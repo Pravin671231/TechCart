@@ -23,6 +23,7 @@ Feature → Update SRS → Add to Milestone → Add to Issue → Implement Code
 - Feature order follows `docs/srs/SRS.md` §3's Feature Index unless explicitly reprioritized.
 - Each issue gets a branch `feature/<issue-number>-<scope>`, cut from `main` and squash-merged back into `main` (no `develop` branch). See `docs/architecture.md` §8 for commit format and release tagging.
 - Before marking an issue complete: push the branch and open a PR into `main` (squash-merge, per the convention above); once merged, sync the status sections of `AGENTS.md`, `CLAUDE.md`, `README.md`, and `docs/architecture.md` §10 to reflect the new state in a direct follow-up commit on `main`, then close the GitHub issue referencing the merge.
+- Whenever changes are made within a scaffolded workspace (`backend/`, and later `buyer-app/`/`admin-app/` once they exist), update that workspace's own `CLAUDE.md`/`AGENTS.md` (see the workspace-docs mapping in Architecture below) to reflect them.
 
 ## Architecture
 
@@ -30,10 +31,16 @@ Feature → Update SRS → Add to Milestone → Add to Issue → Implement Code
 
 - **One backend, two frontends** — all business logic lives in `backend/`; neither `buyer-app/` nor `admin-app/` duplicates it. This is why the backend is a plain Express service rather than Next.js API routes (`admin-app` isn't a Next.js app and would need the logic duplicated).
 - **No shared validation package** — `backend/` owns its Zod schemas internally; `buyer-app`/`admin-app` do their own separate client-side validation. This is a deliberate simplification (matches the sibling `LeafFlow` project), not an oversight — treat `backend`'s validation as the one that actually enforces correctness.
-- **Backend layering** — `routes/ → controllers/ → services/ → repositories/ → models/`. Business logic belongs in `services/`; `repositories/` only issues Mongoose queries.
+- **Backend layering** — implementation detail owned by `backend/` itself; not yet locked in as a root-level architectural decision. See the workspace-docs mapping below (`backend/CLAUDE.md`, `backend/AGENTS.md`, `backend/docs/architecture.md`) for the current structure.
 - **Auth/RBAC** — Better Auth issues sessions for both apps; Admin routes check role claims (`catalog-manager`, `order-manager`, `super-admin`) server-side on every request — never rely on a client-side route guard alone.
 - **Error contract** — every backend error responds `{ "success": false, "code": "string", "message": "string" }`.
 - **Workspace-level docs** — once a workspace is scaffolded, it may have its own `CLAUDE.md`/`AGENTS.md`/`docs/architecture.md` for implementation-level detail. Those never override the root-level decisions in this file or `docs/architecture.md`.
+
+  | Workspace | Own docs |
+  |---|---|
+  | `backend/` | `backend/CLAUDE.md`, `backend/AGENTS.md`, `backend/docs/architecture.md` |
+  | `buyer-app/` | not yet scaffolded |
+  | `admin-app/` | not yet scaffolded |
 
 ## Git conventions
 
