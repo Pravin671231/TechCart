@@ -36,8 +36,9 @@ Both are mounted in `src/app.ts`, after all routes.
 ## Dev workflow
 
 - `npm run dev --workspace backend` — `tsx watch src/index.ts`
-- `npm run build --workspace backend` — `tsc`, must produce zero errors
+- `npm run build --workspace backend` — `tsc && tsc-alias`, must produce zero errors
 - `npm run test --workspace backend` — `vitest run`
+- `npm run test:coverage --workspace backend` — `vitest run --coverage` (v8 provider, text + HTML reporters; no enforced threshold yet)
 - Copy `.env.example` to `.env` before running locally (`PORT`, `NODE_ENV`, `MONGODB_URI`)
 
 Test files: colocated `src/modules/<feature>/tests/*.test.ts` for unit tests, workspace-root `__tests__/<feature>/*.test.ts` for Supertest integration tests. Both globs are wired in `vitest.config.ts`.

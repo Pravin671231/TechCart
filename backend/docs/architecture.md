@@ -86,3 +86,4 @@ backend/
 - **Unit tests** colocate inside each module: `src/modules/<feature>/tests/*.test.ts`. Test the module's own logic (service functions) in isolation.
 - **Integration tests** live at the workspace root: `__tests__/<feature>/*.test.ts`, using Supertest against the exported `app` from `src/app.ts` — exercise the full request/response cycle including middleware.
 - Both globs are registered in `vitest.config.ts`'s `test.include`.
+- **Coverage**: `npm run test:coverage --workspace backend` (v8 provider, text + HTML reporters, configured in `vitest.config.ts`'s `test.coverage`). No enforced threshold yet — reporting only, per Issue #3's scope; a coverage gate lands once real features (not just the skeleton) exist to measure.
