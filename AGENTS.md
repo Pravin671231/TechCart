@@ -8,7 +8,7 @@ TechCart is a production e-commerce platform: a Next.js buyer storefront and a R
 
 ## Current status
 
-No application code exists yet — only planning documents (`docs/srs/SRS.md`, `docs/architecture.md`, `README.md`). There is no `package.json`, no build/lint/test tooling, and no `backend/`/`buyer-app/`/`admin-app/` scaffolding. Do not assume any of it exists, and do not invent commands for it — check what's actually present before running anything. The monorepo layout described in `docs/architecture.md` is the target for the Foundation phase, not current reality.
+Root workspace tooling is scaffolded (Issue #1 / M0.1, merged): root `package.json` (npm workspaces — `backend`, `buyer-app`, `admin-app`; `engines.node >=24`), `tsconfig.base.json`, `eslint.config.ts` (flat config), `.prettierrc`, `.nvmrc`/`.node-version`. `npm install`, `npx eslint .`, and `npx prettier --check .` all work at the repo root. There is still no `backend/`, `buyer-app/`, or `admin-app/` directory and no application code — those scaffold in M0.2/M0.4/M0.6. Do not assume they exist, and do not invent commands for them — check what's actually present before running anything.
 
 ## Development process — read before starting any feature
 
@@ -22,6 +22,7 @@ Feature → Update SRS → Add to Milestone → Add to Issue → Implement Code
 - Before implementing any feature, its SRS doc must exist and follow the template in `docs/srs/SRS.md` §4 — functional requirements numbered `FR-<CODE>-<NNN>`, plus a feature-scoped Baseline NFR checklist. Full system-wide NFRs are deliberately deferred to SRS v0.8/v0.9, but that section exists so each feature still gets a lightweight security/data/error-handling pass rather than none at all.
 - Feature order follows `docs/srs/SRS.md` §3's Feature Index unless explicitly reprioritized.
 - Each issue gets a branch `feature/<issue-number>-<scope>`, cut from `main` and squash-merged back into `main` (no `develop` branch). See `docs/architecture.md` §8 for commit format and release tagging.
+- Before marking an issue complete: push the branch and open a PR into `main` (squash-merge, per the convention above); once merged, sync the status sections of `AGENTS.md`, `CLAUDE.md`, `README.md`, and `docs/architecture.md` §10 to reflect the new state in a direct follow-up commit on `main`, then close the GitHub issue referencing the merge.
 
 ## Architecture
 

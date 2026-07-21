@@ -194,4 +194,4 @@ Open items not yet decided (tracked in SRS, revisit when the trigger condition i
 
 ## 10. Status — what exists today
 
-As of 2026-07-21: `docs/srs/SRS.md`, `docs/milestone.md`, this file, `README.md`, `.gitignore`, root `CLAUDE.md`/`AGENTS.md`. No `backend/`, `buyer-app/`, or `admin-app/` directories, no application code, no CI. The structure in §2 and conventions in §8 are the target for `docs/milestone.md`'s M0 (Foundation) and M1 (CI Pipeline), not a description of current files.
+As of 2026-07-21: `docs/srs/SRS.md`, `docs/milestone.md`, this file, `README.md`, `.gitignore`, root `CLAUDE.md`/`AGENTS.md`, plus the M0.1 root workspace scaffolding (Issue #1, merged): `package.json` (npm workspaces), `tsconfig.base.json`, `eslint.config.ts`, `.prettierrc`, `.nvmrc`/`.node-version`. No `backend/`, `buyer-app/`, or `admin-app/` directories, no application code, no CI. The structure in §2 and conventions in §8 remain the target for the rest of `docs/milestone.md`'s M0 (Foundation) and M1 (CI Pipeline).

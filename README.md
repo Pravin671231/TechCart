@@ -15,4 +15,4 @@ Feature → Update SRS → Add to Milestone → Add to Issue → Implement Code
 
 ## Status
 
-Pre-implementation. SRS v0.1 (initial scope and feature listing) is complete; no application code yet.
+Foundation phase (M0) in progress. SRS v0.1 (initial scope and feature listing) is complete. Root workspace tooling is scaffolded (Issue #1 / M0.1, merged) — npm workspaces, shared TypeScript/ESLint/Prettier config, Node 24 pinning. No `backend/`, `buyer-app/`, or `admin-app/` application code yet.
