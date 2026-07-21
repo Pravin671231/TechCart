@@ -82,27 +82,30 @@ flowchart LR
 ## 4. Application Architecture
 
 ### 4.1 buyer-app (Next.js)
+
 - App Router; Server Components fetch directly from `backend` for SSR/ISR product and category pages.
 - Client Components handle cart, checkout, and account interactivity.
 - Rendering strategy by route:
 
-| Route | Strategy |
-|---|---|
-| Home, category listing | ISR (revalidate on catalog change) |
-| Product detail | ISR |
-| Cart | Client-rendered |
-| Checkout | Client-rendered, no caching |
-| Account / order history | Client-rendered, session-gated |
+| Route                   | Strategy                           |
+| ----------------------- | ---------------------------------- |
+| Home, category listing  | ISR (revalidate on catalog change) |
+| Product detail          | ISR                                |
+| Cart                    | Client-rendered                    |
+| Checkout                | Client-rendered, no caching        |
+| Account / order history | Client-rendered, session-gated     |
 
 - Client-side data fetching/caching: TanStack Query.
 - Cart state: Zustand, persisted to `localStorage` for guests, synced to the backend cart on login.
 
 ### 4.2 admin-app (React + Vite)
+
 - SPA with React Router; no SEO requirement, so Vite over a second Next.js instance.
 - Every route gated by role claim from the session (`catalog-manager`, `order-manager`, `super-admin`) — checked server-side by `backend` on every request, not just client-side route guards.
 - TanStack Query for data fetching/caching, TanStack Table for catalog/order grids, Recharts for dashboard charts.
 
 ### 4.3 backend (Node + Express)
+
 Folder/module structure is implementation detail owned by `backend/` itself, not yet locked in as a root-level decision — see `backend/docs/architecture.md` for the current structure and conventions.
 
 - Request validation: Zod schemas defined and used inside `backend` only — there is no shared validation package with the frontends (see §8, "Shared validation").
@@ -115,13 +118,13 @@ Folder/module structure is implementation detail owned by `backend/` itself, not
 
 High-level collection map (field-level detail belongs in each feature's SRS, not here):
 
-| Collection | Owned by feature | Notes |
-|---|---|---|
-| `users` | Authentication | Buyer + Admin accounts, role field for RBAC |
-| `products`, `categories` | Product Catalog | Indexed for Atlas Search |
-| `carts` | Shopping Cart | One per guest session or user |
-| `orders` | Orders | State machine: pending → paid → processing → shipped → delivered / cancelled / refunded |
-| `payments` | Payments | Razorpay order/payment IDs, webhook event log |
+| Collection               | Owned by feature | Notes                                                                                   |
+| ------------------------ | ---------------- | --------------------------------------------------------------------------------------- |
+| `users`                  | Authentication   | Buyer + Admin accounts, role field for RBAC                                             |
+| `products`, `categories` | Product Catalog  | Indexed for Atlas Search                                                                |
+| `carts`                  | Shopping Cart    | One per guest session or user                                                           |
+| `orders`                 | Orders           | State machine: pending → paid → processing → shipped → delivered / cancelled / refunded |
+| `payments`               | Payments         | Razorpay order/payment IDs, webhook event log                                           |
 
 - **Search:** MongoDB Atlas Search index on `products` — no separate search service at current scale.
 - **Cache/queues:** Upstash Redis backs both backend response caching (where used) and the BullMQ queues.
@@ -142,11 +145,11 @@ High-level collection map (field-level detail belongs in each feature's SRS, not
 
 Three separate environments, each with its own MongoDB Atlas cluster and Razorpay key pair (test for dev/staging, live for prod only) — never a shared database across environments.
 
-| Environment | buyer-app | admin-app | backend | Database |
-|---|---|---|---|---|
-| Development | local | local | local | Atlas dev cluster |
-| Staging | Vercel preview | Render/Railway preview | Render/Railway | Atlas staging cluster |
-| Production | Vercel | Static host (Vercel/Render) | Render/Railway | Atlas production cluster |
+| Environment | buyer-app      | admin-app                   | backend        | Database                 |
+| ----------- | -------------- | --------------------------- | -------------- | ------------------------ |
+| Development | local          | local                       | local          | Atlas dev cluster        |
+| Staging     | Vercel preview | Render/Railway preview      | Render/Railway | Atlas staging cluster    |
+| Production  | Vercel         | Static host (Vercel/Render) | Render/Railway | Atlas production cluster |
 
 ---
 
@@ -171,14 +174,14 @@ Formalized against the LeafFlow reference project, with several deliberate simpl
 
 Short rationale for choices that could reasonably have gone another way.
 
-| Decision | Chosen | Instead of | Why |
-|---|---|---|---|
-| Backend shape | One shared Express service (`backend/`) | Next.js API routes as backend | `admin-app` isn't Next.js — API routes would only serve `buyer-app`, forcing duplicated logic for `admin-app`. |
-| Auth | Better Auth | Auth.js / Clerk | Auth.js went maintenance-only in 2026; Better Auth is self-hosted (no per-MAU cost) with built-in RBAC, which `admin-app` needs. |
-| Catalog search | MongoDB Atlas Search | Algolia | No extra infra/vendor cost at current scale; revisit past ~50k SKUs. |
-| Buyer client state | Zustand + TanStack Query | Redux Toolkit | Not enough cross-cutting client state to justify Redux's ceremony. |
-| Monorepo tooling | npm workspaces, flat `backend/buyer-app/admin-app` | pnpm + Turborepo, nested `apps/*` | Matches the sibling LeafFlow project exactly; simpler for the current scale, and LeafFlow's existing `tdd-workflow` automation already assumes npm workspace commands. |
-| Shared validation | None — schemas live in `backend` only | A shared `packages/schemas` package | Matches LeafFlow; keeps the repo to three workspaces with no shared-package build-order complexity. Accepted tradeoff: frontend/backend validation can drift since they're separate code (see §6). |
+| Decision           | Chosen                                             | Instead of                          | Why                                                                                                                                                                                                |
+| ------------------ | -------------------------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend shape      | One shared Express service (`backend/`)            | Next.js API routes as backend       | `admin-app` isn't Next.js — API routes would only serve `buyer-app`, forcing duplicated logic for `admin-app`.                                                                                     |
+| Auth               | Better Auth                                        | Auth.js / Clerk                     | Auth.js went maintenance-only in 2026; Better Auth is self-hosted (no per-MAU cost) with built-in RBAC, which `admin-app` needs.                                                                   |
+| Catalog search     | MongoDB Atlas Search                               | Algolia                             | No extra infra/vendor cost at current scale; revisit past ~50k SKUs.                                                                                                                               |
+| Buyer client state | Zustand + TanStack Query                           | Redux Toolkit                       | Not enough cross-cutting client state to justify Redux's ceremony.                                                                                                                                 |
+| Monorepo tooling   | npm workspaces, flat `backend/buyer-app/admin-app` | pnpm + Turborepo, nested `apps/*`   | Matches the sibling LeafFlow project exactly; simpler for the current scale, and LeafFlow's existing `tdd-workflow` automation already assumes npm workspace commands.                             |
+| Shared validation  | None — schemas live in `backend` only              | A shared `packages/schemas` package | Matches LeafFlow; keeps the repo to three workspaces with no shared-package build-order complexity. Accepted tradeoff: frontend/backend validation can drift since they're separate code (see §6). |
 
 Open items not yet decided (tracked in SRS, revisit when the trigger condition is hit): TypeScript 6 vs. 7 adoption, Express vs. Fastify if profiling shows the backend as the bottleneck, single vs. multi payment gateway if selling outside India, Git tag/versioning scheme for releases.
 
