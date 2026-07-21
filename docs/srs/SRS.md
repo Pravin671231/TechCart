@@ -54,6 +54,7 @@ Solo/small-team developer(s) building and maintaining the system; this document 
 
 ### 1.5 References
 - Technology Blueprint (stack, versions, architecture decisions): published artifact, "E-Commerce Platform — Technology Blueprint" (2026-07-21).
+- `docs/milestone.md` — milestone-level roadmap (M0–M10) this document's Feature Index and Development Workflow (§5) execute against.
 
 ---
 
@@ -164,8 +165,8 @@ Feature → Update SRS → Add to Milestone → Add to Issue → Implement Code
 
 1. **Feature** — the next feature is selected from the Feature Index (§3), in listed order unless reprioritized.
 2. **Update SRS** — write `docs/srs/features/<version>-<feature>.md` using the template in §4; update this file's Version History and Feature Index status to "Spec drafted."
-3. **Add to Milestone** — create (or reuse) a GitHub milestone named after the SRS version, e.g. `v0.2 – Product Catalog`.
-4. **Add to Issue** — break the feature's functional requirements into one or more GitHub issues linked to that milestone, referencing the relevant `FR-<CODE>-<NNN>` IDs. Each issue gets a branch named `feature/<issue-number>-<scope>` (e.g. issue #12 "Product image upload" → `feature/12-product-image-upload`), cut from `main`.
+3. **Add to Milestone** — create (or reuse) a GitHub milestone matching the corresponding row in `docs/milestone.md` (e.g. SRS v0.2 → milestone M2, "Product Catalog").
+4. **Add to Issue** — draft the feature's functional requirements as issues in `docs/issues.md` (context, task checklist, test criteria, referencing the relevant `FR-<CODE>-<NNN>` IDs), then open them as real GitHub issues linked to that milestone. Each issue gets a branch named `feature/<issue-number>-<scope>` (e.g. issue #12 "Product image upload" → `feature/12-product-image-upload`), cut from `main`.
 5. **Implement Code** — implement on that branch against the issue; on completion, run the feature's acceptance criteria, open a PR back into `main` (squash-merge, CI required to pass), mark the issue/milestone closed, and update this file's status to "Complete." On completing a Milestone, tag the repository with a release version (scheme decided during implementation — see `docs/architecture.md` §8–9).
 
 The repository now exists at `github.com/Pravin671231/TechCart` (`main` is the only long-lived branch — no `develop`), so steps 3–4 are actionable.

@@ -169,7 +169,7 @@ Formalized against the LeafFlow reference project, with several deliberate simpl
 - **CI/CD** — a single `.github/workflows/ci.yml` covering lint + test for all three workspaces on PRs into `main`. Exact triggers/jobs/matrix are a Foundation-phase decision.
 - **Shared validation** — deliberately **not** shared (see §6). No `packages/` directory exists in this repo at all.
 - **Node pinning** — `.nvmrc` + `.node-version`, both `"24"`, plus root `package.json` `"engines": { "node": ">=24" }`.
-- **Docs** — `docs/srs/SRS.md`'s §6 Traceability Matrix is the source of truth for feature↔milestone↔issue links; no parallel `docs/milestone.md`/`docs/issues.md` files.
+- **Docs** — `docs/milestone.md` is the milestone-level roadmap (M0–M10); `docs/issues.md` is where issues are drafted (context, task checklist, test criteria) before being opened on GitHub, extended one milestone at a time as each feature's SRS doc is written; `docs/srs/SRS.md`'s §6 Traceability Matrix is the source of truth for the live feature↔milestone↔issue links once issues are actually open.
 - **Next.js version guard** — `buyer-app` gets its own `AGENTS.md` (a short warning that Next.js 16 has breaking changes from training-data-era APIs, read `node_modules/next/dist/docs/` first) with `buyer-app/CLAUDE.md` as a one-line `@AGENTS.md` import — created when `buyer-app/` is scaffolded, not now.
 - **Workspace-level documentation** — each of `backend/`, `buyer-app/`, `admin-app/` may keep its own `CLAUDE.md`, `AGENTS.md`, and `docs/architecture.md`, created when that workspace is scaffolded. Root-level docs (this file included) stay the source of truth for repo-wide architecture decisions and conventions; workspace-level docs cover only that app's own implementation details, guidelines, and development practices — they don't restate or override root-level decisions.
 
@@ -194,4 +194,4 @@ Open items not yet decided (tracked in SRS, revisit when the trigger condition i
 
 ## 10. Status — what exists today
 
-As of 2026-07-21: `docs/srs/SRS.md`, this file, `README.md`, `.gitignore`, root `CLAUDE.md`/`AGENTS.md`. No `backend/`, `buyer-app/`, or `admin-app/` directories, no application code, no CI. The structure in §2 and conventions in §8 are the target for SRS roadmap phase 01 (Foundation), not a description of current files.
+As of 2026-07-21: `docs/srs/SRS.md`, `docs/milestone.md`, this file, `README.md`, `.gitignore`, root `CLAUDE.md`/`AGENTS.md`. No `backend/`, `buyer-app/`, or `admin-app/` directories, no application code, no CI. The structure in §2 and conventions in §8 are the target for `docs/milestone.md`'s M0 (Foundation) and M1 (CI Pipeline), not a description of current files.
