@@ -103,15 +103,7 @@ flowchart LR
 - TanStack Query for data fetching/caching, TanStack Table for catalog/order grids, Recharts for dashboard charts.
 
 ### 4.3 backend (Node + Express)
-Layered, so business logic stays independent of the HTTP layer:
-
-```
-routes/        → HTTP method + path, calls controller
-controllers/    → request/response shaping, calls service
-services/       → business logic, orchestrates repositories
-repositories/    → Mongoose queries only, no business logic
-models/          → Mongoose schemas
-```
+Folder/module structure is implementation detail owned by `backend/` itself, not yet locked in as a root-level decision — see `backend/docs/architecture.md` for the current structure and conventions.
 
 - Request validation: Zod schemas defined and used inside `backend` only — there is no shared validation package with the frontends (see §8, "Shared validation").
 - Auth: Better Auth mounted as middleware; an RBAC guard middleware checks role claims per route.
@@ -165,7 +157,7 @@ Formalized against the LeafFlow reference project, with several deliberate simpl
 - **Branching** — `feature/<issue-number>-<scope>`, cut from `main`, PR back into `main` directly (no `develop` branch). Branch protection on `main`: PR + CI check required, linear history, squash-merge.
 - **Commits** — Conventional Commits, `type(scope): message (Issue #N)`. Types: `feat, fix, test, chore, docs, refactor`. Scopes: `backend, buyer-app, admin-app, ci, infra`. No `Co-Authored-By` trailer.
 - **Releases** — on completing a Milestone, tag the repo with a release version marking it. Exact tag naming/versioning scheme is decided during the implementation phase, not fixed here.
-- **Testing** — Vitest across all three workspaces; Supertest for backend integration tests; React Testing Library + MSW for both frontends. Dedicated `__tests__/` directories mirroring source structure. Coverage gate: 80% on critical paths (controllers/services/middleware).
+- **Testing** — Vitest across all three workspaces; Supertest for backend integration tests; React Testing Library + MSW for both frontends. Backend's specific test-folder conventions are owned by `backend/` itself — see `backend/docs/architecture.md`. Coverage gate: 80% on critical paths (controllers/services/middleware).
 - **CI/CD** — a single `.github/workflows/ci.yml` covering lint + test for all three workspaces on PRs into `main`. Exact triggers/jobs/matrix are a Foundation-phase decision.
 - **Shared validation** — deliberately **not** shared (see §6). No `packages/` directory exists in this repo at all.
 - **Node pinning** — `.nvmrc` + `.node-version`, both `"24"`, plus root `package.json` `"engines": { "node": ">=24" }`.
