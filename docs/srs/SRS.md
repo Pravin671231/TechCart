@@ -99,7 +99,7 @@ See the Technology Blueprint (§1.5). Summary: Next.js 16 (Buyer), React 19 + Vi
 ### 2.6 Assumptions and Dependencies
 - Razorpay merchant account can be activated (business PAN, bank account, published policy pages).
 - MongoDB Atlas, Upstash Redis, Cloudinary, and Resend accounts are available/provisionable.
-- A GitHub repository will exist before the Development Workflow's milestone/issue steps become actionable (not yet created as of this version).
+- The GitHub repository (`github.com/Pravin671231/TechCart`) exists, with `main` as its only long-lived branch, making the Development Workflow's milestone/issue/branch steps (§5) actionable.
 
 ---
 
@@ -165,10 +165,10 @@ Feature → Update SRS → Add to Milestone → Add to Issue → Implement Code
 1. **Feature** — the next feature is selected from the Feature Index (§3), in listed order unless reprioritized.
 2. **Update SRS** — write `docs/srs/features/<version>-<feature>.md` using the template in §4; update this file's Version History and Feature Index status to "Spec drafted."
 3. **Add to Milestone** — create (or reuse) a GitHub milestone named after the SRS version, e.g. `v0.2 – Product Catalog`.
-4. **Add to Issue** — break the feature's functional requirements into one or more GitHub issues linked to that milestone, referencing the relevant `FR-<CODE>-<NNN>` IDs.
-5. **Implement Code** — implement against the issues; on completion, run the feature's acceptance criteria, mark the issues/milestone closed, and update this file's status to "Complete."
+4. **Add to Issue** — break the feature's functional requirements into one or more GitHub issues linked to that milestone, referencing the relevant `FR-<CODE>-<NNN>` IDs. Each issue gets a branch named `feature/<issue-number>-<scope>` (e.g. issue #12 "Product image upload" → `feature/12-product-image-upload`), cut from `main`.
+5. **Implement Code** — implement on that branch against the issue; on completion, run the feature's acceptance criteria, open a PR back into `main` (squash-merge, CI required to pass), mark the issue/milestone closed, and update this file's status to "Complete." On completing a Milestone, tag the repository with a release version (scheme decided during implementation — see `docs/architecture.md` §8–9).
 
-Steps 3–4 require a GitHub repository, which does not exist yet for this project (§2.6). They become actionable once one is created.
+The repository now exists at `github.com/Pravin671231/TechCart` (`main` is the only long-lived branch — no `develop`), so steps 3–4 are actionable.
 
 ---
 
