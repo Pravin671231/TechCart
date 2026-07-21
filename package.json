@@ -1,0 +1,22 @@
+{
+  "name": "techcart",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TechCart — Node/Express API with a Next.js buyer storefront and a React/Vite admin console",
+  "workspaces": [
+    "backend",
+    "buyer-app",
+    "admin-app"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "jiti": "^2.7.0",
+    "prettier": "^3.9.6",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.65.0"
+  }
+}
