@@ -11,9 +11,13 @@
   "engines": {
     "node": ">=24"
   },
+  "overrides": {
+    "postcss": "^8.5.21",
+    "sharp": "^0.35.3"
+  },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^10.7.0",
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
     "jiti": "^2.7.0",
     "prettier": "^3.9.6",
     "typescript": "~6.0.3",

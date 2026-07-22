@@ -36,11 +36,11 @@ Feature → Update SRS → Add to Milestone → Add to Issue → Implement Code
 - **Error contract** — every backend error responds `{ "success": false, "code": "string", "message": "string" }`.
 - **Workspace-level docs** — once a workspace is scaffolded, it may have its own `CLAUDE.md`/`AGENTS.md`/`docs/architecture.md` for implementation-level detail. Those never override the root-level decisions in this file or `docs/architecture.md`.
 
-  | Workspace    | Own docs                                                                 |
-  | ------------ | ------------------------------------------------------------------------ |
-  | `backend/`   | `backend/CLAUDE.md`, `backend/AGENTS.md`, `backend/docs/architecture.md` |
-  | `buyer-app/` | not yet scaffolded                                                       |
-  | `admin-app/` | not yet scaffolded                                                       |
+  | Workspace    | Own docs                                                                       |
+  | ------------ | ------------------------------------------------------------------------------ |
+  | `backend/`   | `backend/CLAUDE.md`, `backend/AGENTS.md`, `backend/docs/architecture.md`       |
+  | `buyer-app/` | `buyer-app/CLAUDE.md`, `buyer-app/AGENTS.md`, `buyer-app/docs/architecture.md` |
+  | `admin-app/` | not yet scaffolded                                                             |
 
 ## Git conventions
 
