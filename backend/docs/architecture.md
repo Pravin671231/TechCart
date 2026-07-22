@@ -79,7 +79,7 @@ backend/
 
 - `tsc` (build) doesn't rewrite aliases when emitting JS, so `tsc-alias` runs immediately after it in the `build` script, rewriting `@/...` in `dist/` back to relative paths.
 - `tsx` (dev) resolves `tsconfig.json`'s `paths` natively — no extra tooling.
-- Vitest resolves them via `resolve.tsconfigPaths: true` in `vitest.config.ts` (native Vite 6+ support — no plugin dependency needed), reading the same `tsconfig.json` rather than a hand-duplicated alias map.
+- Vitest resolves them via the `vite-tsconfig-paths` plugin in `vitest.config.ts`, reading the same `tsconfig.json` rather than a hand-duplicated alias map. (There is no native `resolve.tsconfigPaths` option in Vite/Vitest — this doc previously claimed otherwise, which left `__tests__/health/health.api.test.ts` failing to resolve `@/app` until Issue #8 fixed it. `buyer-app`/`admin-app` use the same plugin, for the same reason.)
 
 ## Testing
 

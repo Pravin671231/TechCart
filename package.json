@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "description": "TechCart — Node/Express API with a Next.js buyer storefront and a React/Vite admin console",
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "lint": "eslint .",
+    "test": "npm run test --workspaces",
+    "test:backend": "npm run test --workspace backend",
+    "test:buyer-app": "npm run test --workspace buyer-app",
+    "test:admin-app": "npm run test --workspace admin-app"
+  },
   "workspaces": [
     "backend",
     "buyer-app",

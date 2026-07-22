@@ -23,7 +23,7 @@ Module-based skeleton scaffolded (Issue #2 / M0.2): Express 5 + TypeScript, cros
 
 ## Path aliases
 
-`@/*` maps to `src/*` (`backend/tsconfig.json`'s `paths`). Use it for any import that would otherwise need `../` parent traversal (e.g. reaching `config/`, `middleware/`, `utils/`, `externalService/` from inside a module); same-directory or one-level-down-from-`src` imports stay relative. Works everywhere: `tsc` build (rewritten to relative paths by `tsc-alias`, run right after `tsc` in the `build` script), `tsx watch` dev server (native tsconfig-paths support), and Vitest (native `resolve.tsconfigPaths: true` in `vitest.config.ts` — no extra plugin dependency) — one alias defined once in `tsconfig.json`.
+`@/*` maps to `src/*` (`backend/tsconfig.json`'s `paths`). Use it for any import that would otherwise need `../` parent traversal (e.g. reaching `config/`, `middleware/`, `utils/`, `externalService/` from inside a module); same-directory or one-level-down-from-`src` imports stay relative. Works everywhere: `tsc` build (rewritten to relative paths by `tsc-alias`, run right after `tsc` in the `build` script), `tsx watch` dev server (native tsconfig-paths support), and Vitest via the `vite-tsconfig-paths` plugin in `vitest.config.ts` (there is no native `resolve.tsconfigPaths` option — an earlier version of this doc claimed there was, which was wrong and left `__tests__/health/health.api.test.ts` failing until Issue #8 fixed it) — one alias defined once in `tsconfig.json`.
 
 ## Error contract
 
