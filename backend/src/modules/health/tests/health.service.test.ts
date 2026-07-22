@@ -3,6 +3,6 @@ import { getHealthStatus } from "../health.service";
 
 describe("getHealthStatus", () => {
   it("returns 'healthy'", () => {
-    expect(getHealthStatus()).toBe("DELIBERATELY_BROKEN_FOR_CI_VERIFICATION");
+    expect(getHealthStatus()).toBe("healthy");
   });
 });
