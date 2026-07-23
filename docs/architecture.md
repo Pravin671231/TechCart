@@ -62,7 +62,7 @@ flowchart LR
     end
     subgraph Managed services
         Razorpay["Razorpay"]
-        Cloudinary["Cloudinary"]
+        R2["Cloudflare R2"]
         Resend["Resend"]
     end
 
@@ -73,7 +73,7 @@ flowchart LR
     Backend --> Worker
     Worker --> Redis
     Backend <--> Razorpay
-    Backend --> Cloudinary
+    Backend --> R2
     Worker --> Resend
 ```
 
@@ -118,13 +118,13 @@ Folder/module structure is implementation detail owned by `backend/` itself, not
 
 High-level collection map (field-level detail belongs in each feature's SRS, not here):
 
-| Collection               | Owned by feature | Notes                                                                                   |
-| ------------------------ | ---------------- | --------------------------------------------------------------------------------------- |
-| `users`                  | Authentication   | Buyer + Admin accounts, role field for RBAC                                             |
-| `products`, `categories` | Product Catalog  | Indexed for Atlas Search                                                                |
-| `carts`                  | Shopping Cart    | One per guest session or user                                                           |
-| `orders`                 | Orders           | State machine: pending → paid → processing → shipped → delivered / cancelled / refunded |
-| `payments`               | Payments         | Razorpay order/payment IDs, webhook event log                                           |
+| Collection                                                                      | Owned by feature | Notes                                                                                   |
+| ------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------- |
+| `users`                                                                         | Authentication   | Buyer + Admin accounts, role field for RBAC                                             |
+| `products`, `categories`, `brands`, `categorySpecifications`, `productVariants` | Product Catalog  | Indexed for Atlas Search                                                                |
+| `carts`                                                                         | Shopping Cart    | One per guest session or user                                                           |
+| `orders`                                                                        | Orders           | State machine: pending → paid → processing → shipped → delivered / cancelled / refunded |
+| `payments`                                                                      | Payments         | Razorpay order/payment IDs, webhook event log                                           |
 
 - **Search:** MongoDB Atlas Search index on `products` — no separate search service at current scale.
 - **Cache/queues:** Upstash Redis backs both backend response caching (where used) and the BullMQ queues.
@@ -179,6 +179,7 @@ Short rationale for choices that could reasonably have gone another way.
 | Backend shape      | One shared Express service (`backend/`)                                  | Next.js API routes as backend                           | `admin-app` isn't Next.js — API routes would only serve `buyer-app`, forcing duplicated logic for `admin-app`.                                                                                              |
 | Auth               | Better Auth                                                              | Auth.js / Clerk                                         | Auth.js went maintenance-only in 2026; Better Auth is self-hosted (no per-MAU cost) with built-in RBAC, which `admin-app` needs.                                                                            |
 | Catalog search     | MongoDB Atlas Search                                                     | Algolia                                                 | No extra infra/vendor cost at current scale; revisit past ~50k SKUs.                                                                                                                                        |
+| Image storage      | Cloudflare R2                                                            | Cloudinary                                              | Zero egress fees vs. Cloudinary's bandwidth pricing, fits the small-to-medium/cost-conscious constraint already fixed in SRS §2.5.                                                                          |
 | Buyer client state | Zustand + TanStack Query                                                 | Redux Toolkit                                           | Not enough cross-cutting client state to justify Redux's ceremony.                                                                                                                                          |
 | Monorepo tooling   | npm workspaces, flat `backend/buyer-app/admin-app`                       | pnpm + Turborepo, nested `apps/*`                       | Matches the sibling LeafFlow project exactly; simpler for the current scale, and LeafFlow's existing `tdd-workflow` automation already assumes npm workspace commands.                                      |
 | Shared validation  | None — schemas live in `backend` only                                    | A shared `packages/schemas` package                     | Matches LeafFlow; keeps the repo to three workspaces with no shared-package build-order complexity. Accepted tradeoff: frontend/backend validation can drift since they're separate code (see §6).          |

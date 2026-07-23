@@ -9,18 +9,18 @@
 
 ## Version History
 
-| Version | Date       | Scope                                     | Status   |
-| ------- | ---------- | ----------------------------------------- | -------- |
-| 0.1     | 2026-07-21 | Initial scope, structure, feature listing | Complete |
-| 0.2     | —          | Product Catalog                           | Planned  |
-| 0.3     | —          | Authentication                            | Planned  |
-| 0.4     | —          | Shopping Cart                             | Planned  |
-| 0.5     | —          | Orders                                    | Planned  |
-| 0.6     | —          | Payments                                  | Planned  |
-| 0.7     | —          | Dashboard                                 | Planned  |
-| 0.8     | —          | Backend Non-Functional Requirements       | Planned  |
-| 0.9     | —          | Frontend Non-Functional Requirements      | Planned  |
-| 1.0     | —          | Final Consolidated System SRS             | Planned  |
+| Version | Date       | Scope                                     | Status                          |
+| ------- | ---------- | ----------------------------------------- | ------------------------------- |
+| 0.1     | 2026-07-21 | Initial scope, structure, feature listing | Complete                        |
+| 0.2     | 2026-07-22 | Product Catalog                           | Spec drafted — not yet reviewed |
+| 0.3     | —          | Authentication                            | Planned                         |
+| 0.4     | —          | Shopping Cart                             | Planned                         |
+| 0.5     | —          | Orders                                    | Planned                         |
+| 0.6     | —          | Payments                                  | Planned                         |
+| 0.7     | —          | Dashboard                                 | Planned                         |
+| 0.8     | —          | Backend Non-Functional Requirements       | Planned                         |
+| 0.9     | —          | Frontend Non-Functional Requirements      | Planned                         |
+| 1.0     | —          | Final Consolidated System SRS             | Planned                         |
 
 Each row above becomes "Complete" only once its feature has been specified, designed, implemented, and validated — see [Development Workflow](#5-development-workflow).
 
@@ -73,7 +73,7 @@ Two client applications, one API, one database — no per-frontend backend logic
 ```
 Buyer App (Next.js)  ──┐
                         ├──> API (Node/Express) ──> MongoDB
-Admin App (React)    ──┘                        └─> Redis, Razorpay, Cloudinary, Resend
+Admin App (React)    ──┘                        └─> Redis, Razorpay, Cloudflare R2, Resend
 ```
 
 ### 2.2 Product Functions (high-level)
@@ -111,24 +111,24 @@ See the Technology Blueprint (§1.5). Summary: Next.js 16 (Buyer), React 19 + Vi
 ### 2.6 Assumptions and Dependencies
 
 - Razorpay merchant account can be activated (business PAN, bank account, published policy pages).
-- MongoDB Atlas, Upstash Redis, Cloudinary, and Resend accounts are available/provisionable.
+- MongoDB Atlas, Upstash Redis, Cloudflare R2, and Resend accounts are available/provisionable.
 - The GitHub repository (`github.com/Pravin671231/TechCart`) exists, with `main` as its only long-lived branch, making the Development Workflow's milestone/issue/branch steps (§5) actionable.
 
 ---
 
 ## 3. Feature Index
 
-| #   | Feature                | One-line description                                                                  | Target SRS Version | Status      |
-| --- | ---------------------- | ------------------------------------------------------------------------------------- | ------------------ | ----------- |
-| 1   | Product Catalog        | Product/category browsing, search, filtering, admin CRUD                              | v0.2               | Not started |
-| 2   | Authentication         | Buyer + admin auth, RBAC, session management                                          | v0.3               | Not started |
-| 3   | Shopping Cart          | Guest + logged-in cart, persistence, sync                                             | v0.4               | Not started |
-| 4   | Orders                 | Checkout capture, order lifecycle, history                                            | v0.5               | Not started |
-| 5   | Payments               | Razorpay integration, verification, refunds                                           | v0.6               | Not started |
-| 6   | Dashboard              | Admin analytics + buyer account dashboard                                             | v0.7               | Not started |
-| 7   | Backend NFRs           | Performance, scalability, security, DB, API, logging, error handling                  | v0.8               | Not started |
-| 8   | Frontend NFRs          | UI performance, responsiveness, browser support, accessibility, UX, frontend security | v0.9               | Not started |
-| 9   | Final Consolidated SRS | Full system document                                                                  | v1.0               | Not started |
+| #   | Feature                | One-line description                                                                  | Target SRS Version | Status                                                                                       |
+| --- | ---------------------- | ------------------------------------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------- |
+| 1   | Product Catalog        | Product/category browsing, search, filtering, admin CRUD                              | v0.2               | Spec drafted — see `docs/srs/features/0.2-product-catalog.md`, open questions pending review |
+| 2   | Authentication         | Buyer + admin auth, RBAC, session management                                          | v0.3               | Not started                                                                                  |
+| 3   | Shopping Cart          | Guest + logged-in cart, persistence, sync                                             | v0.4               | Not started                                                                                  |
+| 4   | Orders                 | Checkout capture, order lifecycle, history                                            | v0.5               | Not started                                                                                  |
+| 5   | Payments               | Razorpay integration, verification, refunds                                           | v0.6               | Not started                                                                                  |
+| 6   | Dashboard              | Admin analytics + buyer account dashboard                                             | v0.7               | Not started                                                                                  |
+| 7   | Backend NFRs           | Performance, scalability, security, DB, API, logging, error handling                  | v0.8               | Not started                                                                                  |
+| 8   | Frontend NFRs          | UI performance, responsiveness, browser support, accessibility, UX, frontend security | v0.9               | Not started                                                                                  |
+| 9   | Final Consolidated SRS | Full system document                                                                  | v1.0               | Not started                                                                                  |
 
 Detailed per-feature SRS documents will live alongside this file as they're written:
 
