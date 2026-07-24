@@ -121,7 +121,7 @@ High-level collection map (field-level detail belongs in each feature's SRS, not
 | Collection                                                                      | Owned by feature | Notes                                                                                   |
 | ------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------- |
 | `users`                                                                         | Authentication   | Buyer + Admin accounts, role field for RBAC                                             |
-| `products`, `categories`, `brands`, `categorySpecifications`, `productVariants` | Product Catalog  | Indexed for Atlas Search                                                                |
+| `products` (variants embedded on `products.variants`), `categories`, `brands`, `categorySpecifications`, `categoryVariants` | Product Catalog  | Indexed for Atlas Search                                                                |
 | `carts`                                                                         | Shopping Cart    | One per guest session or user                                                           |
 | `orders`                                                                        | Orders           | State machine: pending → paid → processing → shipped → delivered / cancelled / refunded |
 | `payments`                                                                      | Payments         | Razorpay order/payment IDs, webhook event log                                           |
