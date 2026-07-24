@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TechCart Admin — Products</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body data-page="products" class="flex min-h-screen bg-neutral-50 text-neutral-900">
+    <div id="admin-nav"></div>
+
+    <main class="flex-1 px-6 py-6">
+      <div class="mb-4 flex items-center justify-between">
+        <h1 class="text-2xl font-semibold tracking-tight">Products</h1>
+        <a href="product-form.html" class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500">+ New product</a>
+      </div>
+
+      <div class="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          id="search-box"
+          type="search"
+          placeholder="Search by name or SKU..."
+          class="w-64 rounded-md border border-neutral-300 px-3 py-1.5 text-sm"
+        />
+        <select id="status-filter" class="rounded-md border border-neutral-300 px-2 py-1.5 text-sm">
+          <option value="">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="published">Published</option>
+          <option value="archived">Archived</option>
+        </select>
+        <p id="result-count" class="ml-auto text-sm text-neutral-500"></p>
+      </div>
+
+      <div class="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+        <table class="w-full text-left text-sm">
+          <thead class="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-500">
+            <tr>
+              <th class="px-3 py-2">Image</th>
+              <th class="px-3 py-2">Name</th>
+              <th class="px-3 py-2">SKU</th>
+              <th class="px-3 py-2">Brand</th>
+              <th class="px-3 py-2">Category</th>
+              <th class="px-3 py-2">Price</th>
+              <th class="px-3 py-2">Stock</th>
+              <th class="px-3 py-2">Status</th>
+              <th class="px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody id="product-rows"></tbody>
+        </table>
+      </div>
+
+      <div id="pagination-container" class="mt-4 flex justify-center gap-2"></div>
+    </main>
+
+    <script src="../shared/mock-data.js"></script>
+    <script src="../shared/helpers.js"></script>
+    <script src="../shared/admin-nav.js"></script>
+    <script src="../shared/product-grid.js"></script>
+    <script src="js/products.js"></script>
+  </body>
+</html>

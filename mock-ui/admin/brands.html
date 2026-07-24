@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TechCart Admin — Brands</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body data-page="brands" class="flex min-h-screen bg-neutral-50 text-neutral-900">
+    <div id="admin-nav"></div>
+
+    <main class="mx-auto flex-1 px-6 py-6">
+      <h1 class="mb-4 text-2xl font-semibold tracking-tight">Brands</h1>
+
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div class="lg:col-span-2 space-y-4">
+          <input
+            id="search-box"
+            type="search"
+            placeholder="Search by name..."
+            class="w-64 rounded-md border border-neutral-300 px-3 py-1.5 text-sm"
+          />
+
+          <div class="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+            <table class="w-full text-left text-sm">
+              <thead class="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-500">
+                <tr>
+                  <th class="px-3 py-2">Logo</th>
+                  <th class="px-3 py-2">Name</th>
+                  <th class="px-3 py-2">Products (all statuses)</th>
+                  <th class="px-3 py-2">Status</th>
+                  <th class="px-3 py-2"></th>
+                </tr>
+              </thead>
+              <tbody id="brand-rows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <div class="rounded-lg border border-neutral-200 bg-white p-5">
+            <h2 id="form-heading" class="mb-3 text-sm font-semibold text-neutral-700">New brand</h2>
+            <form id="brand-form" class="space-y-3">
+              <label class="block text-sm">
+                <span class="mb-1 block text-neutral-600">Name</span>
+                <input id="brand-name" required class="w-full rounded-md border border-neutral-300 px-3 py-1.5" />
+              </label>
+              <label class="block text-sm">
+                <span class="mb-1 block text-neutral-600">Description (optional)</span>
+                <input id="brand-description" class="w-full rounded-md border border-neutral-300 px-3 py-1.5" />
+              </label>
+              <label class="block text-sm">
+                <span class="mb-1 block text-neutral-600">Logo (optional)</span>
+                <input id="brand-logo" type="file" accept="image/jpeg,image/png,image/webp" class="w-full text-sm" />
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <input id="brand-status" type="checkbox" checked class="rounded border-neutral-300" />
+                <span class="text-neutral-600">Active (visible in buyer-facing brand list)</span>
+              </label>
+              <div class="flex items-center gap-2">
+                <button type="submit" class="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-700">Save</button>
+                <button type="button" id="cancel-edit-btn" class="hidden text-sm text-neutral-500 hover:underline">Cancel edit</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="../shared/mock-data.js"></script>
+    <script src="../shared/helpers.js"></script>
+    <script src="../shared/admin-nav.js"></script>
+    <script src="js/brands.js"></script>
+  </body>
+</html>

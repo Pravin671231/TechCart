@@ -1,0 +1,345 @@
+// Static mock data for the Product Catalog UI prototype (SRS v0.2, docs/srs/features/0.2-product-catalog.md §5,
+// as revised 2026-07-24 — Decisions #10-17).
+// Prices are integer paise, stored flat (mrp/discount/sellingPrice — Decision #11, no nested price object,
+// no currency field). sellingPrice values below are pre-computed as mrp - floor(mrp * discount / 100),
+// matching FR-CAT-062, so this file has no dependency on helpers.js load order.
+// Variants are embedded per-product (Decision #10) — there is no top-level productVariants collection anymore.
+
+window.MOCK = {
+  brands: [
+    { id: "b1", name: "Nimbus", slug: "nimbus", logo: null, status: true },
+    { id: "b2", name: "Vertex", slug: "vertex", logo: null, status: true },
+    // Deliberately inactive, to demo FR-CAT-065/038: hidden from the buyer-facing brand list,
+    // but its products (p3, p6) remain fully browsable and its admin list row stays visible.
+    { id: "b3", name: "Aarohi", slug: "aarohi", logo: null, status: false },
+  ],
+
+  categories: [
+    { id: "c1", name: "Electronics", slug: "electronics", parentCategoryId: null, image: null, status: true },
+    { id: "c2", name: "Phones", slug: "phones", parentCategoryId: "c1", image: "Phones nav image", status: true },
+    { id: "c3", name: "Apparel", slug: "apparel", parentCategoryId: null, image: null, status: true },
+    { id: "c4", name: "Shirts", slug: "shirts", parentCategoryId: "c3", image: null, status: true },
+    // Deliberately inactive, to demo FR-CAT-063/026: hidden from buyer-facing nav, but its
+    // product (p6) is still directly browsable and its admin list row stays visible.
+    { id: "c5", name: "Home & Decor", slug: "home-decor", parentCategoryId: null, image: null, status: false },
+  ],
+
+  // One grouped document per category (Decision #14) — no more enum type/options/filterable flag.
+  categorySpecifications: [
+    {
+      id: "cs-c2",
+      categoryId: "c2",
+      specificationGroups: [
+        {
+          groupName: "Performance",
+          specifications: [
+            { name: "RAM", type: "text", unit: "GB", required: true },
+            { name: "Battery", type: "number", unit: "mAh", required: false },
+          ],
+        },
+      ],
+    },
+    {
+      id: "cs-c4",
+      categoryId: "c4",
+      specificationGroups: [
+        {
+          groupName: "Material & Fit",
+          specifications: [
+            { name: "Fabric", type: "text", required: false },
+            { name: "Fit", type: "text", required: false },
+          ],
+        },
+      ],
+    },
+  ],
+
+  // New collection (Decision #15) — a UI-rendering guide only for admin-app's variant editor,
+  // not server-validated against product variant attributes.
+  categoryVariants: [
+    {
+      id: "cv-c2",
+      categoryId: "c2",
+      variants: [
+        {
+          name: "Storage",
+          code: "storage",
+          type: "select",
+          required: true,
+          options: [
+            { label: "128GB", value: "128GB" },
+            { label: "256GB", value: "256GB" },
+          ],
+        },
+      ],
+    },
+    {
+      id: "cv-c4",
+      categoryId: "c4",
+      variants: [
+        {
+          name: "Color",
+          code: "color",
+          type: "color",
+          required: true,
+          options: [
+            { label: "Red", value: "Red" },
+            { label: "Blue", value: "Blue" },
+          ],
+        },
+        {
+          name: "Size",
+          code: "size",
+          type: "select",
+          required: true,
+          options: [
+            { label: "M", value: "M" },
+            { label: "L", value: "L" },
+          ],
+        },
+      ],
+    },
+  ],
+
+  products: [
+    {
+      id: "p1",
+      name: "Nimbus Aero X12",
+      slug: "nimbus-aero-x12",
+      sku: "NIM-AERO-X12",
+      description: "Flagship phone with a smooth 120Hz display and all-day battery.",
+      brandId: "b1",
+      categoryId: "c2",
+      images: ["Nimbus Aero X12"],
+      specifications: [
+        {
+          groupName: "Performance",
+          values: [
+            { name: "RAM", value: "8" },
+            { name: "Battery", value: 4500 },
+          ],
+        },
+      ],
+      mrp: 2999900,
+      discount: 0,
+      sellingPrice: 2999900,
+      stock: 0,
+      status: "published",
+      variants: [
+        {
+          id: "v1",
+          sku: "NIM-AERO-X12-128",
+          attributes: [{ name: "Storage", value: "128GB" }],
+          images: ["Nimbus Aero X12 — 128GB"],
+          mrp: 2999900,
+          discount: 10,
+          sellingPrice: 2699910,
+          stock: 15,
+          weight: 195,
+          active: true,
+        },
+        {
+          id: "v2",
+          sku: "NIM-AERO-X12-256",
+          attributes: [{ name: "Storage", value: "256GB" }],
+          images: [],
+          mrp: 3499900,
+          discount: 5,
+          sellingPrice: 3324905,
+          stock: 8,
+          weight: 195,
+          active: true,
+        },
+      ],
+    },
+    {
+      id: "p2",
+      name: "Vertex Flow Shirt",
+      slug: "vertex-flow-shirt",
+      sku: "VTX-FLOW-SHIRT",
+      description: "Breathable everyday shirt with a relaxed fit.",
+      brandId: "b2",
+      categoryId: "c4",
+      images: ["Vertex Flow Shirt"],
+      specifications: [
+        {
+          groupName: "Material & Fit",
+          values: [
+            { name: "Fabric", value: "Cotton" },
+            { name: "Fit", value: "Regular" },
+          ],
+        },
+      ],
+      mrp: 129900,
+      discount: 0,
+      sellingPrice: 129900,
+      stock: 0,
+      status: "published",
+      variants: [
+        {
+          id: "v3",
+          sku: "VTX-FLOW-SHIRT-RED-M",
+          attributes: [
+            { name: "Color", value: "Red" },
+            { name: "Size", value: "M" },
+          ],
+          images: ["Vertex Flow Shirt — Red"],
+          mrp: 129900,
+          discount: 20,
+          sellingPrice: 103920,
+          stock: 10,
+          weight: 220,
+          active: true,
+        },
+        {
+          id: "v4",
+          sku: "VTX-FLOW-SHIRT-RED-L",
+          attributes: [
+            { name: "Color", value: "Red" },
+            { name: "Size", value: "L" },
+          ],
+          images: [],
+          mrp: 129900,
+          discount: 20,
+          sellingPrice: 103920,
+          stock: 0,
+          weight: 230,
+          active: true,
+        },
+        {
+          id: "v5",
+          sku: "VTX-FLOW-SHIRT-BLUE-M",
+          attributes: [
+            { name: "Color", value: "Blue" },
+            { name: "Size", value: "M" },
+          ],
+          images: [],
+          mrp: 139900,
+          discount: 0,
+          sellingPrice: 139900,
+          stock: 6,
+          weight: 220,
+          active: true,
+        },
+      ],
+    },
+    {
+      id: "p3",
+      name: "Aarohi Classic Tee",
+      slug: "aarohi-classic-tee",
+      sku: "AAR-CLASSIC-TEE",
+      description: "Soft cotton tee for everyday wear.",
+      brandId: "b3",
+      categoryId: "c4",
+      images: ["Aarohi Classic Tee"],
+      specifications: [
+        {
+          groupName: "Material & Fit",
+          values: [
+            { name: "Fabric", value: "Linen" },
+            { name: "Fit", value: "Slim" },
+          ],
+        },
+      ],
+      mrp: 89900,
+      discount: 15,
+      sellingPrice: 76415,
+      stock: 24,
+      status: "published",
+      variants: [],
+    },
+    {
+      id: "p4",
+      name: "Nimbus Pulse Earbuds",
+      slug: "nimbus-pulse-earbuds",
+      sku: "NIM-PULSE-EB",
+      description: "True wireless earbuds with active noise cancellation.",
+      brandId: "b1",
+      categoryId: "c1",
+      images: ["Nimbus Pulse Earbuds"],
+      specifications: [],
+      mrp: 499900,
+      discount: 20,
+      sellingPrice: 399920,
+      stock: 40,
+      status: "published",
+      variants: [],
+    },
+    {
+      id: "p5",
+      name: "Vertex Trail Jacket",
+      slug: "vertex-trail-jacket",
+      sku: "VTX-TRAIL-JKT",
+      description: "Weatherproof jacket for outdoor trails.",
+      brandId: "b2",
+      categoryId: "c3",
+      images: ["Vertex Trail Jacket"],
+      specifications: [],
+      mrp: 349900,
+      discount: 0,
+      sellingPrice: 349900,
+      stock: 0,
+      status: "published",
+      variants: [],
+    },
+    {
+      id: "p6",
+      name: "Aarohi Studio Lamp",
+      slug: "aarohi-studio-lamp",
+      sku: "AAR-STUDIO-LAMP",
+      description: "Minimalist desk lamp with adjustable warmth.",
+      brandId: "b3",
+      categoryId: "c5",
+      images: ["Aarohi Studio Lamp"],
+      specifications: [],
+      mrp: 159900,
+      discount: 10,
+      sellingPrice: 143910,
+      stock: 18,
+      status: "published",
+      variants: [],
+    },
+    {
+      id: "p7",
+      name: "Nimbus Draft Phone",
+      slug: "nimbus-draft-phone",
+      sku: "NIM-DRAFT-PH",
+      description: "Unreleased phone still being finalized.",
+      brandId: "b1",
+      categoryId: "c2",
+      images: ["Nimbus Draft Phone"],
+      specifications: [
+        {
+          groupName: "Performance",
+          values: [
+            { name: "RAM", value: "6" },
+            { name: "Battery", value: 4000 },
+          ],
+        },
+      ],
+      mrp: 2499900,
+      discount: 0,
+      sellingPrice: 2499900,
+      stock: 5,
+      status: "draft",
+      variants: [],
+    },
+    {
+      id: "p8",
+      name: "Vertex Archived Jacket",
+      slug: "vertex-archived-jacket",
+      sku: "VTX-ARCH-JKT",
+      description: "Discontinued jacket, kept for order history.",
+      brandId: "b2",
+      categoryId: "c3",
+      images: ["Vertex Archived Jacket"],
+      specifications: [],
+      mrp: 299900,
+      discount: 0,
+      sellingPrice: 299900,
+      stock: 0,
+      status: "archived",
+      variants: [],
+    },
+  ],
+};

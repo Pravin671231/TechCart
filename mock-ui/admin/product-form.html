@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TechCart Admin — Product form</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body data-page="products" class="flex min-h-screen bg-neutral-50 text-neutral-900">
+    <div id="admin-nav"></div>
+
+    <main class="mx-auto flex-1 px-6 py-6">
+      <h1 id="form-title" class="mb-1 text-2xl font-semibold tracking-tight">New product</h1>
+      <p class="mb-6 text-sm text-neutral-500">Client-side validation only — mirrors the backend Zod schema described in the SRS, not shared code.</p>
+
+      <div id="saved-banner" class="mb-4 hidden rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        Saved (mock) — nothing is actually persisted in this prototype.
+      </div>
+
+      <form id="product-form" class="max-w-3xl space-y-8">
+        <!-- Basic info -->
+        <section class="rounded-lg border border-neutral-200 bg-white p-5">
+          <h2 class="mb-4 text-sm font-semibold text-neutral-700">Basic info</h2>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label class="block text-sm">
+              <span class="mb-1 block text-neutral-600">Name</span>
+              <input id="field-name" required class="w-full rounded-md border border-neutral-300 px-3 py-1.5" />
+            </label>
+            <label class="block text-sm">
+              <span class="mb-1 block text-neutral-600">SKU</span>
+              <input id="field-sku" required class="w-full rounded-md border border-neutral-300 px-3 py-1.5" />
+              <span id="sku-error" class="mt-1 hidden text-xs text-red-600">This SKU is already used by another product or variant.</span>
+            </label>
+            <label class="block text-sm">
+              <span class="mb-1 block text-neutral-600">Brand</span>
+              <select id="field-brand" required class="w-full rounded-md border border-neutral-300 px-3 py-1.5"></select>
+            </label>
+            <label class="block text-sm">
+              <span class="mb-1 block text-neutral-600">Category</span>
+              <select id="field-category" required class="w-full rounded-md border border-neutral-300 px-3 py-1.5"></select>
+            </label>
+            <label class="block text-sm">
+              <span class="mb-1 block text-neutral-600">Status</span>
+              <select id="field-status" class="w-full rounded-md border border-neutral-300 px-3 py-1.5">
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="archived">Archived</option>
+              </select>
+            </label>
+          </div>
+          <label class="mt-4 block text-sm">
+            <span class="mb-1 block text-neutral-600">Description</span>
+            <textarea id="field-description" rows="3" required class="w-full rounded-md border border-neutral-300 px-3 py-1.5"></textarea>
+          </label>
+        </section>
+
+        <!-- Pricing & stock -->
+        <section class="rounded-lg border border-neutral-200 bg-white p-5">
+          <h2 class="mb-4 text-sm font-semibold text-neutral-700">Base price &amp; stock</h2>
+          <p id="variant-price-note" class="mb-3 hidden rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            This product has variants — the fields below become "starting from" display values only (FR-CAT-050); each variant is sold at its own price/stock.
+          </p>
+          <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <label class="block text-sm">
+              <span class="mb-1 block text-neutral-600">MRP (₹)</span>
+              <input id="field-mrp" type="number" min="1" required class="w-full rounded-md border border-neutral-300 px-3 py-1.5" />
+            </label>
+            <label class="block text-sm">
+              <span class="mb-1 block text-neutral-600">Discount (%)</span>
+              <input id="field-discount" type="number" min="0" max="99" value="0" class="w-full rounded-md border border-neutral-300 px-3 py-1.5" />
+            </label>
+            <label class="block text-sm">
+              <span class="mb-1 block text-neutral-600">Selling price</span>
+              <input id="field-selling-price" disabled class="w-full rounded-md border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-neutral-500" />
+            </label>
+            <label class="block text-sm">
+              <span class="mb-1 block text-neutral-600">Stock</span>
+              <input id="field-stock" type="number" min="0" required class="w-full rounded-md border border-neutral-300 px-3 py-1.5" />
+            </label>
+          </div>
+        </section>
+
+        <!-- Images -->
+        <section class="rounded-lg border border-neutral-200 bg-white p-5">
+          <h2 class="mb-1 text-sm font-semibold text-neutral-700">Images</h2>
+          <p class="mb-3 text-xs text-neutral-500">1–8 images, JPEG/PNG/WebP (FR-CAT-028, 029).</p>
+          <input id="field-images" type="file" multiple accept="image/jpeg,image/png,image/webp" class="text-sm" />
+          <p id="image-count-error" class="mt-2 hidden text-xs text-red-600"></p>
+          <div id="image-previews" class="mt-3 flex flex-wrap gap-2"></div>
+        </section>
+
+        <!-- Specifications -->
+        <section class="rounded-lg border border-neutral-200 bg-white p-5">
+          <h2 class="mb-1 text-sm font-semibold text-neutral-700">Specifications</h2>
+          <p class="mb-3 text-xs text-neutral-500">Rendered grouped by the selected category's specificationGroups (FR-CAT-041, 043).</p>
+          <div id="spec-fields" class="grid grid-cols-1 gap-4 sm:grid-cols-2"></div>
+        </section>
+
+        <!-- Variants -->
+        <section class="rounded-lg border border-neutral-200 bg-white p-5">
+          <div class="mb-3 flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-semibold text-neutral-700">Variants</h2>
+              <p class="text-xs text-neutral-500">Each variant is a sellable item with its own SKU/price/stock, embedded on the product (FR-CAT-046–050, Decision #10). Attribute inputs render per the category's variant-type definitions when set on the Categories page, falling back to free-text otherwise (FR-CAT-066/067).</p>
+            </div>
+            <button type="button" id="add-variant-btn" class="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100">+ Add variant</button>
+          </div>
+          <div id="variant-rows" class="space-y-4"></div>
+        </section>
+
+        <div class="flex items-center gap-3">
+          <button type="submit" class="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700">Save product</button>
+          <a href="index.html" class="text-sm text-neutral-500 hover:underline">Cancel</a>
+        </div>
+      </form>
+    </main>
+
+    <script src="../shared/mock-data.js"></script>
+    <script src="../shared/helpers.js"></script>
+    <script src="../shared/admin-nav.js"></script>
+    <script src="js/product-form.js"></script>
+  </body>
+</html>

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TechCart Admin — Categories</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body data-page="categories" class="flex min-h-screen bg-neutral-50 text-neutral-900">
+    <div id="admin-nav"></div>
+
+    <main class="mx-auto flex-1 px-6 py-6">
+      <h1 class="mb-4 text-2xl font-semibold tracking-tight">Categories</h1>
+
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div class="lg:col-span-2 space-y-4">
+          <input
+            id="search-box"
+            type="search"
+            placeholder="Search by name..."
+            class="w-64 rounded-md border border-neutral-300 px-3 py-1.5 text-sm"
+          />
+
+          <div class="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+            <table class="w-full text-left text-sm">
+              <thead class="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-500">
+                <tr>
+                  <th class="px-3 py-2">Name</th>
+                  <th class="px-3 py-2">Parent</th>
+                  <th class="px-3 py-2">Products</th>
+                  <th class="px-3 py-2">Status</th>
+                  <th class="px-3 py-2"></th>
+                </tr>
+              </thead>
+              <tbody id="category-rows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="rounded-lg border border-neutral-200 bg-white p-5">
+            <h2 id="form-heading" class="mb-3 text-sm font-semibold text-neutral-700">New category</h2>
+            <form id="category-form" class="space-y-3">
+              <label class="block text-sm">
+                <span class="mb-1 block text-neutral-600">Name</span>
+                <input id="cat-name" required class="w-full rounded-md border border-neutral-300 px-3 py-1.5" />
+              </label>
+              <label class="block text-sm">
+                <span class="mb-1 block text-neutral-600">Parent category (optional)</span>
+                <select id="cat-parent" class="w-full rounded-md border border-neutral-300 px-3 py-1.5">
+                  <option value="">None (top-level)</option>
+                </select>
+              </label>
+              <label class="block text-sm">
+                <span class="mb-1 block text-neutral-600">Nav image (optional)</span>
+                <input id="cat-image" type="file" accept="image/jpeg,image/png,image/webp" class="w-full text-sm" />
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <input id="cat-status" type="checkbox" checked class="rounded border-neutral-300" />
+                <span class="text-neutral-600">Active (visible in buyer-facing nav)</span>
+              </label>
+              <div class="flex items-center gap-2">
+                <button type="submit" class="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-700">Save</button>
+                <button type="button" id="cancel-edit-btn" class="hidden text-sm text-neutral-500 hover:underline">Cancel edit</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="variant-types-panel" class="hidden rounded-lg border border-neutral-200 bg-white p-5">
+            <h2 class="mb-1 text-sm font-semibold text-neutral-700">Variant types for <span id="variant-types-category-name"></span></h2>
+            <p class="mb-3 text-xs text-neutral-500">
+              Drives the product variant editor's rendering only — not server-validated (FR-CAT-066/067). Removing one is never blocked.
+            </p>
+            <div id="variant-type-rows" class="mb-4 space-y-2"></div>
+            <div class="space-y-2 rounded-md border border-dashed border-neutral-300 p-3">
+              <div class="grid grid-cols-2 gap-2">
+                <input id="vt-name" placeholder="Name (e.g. Color)" class="rounded-md border border-neutral-300 px-2 py-1 text-sm" />
+                <input id="vt-code" placeholder="Code (e.g. color)" class="rounded-md border border-neutral-300 px-2 py-1 text-sm" />
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <select id="vt-type" class="rounded-md border border-neutral-300 px-2 py-1 text-sm">
+                  <option value="select">select</option>
+                  <option value="color">color</option>
+                  <option value="text">text</option>
+                  <option value="number">number</option>
+                </select>
+                <label class="flex items-center gap-2 text-xs text-neutral-600">
+                  <input id="vt-required" type="checkbox" class="rounded border-neutral-300" /> Required (UI hint only)
+                </label>
+              </div>
+              <input id="vt-options" placeholder="Options for select/color, e.g. Red:Red, Blue:Blue" class="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm" />
+              <button type="button" id="add-variant-type-btn" class="rounded-md border border-neutral-300 px-3 py-1.5 text-xs hover:bg-neutral-100">+ Add variant type</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="../shared/mock-data.js"></script>
+    <script src="../shared/helpers.js"></script>
+    <script src="../shared/admin-nav.js"></script>
+    <script src="js/categories.js"></script>
+  </body>
+</html>
