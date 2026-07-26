@@ -3,70 +3,150 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TechCart Admin — Product detail</title>
+    <title>TechCart Admin — Product preview</title>
+    <script>
+      (function () {
+        var stored = localStorage.getItem("techcart-admin-theme");
+        var dark =
+          stored === "dark" ||
+          (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+      })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: "class" };
+    </script>
   </head>
-  <body data-page="products" class="flex min-h-screen bg-neutral-50 text-neutral-900">
+  <body
+    data-page="products"
+    class="h-[100dvh] overflow-hidden bg-neutral-50 text-neutral-900 dark:bg-slate-950 dark:text-slate-100"
+  >
+    <div id="admin-header"></div>
     <div id="admin-nav"></div>
 
-    <main class="mx-auto flex-1 px-6 py-6">
-      <div id="not-found" class="hidden rounded-lg border border-dashed border-neutral-300 py-16 text-center">
-        <p class="text-sm font-medium text-neutral-600">Product not found.</p>
-        <a href="index.html" class="mt-2 inline-block text-sm text-neutral-900 underline">Back to products</a>
+    <main
+      data-admin-main
+      class="h-[calc(100dvh-4rem)] overflow-y-auto px-4 py-6 transition-[margin] duration-200 sm:px-6 lg:ml-64"
+    >
+      <div
+        id="not-found"
+        class="hidden rounded-lg border border-dashed border-neutral-300 py-16 text-center dark:border-slate-700"
+      >
+        <p class="text-sm font-medium text-neutral-600 dark:text-slate-400">Product not found.</p>
+        <a
+          href="index.html"
+          class="mt-2 inline-block text-sm text-indigo-600 underline dark:text-indigo-400"
+          >Back to products</a
+        >
       </div>
 
       <div id="detail-content" class="hidden max-w-3xl space-y-6">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p class="text-xs text-neutral-500">
-              <a href="index.html" class="hover:underline">Products</a> / <span id="product-name"></span>
-            </p>
+            <nav aria-label="Breadcrumb" class="text-xs text-neutral-500 dark:text-slate-400">
+              <a href="index.html" class="hover:underline">Home</a> /
+              <a href="index.html" class="hover:underline">Products</a> /
+              <span
+                id="product-name"
+                class="font-medium text-indigo-600 dark:text-indigo-400"
+                aria-current="page"
+              ></span>
+            </nav>
             <div class="mt-1 flex items-center gap-2">
               <h1 id="product-name-heading" class="text-2xl font-semibold tracking-tight"></h1>
               <span id="status-badge"></span>
             </div>
           </div>
-          <a id="edit-link" href="#" class="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700">Edit product</a>
+          <a
+            id="edit-link"
+            href="#"
+            class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+            >Edit product</a
+          >
         </div>
 
-        <p class="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          Read-only detail view — shows every field regardless of status (draft/published/archived), distinct from the create/edit form (FR-CAT-068).
+        <p
+          class="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+        >
+          Read-only preview — shows every field regardless of status (draft/published/archived),
+          distinct from the create/edit wizard (FR-CAT-068).
         </p>
 
-        <section class="rounded-lg border border-neutral-200 bg-white p-5">
-          <h2 class="mb-3 text-sm font-semibold text-neutral-700">Basic info</h2>
+        <section
+          class="rounded-lg border border-neutral-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+        >
+          <h2 class="mb-3 text-sm font-semibold">Basic info</h2>
           <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-            <div><dt class="text-neutral-500">SKU</dt><dd id="detail-sku" class="font-medium"></dd></div>
-            <div><dt class="text-neutral-500">Brand</dt><dd id="detail-brand" class="font-medium"></dd></div>
-            <div><dt class="text-neutral-500">Category</dt><dd id="detail-category" class="font-medium"></dd></div>
-            <div><dt class="text-neutral-500">Slug</dt><dd id="detail-slug" class="font-medium"></dd></div>
+            <div>
+              <dt class="text-neutral-500 dark:text-slate-400">SKU</dt>
+              <dd id="detail-sku" class="font-medium"></dd>
+            </div>
+            <div>
+              <dt class="text-neutral-500 dark:text-slate-400">Brand</dt>
+              <dd id="detail-brand" class="font-medium"></dd>
+            </div>
+            <div>
+              <dt class="text-neutral-500 dark:text-slate-400">Category</dt>
+              <dd id="detail-category" class="font-medium"></dd>
+            </div>
+            <div>
+              <dt class="text-neutral-500 dark:text-slate-400">Slug</dt>
+              <dd id="detail-slug" class="font-medium"></dd>
+            </div>
           </dl>
-          <p class="mt-3 text-sm text-neutral-600"><span class="text-neutral-500">Description:</span> <span id="detail-description"></span></p>
+          <p class="mt-3 text-sm text-neutral-600 dark:text-slate-400">
+            <span class="text-neutral-500 dark:text-slate-500">Description:</span>
+            <span id="detail-description"></span>
+          </p>
         </section>
 
-        <section class="rounded-lg border border-neutral-200 bg-white p-5">
-          <h2 class="mb-3 text-sm font-semibold text-neutral-700">Price &amp; stock</h2>
+        <section
+          class="rounded-lg border border-neutral-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+        >
+          <h2 class="mb-3 text-sm font-semibold">Price &amp; stock</h2>
           <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-            <div><dt class="text-neutral-500">MRP</dt><dd id="detail-mrp" class="font-medium"></dd></div>
-            <div><dt class="text-neutral-500">Discount</dt><dd id="detail-discount" class="font-medium"></dd></div>
-            <div><dt class="text-neutral-500">Selling price</dt><dd id="detail-selling-price" class="font-medium"></dd></div>
-            <div><dt class="text-neutral-500">Stock</dt><dd id="detail-stock" class="font-medium"></dd></div>
+            <div>
+              <dt class="text-neutral-500 dark:text-slate-400">MRP</dt>
+              <dd id="detail-mrp" class="font-medium"></dd>
+            </div>
+            <div>
+              <dt class="text-neutral-500 dark:text-slate-400">Discount</dt>
+              <dd id="detail-discount" class="font-medium"></dd>
+            </div>
+            <div>
+              <dt class="text-neutral-500 dark:text-slate-400">Selling price</dt>
+              <dd id="detail-selling-price" class="font-medium"></dd>
+            </div>
+            <div>
+              <dt class="text-neutral-500 dark:text-slate-400">Stock</dt>
+              <dd id="detail-stock" class="font-medium"></dd>
+            </div>
           </dl>
-          <p id="starting-from-note" class="mt-2 hidden text-xs text-amber-700">This product has active variants — the fields above are "starting from" display values only (FR-CAT-050); each variant sells at its own price/stock.</p>
+          <p id="starting-from-note" class="mt-2 hidden text-xs text-amber-700 dark:text-amber-300">
+            This product has active variants — the fields above are "starting from" display values
+            only (FR-CAT-050); each variant sells at its own price/stock.
+          </p>
         </section>
 
-        <section class="rounded-lg border border-neutral-200 bg-white p-5">
-          <h2 class="mb-3 text-sm font-semibold text-neutral-700">Images</h2>
+        <section
+          class="rounded-lg border border-neutral-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+        >
+          <h2 class="mb-3 text-sm font-semibold">Images</h2>
           <div id="detail-images" class="flex flex-wrap gap-2"></div>
         </section>
 
-        <section class="rounded-lg border border-neutral-200 bg-white p-5">
-          <h2 class="mb-3 text-sm font-semibold text-neutral-700">Specifications</h2>
+        <section
+          class="rounded-lg border border-neutral-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+        >
+          <h2 class="mb-3 text-sm font-semibold">Specifications</h2>
           <div id="detail-specs" class="text-sm"></div>
         </section>
 
-        <section class="rounded-lg border border-neutral-200 bg-white p-5">
-          <h2 class="mb-3 text-sm font-semibold text-neutral-700">Variants</h2>
+        <section
+          class="rounded-lg border border-neutral-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+        >
+          <h2 class="mb-3 text-sm font-semibold">Variants</h2>
           <div id="detail-variants" class="overflow-x-auto"></div>
         </section>
       </div>
@@ -74,7 +154,10 @@
 
     <script src="../shared/mock-data.js"></script>
     <script src="../shared/helpers.js"></script>
+    <script src="../shared/admin-shell.js"></script>
     <script src="../shared/admin-nav.js"></script>
+    <script src="../shared/admin-header.js"></script>
+    <script src="../shared/admin-table.js"></script>
     <script src="js/product-detail.js"></script>
   </body>
 </html>

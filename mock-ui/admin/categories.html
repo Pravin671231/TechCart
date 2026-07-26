@@ -4,33 +4,61 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TechCart Admin — Categories</title>
+    <script>
+      (function () {
+        var stored = localStorage.getItem("techcart-admin-theme");
+        var dark =
+          stored === "dark" ||
+          (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+      })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: "class" };
+    </script>
   </head>
-  <body data-page="categories" class="flex min-h-screen bg-neutral-50 text-neutral-900">
+  <body
+    data-page="categories"
+    class="h-[100dvh] overflow-hidden bg-neutral-50 text-neutral-900 dark:bg-slate-950 dark:text-slate-100"
+  >
+    <div id="admin-header"></div>
     <div id="admin-nav"></div>
 
-    <main class="mx-auto flex-1 px-6 py-6">
-      <h1 class="mb-4 text-2xl font-semibold tracking-tight">Categories</h1>
+    <main
+      data-admin-main
+      class="h-[calc(100dvh-4rem)] overflow-y-auto px-4 py-6 transition-[margin] duration-200 sm:px-6 lg:ml-64"
+    >
+      <nav aria-label="Breadcrumb" class="mb-1 text-xs text-neutral-500 dark:text-slate-400">
+        <a href="index.html" class="hover:underline">Home</a> /
+        <span class="font-medium text-indigo-600 dark:text-indigo-400" aria-current="page"
+          >Categories</span
+        >
+      </nav>
+
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 class="text-2xl font-semibold tracking-tight">Categories</h1>
+        <button type="button" id="add-btn" class="ta-btn-primary">+ New category</button>
+      </div>
 
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div class="lg:col-span-2 space-y-4">
+        <div class="space-y-4 lg:col-span-2">
+          <label for="search-box" class="sr-only">Search categories by name</label>
           <input
             id="search-box"
             type="search"
             placeholder="Search by name..."
-            class="w-64 rounded-md border border-neutral-300 px-3 py-1.5 text-sm"
+            class="ta-input w-64"
           />
 
-          <div class="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+          <div
+            class="overflow-x-auto rounded-lg border border-neutral-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+          >
             <table class="w-full text-left text-sm">
-              <thead class="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-500">
-                <tr>
-                  <th class="px-3 py-2">Name</th>
-                  <th class="px-3 py-2">Parent</th>
-                  <th class="px-3 py-2">Products</th>
-                  <th class="px-3 py-2">Status</th>
-                  <th class="px-3 py-2"></th>
-                </tr>
+              <thead
+                class="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400"
+              >
+                <tr id="category-head"></tr>
               </thead>
               <tbody id="category-rows"></tbody>
             </table>
@@ -38,67 +66,119 @@
         </div>
 
         <div class="space-y-4">
-          <div class="rounded-lg border border-neutral-200 bg-white p-5">
-            <h2 id="form-heading" class="mb-3 text-sm font-semibold text-neutral-700">New category</h2>
+          <div
+            class="rounded-lg border border-neutral-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+          >
+            <h2 id="form-heading" class="mb-3 text-sm font-semibold">New category</h2>
             <form id="category-form" class="space-y-3">
               <label class="block text-sm">
-                <span class="mb-1 block text-neutral-600">Name</span>
-                <input id="cat-name" required class="w-full rounded-md border border-neutral-300 px-3 py-1.5" />
+                <span class="mb-1 block text-neutral-600 dark:text-slate-400">Name</span>
+                <input id="cat-name" required class="ta-input" />
               </label>
               <label class="block text-sm">
-                <span class="mb-1 block text-neutral-600">Parent category (optional)</span>
-                <select id="cat-parent" class="w-full rounded-md border border-neutral-300 px-3 py-1.5">
+                <span class="mb-1 block text-neutral-600 dark:text-slate-400"
+                  >Parent category (optional)</span
+                >
+                <select id="cat-parent" class="ta-input">
                   <option value="">None (top-level)</option>
                 </select>
               </label>
               <label class="block text-sm">
-                <span class="mb-1 block text-neutral-600">Nav image (optional)</span>
-                <input id="cat-image" type="file" accept="image/jpeg,image/png,image/webp" class="w-full text-sm" />
+                <span class="mb-1 block text-neutral-600 dark:text-slate-400"
+                  >Nav image (optional)</span
+                >
+                <input
+                  id="cat-image"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  class="w-full text-sm"
+                />
               </label>
               <label class="flex items-center gap-2 text-sm">
                 <input id="cat-status" type="checkbox" checked class="rounded border-neutral-300" />
-                <span class="text-neutral-600">Active (visible in buyer-facing nav)</span>
+                <span class="text-neutral-600 dark:text-slate-400"
+                  >Active (visible in buyer-facing nav)</span
+                >
               </label>
               <div class="flex items-center gap-2">
-                <button type="submit" class="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-700">Save</button>
-                <button type="button" id="cancel-edit-btn" class="hidden text-sm text-neutral-500 hover:underline">Cancel edit</button>
+                <button type="submit" class="ta-btn-primary">Save</button>
+                <button
+                  type="button"
+                  id="cancel-edit-btn"
+                  class="hidden text-sm text-neutral-500 hover:underline dark:text-slate-400"
+                >
+                  Cancel edit
+                </button>
               </div>
             </form>
           </div>
 
-          <div id="variant-types-panel" class="hidden rounded-lg border border-neutral-200 bg-white p-5">
-            <h2 class="mb-1 text-sm font-semibold text-neutral-700">Variant types for <span id="variant-types-category-name"></span></h2>
-            <p class="mb-3 text-xs text-neutral-500">
-              Drives the product variant editor's rendering only — not server-validated (FR-CAT-066/067). Removing one is never blocked.
+          <div
+            id="variant-types-panel"
+            class="hidden rounded-lg border border-neutral-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+          >
+            <h2 class="mb-1 text-sm font-semibold">
+              Variant types for <span id="variant-types-category-name"></span>
+            </h2>
+            <p class="mb-3 text-xs text-neutral-500 dark:text-slate-400">
+              Drives the product wizard's step 3 rendering only — not server-validated
+              (FR-CAT-066/067). Removing one is never blocked.
             </p>
             <div id="variant-type-rows" class="mb-4 space-y-2"></div>
-            <div class="space-y-2 rounded-md border border-dashed border-neutral-300 p-3">
+            <div
+              class="space-y-2 rounded-md border border-dashed border-neutral-300 p-3 dark:border-slate-700"
+            >
               <div class="grid grid-cols-2 gap-2">
-                <input id="vt-name" placeholder="Name (e.g. Color)" class="rounded-md border border-neutral-300 px-2 py-1 text-sm" />
-                <input id="vt-code" placeholder="Code (e.g. color)" class="rounded-md border border-neutral-300 px-2 py-1 text-sm" />
+                <input id="vt-name" placeholder="Name (e.g. Color)" class="ta-input" />
+                <input id="vt-code" placeholder="Code (e.g. color)" class="ta-input" />
               </div>
               <div class="grid grid-cols-2 gap-2">
-                <select id="vt-type" class="rounded-md border border-neutral-300 px-2 py-1 text-sm">
+                <select id="vt-type" class="ta-input">
                   <option value="select">select</option>
                   <option value="color">color</option>
                   <option value="text">text</option>
                   <option value="number">number</option>
                 </select>
-                <label class="flex items-center gap-2 text-xs text-neutral-600">
-                  <input id="vt-required" type="checkbox" class="rounded border-neutral-300" /> Required (UI hint only)
+                <label class="flex items-center gap-2 text-xs text-neutral-600 dark:text-slate-400">
+                  <input id="vt-required" type="checkbox" class="rounded border-neutral-300" />
+                  Required (UI hint only)
                 </label>
               </div>
-              <input id="vt-options" placeholder="Options for select/color, e.g. Red:Red, Blue:Blue" class="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm" />
-              <button type="button" id="add-variant-type-btn" class="rounded-md border border-neutral-300 px-3 py-1.5 text-xs hover:bg-neutral-100">+ Add variant type</button>
+              <input
+                id="vt-options"
+                placeholder="Options for select/color, e.g. Red:Red, Blue:Blue"
+                class="ta-input"
+              />
+              <button
+                type="button"
+                id="add-variant-type-btn"
+                class="rounded-md border border-indigo-300 px-3 py-1.5 text-xs text-indigo-700 hover:bg-indigo-50 dark:border-indigo-500/50 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
+              >
+                + Add variant type
+              </button>
             </div>
           </div>
         </div>
       </div>
     </main>
 
+    <style type="text/tailwindcss">
+      @layer components {
+        .ta-input {
+          @apply w-full rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm focus-visible:border-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:border-indigo-500 dark:focus-visible:ring-indigo-500/40;
+        }
+        .ta-btn-primary {
+          @apply rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 dark:bg-indigo-500 dark:hover:bg-indigo-400;
+        }
+      }
+    </style>
+
     <script src="../shared/mock-data.js"></script>
     <script src="../shared/helpers.js"></script>
+    <script src="../shared/admin-shell.js"></script>
     <script src="../shared/admin-nav.js"></script>
+    <script src="../shared/admin-header.js"></script>
+    <script src="../shared/admin-table.js"></script>
     <script src="js/categories.js"></script>
   </body>
 </html>

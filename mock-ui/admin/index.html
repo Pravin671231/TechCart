@@ -4,59 +4,100 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TechCart Admin — Products</title>
+    <script>
+      // Applied before first paint — a flash of the wrong theme is a defect
+      // (docs/ui/admin-app.md section 2.2).
+      (function () {
+        var stored = localStorage.getItem("techcart-admin-theme");
+        var dark =
+          stored === "dark" ||
+          (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+      })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: "class" };
+    </script>
   </head>
-  <body data-page="products" class="flex min-h-screen bg-neutral-50 text-neutral-900">
+  <body
+    data-page="products"
+    class="h-[100dvh] overflow-hidden bg-neutral-50 text-neutral-900 dark:bg-slate-950 dark:text-slate-100"
+  >
+    <div id="admin-header"></div>
     <div id="admin-nav"></div>
 
-    <main class="flex-1 px-6 py-6">
-      <div class="mb-4 flex items-center justify-between">
+    <main
+      data-admin-main
+      class="h-[calc(100dvh-4rem)] overflow-y-auto px-4 py-6 transition-[margin] duration-200 sm:px-6 lg:ml-64"
+    >
+      <nav aria-label="Breadcrumb" class="mb-1 text-xs text-neutral-500 dark:text-slate-400">
+        <a href="index.html" class="rounded hover:underline">Home</a> /
+        <span class="font-medium text-indigo-600 dark:text-indigo-400" aria-current="page"
+          >Products</span
+        >
+      </nav>
+
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 class="text-2xl font-semibold tracking-tight">Products</h1>
-        <a href="product-form.html" class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500">+ New product</a>
+        <a
+          href="product-form.html"
+          class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+          >+ New product</a
+        >
       </div>
 
       <div class="mb-4 flex flex-wrap items-center gap-3">
+        <label for="search-box" class="sr-only">Search products by name or SKU</label>
         <input
           id="search-box"
           type="search"
           placeholder="Search by name or SKU..."
-          class="w-64 rounded-md border border-neutral-300 px-3 py-1.5 text-sm"
+          class="w-64 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm focus-visible:border-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-indigo-500/40"
         />
-        <select id="status-filter" class="rounded-md border border-neutral-300 px-2 py-1.5 text-sm">
+        <label for="status-filter" class="sr-only">Filter by status</label>
+        <select
+          id="status-filter"
+          class="rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-sm focus-visible:border-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+        >
           <option value="">All statuses</option>
           <option value="draft">Draft</option>
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
-        <p id="result-count" class="ml-auto text-sm text-neutral-500"></p>
+        <p
+          id="result-count"
+          aria-live="polite"
+          class="ml-auto text-sm text-neutral-500 dark:text-slate-400"
+        ></p>
       </div>
 
-      <div class="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+      <div
+        class="overflow-x-auto rounded-lg border border-neutral-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+      >
         <table class="w-full text-left text-sm">
-          <thead class="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-500">
-            <tr>
-              <th class="px-3 py-2">Image</th>
-              <th class="px-3 py-2">Name</th>
-              <th class="px-3 py-2">SKU</th>
-              <th class="px-3 py-2">Brand</th>
-              <th class="px-3 py-2">Category</th>
-              <th class="px-3 py-2">Price</th>
-              <th class="px-3 py-2">Stock</th>
-              <th class="px-3 py-2">Status</th>
-              <th class="px-3 py-2"></th>
-            </tr>
+          <thead
+            class="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400"
+          >
+            <tr id="product-head"></tr>
           </thead>
           <tbody id="product-rows"></tbody>
         </table>
       </div>
 
-      <div id="pagination-container" class="mt-4 flex justify-center gap-2"></div>
+      <nav
+        id="pagination-container"
+        aria-label="Pagination"
+        class="mt-4 flex justify-center gap-2"
+      ></nav>
     </main>
 
     <script src="../shared/mock-data.js"></script>
     <script src="../shared/helpers.js"></script>
+    <script src="../shared/admin-shell.js"></script>
     <script src="../shared/admin-nav.js"></script>
-    <script src="../shared/product-grid.js"></script>
+    <script src="../shared/admin-header.js"></script>
+    <script src="../shared/admin-table.js"></script>
     <script src="js/products.js"></script>
   </body>
 </html>

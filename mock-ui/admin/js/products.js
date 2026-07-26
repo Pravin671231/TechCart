@@ -1,76 +1,121 @@
-// Admin product list (admin/index.html) — FR-CAT-017.
+// Admin product list — every status visible (FR-CAT-017), unlike any
+// buyer-facing endpoint. Built to docs/ui/admin-app.md section 5.1: sortable
+// columns, the product name links to the preview page, pagination below.
 
 (function () {
   const H = window.MockHelpers;
-  const MOCK = window.MOCK;
+  const T = window.AdminTable;
 
-  const state = { query: "", status: "", page: 1, pageSize: 6 };
+  const headRow = document.getElementById("product-head");
+  const tbody = document.getElementById("product-rows");
+  const searchBox = document.getElementById("search-box");
+  const statusFilter = document.getElementById("status-filter");
+  const resultCount = document.getElementById("result-count");
+  const pagination = document.getElementById("pagination-container");
 
-  const rowsEl = document.getElementById("product-rows");
-  const paginationEl = document.getElementById("pagination-container");
-  const resultCountEl = document.getElementById("result-count");
+  const COLUMNS = [
+    { key: null, label: "Image", sortable: false },
+    { key: "name", label: "Name", sortable: true },
+    { key: "sku", label: "SKU", sortable: true },
+    { key: "brand", label: "Brand", sortable: true },
+    { key: "category", label: "Category", sortable: true },
+    { key: "price", label: "Price", sortable: true },
+    { key: "stock", label: "Stock", sortable: true },
+    { key: "status", label: "Status", sortable: true },
+    { key: null, label: "Actions", sortable: false },
+  ];
 
-  function statusBadge(status) {
-    const styles = {
-      draft: "bg-neutral-100 text-neutral-600",
-      published: "bg-emerald-100 text-emerald-700",
-      archived: "bg-red-100 text-red-700",
-    };
-    return `<span class="rounded px-2 py-0.5 text-xs font-medium ${styles[status]}">${status}</span>`;
+  const SORT_ACCESSORS = {
+    name: (p) => p.name,
+    sku: (p) => p.sku,
+    brand: (p) => (H.getBrandById(p.brandId) || {}).name || "",
+    category: (p) => (H.getCategoryById(p.categoryId) || {}).name || "",
+    price: (p) => H.getDisplayPrice(p).sellingPrice,
+    stock: (p) => H.getDisplayStock(p),
+    status: (p) => p.status,
+  };
+
+  // The header search submits ?q=, so a search result is a linkable URL
+  // (docs/ui/admin-app.md section 3.1).
+  const params = new URLSearchParams(window.location.search);
+
+  const state = {
+    query: params.get("q") || "",
+    status: "",
+    sort: { key: null, dir: null },
+    page: 1,
+    pageSize: 10,
+  };
+
+  searchBox.value = state.query;
+
+  function filtered() {
+    const q = state.query.trim().toLowerCase();
+    let rows = window.MOCK.products.slice();
+    if (q) {
+      rows = rows.filter(
+        (p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q),
+      );
+    }
+    if (state.status) {
+      rows = rows.filter((p) => p.status === state.status);
+    }
+    return T.applySort(rows, state.sort, SORT_ACCESSORS);
+  }
+
+  function row(product) {
+    const brand = H.getBrandById(product.brandId);
+    const category = H.getCategoryById(product.categoryId);
+    const display = H.getDisplayPrice(product);
+    const stock = H.getDisplayStock(product);
+    const variantCount = H.getVariantsForProduct(product.id).length;
+
+    return `
+      <tr class="border-b border-neutral-100 last:border-0 dark:border-slate-800">
+        <td class="px-3 py-2">
+          <div class="flex h-10 w-10 items-center justify-center rounded bg-neutral-100 text-[10px] text-neutral-400 dark:bg-slate-800 dark:text-slate-500">IMG</div>
+        </td>
+        <td class="px-3 py-2">
+          <a
+            href="product-detail.html?id=${encodeURIComponent(product.id)}"
+            class="font-medium text-indigo-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 dark:text-indigo-400"
+          >${product.name}</a>
+          ${variantCount > 0 ? `<p class="text-xs text-neutral-400 dark:text-slate-500">${variantCount} variants</p>` : ""}
+        </td>
+        <td class="px-3 py-2 text-neutral-600 dark:text-slate-400">${product.sku}</td>
+        <td class="px-3 py-2 text-neutral-600 dark:text-slate-400">${brand ? brand.name : "—"}</td>
+        <td class="px-3 py-2 text-neutral-600 dark:text-slate-400">${category ? category.name : "—"}</td>
+        <td class="px-3 py-2">${display.isStartingFrom ? "From " : ""}${H.formatINR(display.sellingPrice)}</td>
+        <td class="px-3 py-2 ${stock === 0 ? "text-red-600 dark:text-red-400" : ""}">${stock}</td>
+        <td class="px-3 py-2">${T.statusBadge(product.status)}</td>
+        <td class="px-3 py-2">
+          <a href="product-form.html?id=${encodeURIComponent(product.id)}" class="text-sm text-neutral-600 hover:underline dark:text-slate-400">Edit</a>
+        </td>
+      </tr>
+    `;
   }
 
   function render() {
-    // Admin grid shows every status, unlike the buyer-facing endpoints (FR-CAT-017 vs FR-CAT-009).
-    let results = MOCK.products.slice();
+    T.renderHead(headRow, COLUMNS, state.sort, (next) => {
+      state.sort = next;
+      state.page = 1;
+      render();
+    });
 
-    if (state.status) results = results.filter((p) => p.status === state.status);
-    if (state.query) {
-      const q = state.query.trim().toLowerCase();
-      results = results.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
-    }
-
-    resultCountEl.textContent = `${results.length} product${results.length === 1 ? "" : "s"}`;
-
+    const rows = filtered();
     const start = (state.page - 1) * state.pageSize;
-    const pageResults = results.slice(start, start + state.pageSize);
+    const pageRows = rows.slice(start, start + state.pageSize);
 
-    if (pageResults.length === 0) {
-      rowsEl.innerHTML = `<tr><td colspan="9" class="px-3 py-8 text-center text-neutral-400">No products match this search/filter.</td></tr>`;
-    } else {
-      rowsEl.innerHTML = pageResults
-        .map((p) => {
-          const brand = H.getBrandById(p.brandId);
-          const category = H.getCategoryById(p.categoryId);
-          const display = H.getDisplayPrice(p);
-          const stock = H.getDisplayStock(p);
-          const variantCount = H.getVariantsForProduct(p.id).length;
-          return `
-            <tr class="border-b border-neutral-100 last:border-0">
-              <td class="px-3 py-2"><div class="flex h-10 w-10 items-center justify-center rounded bg-neutral-100 text-[10px] text-neutral-400">IMG</div></td>
-              <td class="px-3 py-2">
-                <p class="font-medium">${p.name}</p>
-                ${variantCount > 0 ? `<p class="text-xs text-neutral-400">${variantCount} variant${variantCount === 1 ? "" : "s"}</p>` : ""}
-              </td>
-              <td class="px-3 py-2 text-neutral-500">${p.sku}</td>
-              <td class="px-3 py-2">${brand ? brand.name : "—"}</td>
-              <td class="px-3 py-2">${category ? category.name : "—"}</td>
-              <td class="px-3 py-2">${display.isStartingFrom ? "From " : ""}${H.formatINR(display.sellingPrice)}</td>
-              <td class="px-3 py-2 ${stock === 0 ? "text-red-600" : ""}">${stock}</td>
-              <td class="px-3 py-2">${statusBadge(p.status)}</td>
-              <td class="px-3 py-2 text-right">
-                <a href="product-detail.html?id=${p.id}" class="mr-3 text-sm text-neutral-600 underline hover:text-neutral-900">View</a>
-                <a href="product-form.html?id=${p.id}" class="text-sm text-neutral-600 underline hover:text-neutral-900">Edit</a>
-              </td>
-            </tr>
-          `;
-        })
-        .join("");
-    }
+    tbody.innerHTML = pageRows.length
+      ? pageRows.map(row).join("")
+      : `<tr><td colspan="${COLUMNS.length}" class="px-3 py-10 text-center text-sm text-neutral-400 dark:text-slate-500">No products match this search/filter.</td></tr>`;
 
-    window.ProductGrid.renderPagination(paginationEl, {
+    resultCount.textContent = `${rows.length} product${rows.length === 1 ? "" : "s"}`;
+
+    T.renderPagination(pagination, {
       page: state.page,
       pageSize: state.pageSize,
-      total: results.length,
+      total: rows.length,
       onPageChange: (page) => {
         state.page = page;
         render();
@@ -78,13 +123,16 @@
     });
   }
 
-  document.getElementById("search-box").addEventListener("input", (e) => {
-    state.query = e.target.value;
+  // Any filter change resets to page 1; sorting leaves filters alone
+  // (docs/ui/admin-app.md section 6.2).
+  searchBox.addEventListener("input", () => {
+    state.query = searchBox.value;
     state.page = 1;
     render();
   });
-  document.getElementById("status-filter").addEventListener("change", (e) => {
-    state.status = e.target.value;
+
+  statusFilter.addEventListener("change", () => {
+    state.status = statusFilter.value;
     state.page = 1;
     render();
   });

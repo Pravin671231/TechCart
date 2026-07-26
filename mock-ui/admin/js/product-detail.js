@@ -14,16 +14,13 @@
   }
   document.getElementById("detail-content").classList.remove("hidden");
 
-  const statusStyles = {
-    draft: "bg-neutral-100 text-neutral-600",
-    published: "bg-emerald-100 text-emerald-700",
-    archived: "bg-red-100 text-red-700",
-  };
+  const T = window.AdminTable;
 
   function renderHeader() {
     document.getElementById("product-name").textContent = product.name;
     document.getElementById("product-name-heading").textContent = product.name;
-    document.getElementById("status-badge").innerHTML = `<span class="rounded px-2 py-0.5 text-xs font-medium ${statusStyles[product.status]}">${product.status}</span>`;
+    document.title = `TechCart Admin — ${product.name}`;
+    document.getElementById("status-badge").innerHTML = T.statusBadge(product.status);
     document.getElementById("edit-link").href = `product-form.html?id=${product.id}`;
   }
 
@@ -42,14 +39,18 @@
     const hasVariants = (product.variants || []).some((v) => v.active);
     document.getElementById("detail-mrp").textContent = H.formatINR(product.mrp);
     document.getElementById("detail-discount").textContent = `${product.discount}%`;
-    document.getElementById("detail-selling-price").textContent = `${display.isStartingFrom ? "From " : ""}${H.formatINR(display.sellingPrice)}`;
+    document.getElementById("detail-selling-price").textContent =
+      `${display.isStartingFrom ? "From " : ""}${H.formatINR(display.sellingPrice)}`;
     document.getElementById("detail-stock").textContent = H.getDisplayStock(product);
     document.getElementById("starting-from-note").classList.toggle("hidden", !hasVariants);
   }
 
   function renderImages() {
     document.getElementById("detail-images").innerHTML = product.images
-      .map((img) => `<div class="flex h-16 w-16 items-center justify-center rounded-md bg-neutral-100 text-center text-[10px] text-neutral-400">${img}</div>`)
+      .map(
+        (img) =>
+          `<div class="flex h-16 w-16 items-center justify-center rounded-md bg-neutral-100 text-center text-[10px] text-neutral-400 dark:bg-slate-800 dark:text-slate-500">${img}</div>`,
+      )
       .join("");
   }
 
@@ -60,21 +61,22 @@
           .map(
             (group) => `
               <div class="mb-3 last:mb-0">
-                <p class="mb-1 text-xs font-semibold uppercase text-neutral-400">${group.groupName}</p>
+                <p class="mb-1 text-xs font-semibold uppercase text-neutral-400 dark:text-slate-500">${group.groupName}</p>
                 <dl class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  ${group.rows.map((row) => `<div><dt class="text-neutral-500">${row.name}</dt><dd class="font-medium">${row.value}</dd></div>`).join("")}
+                  ${group.rows.map((row) => `<div><dt class="text-neutral-500 dark:text-slate-400">${row.name}</dt><dd class="font-medium">${row.value}</dd></div>`).join("")}
                 </dl>
               </div>
             `,
           )
           .join("")
-      : `<p class="text-neutral-400">No specifications set.</p>`;
+      : `<p class="text-neutral-400 dark:text-slate-500">No specifications set.</p>`;
   }
 
   function renderVariants() {
     const variants = product.variants || [];
     if (variants.length === 0) {
-      document.getElementById("detail-variants").innerHTML = `<p class="text-sm text-neutral-400">No variants — this product sells via its own SKU/price/stock above.</p>`;
+      document.getElementById("detail-variants").innerHTML =
+        `<p class="text-sm text-neutral-400 dark:text-slate-500">No variants — this product sells via its own SKU/price/stock above.</p>`;
       return;
     }
     // Every variant is shown here (including inactive/soft-deleted ones) — this is the
@@ -83,16 +85,16 @@
       .map((v) => {
         const attrsText = v.attributes.map((a) => `${a.name}=${a.value}`).join(", ");
         return `
-          <tr class="border-b border-neutral-100 last:border-0">
-            <td class="px-3 py-2 text-neutral-500">${v.sku}</td>
+          <tr class="border-b border-neutral-100 last:border-0 dark:border-slate-800">
+            <td class="px-3 py-2 text-neutral-500 dark:text-slate-400">${v.sku}</td>
             <td class="px-3 py-2">${attrsText}</td>
             <td class="px-3 py-2">${H.formatINR(v.mrp)}</td>
             <td class="px-3 py-2">${v.discount}%</td>
             <td class="px-3 py-2">${H.formatINR(v.sellingPrice)}</td>
-            <td class="px-3 py-2 ${v.stock === 0 ? "text-red-600" : ""}">${v.stock}</td>
+            <td class="px-3 py-2 ${v.stock === 0 ? "text-red-600 dark:text-red-400" : ""}">${v.stock}</td>
             <td class="px-3 py-2">${v.weight != null ? v.weight + "g" : "—"}</td>
             <td class="px-3 py-2">${v.images && v.images.length ? v.images.length : 0}</td>
-            <td class="px-3 py-2">${v.active ? `<span class="rounded bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700">Active</span>` : `<span class="rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-500">Inactive</span>`}</td>
+            <td class="px-3 py-2">${v.active ? `<span class="rounded px-1.5 py-0.5 text-xs ${T.STATUS_TONES.published}">Active</span>` : `<span class="rounded px-1.5 py-0.5 text-xs ${T.STATUS_TONES.inactive}">Inactive</span>`}</td>
           </tr>
         `;
       })
@@ -100,7 +102,7 @@
 
     document.getElementById("detail-variants").innerHTML = `
       <table class="w-full text-left text-sm">
-        <thead class="border-b border-neutral-200 text-xs uppercase text-neutral-500">
+        <thead class="border-b border-neutral-200 text-xs uppercase text-neutral-500 dark:border-slate-800 dark:text-slate-400">
           <tr>
             <th class="px-3 py-2">SKU</th>
             <th class="px-3 py-2">Attributes</th>

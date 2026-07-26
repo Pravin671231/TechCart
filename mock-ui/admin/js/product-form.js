@@ -1,8 +1,12 @@
-// Admin product create/edit form (admin/product-form.html) — FR-CAT-011-020,
-// 039, 041-050, 054-060, 061-062, 066-067.
-// Submission is fully mocked (shows a banner, nothing is written back to
-// window.MOCK) — this file is only responsible for correct prefill and
-// interactive rendering, matching the existing prototype's scope.
+// Admin product create/edit wizard (admin/product-form.html).
+// Built to docs/ui/admin-app.md section 5.3: four steps — Basic Information,
+// Images and Specifications, Add Variants, Preview.
+//
+// Rules that shape this file (section 6.3):
+//   - Forward is gated by the current step's validation; backward is free.
+//   - A completed step is reachable from the stepper; an unvisited one isn't.
+//   - Step 4 is read-only; edits happen by returning to the owning step.
+//   - Nothing persists until step 4's save, which is mocked here.
 
 (function () {
   const H = window.MockHelpers;
@@ -10,305 +14,675 @@
 
   const params = new URLSearchParams(window.location.search);
   const editingId = params.get("id");
-  const existingProduct = editingId ? MOCK.products.find((p) => p.id === editingId) : null;
-  const existingVariants = existingProduct ? H.getVariantsForProduct(existingProduct.id) : [];
+  const editing = editingId ? MOCK.products.find((p) => p.id === editingId) : null;
 
-  let variantRowCounter = 0;
-  const previewUrls = []; // tracked so they could be revoked; harmless to leak in a short-lived mock
+  const STEPS = [
+    { n: 1, label: "Basic Information" },
+    { n: 2, label: "Images and Specifications" },
+    { n: 3, label: "Add Variants" },
+    { n: 4, label: "Preview" },
+  ];
 
-  // ---- Basic info / brand / category selects ----
+  let current = 1;
+  let furthest = 1;
+  let selectedImages = [];
+  let lastCategoryId = "";
 
-  function populateBrandSelect() {
-    const select = document.getElementById("field-brand");
-    select.innerHTML = MOCK.brands.map((b) => `<option value="${b.id}">${b.name}</option>`).join("");
+  const el = (id) => document.getElementById(id);
+  const stepper = el("stepper");
+  const stepStatus = el("step-status");
+  const backBtn = el("back-btn");
+  const nextBtn = el("next-btn");
+  const saveBtn = el("save-btn");
+  const form = el("product-form");
+
+  // --- Error helpers -----------------------------------------------------
+
+  function setError(name, message) {
+    const holder = document.querySelector(`[data-error-for="${name}"]`);
+    if (holder) holder.textContent = message || "";
+    const field = el(name);
+    if (field) {
+      if (message) {
+        field.setAttribute("aria-invalid", "true");
+      } else {
+        field.removeAttribute("aria-invalid");
+      }
+    }
   }
 
-  function populateCategorySelect() {
-    const select = document.getElementById("field-category");
-    const options = [];
-    H.getTopLevelCategories().forEach((top) => {
-      options.push(`<option value="${top.id}">${top.name}</option>`);
-      H.getCategoryChildren(top.id).forEach((child) => {
-        options.push(`<option value="${child.id}">&nbsp;&nbsp;${child.name}</option>`);
+  function clearErrors(step) {
+    document
+      .querySelector(`[data-step="${step}"]`)
+      .querySelectorAll("[data-error-for]")
+      .forEach((n) => {
+        n.textContent = "";
+        const field = el(n.getAttribute("data-error-for"));
+        if (field) field.removeAttribute("aria-invalid");
+      });
+  }
+
+  // --- Populate selects --------------------------------------------------
+
+  // Inactive brands/categories stay selectable — inactive means hidden from
+  // buyers, not unusable by admins (docs/ui/admin-app.md section 6.5).
+  function populateBrands() {
+    el("field-brand").innerHTML =
+      `<option value="">Select a brand</option>` +
+      MOCK.brands
+        .map(
+          (b) =>
+            `<option value="${b.id}">${b.name}${b.status === false ? " (inactive)" : ""}</option>`,
+        )
+        .join("");
+  }
+
+  function populateCategories() {
+    let html = `<option value="">Select a category</option>`;
+    H.getTopLevelCategories().forEach((parent) => {
+      html += `<option value="${parent.id}">${parent.name}${parent.status === false ? " (inactive)" : ""}</option>`;
+      H.getCategoryChildren(parent.id).forEach((child) => {
+        html += `<option value="${child.id}">&nbsp;&nbsp;${child.name}${child.status === false ? " (inactive)" : ""}</option>`;
       });
     });
-    select.innerHTML = options.join("");
+    el("field-category").innerHTML = html;
   }
 
-  function prefillBasicInfo() {
-    if (!existingProduct) return;
-    document.getElementById("form-title").textContent = `Edit ${existingProduct.name}`;
-    document.getElementById("field-name").value = existingProduct.name;
-    document.getElementById("field-sku").value = existingProduct.sku;
-    document.getElementById("field-brand").value = existingProduct.brandId;
-    document.getElementById("field-category").value = existingProduct.categoryId;
-    document.getElementById("field-status").value = existingProduct.status;
-    document.getElementById("field-description").value = existingProduct.description;
-    document.getElementById("field-mrp").value = existingProduct.mrp / 100;
-    document.getElementById("field-discount").value = existingProduct.discount;
-    document.getElementById("field-stock").value = existingProduct.stock;
-  }
+  // --- Price -------------------------------------------------------------
 
-  // ---- Live selling price preview (FR-CAT-062) ----
-
-  function updateSellingPricePreview() {
-    const mrpRupees = Number(document.getElementById("field-mrp").value) || 0;
-    const discount = Number(document.getElementById("field-discount").value) || 0;
-    const mrpPaise = Math.round(mrpRupees * 100);
-    const sellingPaise = H.computeSellingPrice(mrpPaise, discount);
-    document.getElementById("field-selling-price").value = mrpPaise > 0 ? H.formatINR(sellingPaise) : "";
-  }
-  document.getElementById("field-mrp").addEventListener("input", updateSellingPricePreview);
-  document.getElementById("field-discount").addEventListener("input", updateSellingPricePreview);
-
-  // ---- Dynamic specification fields, grouped by specificationGroups (FR-CAT-041, 043) ----
-
-  function findExistingSpecValue(prefillGroups, groupName, specName) {
-    const group = (prefillGroups || []).find((g) => g.groupName === groupName);
-    if (!group) return undefined;
-    const entry = group.values.find((v) => v.name === specName);
-    return entry ? entry.value : undefined;
-  }
-
-  function renderSpecFields(categoryId, prefillGroups) {
-    const container = document.getElementById("spec-fields");
-    const groups = H.getSpecGroupsForCategory(categoryId);
-    if (groups.length === 0) {
-      container.innerHTML = `<p class="text-sm text-neutral-400">No specifications defined for this category.</p>`;
+  function updateSellingPrice() {
+    const mrpRupees = Number(el("field-mrp").value);
+    const discount = Number(el("field-discount").value || 0);
+    if (!mrpRupees || mrpRupees <= 0) {
+      el("field-selling-price").value = "";
       return;
     }
+    const paise = H.computeSellingPrice(Math.round(mrpRupees * 100), discount);
+    el("field-selling-price").value = H.formatINR(paise);
+  }
+
+  // --- Specifications ----------------------------------------------------
+
+  function currentSpecValues() {
+    const values = {};
+    document.querySelectorAll("#spec-fields [data-spec]").forEach((input) => {
+      values[input.getAttribute("data-spec")] = input.value;
+    });
+    return values;
+  }
+
+  function renderSpecFields(preserved) {
+    const categoryId = el("field-category").value;
+    const groups = categoryId ? H.getSpecGroupsForCategory(categoryId) : [];
+    const container = el("spec-fields");
+
+    if (!groups.length) {
+      container.innerHTML = `<p class="text-sm text-neutral-400 dark:text-slate-500">No specifications defined for this category.</p>`;
+      return;
+    }
+
     container.innerHTML = groups
-      .map((group) => {
-        const fieldsHtml = group.specifications
-          .map((spec) => {
-            const existing = findExistingSpecValue(prefillGroups, group.groupName, spec.name);
-            const label = `${spec.name}${spec.unit ? " (" + spec.unit + ")" : ""}${spec.required ? " *" : ""}`;
-            let input;
-            if (spec.type === "number") {
-              input = `<input type="number" data-group="${group.groupName}" data-name="${spec.name}" value="${existing != null ? existing : ""}" class="spec-input w-full rounded-md border border-neutral-300 px-3 py-1.5" ${spec.required ? "required" : ""} />`;
-            } else if (spec.type === "boolean") {
-              input = `<select data-group="${group.groupName}" data-name="${spec.name}" class="spec-input w-full rounded-md border border-neutral-300 px-3 py-1.5">
-                <option value="false" ${existing === false ? "selected" : ""}>No</option>
-                <option value="true" ${existing === true ? "selected" : ""}>Yes</option>
-              </select>`;
-            } else {
-              input = `<input type="text" data-group="${group.groupName}" data-name="${spec.name}" value="${existing != null ? existing : ""}" class="spec-input w-full rounded-md border border-neutral-300 px-3 py-1.5" ${spec.required ? "required" : ""} />`;
-            }
-            return `<label class="block text-sm"><span class="mb-1 block text-neutral-600">${label}</span>${input}</label>`;
-          })
-          .join("");
-        return `<div class="sm:col-span-2"><p class="mb-2 text-xs font-semibold uppercase text-neutral-400">${group.groupName}</p><div class="grid grid-cols-1 gap-4 sm:grid-cols-2">${fieldsHtml}</div></div>`;
+      .map(
+        (group) => `
+        <div class="sm:col-span-2">
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-slate-400">${group.groupName}</p>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            ${group.specifications
+              .map((spec) => {
+                const key = `${group.groupName}::${spec.name}`;
+                const value = (preserved && preserved[key]) || "";
+                const label = `${spec.name}${spec.unit ? ` (${spec.unit})` : ""}${spec.required ? " *" : ""}`;
+                let control;
+                if (spec.type === "number") {
+                  control = `<input type="number" data-spec="${key}" data-required="${!!spec.required}" value="${value}" class="ta-input" />`;
+                } else if (spec.type === "boolean") {
+                  control = `<select data-spec="${key}" data-required="${!!spec.required}" class="ta-input">
+                      <option value="">—</option>
+                      <option value="No"${value === "No" ? " selected" : ""}>No</option>
+                      <option value="Yes"${value === "Yes" ? " selected" : ""}>Yes</option>
+                    </select>`;
+                } else {
+                  control = `<input type="text" data-spec="${key}" data-required="${!!spec.required}" value="${value}" class="ta-input" />`;
+                }
+                return `<label class="block text-sm"><span class="mb-1 block text-neutral-600 dark:text-slate-400">${label}</span>${control}<span data-error-for="spec:${key}" class="ta-error"></span></label>`;
+              })
+              .join("")}
+          </div>
+        </div>`,
+      )
+      .join("");
+  }
+
+  // Changing the category re-renders step 2's spec fields. Values for specs
+  // that still exist are kept; the rest are dropped with a visible notice
+  // rather than silently (docs/ui/admin-app.md section 5.3).
+  function onCategoryChange() {
+    const previous = currentSpecValues();
+    const hadValues = Object.values(previous).some((v) => v !== "");
+    renderSpecFields(previous);
+
+    const note = el("spec-reset-note");
+    if (hadValues && lastCategoryId && lastCategoryId !== el("field-category").value) {
+      const kept = currentSpecValues();
+      const dropped = Object.keys(previous).filter((k) => !(k in kept) && previous[k] !== "");
+      note.textContent = dropped.length
+        ? `Category changed — ${dropped.length} specification value(s) no longer apply and were cleared.`
+        : "Category changed — specification fields were re-rendered for the new category.";
+      note.classList.remove("hidden");
+    }
+    lastCategoryId = el("field-category").value;
+  }
+
+  // --- Variants ----------------------------------------------------------
+
+  function variantAttributeInputs(categoryId, attributes) {
+    const types = categoryId ? H.getCategoryVariantTypes(categoryId) : [];
+    if (!types.length) {
+      return `
+        <p class="mb-2 text-xs text-neutral-500 dark:text-slate-400">
+          No variant types defined for this category — using free-text attribute pairs (FR-CAT-067).
+        </p>
+        <div class="space-y-2" data-free-attrs>
+          ${(attributes || []).map((a) => freeAttrRow(a.name, a.value)).join("")}
+        </div>
+        <button type="button" class="mt-2 text-xs text-indigo-600 hover:underline dark:text-indigo-400" data-add-attr>+ Add attribute</button>
+      `;
+    }
+
+    return types
+      .map((type) => {
+        const existing = (attributes || []).find((a) => a.name === type.name);
+        const value = existing ? existing.value : "";
+        let control;
+        if (type.type === "select" || type.type === "color") {
+          control = `<select data-attr="${type.name}" class="ta-input">
+              <option value="">—</option>
+              ${(type.options || [])
+                .map(
+                  (o) =>
+                    `<option value="${o.value}"${o.value === value ? " selected" : ""}>${o.label}</option>`,
+                )
+                .join("")}
+            </select>`;
+        } else if (type.type === "number") {
+          control = `<input type="number" data-attr="${type.name}" value="${value}" class="ta-input" />`;
+        } else {
+          control = `<input type="text" data-attr="${type.name}" value="${value}" class="ta-input" />`;
+        }
+        return `<label class="block text-sm"><span class="mb-1 block text-neutral-600 dark:text-slate-400">${type.name}${type.required ? " *" : ""}</span>${control}</label>`;
       })
       .join("");
   }
 
-  document.getElementById("field-category").addEventListener("change", (e) => {
-    renderSpecFields(e.target.value, null);
-    updateVariantPriceNote();
-  });
-
-  // ---- Images (FR-CAT-028, 054-060) ----
-
-  document.getElementById("field-images").addEventListener("change", (e) => {
-    const files = Array.from(e.target.files);
-    const errorEl = document.getElementById("image-count-error");
-    if (files.length < 1 || files.length > 8) {
-      errorEl.textContent = `Select 1–8 images (selected ${files.length}).`;
-      errorEl.classList.remove("hidden");
-    } else {
-      errorEl.classList.add("hidden");
-    }
-    const previews = document.getElementById("image-previews");
-    previews.innerHTML = "";
-    files.forEach((file) => {
-      const url = URL.createObjectURL(file);
-      previewUrls.push(url);
-      previews.innerHTML += `<img src="${url}" class="h-16 w-16 rounded-md object-cover" alt="${file.name}" />`;
-    });
-  });
-
-  // ---- Variants (FR-CAT-046-050, embedded per Decision #10) ----
-
-  function attributePairRow(name, value) {
+  function freeAttrRow(name, value) {
     return `
-      <div class="attr-pair flex items-center gap-2">
-        <input type="text" placeholder="Name (e.g. Color)" value="${name || ""}" class="attr-name w-1/2 rounded-md border border-neutral-300 px-2 py-1 text-sm" />
-        <input type="text" placeholder="Value (e.g. Red)" value="${value || ""}" class="attr-value w-1/2 rounded-md border border-neutral-300 px-2 py-1 text-sm" />
-        <button type="button" class="remove-attr-btn text-neutral-400 hover:text-red-600" title="Remove attribute">✕</button>
+      <div class="flex items-center gap-2" data-attr-row>
+        <input type="text" placeholder="Name" value="${name || ""}" data-attr-name class="ta-input" />
+        <input type="text" placeholder="Value" value="${value || ""}" data-attr-value class="ta-input" />
+        <button type="button" data-remove-attr class="rounded px-2 text-neutral-400 hover:text-red-600" aria-label="Remove attribute">✕</button>
       </div>
     `;
   }
 
-  // Governed inputs come from the category's categoryVariants definitions (FR-CAT-066) —
-  // a UI-rendering guide only, not server-validated (FR-CAT-067). Any attribute not covered
-  // by a governed axis still falls back to a free-text name/value pair.
-  function renderAttributesSection(prefillAttrs, categoryId) {
-    const attrs = prefillAttrs || [];
-    const governedTypes = H.getCategoryVariantTypes(categoryId);
-    const governedNames = new Set(governedTypes.map((t) => t.name));
-
-    const governedHtml = governedTypes
-      .map((t) => {
-        const existing = attrs.find((a) => a.name === t.name);
-        const value = existing ? existing.value : "";
-        let input;
-        if (t.type === "select" || t.type === "color") {
-          input = `<select data-attr-name="${t.name}" class="governed-attr w-full rounded-md border border-neutral-300 px-2 py-1 text-sm">
-            <option value="">Select...</option>
-            ${t.options.map((o) => `<option value="${o.value}" ${existing && existing.value === o.value ? "selected" : ""}>${o.label}</option>`).join("")}
-          </select>`;
-        } else if (t.type === "number") {
-          input = `<input type="number" data-attr-name="${t.name}" value="${value}" class="governed-attr w-full rounded-md border border-neutral-300 px-2 py-1 text-sm" />`;
-        } else {
-          input = `<input type="text" data-attr-name="${t.name}" value="${value}" class="governed-attr w-full rounded-md border border-neutral-300 px-2 py-1 text-sm" />`;
-        }
-        return `<label class="block text-xs"><span class="mb-1 block text-neutral-500">${t.name}${t.required ? " *" : ""}</span>${input}</label>`;
-      })
-      .join("");
-
-    const customAttrs = attrs.filter((a) => !governedNames.has(a.name));
-    const customHtml = customAttrs.length
-      ? customAttrs.map((a) => attributePairRow(a.name, a.value)).join("")
-      : governedTypes.length === 0
-        ? attributePairRow("", "")
-        : "";
-
-    return `
-      ${governedTypes.length ? `<div class="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-3">${governedHtml}</div>` : ""}
-      <div class="attr-pairs space-y-2">${customHtml}</div>
-      <button type="button" class="add-attr-btn mt-2 text-xs text-neutral-500 underline hover:text-neutral-700">+ Add ${governedTypes.length ? "custom " : ""}attribute</button>
-    `;
-  }
-
-  function addVariantRow(prefillVariant) {
-    variantRowCounter += 1;
-    const rowId = `variant-row-${variantRowCounter}`;
-    const attrs = prefillVariant ? prefillVariant.attributes : [];
-    const categoryId = document.getElementById("field-category").value;
-    const imageCount = prefillVariant && prefillVariant.images ? prefillVariant.images.length : 0;
-
+  function addVariantRow(variant) {
+    const categoryId = el("field-category").value;
+    const v = variant || {};
     const wrapper = document.createElement("div");
-    wrapper.id = rowId;
-    wrapper.className = "variant-row rounded-md border border-neutral-200 p-4";
+    wrapper.className =
+      "rounded-md border border-neutral-200 p-4 dark:border-slate-700 dark:bg-slate-950/40";
+    wrapper.setAttribute("data-variant-row", "");
     wrapper.innerHTML = `
       <div class="mb-3 flex items-center justify-between">
-        <p class="text-sm font-medium text-neutral-700">Variant</p>
-        <label class="flex items-center gap-1.5 text-xs text-neutral-500">
-          <input type="checkbox" class="variant-active rounded border-neutral-300" ${!prefillVariant || prefillVariant.active ? "checked" : ""} /> Active
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" data-v-active ${v.active === false ? "" : "checked"} class="rounded border-neutral-300" />
+          <span class="text-neutral-600 dark:text-slate-400">Active</span>
         </label>
-        <button type="button" class="remove-variant-btn text-xs text-red-600 underline">Remove</button>
+        <button type="button" data-remove-variant class="text-xs text-red-600 hover:underline dark:text-red-400">Remove</button>
       </div>
-      <div class="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <label class="block text-xs sm:col-span-2">
-          <span class="mb-1 block text-neutral-500">SKU</span>
-          <input type="text" class="variant-sku w-full rounded-md border border-neutral-300 px-2 py-1 text-sm" value="${prefillVariant ? prefillVariant.sku : ""}" />
-        </label>
-        <label class="block text-xs">
-          <span class="mb-1 block text-neutral-500">MRP (₹)</span>
-          <input type="number" min="1" class="variant-mrp w-full rounded-md border border-neutral-300 px-2 py-1 text-sm" value="${prefillVariant ? prefillVariant.mrp / 100 : ""}" />
-        </label>
-        <label class="block text-xs">
-          <span class="mb-1 block text-neutral-500">Stock</span>
-          <input type="number" min="0" class="variant-stock w-full rounded-md border border-neutral-300 px-2 py-1 text-sm" value="${prefillVariant ? prefillVariant.stock : ""}" />
-        </label>
-        <label class="block text-xs">
-          <span class="mb-1 block text-neutral-500">Discount (%)</span>
-          <input type="number" min="0" max="99" class="variant-discount w-full rounded-md border border-neutral-300 px-2 py-1 text-sm" value="${prefillVariant ? prefillVariant.discount : 0}" />
-        </label>
-        <label class="block text-xs">
-          <span class="mb-1 block text-neutral-500">Weight (g, optional)</span>
-          <input type="number" min="0" class="variant-weight w-full rounded-md border border-neutral-300 px-2 py-1 text-sm" value="${prefillVariant && prefillVariant.weight != null ? prefillVariant.weight : ""}" />
-        </label>
-        <label class="block text-xs sm:col-span-2">
-          <span class="mb-1 block text-neutral-500">Selling price</span>
-          <input disabled class="variant-selling-price w-full rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-sm text-neutral-500" />
-        </label>
-        <label class="block text-xs sm:col-span-2">
-          <span class="mb-1 block text-neutral-500">Images (0–2, optional — falls back to product images)</span>
-          <input type="file" multiple accept="image/jpeg,image/png,image/webp" class="variant-images w-full text-xs" />
-          <p class="variant-image-error mt-1 hidden text-xs text-red-600"></p>
-        </label>
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <label class="block text-sm"><span class="mb-1 block text-neutral-600 dark:text-slate-400">SKU *</span><input data-v-sku value="${v.sku || ""}" class="ta-input" /></label>
+        <label class="block text-sm"><span class="mb-1 block text-neutral-600 dark:text-slate-400">MRP (₹) *</span><input type="number" min="1" data-v-mrp value="${v.mrp ? v.mrp / 100 : ""}" class="ta-input" /></label>
+        <label class="block text-sm"><span class="mb-1 block text-neutral-600 dark:text-slate-400">Discount (%)</span><input type="number" min="0" max="99" data-v-discount value="${v.discount || 0}" class="ta-input" /></label>
+        <label class="block text-sm"><span class="mb-1 block text-neutral-600 dark:text-slate-400">Stock *</span><input type="number" min="0" data-v-stock value="${v.stock != null ? v.stock : ""}" class="ta-input" /></label>
+        <label class="block text-sm"><span class="mb-1 block text-neutral-600 dark:text-slate-400">Weight (g)</span><input type="number" min="0" data-v-weight value="${v.weight != null ? v.weight : ""}" class="ta-input" /></label>
+        <label class="block text-sm"><span class="mb-1 block text-neutral-600 dark:text-slate-400">Selling price</span><input data-v-selling disabled class="ta-input-disabled" /></label>
+        <label class="block text-sm sm:col-span-2"><span class="mb-1 block text-neutral-600 dark:text-slate-400">Images (0–2, optional)</span><input type="file" multiple accept="image/jpeg,image/png,image/webp" data-v-images class="text-sm" /></label>
       </div>
-      <div class="attr-section">${renderAttributesSection(attrs, categoryId)}</div>
+      <div class="mt-3">
+        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-slate-400">Attributes</p>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2" data-attrs>${variantAttributeInputs(categoryId, v.attributes)}</div>
+      </div>
+      <p data-v-error class="ta-error"></p>
+    `;
+    el("variant-rows").appendChild(wrapper);
+    updateVariantSelling(wrapper);
+    updateVariantNote();
+  }
+
+  function updateVariantSelling(row) {
+    const mrp = Number(row.querySelector("[data-v-mrp]").value);
+    const discount = Number(row.querySelector("[data-v-discount]").value || 0);
+    const out = row.querySelector("[data-v-selling]");
+    out.value = mrp > 0 ? H.formatINR(H.computeSellingPrice(Math.round(mrp * 100), discount)) : "";
+  }
+
+  function updateVariantNote() {
+    const has = document.querySelectorAll("[data-variant-row]").length > 0;
+    el("variant-price-note").classList.toggle("hidden", !has);
+  }
+
+  function readVariants() {
+    return Array.from(document.querySelectorAll("[data-variant-row]")).map((row) => {
+      const attributes = [];
+      row.querySelectorAll("[data-attr]").forEach((input) => {
+        if (input.value)
+          attributes.push({ name: input.getAttribute("data-attr"), value: input.value });
+      });
+      row.querySelectorAll("[data-attr-row]").forEach((r) => {
+        const name = r.querySelector("[data-attr-name]").value.trim();
+        const value = r.querySelector("[data-attr-value]").value.trim();
+        if (name && value) attributes.push({ name, value });
+      });
+      const mrp = Number(row.querySelector("[data-v-mrp]").value);
+      const discount = Number(row.querySelector("[data-v-discount]").value || 0);
+      return {
+        row,
+        sku: row.querySelector("[data-v-sku]").value.trim(),
+        mrp: mrp > 0 ? Math.round(mrp * 100) : 0,
+        discount,
+        stock: Number(row.querySelector("[data-v-stock]").value),
+        weight: row.querySelector("[data-v-weight]").value,
+        active: row.querySelector("[data-v-active]").checked,
+        attributes,
+      };
+    });
+  }
+
+  // --- Validation --------------------------------------------------------
+
+  // SKU uniqueness spans products and their embedded variants — one shared
+  // namespace (FR-CAT-012).
+  function skuTaken(sku, ignoreProductId) {
+    const lower = sku.toLowerCase();
+    return MOCK.products.some((p) => {
+      if (p.id === ignoreProductId) return false;
+      if (p.sku.toLowerCase() === lower) return true;
+      return (p.variants || []).some((v) => v.sku.toLowerCase() === lower);
+    });
+  }
+
+  function validateStep1() {
+    clearErrors(1);
+    let ok = true;
+    const req = (id, message) => {
+      if (!el(id).value.trim()) {
+        setError(id, message);
+        ok = false;
+      }
+    };
+
+    req("field-name", "Name is required.");
+    req("field-description", "Description is required.");
+    req("field-brand", "Brand is required — every product must reference one (FR-CAT-039).");
+    req("field-category", "Category is required.");
+
+    const sku = el("field-sku").value.trim();
+    if (!sku) {
+      setError("field-sku", "SKU is required.");
+      ok = false;
+    } else if (skuTaken(sku, editingId)) {
+      setError("field-sku", "This SKU is already used by another product or variant.");
+      ok = false;
+    }
+
+    const mrp = Number(el("field-mrp").value);
+    if (!Number.isInteger(mrp) || mrp <= 0) {
+      setError("field-mrp", "MRP must be a whole number greater than 0.");
+      ok = false;
+    }
+
+    const discount = Number(el("field-discount").value || 0);
+    if (!Number.isInteger(discount) || discount < 0 || discount > 99) {
+      setError("field-discount", "Discount must be a whole number between 0 and 99.");
+      ok = false;
+    }
+
+    const stock = Number(el("field-stock").value);
+    if (el("field-stock").value === "" || !Number.isInteger(stock) || stock < 0) {
+      setError("field-stock", "Stock must be a non-negative whole number.");
+      ok = false;
+    }
+
+    return ok;
+  }
+
+  function validateStep2() {
+    clearErrors(2);
+    let ok = true;
+
+    if (selectedImages.length < 1 || selectedImages.length > 8) {
+      setError("field-images", `Select 1–8 images (selected ${selectedImages.length}).`);
+      ok = false;
+    }
+
+    document.querySelectorAll("#spec-fields [data-spec]").forEach((input) => {
+      if (input.getAttribute("data-required") === "true" && !input.value.trim()) {
+        const holder = document.querySelector(
+          `[data-error-for="spec:${input.getAttribute("data-spec")}"]`,
+        );
+        if (holder) holder.textContent = "Required for this category.";
+        input.setAttribute("aria-invalid", "true");
+        ok = false;
+      }
+    });
+
+    return ok;
+  }
+
+  function validateStep3() {
+    clearErrors(3);
+    const variants = readVariants();
+    let ok = true;
+
+    // Zero variants is valid — the product then sells on its own SKU/price.
+    const seen = new Set();
+    const combos = new Set();
+
+    variants.forEach((v) => {
+      const errors = [];
+      if (!v.sku) errors.push("SKU is required.");
+      else if (seen.has(v.sku.toLowerCase()) || skuTaken(v.sku, editingId))
+        errors.push("SKU must be unique across all products and variants (FR-CAT-012).");
+      seen.add(v.sku.toLowerCase());
+
+      if (!Number.isInteger(v.mrp / 1) || v.mrp <= 0) errors.push("MRP must be greater than 0.");
+      if (!Number.isInteger(v.discount) || v.discount < 0 || v.discount > 99)
+        errors.push("Discount must be 0–99.");
+      if (!Number.isInteger(v.stock) || v.stock < 0) errors.push("Stock must be non-negative.");
+
+      const combo = v.attributes
+        .map((a) => `${a.name}=${a.value}`)
+        .sort()
+        .join("|");
+      if (combo && combos.has(combo))
+        errors.push("Another variant already uses this attribute combination (FR-CAT-048).");
+      combos.add(combo);
+
+      v.row.querySelector("[data-v-error]").textContent = errors.join(" ");
+      if (errors.length) ok = false;
+    });
+
+    return ok;
+  }
+
+  function validate(step) {
+    if (step === 1) return validateStep1();
+    if (step === 2) return validateStep2();
+    if (step === 3) return validateStep3();
+    return true;
+  }
+
+  // --- Preview -----------------------------------------------------------
+
+  function previewRow(label, value) {
+    return `<div><dt class="text-neutral-500 dark:text-slate-400">${label}</dt><dd class="font-medium">${value || "—"}</dd></div>`;
+  }
+
+  function jumpLink(step, label) {
+    return `<button type="button" data-jump="${step}" class="text-xs text-indigo-600 hover:underline dark:text-indigo-400">${label}</button>`;
+  }
+
+  function renderPreview() {
+    const brand = MOCK.brands.find((b) => b.id === el("field-brand").value);
+    const category = H.getCategoryById(el("field-category").value);
+    const mrp = Number(el("field-mrp").value) || 0;
+    const discount = Number(el("field-discount").value || 0);
+    const selling = mrp > 0 ? H.computeSellingPrice(Math.round(mrp * 100), discount) : 0;
+    const variants = readVariants();
+
+    const specs = Object.entries(currentSpecValues()).filter(([, v]) => v !== "");
+
+    el("preview-content").innerHTML = `
+      <section>
+        <div class="mb-2 flex items-center justify-between">
+          <h3 class="text-sm font-semibold">Basic information</h3>
+          ${jumpLink(1, "Edit step 1")}
+        </div>
+        <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+          ${previewRow("Name", el("field-name").value)}
+          ${previewRow("SKU", el("field-sku").value)}
+          ${previewRow("Brand", brand ? brand.name : "")}
+          ${previewRow("Category", category ? category.name : "")}
+          ${previewRow("Status", el("field-status").value)}
+          ${previewRow("Description", el("field-description").value)}
+        </dl>
+        <dl class="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+          ${previewRow("MRP", mrp ? H.formatINR(mrp * 100) : "")}
+          ${previewRow("Discount", `${discount}%`)}
+          ${previewRow(variants.length ? "Selling price (from)" : "Selling price", selling ? H.formatINR(selling) : "")}
+          ${previewRow("Stock", el("field-stock").value)}
+        </dl>
+      </section>
+
+      <section>
+        <div class="mb-2 flex items-center justify-between">
+          <h3 class="text-sm font-semibold">Images and specifications</h3>
+          ${jumpLink(2, "Edit step 2")}
+        </div>
+        <p class="text-sm">${selectedImages.length} image(s) selected</p>
+        ${
+          specs.length
+            ? `<dl class="mt-2 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">${specs
+                .map(([k, v]) => previewRow(k.replace("::", " · "), v))
+                .join("")}</dl>`
+            : `<p class="mt-2 text-sm text-neutral-400 dark:text-slate-500">No specification values entered.</p>`
+        }
+      </section>
+
+      <section>
+        <div class="mb-2 flex items-center justify-between">
+          <h3 class="text-sm font-semibold">Variants</h3>
+          ${jumpLink(3, "Edit step 3")}
+        </div>
+        ${
+          variants.length
+            ? `<div class="overflow-x-auto"><table class="w-full text-left text-sm">
+                <thead class="border-b border-neutral-200 text-xs uppercase text-neutral-500 dark:border-slate-800 dark:text-slate-400">
+                  <tr><th class="px-2 py-1">SKU</th><th class="px-2 py-1">Attributes</th><th class="px-2 py-1">Selling price</th><th class="px-2 py-1">Stock</th><th class="px-2 py-1">Active</th></tr>
+                </thead>
+                <tbody>${variants
+                  .map(
+                    (
+                      v,
+                    ) => `<tr class="border-b border-neutral-100 last:border-0 dark:border-slate-800">
+                      <td class="px-2 py-1">${v.sku}</td>
+                      <td class="px-2 py-1">${v.attributes.map((a) => `${a.name}=${a.value}`).join(", ") || "—"}</td>
+                      <td class="px-2 py-1">${v.mrp ? H.formatINR(H.computeSellingPrice(v.mrp, v.discount)) : "—"}</td>
+                      <td class="px-2 py-1">${v.stock}</td>
+                      <td class="px-2 py-1">${v.active ? "Yes" : "No"}</td>
+                    </tr>`,
+                  )
+                  .join("")}</tbody>
+              </table></div>`
+            : `<p class="text-sm text-neutral-400 dark:text-slate-500">No variants — this product sells via its own SKU/price/stock.</p>`
+        }
+      </section>
     `;
 
-    document.getElementById("variant-rows").appendChild(wrapper);
-    updateVariantRowPrice(wrapper);
-    if (imageCount > 0) {
-      wrapper.querySelector(".variant-image-error").classList.add("hidden");
-    }
+    el("preview-content")
+      .querySelectorAll("[data-jump]")
+      .forEach((btn) =>
+        btn.addEventListener("click", () => goTo(Number(btn.getAttribute("data-jump")))),
+      );
   }
 
-  function updateVariantRowPrice(row) {
-    const mrpRupees = Number(row.querySelector(".variant-mrp").value) || 0;
-    const discount = Number(row.querySelector(".variant-discount").value) || 0;
-    const mrpPaise = Math.round(mrpRupees * 100);
-    const sellingPaise = H.computeSellingPrice(mrpPaise, discount);
-    row.querySelector(".variant-selling-price").value = mrpPaise > 0 ? H.formatINR(sellingPaise) : "";
+  // --- Stepper and navigation -------------------------------------------
+
+  function renderStepper() {
+    stepper.innerHTML = STEPS.map((step) => {
+      const isCurrent = step.n === current;
+      const isComplete = step.n < furthest;
+      const reachable = step.n <= furthest;
+      const tone = isCurrent
+        ? "border-indigo-600 bg-indigo-600 text-white dark:border-indigo-500 dark:bg-indigo-500"
+        : isComplete
+          ? "border-indigo-300 text-indigo-700 dark:border-indigo-500/50 dark:text-indigo-300"
+          : "border-neutral-200 text-neutral-400 dark:border-slate-800 dark:text-slate-600";
+      const inner = `<span class="flex h-5 w-5 items-center justify-center rounded-full border text-[11px]">${step.n}</span><span class="hidden sm:inline">${step.label}</span>`;
+      return `<li>
+        <button
+          type="button"
+          data-step-to="${step.n}"
+          ${reachable ? "" : "disabled"}
+          ${isCurrent ? 'aria-current="step"' : ""}
+          class="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium ${tone} ${reachable ? "" : "cursor-not-allowed"} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+        >${inner}</button>
+      </li>`;
+    }).join("");
+
+    stepper.querySelectorAll("button[data-step-to]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const target = Number(btn.getAttribute("data-step-to"));
+        if (target <= furthest) goTo(target);
+      });
+    });
   }
 
-  function updateVariantPriceNote() {
-    const hasVariants = document.getElementById("variant-rows").children.length > 0;
-    document.getElementById("variant-price-note").classList.toggle("hidden", !hasVariants);
+  function showStep(n) {
+    STEPS.forEach((s) =>
+      document.querySelector(`[data-step="${s.n}"]`).classList.toggle("hidden", s.n !== n),
+    );
+    backBtn.disabled = n === 1;
+    nextBtn.classList.toggle("hidden", n === STEPS.length);
+    saveBtn.classList.toggle("hidden", n !== STEPS.length);
+    renderStepper();
+
+    stepStatus.textContent = `Step ${n} of ${STEPS.length}: ${STEPS[n - 1].label}`;
+    const heading = document.getElementById(`step-${n}-heading`);
+    if (heading) heading.focus();
   }
 
-  document.getElementById("add-variant-btn").addEventListener("click", () => {
-    addVariantRow(null);
-    updateVariantPriceNote();
+  function goTo(n) {
+    current = n;
+    if (n === 4) renderPreview();
+    showStep(n);
+  }
+
+  nextBtn.addEventListener("click", () => {
+    if (!validate(current)) {
+      const firstInvalid = document.querySelector(`[data-step="${current}"] [aria-invalid="true"]`);
+      if (firstInvalid) firstInvalid.focus();
+      return;
+    }
+    const next = Math.min(current + 1, STEPS.length);
+    furthest = Math.max(furthest, next);
+    goTo(next);
   });
 
-  // Event delegation for everything inside dynamically-created variant rows.
-  document.getElementById("variant-rows").addEventListener("click", (e) => {
-    if (e.target.classList.contains("remove-variant-btn")) {
-      e.target.closest(".variant-row").remove();
-      updateVariantPriceNote();
-    }
-    if (e.target.classList.contains("add-attr-btn")) {
-      e.target.insertAdjacentHTML("beforebegin", attributePairRow("", ""));
-    }
-    if (e.target.classList.contains("remove-attr-btn")) {
-      e.target.closest(".attr-pair").remove();
-    }
-  });
+  backBtn.addEventListener("click", () => goTo(Math.max(current - 1, 1)));
 
-  document.getElementById("variant-rows").addEventListener("input", (e) => {
-    if (e.target.classList.contains("variant-mrp") || e.target.classList.contains("variant-discount")) {
-      updateVariantRowPrice(e.target.closest(".variant-row"));
-    }
-  });
-
-  // A variant's images set is bounded 0-2 (not the product's 1-8) — FR-CAT-046, 060.
-  document.getElementById("variant-rows").addEventListener("change", (e) => {
-    if (!e.target.classList.contains("variant-images")) return;
-    const files = Array.from(e.target.files);
-    const errorEl = e.target.closest("label").querySelector(".variant-image-error");
-    if (files.length > 2) {
-      errorEl.textContent = `Select at most 2 images (selected ${files.length}) — falls back to product images if omitted.`;
-      errorEl.classList.remove("hidden");
-    } else {
-      errorEl.classList.add("hidden");
-    }
-  });
-
-  // ---- Submit (mocked — nothing persisted) ----
-
-  document.getElementById("product-form").addEventListener("submit", (e) => {
+  form.addEventListener("submit", (e) => {
     e.preventDefault();
-    const banner = document.getElementById("saved-banner");
+    const banner = el("saved-banner");
     banner.classList.remove("hidden");
-    banner.scrollIntoView({ behavior: "smooth", block: "start" });
+    banner.scrollIntoView({ behavior: "smooth", block: "center" });
   });
 
-  // ---- Init ----
+  // --- Wiring ------------------------------------------------------------
 
-  populateBrandSelect();
-  populateCategorySelect();
-  prefillBasicInfo();
-  renderSpecFields(existingProduct ? existingProduct.categoryId : document.getElementById("field-category").value, existingProduct ? existingProduct.specifications : null);
-  updateSellingPricePreview();
+  el("field-mrp").addEventListener("input", updateSellingPrice);
+  el("field-discount").addEventListener("input", updateSellingPrice);
+  el("field-category").addEventListener("change", onCategoryChange);
 
-  if (existingVariants.length > 0) {
-    existingVariants.forEach((v) => addVariantRow(v));
+  el("field-images").addEventListener("change", (e) => {
+    selectedImages = Array.from(e.target.files || []);
+    const previews = el("image-previews");
+    previews.innerHTML = selectedImages
+      .map(
+        (file) =>
+          `<img src="${URL.createObjectURL(file)}" alt="${file.name}" class="h-16 w-16 rounded-md object-cover" />`,
+      )
+      .join("");
+    setError("field-images", "");
+  });
+
+  el("add-variant-btn").addEventListener("click", () => addVariantRow());
+
+  el("variant-rows").addEventListener("click", (e) => {
+    const removeVariant = e.target.closest("[data-remove-variant]");
+    if (removeVariant) {
+      removeVariant.closest("[data-variant-row]").remove();
+      updateVariantNote();
+      return;
+    }
+    const addAttr = e.target.closest("[data-add-attr]");
+    if (addAttr) {
+      addAttr.parentElement
+        .querySelector("[data-free-attrs]")
+        .insertAdjacentHTML("beforeend", freeAttrRow("", ""));
+      return;
+    }
+    const removeAttr = e.target.closest("[data-remove-attr]");
+    if (removeAttr) removeAttr.closest("[data-attr-row]").remove();
+  });
+
+  el("variant-rows").addEventListener("input", (e) => {
+    if (e.target.matches("[data-v-mrp], [data-v-discount]")) {
+      updateVariantSelling(e.target.closest("[data-variant-row]"));
+    }
+  });
+
+  // Leaving mid-wizard discards the draft, so warn first (section 6.3).
+  let dirty = false;
+  form.addEventListener("input", () => (dirty = true));
+  window.addEventListener("beforeunload", (e) => {
+    if (dirty) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
+
+  // --- Prefill -----------------------------------------------------------
+
+  populateBrands();
+  populateCategories();
+
+  if (editing) {
+    el("form-title").textContent = "Edit product";
+    el("breadcrumb-current").textContent = editing.name;
+    document.title = `TechCart Admin — Edit ${editing.name}`;
+    el("field-name").value = editing.name;
+    el("field-sku").value = editing.sku;
+    el("field-brand").value = editing.brandId;
+    el("field-category").value = editing.categoryId;
+    el("field-status").value = editing.status;
+    el("field-description").value = editing.description;
+    el("field-mrp").value = editing.mrp / 100;
+    el("field-discount").value = editing.discount;
+    el("field-stock").value = editing.stock;
+    lastCategoryId = editing.categoryId;
+
+    const preserved = {};
+    (editing.specifications || []).forEach((group) => {
+      group.values.forEach((v) => {
+        preserved[`${group.groupName}::${v.name}`] = String(v.value);
+      });
+    });
+    renderSpecFields(preserved);
+    (editing.variants || []).forEach(addVariantRow);
+    // Images can't round-trip through a file input; the prototype notes this.
+    selectedImages = (editing.images || []).map((src) => ({ name: src }));
+    el("image-previews").innerHTML = (editing.images || [])
+      .map(
+        (src) =>
+          `<div class="flex h-16 w-16 items-center justify-center rounded-md bg-neutral-100 text-[10px] text-neutral-400 dark:bg-slate-800 dark:text-slate-500">${src}</div>`,
+      )
+      .join("");
+  } else {
+    renderSpecFields({});
   }
-  updateVariantPriceNote();
+
+  updateSellingPrice();
+  updateVariantNote();
+  showStep(1);
 })();

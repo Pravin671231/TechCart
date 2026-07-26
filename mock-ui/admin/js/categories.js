@@ -5,10 +5,31 @@
 
 (function () {
   const MOCK = window.MOCK;
-  const state = { query: "" };
+  const T = window.AdminTable;
+  const state = { query: "", sort: { key: null, dir: null } };
   let editingId = null;
   let idCounter = 100;
   let pendingImageUrl = null;
+
+  const COLUMNS = [
+    { key: "name", label: "Name", sortable: true },
+    { key: "parent", label: "Parent", sortable: true },
+    { key: "products", label: "Products", sortable: true },
+    { key: "status", label: "Status", sortable: true },
+    { key: null, label: "Actions", sortable: false },
+  ];
+
+  const SORT_ACCESSORS = {
+    name: (c) => c.name,
+    parent: (c) => {
+      const parent = c.parentCategoryId
+        ? MOCK.categories.find((p) => p.id === c.parentCategoryId)
+        : null;
+      return parent ? parent.name : "";
+    },
+    products: (c) => productCount(c.id),
+    status: (c) => (c.status === false ? "Inactive" : "Active"),
+  };
 
   function slugify(name) {
     const base = name
@@ -35,34 +56,45 @@
 
   function statusBadge(category) {
     const active = category.status !== false;
-    const cls = active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500";
-    return `<button data-toggle-status="${category.id}" class="rounded px-2 py-0.5 text-xs font-medium ${cls}" title="Click to toggle (FR-CAT-063)">${active ? "Active" : "Inactive"}</button>`;
+    const cls = active ? T.STATUS_TONES.published : T.STATUS_TONES.inactive;
+    return `<button data-toggle-status="${category.id}" class="rounded px-2 py-0.5 text-xs font-medium ${cls} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" title="Click to toggle (FR-CAT-063)">${active ? "Active" : "Inactive"}</button>`;
   }
 
   function renderTable() {
     const rowsEl = document.getElementById("category-rows");
+
+    T.renderHead(document.getElementById("category-head"), COLUMNS, state.sort, (next) => {
+      state.sort = next;
+      renderTable();
+    });
+
     const q = state.query.trim().toLowerCase();
-    const results = q ? MOCK.categories.filter((c) => c.name.toLowerCase().includes(q)) : MOCK.categories;
+    const filtered = q
+      ? MOCK.categories.filter((c) => c.name.toLowerCase().includes(q))
+      : MOCK.categories;
+    const results = T.applySort(filtered, state.sort, SORT_ACCESSORS);
 
     if (results.length === 0) {
-      rowsEl.innerHTML = `<tr><td colspan="5" class="px-3 py-8 text-center text-neutral-400">No categories match this search.</td></tr>`;
+      rowsEl.innerHTML = `<tr><td colspan="${COLUMNS.length}" class="px-3 py-8 text-center text-neutral-400 dark:text-slate-500">No categories match this search.</td></tr>`;
     } else {
       rowsEl.innerHTML = results
         .map((c) => {
-          const parent = c.parentCategoryId ? MOCK.categories.find((p) => p.id === c.parentCategoryId) : null;
+          const parent = c.parentCategoryId
+            ? MOCK.categories.find((p) => p.id === c.parentCategoryId)
+            : null;
           const count = productCount(c.id);
           return `
-            <tr class="border-b border-neutral-100 last:border-0" data-row-for="${c.id}">
+            <tr class="border-b border-neutral-100 last:border-0 dark:border-slate-800" data-row-for="${c.id}">
               <td class="px-3 py-2 font-medium">${c.name}</td>
-              <td class="px-3 py-2 text-neutral-500">${parent ? parent.name : "—"}</td>
+              <td class="px-3 py-2 text-neutral-500 dark:text-slate-400">${parent ? parent.name : "—"}</td>
               <td class="px-3 py-2">${count}</td>
               <td class="px-3 py-2">${statusBadge(c)}</td>
               <td class="px-3 py-2 text-right">
-                <button data-edit="${c.id}" class="mr-3 text-sm text-neutral-600 underline hover:text-neutral-900">Edit</button>
-                <button data-delete="${c.id}" class="text-sm text-red-600 underline hover:text-red-800">Delete</button>
+                <button data-edit="${c.id}" class="mr-3 text-sm text-neutral-600 underline hover:text-neutral-900 dark:text-slate-400 dark:hover:text-slate-100">Edit</button>
+                <button data-delete="${c.id}" class="text-sm text-red-600 underline hover:text-red-800 dark:text-red-400">Delete</button>
               </td>
             </tr>
-            <tr data-error-for="${c.id}" class="hidden"><td colspan="5" class="px-3 pb-2 text-xs text-red-600"></td></tr>
+            <tr data-error-for="${c.id}" class="hidden"><td colspan="${COLUMNS.length}" class="px-3 pb-2 text-xs text-red-600 dark:text-red-400" role="alert"></td></tr>
           `;
         })
         .join("");
@@ -88,9 +120,12 @@
 
   function populateParentSelect() {
     const select = document.getElementById("cat-parent");
-    const topLevel = MOCK.categories.filter((c) => c.parentCategoryId === null && c.id !== editingId);
+    const topLevel = MOCK.categories.filter(
+      (c) => c.parentCategoryId === null && c.id !== editingId,
+    );
     select.innerHTML =
-      `<option value="">None (top-level)</option>` + topLevel.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
+      `<option value="">None (top-level)</option>` +
+      topLevel.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
   }
 
   // ---- Variant-type editor (FR-CAT-066/067) — shown only while editing an existing category ----
@@ -101,7 +136,9 @@
 
   function renderVariantTypesPanel(categoryId) {
     const category = MOCK.categories.find((c) => c.id === categoryId);
-    document.getElementById("variant-types-category-name").textContent = category ? category.name : "";
+    document.getElementById("variant-types-category-name").textContent = category
+      ? category.name
+      : "";
     document.getElementById("variant-types-panel").classList.remove("hidden");
 
     const doc = getVariantTypeDoc(categoryId);
@@ -111,18 +148,18 @@
       ? types
           .map(
             (t, i) => `
-              <div class="flex items-center justify-between rounded-md border border-neutral-200 px-3 py-2 text-sm">
+              <div class="flex items-center justify-between rounded-md border border-neutral-200 px-3 py-2 text-sm dark:border-slate-700">
                 <div>
                   <span class="font-medium">${t.name}</span>
-                  <span class="ml-2 text-xs text-neutral-400">${t.code} · ${t.type}${t.required ? " · required (UI hint)" : ""}</span>
-                  ${t.options && t.options.length ? `<div class="mt-0.5 text-xs text-neutral-500">${t.options.map((o) => o.label).join(", ")}</div>` : ""}
+                  <span class="ml-2 text-xs text-neutral-400 dark:text-slate-500">${t.code} · ${t.type}${t.required ? " · required (UI hint)" : ""}</span>
+                  ${t.options && t.options.length ? `<div class="mt-0.5 text-xs text-neutral-500 dark:text-slate-400">${t.options.map((o) => o.label).join(", ")}</div>` : ""}
                 </div>
-                <button data-remove-variant-type="${i}" class="text-xs text-red-600 underline hover:text-red-800">Remove</button>
+                <button data-remove-variant-type="${i}" class="text-xs text-red-600 underline hover:text-red-800 dark:text-red-400">Remove</button>
               </div>
             `,
           )
           .join("")
-      : `<p class="text-xs text-neutral-400">No variant types defined for this category yet.</p>`;
+      : `<p class="text-xs text-neutral-400 dark:text-slate-500">No variant types defined for this category yet.</p>`;
 
     rowsEl.querySelectorAll("button[data-remove-variant-type]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -215,7 +252,8 @@
       const reasons = [];
       if (count > 0) reasons.push(`${count} product${count === 1 ? "" : "s"}`);
       if (subcount > 0) reasons.push(`${subcount} subcategor${subcount === 1 ? "y" : "ies"}`);
-      errorRow.querySelector("td").textContent = `Cannot delete: still has ${reasons.join(" and ")} assigned. Reassign or remove them first.`;
+      errorRow.querySelector("td").textContent =
+        `Cannot delete: still has ${reasons.join(" and ")} assigned. Reassign or remove them first.`;
       errorRow.classList.remove("hidden");
       return;
     }
@@ -226,6 +264,13 @@
     MOCK.categoryVariants = MOCK.categoryVariants.filter((cv) => cv.categoryId !== id);
     if (editingId === id) resetForm();
     renderTable();
+    refreshCounts();
+  }
+
+  // The list, the sidebar badges and the result count refresh together after a
+  // mutation (docs/ui/admin-app.md section 6.6).
+  function refreshCounts() {
+    if (window.AdminNav) window.AdminNav.refresh();
   }
 
   document.getElementById("cat-image").addEventListener("change", (e) => {
@@ -260,9 +305,17 @@
     }
     resetForm();
     renderTable();
+    refreshCounts();
   });
 
   document.getElementById("cancel-edit-btn").addEventListener("click", resetForm);
+
+  // The Add button targets the side form rather than opening a modal — editing
+  // and creating share one persistent panel (docs/ui/admin-app.md section 4).
+  document.getElementById("add-btn").addEventListener("click", () => {
+    resetForm();
+    document.getElementById("cat-name").focus();
+  });
 
   document.getElementById("search-box").addEventListener("input", (e) => {
     state.query = e.target.value;
