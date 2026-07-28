@@ -6,29 +6,183 @@
     <title>TechCart — Layout Mocks</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   </head>
-  <body class="flex min-h-screen items-center justify-center bg-white p-6 text-neutral-600">
-    <div class="w-full max-w-md border border-neutral-400 p-8">
-      <h1 class="text-lg tracking-wide text-neutral-600">TechCart — Layout Mocks</h1>
-      <p class="mt-2 text-sm text-neutral-500">
-        Structural wireframes for the two frontends. Page chrome only — not visual design.
-      </p>
+  <body class="min-h-screen bg-white p-6 text-neutral-700">
+    <div class="mx-auto max-w-5xl">
+      <header class="border-b border-neutral-400 pb-4">
+        <h1 class="text-xl tracking-tight">TechCart — Layout Mocks</h1>
+        <p class="mt-1 text-sm text-neutral-500">
+          Structural wireframes. Layout and information hierarchy only — not visual design.
+        </p>
+        <p class="mt-2 text-[11px] text-neutral-400">
+          Catalog screens follow SRS v0.2 §6. Each page names the
+          <code>FR-CAT-*</code> requirements it renders.
+        </p>
+      </header>
 
-      <nav class="mt-6 flex flex-col gap-3">
-        <a
-          href="./admin-app/index.html"
-          class="flex items-center justify-between border border-neutral-400 px-4 py-3 text-sm text-neutral-600 hover:bg-neutral-100"
-        >
-          <span>admin-app</span>
-          <span class="text-neutral-500">Side bar + Header + Content</span>
-        </a>
-        <a
-          href="./buyer-app/index.html"
-          class="flex items-center justify-between border border-neutral-400 px-4 py-3 text-sm text-neutral-600 hover:bg-neutral-100"
-        >
-          <span>buyer-app</span>
-          <span class="text-neutral-500">Header + Content + Footer</span>
-        </a>
-      </nav>
+      <!-- Shells -->
+      <section class="mt-6">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">
+          Shell layouts
+        </h2>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./admin-app/index.html"
+          >
+            <p class="text-sm font-medium">admin-app shell</p>
+            <p class="mt-1 text-xs text-neutral-500">Side bar + Header + Content</p>
+          </a>
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./buyer-app/index.html"
+          >
+            <p class="text-sm font-medium">buyer-app shell</p>
+            <p class="mt-1 text-xs text-neutral-500">Header (sticky) + Content + Footer</p>
+          </a>
+        </div>
+      </section>
+
+      <!-- Buyer screens -->
+      <section class="mt-8">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">
+          buyer-app — catalog screens
+        </h2>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./buyer-app/home.html"
+          >
+            <p class="text-sm font-medium">Home / all-products listing</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Sort, pagination, image-name-price cards, and the skeleton / empty / error states
+            </p>
+            <code class="mt-2 block text-[11px] text-neutral-400">
+              FR-CAT-054, 057–059, 075, 091
+            </code>
+          </a>
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./buyer-app/category.html"
+          >
+            <p class="text-sm font-medium">Category listing</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Breadcrumb, and cards carrying up to four filterable specification pairs
+            </p>
+            <code class="mt-2 block text-[11px] text-neutral-400">FR-CAT-055, 070, 092</code>
+          </a>
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./buyer-app/search.html"
+          >
+            <p class="text-sm font-medium">Search results</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Keyword shown, relevance sort, and the search-empty state distinct from filter-empty
+            </p>
+            <code class="mt-2 block text-[11px] text-neutral-400">FR-CAT-065, 067, 075</code>
+          </a>
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./buyer-app/product-detail.html"
+          >
+            <p class="text-sm font-medium">Product detail</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Gallery, variant selector, grouped specification table, stock badge. No add-to-cart in
+              v0.2
+            </p>
+            <code class="mt-2 block text-[11px] text-neutral-400">
+              FR-CAT-056, 059, 063, 064, 084
+            </code>
+          </a>
+        </div>
+      </section>
+
+      <!-- Admin screens -->
+      <section class="mt-8">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">
+          admin-app — catalog screens
+        </h2>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./admin-app/product-list.html"
+          >
+            <p class="text-sm font-medium">Product list</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              All statuses, keyword + status + low-stock filters, pagination
+            </p>
+            <code class="mt-2 block text-[11px] text-neutral-400">FR-CAT-005, 011, 050, 053</code>
+          </a>
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./admin-app/product-detail.html"
+          >
+            <p class="text-sm font-medium">Product detail (read-only)</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Every field at any status, separate from the edit form
+            </p>
+            <code class="mt-2 block text-[11px] text-neutral-400">FR-CAT-006, 013, 043, 045</code>
+          </a>
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./admin-app/product-form.html"
+          >
+            <p class="text-sm font-medium">Product create / edit form</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Image widget with primary selection, paise pricing, category-derived specification
+              inputs, axis-driven variant editor
+            </p>
+            <code class="mt-2 block text-[11px] text-neutral-400">
+              FR-CAT-001–004, 033, 038, 083–087
+            </code>
+          </a>
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./admin-app/category-list.html"
+          >
+            <p class="text-sm font-medium">Categories — list + form</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Parent/child tree, product counts, and the delete guard shown inline
+            </p>
+            <code class="mt-2 block text-[11px] text-neutral-400">FR-CAT-014–022, 048, 051</code>
+          </a>
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./admin-app/brand-list.html"
+          >
+            <p class="text-sm font-medium">Brands — list + form</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Logo, all-status product counts, and the delete guard shown inline
+            </p>
+            <code class="mt-2 block text-[11px] text-neutral-400">FR-CAT-023–028, 048, 052</code>
+          </a>
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./admin-app/specification-editor.html"
+          >
+            <p class="text-sm font-medium">Category specification editor</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Groups and fields, reorder handles, both effects of <code>filterable</code>, and a
+              live category-card preview
+            </p>
+            <code class="mt-2 block text-[11px] text-neutral-400">FR-CAT-030, 031, 035, 092</code>
+          </a>
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./admin-app/variant-type-editor.html"
+          >
+            <p class="text-sm font-medium">Category variant-type editor</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Axes with name, code, type, options — and what each type renders in the product form
+            </p>
+            <code class="mt-2 block text-[11px] text-neutral-400">FR-CAT-036–038</code>
+          </a>
+        </div>
+      </section>
+
+      <footer class="mt-8 border-t border-neutral-300 pt-4 text-[11px] text-neutral-400">
+        Tailwind is loaded from a CDN, so these pages need an internet connection to render. See
+        <a class="underline" href="./README.md">README.md</a>.
+      </footer>
     </div>
   </body>
 </html>

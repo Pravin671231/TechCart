@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Buyer — Product Detail</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  </head>
+  <body class="flex min-h-screen flex-col bg-white text-neutral-700">
+    <header class="sticky top-0 z-20 border-b border-neutral-400 bg-neutral-100">
+      <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
+        <a href="./home.html" class="text-sm font-medium tracking-wide">TechCart</a>
+        <div
+          class="flex h-9 flex-1 items-center border border-neutral-400 bg-white px-3 text-sm text-neutral-400"
+        >
+          Search products…
+        </div>
+        <nav class="hidden gap-4 text-sm text-neutral-500 sm:flex">
+          <a href="./category.html">Categories</a>
+          <a href="./search.html">Search</a>
+        </nav>
+      </div>
+    </header>
+
+    <p class="border-b border-neutral-300 bg-neutral-50 px-4 py-2 text-center text-[11px]">
+      <span class="text-neutral-500">buyer-app · Product detail, routed by slug —</span>
+      <code class="text-neutral-600">FR-CAT-056, 059, 063, 064, 084</code>
+    </p>
+
+    <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
+      <nav class="mb-6 text-sm text-neutral-500">
+        <a href="./home.html">Home</a>
+        <span class="mx-1">/</span>
+        <span>Electronics</span>
+        <span class="mx-1">/</span>
+        <a href="./category.html">Smartphones</a>
+        <span class="mx-1">/</span>
+        <span class="text-neutral-700">Product name</span>
+      </nav>
+      <p class="mb-6 -mt-4 text-[11px] text-neutral-400">
+        URL is <code>/products/&lt;slug&gt;</code> — slug, not ID, because catalog pages are ISR and
+        the slug is both cache key and SEO URL · FR-CAT-056
+      </p>
+
+      <div class="grid gap-8 lg:grid-cols-2">
+        <!-- Gallery — primary image drives it, each image carries alt text. FR-CAT-084 -->
+        <section>
+          <div
+            class="flex aspect-square items-center justify-center border border-neutral-400 bg-neutral-100 text-xs text-neutral-400"
+          >
+            Primary image (alt text)
+          </div>
+          <div class="mt-3 flex gap-2">
+            <div
+              class="flex h-16 w-16 items-center justify-center border border-neutral-600 bg-neutral-100 text-[10px] text-neutral-400"
+            >
+              1
+            </div>
+            <div
+              class="flex h-16 w-16 items-center justify-center border border-neutral-400 bg-neutral-100 text-[10px] text-neutral-400"
+            >
+              2
+            </div>
+            <div
+              class="flex h-16 w-16 items-center justify-center border border-neutral-400 bg-neutral-100 text-[10px] text-neutral-400"
+            >
+              3
+            </div>
+            <div
+              class="flex h-16 w-16 items-center justify-center border border-neutral-400 bg-neutral-100 text-[10px] text-neutral-400"
+            >
+              4
+            </div>
+          </div>
+          <p class="mt-2 text-[11px] text-neutral-400">
+            1–8 images per product, exactly one primary · FR-CAT-083, 084. A selected variant with
+            no images of its own falls back to these · FR-CAT-064
+          </p>
+        </section>
+
+        <!-- Buy box -->
+        <section class="flex flex-col gap-5">
+          <div>
+            <h1 class="text-2xl tracking-tight">Product name</h1>
+            <p class="mt-1 text-sm text-neutral-500">
+              by <a class="underline" href="#">Brand A</a>
+              <span class="mx-1">·</span>
+              <a class="underline" href="./category.html">Smartphones</a>
+            </p>
+            <p class="mt-1 text-[11px] text-neutral-400">Brand and category are both links · §6</p>
+          </div>
+
+          <div>
+            <p class="flex flex-wrap items-baseline gap-2">
+              <span class="text-2xl font-medium">₹44,910</span>
+              <span class="text-sm text-neutral-400 line-through">₹49,900</span>
+              <span class="border border-neutral-400 px-2 py-0.5 text-xs text-neutral-600">
+                10% off
+              </span>
+            </p>
+            <p class="mt-1 text-[11px] text-neutral-400">
+              sellingPrice = mrp − floor(mrp × discount / 100), always server-computed · FR-CAT-087
+            </p>
+          </div>
+
+          <p>
+            <span class="border border-neutral-500 px-2 py-1 text-xs text-neutral-700">
+              In stock
+            </span>
+            <span class="ml-2 text-[11px] text-neutral-400">
+              Zero-stock products stay visible, marked out of stock · FR-CAT-059
+            </span>
+          </p>
+
+          <!-- Variant selector — FR-CAT-064 -->
+          <section class="border border-neutral-400 p-4">
+            <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Choose a variant</h2>
+
+            <p class="mb-1 text-sm text-neutral-500">Colour</p>
+            <div class="mb-4 flex gap-2">
+              <span class="h-8 w-8 border-2 border-neutral-700 bg-neutral-200"></span>
+              <span class="h-8 w-8 border border-neutral-400 bg-neutral-400"></span>
+              <span class="h-8 w-8 border border-neutral-400 bg-neutral-600"></span>
+            </div>
+
+            <p class="mb-1 text-sm text-neutral-500">Storage</p>
+            <div class="flex gap-2">
+              <span class="border-2 border-neutral-700 px-3 py-1 text-sm">128GB</span>
+              <span class="border border-neutral-400 px-3 py-1 text-sm text-neutral-600">
+                256GB
+              </span>
+              <span
+                class="border border-neutral-300 px-3 py-1 text-sm text-neutral-300 line-through"
+              >
+                512GB
+              </span>
+            </div>
+
+            <p class="mt-3 text-[11px] text-neutral-400">
+              Defaults to the lowest-<code>sellingPrice</code> active variant. Selecting another
+              updates price, stock, and images · FR-CAT-064. Inactive variants are never offered ·
+              FR-CAT-040, 044
+            </p>
+          </section>
+
+          <!-- Explicitly out of scope this version -->
+          <div class="border border-dashed border-neutral-400 p-3 text-[11px] text-neutral-500">
+            <strong class="text-neutral-600">No add-to-cart control in v0.2.</strong>
+            The product detail page is read-only in this version; cart interaction lands in v0.4 ·
+            §7
+          </div>
+        </section>
+      </div>
+
+      <!-- Description -->
+      <section class="mt-10 max-w-3xl">
+        <h2 class="mb-2 text-sm font-medium tracking-wide uppercase text-neutral-500">
+          Description
+        </h2>
+        <div class="space-y-2">
+          <div class="h-3 w-full bg-neutral-100"></div>
+          <div class="h-3 w-full bg-neutral-100"></div>
+          <div class="h-3 w-4/5 bg-neutral-100"></div>
+        </div>
+      </section>
+
+      <!-- Specification table grouped by groupName — FR-CAT-063 -->
+      <section class="mt-10 max-w-3xl">
+        <h2 class="mb-2 text-sm font-medium tracking-wide uppercase text-neutral-500">
+          Specifications
+        </h2>
+        <div class="border border-neutral-400">
+          <p class="border-b border-neutral-400 bg-neutral-100 px-3 py-2 text-sm font-medium">
+            Display
+          </p>
+          <dl class="divide-y divide-neutral-200 text-sm">
+            <div class="flex px-3 py-2">
+              <dt class="w-48 shrink-0 text-neutral-500">Screen Size</dt>
+              <dd>6.1 in</dd>
+            </div>
+            <div class="flex px-3 py-2">
+              <dt class="w-48 shrink-0 text-neutral-500">Resolution</dt>
+              <dd>2556 × 1179</dd>
+            </div>
+          </dl>
+
+          <p class="border-y border-neutral-400 bg-neutral-100 px-3 py-2 text-sm font-medium">
+            Performance
+          </p>
+          <dl class="divide-y divide-neutral-200 text-sm">
+            <div class="flex px-3 py-2">
+              <dt class="w-48 shrink-0 text-neutral-500">RAM</dt>
+              <dd>8GB</dd>
+            </div>
+            <div class="flex px-3 py-2">
+              <dt class="w-48 shrink-0 text-neutral-500">Processor</dt>
+              <dd class="flex items-center gap-2">
+                A17 Pro
+                <span class="text-[11px] text-neutral-400"
+                  >(not filterable — detail page only)</span
+                >
+              </dd>
+            </div>
+          </dl>
+
+          <p class="border-y border-neutral-400 bg-neutral-100 px-3 py-2 text-sm font-medium">
+            Connectivity
+          </p>
+          <dl class="divide-y divide-neutral-200 text-sm">
+            <div class="flex px-3 py-2">
+              <dt class="w-48 shrink-0 text-neutral-500">5G</dt>
+              <dd>Yes</dd>
+            </div>
+          </dl>
+        </div>
+        <p class="mt-2 text-[11px] text-neutral-400">
+          Every specification pair is shown here, grouped by <code>groupName</code>, whether or not
+          it is <code>filterable</code> · FR-CAT-063
+        </p>
+      </section>
+    </main>
+
+    <footer class="mt-10 border-t border-neutral-400 bg-neutral-100">
+      <div
+        class="mx-auto flex h-24 max-w-7xl items-center justify-center px-4 text-sm text-neutral-500"
+      >
+        Footer
+      </div>
+    </footer>
+  </body>
+</html>

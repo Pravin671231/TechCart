@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin — Category Variant-Type Editor</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  </head>
+  <body class="h-screen bg-white text-neutral-700">
+    <div class="flex h-screen">
+      <aside class="flex w-56 shrink-0 flex-col border-r border-neutral-400 bg-neutral-100">
+        <div
+          class="flex h-16 shrink-0 items-center border-b border-neutral-400 px-4 text-sm font-medium"
+        >
+          TechCart Admin
+        </div>
+        <nav class="flex flex-col p-2 text-sm text-neutral-600">
+          <a class="px-3 py-2" href="./product-list.html">Products</a>
+          <a class="px-3 py-2" href="./category-list.html">Categories</a>
+          <a class="px-3 py-2" href="./brand-list.html">Brands</a>
+          <a class="px-3 py-2" href="./specification-editor.html">Specifications</a>
+          <a class="border border-neutral-500 bg-white px-3 py-2" href="./variant-type-editor.html">
+            Variant types
+          </a>
+        </nav>
+      </aside>
+
+      <div class="flex min-w-0 flex-1 flex-col">
+        <header
+          class="flex h-16 shrink-0 items-center justify-between border-b border-neutral-400 bg-neutral-100 px-6"
+        >
+          <h1 class="text-sm font-medium">Variant axes</h1>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="border border-neutral-400 px-3 py-1.5">Category: Smartphones ▾</span>
+            <span class="border border-neutral-600 bg-white px-3 py-1.5">Save axes</span>
+          </div>
+        </header>
+
+        <main class="flex-1 overflow-auto p-6">
+          <p class="mb-4 text-[11px] text-neutral-400">
+            admin-app · Category variant-type editor —
+            <code class="text-neutral-500">FR-CAT-036, 037, 038</code> · One variant-type document
+            per category
+          </p>
+
+          <div class="mb-6 border border-dashed border-neutral-400 p-3 text-sm">
+            <p class="font-medium text-neutral-600">These definitions drive form rendering only</p>
+            <p class="mt-1 text-[11px] text-neutral-500">
+              They are never enforced against stored variant attributes server-side. That is why
+              deleting an axis is <strong>unguarded</strong> — unlike the specification field guard
+              in FR-CAT-031, no in-use check blocks it. Removing an axis just means the variant
+              editor falls back to a plain text input for it · FR-CAT-037
+            </p>
+          </div>
+
+          <div class="flex flex-col gap-6 xl:flex-row">
+            <section class="min-w-0 flex-1">
+              <div class="overflow-x-auto border border-neutral-400">
+                <table class="w-full min-w-[760px] border-collapse text-sm">
+                  <thead class="bg-neutral-100 text-left">
+                    <tr class="border-b border-neutral-400">
+                      <th class="px-3 py-2 font-medium">Axis name</th>
+                      <th class="px-3 py-2 font-medium">Code</th>
+                      <th class="px-3 py-2 font-medium">Type</th>
+                      <th class="px-3 py-2 font-medium">Required</th>
+                      <th class="px-3 py-2 font-medium">Options (label / value)</th>
+                      <th class="px-3 py-2 font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-neutral-200">
+                    <tr>
+                      <td class="px-3 py-2">Colour</td>
+                      <td class="px-3 py-2 font-mono text-xs">color</td>
+                      <td class="px-3 py-2">color ▾</td>
+                      <td class="px-3 py-2">☑</td>
+                      <td class="px-3 py-2 text-xs">
+                        Black / #000 · Silver / #c0c0c0 · Graphite / #4a4a4a
+                      </td>
+                      <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                    </tr>
+                    <tr>
+                      <td class="px-3 py-2">Storage</td>
+                      <td class="px-3 py-2 font-mono text-xs">storage</td>
+                      <td class="px-3 py-2">select ▾</td>
+                      <td class="px-3 py-2">☑</td>
+                      <td class="px-3 py-2 text-xs">128GB / 128 · 256GB / 256 · 512GB / 512</td>
+                      <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                    </tr>
+                    <tr>
+                      <td class="px-3 py-2">Bundle Size</td>
+                      <td class="px-3 py-2 font-mono text-xs">bundle</td>
+                      <td class="px-3 py-2">number ▾</td>
+                      <td class="px-3 py-2">☐</td>
+                      <td class="px-3 py-2 text-neutral-400">— not used for number</td>
+                      <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                    </tr>
+                    <tr>
+                      <td class="px-3 py-2">Engraving</td>
+                      <td class="px-3 py-2 font-mono text-xs">engraving</td>
+                      <td class="px-3 py-2">text ▾</td>
+                      <td class="px-3 py-2">☐</td>
+                      <td class="px-3 py-2 text-neutral-400">— not used for text</td>
+                      <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="mt-2 text-[11px] text-neutral-400">
+                <code>type</code> is one of <code>text</code>, <code>select</code>,
+                <code>color</code>, or <code>number</code>, defaulting to <code>select</code>.
+                <code>options</code> are <code>{label, value}</code> pairs and apply to
+                <code>select</code> and <code>color</code> only · FR-CAT-036
+              </p>
+
+              <span class="mt-4 inline-block border border-neutral-400 px-3 py-1.5 text-sm">
+                + Add axis
+              </span>
+            </section>
+
+            <!-- How these axes render in the product form -->
+            <section class="w-full shrink-0 xl:w-96">
+              <div class="border border-neutral-400 p-4">
+                <h2 class="mb-1 text-xs font-medium tracking-wide uppercase">
+                  Resulting variant editor
+                </h2>
+                <p class="mb-4 text-[11px] text-neutral-400">
+                  What the product form renders from the axes on the left · FR-CAT-038 · see
+                  <a class="underline" href="./product-form.html">product-form.html</a>
+                </p>
+
+                <div class="space-y-3">
+                  <label class="block text-sm">
+                    <span class="text-neutral-500">Colour <em>(color → swatch picker)</em></span>
+                    <span class="mt-1 flex gap-1">
+                      <span class="h-8 w-8 border-2 border-neutral-700 bg-neutral-200"></span>
+                      <span class="h-8 w-8 border border-neutral-400 bg-neutral-400"></span>
+                      <span class="h-8 w-8 border border-neutral-400 bg-neutral-600"></span>
+                    </span>
+                  </label>
+                  <label class="block text-sm">
+                    <span class="text-neutral-500">Storage <em>(select → dropdown)</em></span>
+                    <span class="mt-1 block border border-neutral-400 px-3 py-2">128GB ▾</span>
+                  </label>
+                  <label class="block text-sm">
+                    <span class="text-neutral-500"
+                      >Bundle Size <em>(number → numeric input)</em></span
+                    >
+                    <span class="mt-1 block border border-neutral-400 px-3 py-2">1</span>
+                  </label>
+                  <label class="block text-sm">
+                    <span class="text-neutral-500">Engraving <em>(text → text input)</em></span>
+                    <span class="mt-1 block border border-neutral-400 px-3 py-2"></span>
+                  </label>
+                  <label class="block text-sm">
+                    <span class="text-neutral-500">
+                      Finish <em class="text-neutral-400">(no axis defined → text fallback)</em>
+                    </span>
+                    <span
+                      class="mt-1 block border border-dashed border-neutral-400 px-3 py-2"
+                    ></span>
+                  </label>
+                </div>
+              </div>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
