@@ -189,9 +189,9 @@ The repository now exists at `github.com/Pravin671231/TechCart` (`main` is the o
 
 A feature earns a row once its spec is drafted (step 2 of the workflow above); the Milestone and Issue(s) columns fill in as it reaches steps 3 and 4.
 
-| Feature         | SRS Version                                                  | Milestone            | Issue(s) | Status       |
-| --------------- | ------------------------------------------------------------ | -------------------- | -------- | ------------ |
-| Product Catalog | [v0.2](features/0.2-product-catalog.md) — `FR-CAT-001`–`090` | M2 (not yet created) | —        | Spec drafted |
+| Feature         | SRS Version                                                  | Milestone            | Issue(s) | Status                                              |
+| --------------- | ------------------------------------------------------------ | -------------------- | -------- | --------------------------------------------------- |
+| Product Catalog | [v0.2](features/0.2-product-catalog.md) — `FR-CAT-001`–`096` | M2 (not yet created) | —        | Spec drafted; 12 issues drafted in `docs/issues.md` |
 
 ---
 
