@@ -30,6 +30,7 @@ TechCart/
 ├── docs/
 │   ├── srs/                    # Versioned SRS — see srs/SRS.md
 │   └── architecture.md          # this file
+├── mock-ui/                     # static layout wireframes (not a workspace)
 ├── .github/workflows/ci.yml      # single workflow, checks all three workspaces
 ├── package.json                  # root, npm workspaces: ["backend", "buyer-app", "admin-app"]
 ├── tsconfig.base.json
