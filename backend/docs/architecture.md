@@ -55,7 +55,7 @@ backend/
     ├── utils/
     │   └── AppError.ts
     │
-    ├── externalService/                # empty — third-party API clients (Razorpay, Cloudinary, ...) land M6+
+    ├── externalService/                # empty — third-party API clients; first is Cloudflare R2 (M2), then Razorpay (M6+)
     │
     └── modules/
         └── health/

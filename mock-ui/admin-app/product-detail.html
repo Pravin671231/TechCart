@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin — Product Detail (read-only)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  </head>
+  <body class="h-screen bg-white text-neutral-700">
+    <div class="flex h-screen">
+      <aside class="flex w-56 shrink-0 flex-col border-r border-neutral-400 bg-neutral-100">
+        <div
+          class="flex h-16 shrink-0 items-center border-b border-neutral-400 px-4 text-sm font-medium"
+        >
+          TechCart Admin
+        </div>
+        <nav class="flex flex-col p-2 text-sm text-neutral-600">
+          <a class="border border-neutral-500 bg-white px-3 py-2" href="./product-list.html">
+            Products
+          </a>
+          <a class="px-3 py-2" href="./category-list.html">Categories</a>
+          <a class="px-3 py-2" href="./brand-list.html">Brands</a>
+          <a class="px-3 py-2" href="./specification-editor.html">Specifications</a>
+          <a class="px-3 py-2" href="./variant-type-editor.html">Variant types</a>
+        </nav>
+      </aside>
+
+      <div class="flex min-w-0 flex-1 flex-col">
+        <header
+          class="flex h-16 shrink-0 items-center justify-between border-b border-neutral-400 bg-neutral-100 px-6"
+        >
+          <h1 class="text-sm font-medium">
+            <a class="text-neutral-500" href="./product-list.html">Products</a>
+            <span class="mx-1 text-neutral-400">/</span>
+            Product name
+          </h1>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="border border-neutral-400 px-3 py-1.5">Change status ▾</span>
+            <a class="border border-neutral-600 bg-white px-3 py-1.5" href="./product-form.html">
+              Edit
+            </a>
+          </div>
+        </header>
+
+        <main class="flex-1 overflow-auto p-6">
+          <p class="mb-4 text-[11px] text-neutral-400">
+            admin-app · Product detail, read-only —
+            <code class="text-neutral-500">FR-CAT-006, 013, 045</code> · A separate view from the
+            create/edit form, showing every field at any status
+          </p>
+
+          <div class="mb-6 flex flex-wrap items-center gap-3">
+            <span class="border border-dashed border-neutral-500 px-2 py-0.5 text-xs">Draft</span>
+            <span class="text-[11px] text-neutral-400">
+              This view renders identically for <code>draft</code>, <code>published</code>, and
+              <code>archived</code> · FR-CAT-006
+            </span>
+          </div>
+
+          <div class="grid gap-6 lg:grid-cols-3">
+            <!-- Images -->
+            <section class="border border-neutral-400 p-4">
+              <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Images</h2>
+              <div class="grid grid-cols-3 gap-2">
+                <div
+                  class="flex aspect-square items-center justify-center border-2 border-neutral-600 bg-neutral-100 text-[10px] text-neutral-500"
+                >
+                  Primary
+                </div>
+                <div class="aspect-square border border-neutral-400 bg-neutral-100"></div>
+                <div class="aspect-square border border-neutral-400 bg-neutral-100"></div>
+                <div class="aspect-square border border-neutral-400 bg-neutral-100"></div>
+              </div>
+              <p class="mt-2 text-[11px] text-neutral-400">
+                4 of 8 max · each carries <code>alt</code> text · FR-CAT-083, 084
+              </p>
+            </section>
+
+            <!-- Core fields -->
+            <section class="border border-neutral-400 p-4 lg:col-span-2">
+              <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Details</h2>
+              <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">Name</dt>
+                  <dd>Product name</dd>
+                </div>
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">Slug</dt>
+                  <dd class="font-mono text-xs">product-name</dd>
+                </div>
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">SKU</dt>
+                  <dd class="font-mono text-xs">TC-SP-0001</dd>
+                </div>
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">Brand</dt>
+                  <dd>Brand A</dd>
+                </div>
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">Category</dt>
+                  <dd>Electronics › Smartphones</dd>
+                </div>
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">Featured</dt>
+                  <dd>No</dd>
+                </div>
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">MRP</dt>
+                  <dd>₹49,900 <span class="text-[11px] text-neutral-400">(4990000 paise)</span></dd>
+                </div>
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">Discount</dt>
+                  <dd>10%</dd>
+                </div>
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">Selling price</dt>
+                  <dd>₹44,910 <span class="text-[11px] text-neutral-400">server-computed</span></dd>
+                </div>
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">Stock</dt>
+                  <dd>128</dd>
+                </div>
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">Low-stock threshold</dt>
+                  <dd>10</dd>
+                </div>
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">Meta title</dt>
+                  <dd class="text-neutral-400">— falls back to name</dd>
+                </div>
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">Created by</dt>
+                  <dd class="font-mono text-xs text-neutral-400">null</dd>
+                </div>
+                <div class="flex gap-2">
+                  <dt class="w-36 shrink-0 text-neutral-500">Updated by</dt>
+                  <dd class="font-mono text-xs text-neutral-400">null</dd>
+                </div>
+              </dl>
+              <p class="mt-3 text-[11px] text-neutral-400">
+                <code>createdBy</code>/<code>updatedBy</code> are reserved and stored as
+                <code>null</code> until v0.3 — present in the document, not absent · FR-CAT-013
+              </p>
+            </section>
+          </div>
+
+          <!-- Specifications -->
+          <section class="mt-6 border border-neutral-400 p-4">
+            <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Specifications</h2>
+            <div class="grid gap-4 sm:grid-cols-3">
+              <div>
+                <p class="mb-1 text-sm font-medium">Display</p>
+                <dl class="text-sm text-neutral-600">
+                  <div class="flex justify-between border-b border-neutral-200 py-1">
+                    <dt>Screen Size</dt>
+                    <dd>6.1 in</dd>
+                  </div>
+                  <div class="flex justify-between border-b border-neutral-200 py-1">
+                    <dt>Resolution</dt>
+                    <dd>2556 × 1179</dd>
+                  </div>
+                </dl>
+              </div>
+              <div>
+                <p class="mb-1 text-sm font-medium">Performance</p>
+                <dl class="text-sm text-neutral-600">
+                  <div class="flex justify-between border-b border-neutral-200 py-1">
+                    <dt>RAM</dt>
+                    <dd>8GB</dd>
+                  </div>
+                  <div class="flex justify-between border-b border-neutral-200 py-1">
+                    <dt>Processor</dt>
+                    <dd>A17 Pro</dd>
+                  </div>
+                </dl>
+              </div>
+              <div>
+                <p class="mb-1 text-sm font-medium">Connectivity</p>
+                <dl class="text-sm text-neutral-600">
+                  <div class="flex justify-between border-b border-neutral-200 py-1">
+                    <dt>5G</dt>
+                    <dd>Yes</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </section>
+
+          <!-- Variants -->
+          <section class="mt-6 border border-neutral-400 p-4">
+            <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Variants</h2>
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[700px] border-collapse text-sm">
+                <thead class="bg-neutral-100 text-left">
+                  <tr class="border-b border-neutral-400">
+                    <th class="px-3 py-2 font-medium">SKU</th>
+                    <th class="px-3 py-2 font-medium">Attributes</th>
+                    <th class="px-3 py-2 text-right font-medium">MRP</th>
+                    <th class="px-3 py-2 text-right font-medium">Disc.</th>
+                    <th class="px-3 py-2 text-right font-medium">Selling</th>
+                    <th class="px-3 py-2 text-right font-medium">Stock</th>
+                    <th class="px-3 py-2 font-medium">Active</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-200">
+                  <tr>
+                    <td class="px-3 py-2 font-mono text-xs">TC-SP-0001-BLK-128</td>
+                    <td class="px-3 py-2">Colour=Black · Storage=128GB</td>
+                    <td class="px-3 py-2 text-right">₹49,900</td>
+                    <td class="px-3 py-2 text-right">10%</td>
+                    <td class="px-3 py-2 text-right">₹44,910</td>
+                    <td class="px-3 py-2 text-right">64</td>
+                    <td class="px-3 py-2">Yes</td>
+                  </tr>
+                  <tr>
+                    <td class="px-3 py-2 font-mono text-xs">TC-SP-0001-BLK-256</td>
+                    <td class="px-3 py-2">Colour=Black · Storage=256GB</td>
+                    <td class="px-3 py-2 text-right">₹56,900</td>
+                    <td class="px-3 py-2 text-right">0%</td>
+                    <td class="px-3 py-2 text-right">₹56,900</td>
+                    <td class="px-3 py-2 text-right">40</td>
+                    <td class="px-3 py-2">Yes</td>
+                  </tr>
+                  <tr class="text-neutral-400">
+                    <td class="px-3 py-2 font-mono text-xs">TC-SP-0001-WHT-128</td>
+                    <td class="px-3 py-2">Colour=White · Storage=128GB</td>
+                    <td class="px-3 py-2 text-right">₹49,900</td>
+                    <td class="px-3 py-2 text-right">0%</td>
+                    <td class="px-3 py-2 text-right">₹49,900</td>
+                    <td class="px-3 py-2 text-right">0</td>
+                    <td class="px-3 py-2">No</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="mt-2 text-[11px] text-neutral-400">
+              Deactivated variants stay embedded on the document — never hard-removed · FR-CAT-040.
+              With active variants present, the variant is the purchasable unit and the parent's own
+              price becomes a “starting from” value · FR-CAT-043
+            </p>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

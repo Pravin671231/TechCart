@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TechCart Storefront — Layout Mock</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  </head>
+  <body class="flex min-h-screen flex-col bg-white text-neutral-600">
+    <!-- Header — sticks to the top on scroll -->
+    <header
+      class="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-center border-b border-neutral-400 bg-neutral-100"
+    >
+      <span class="text-sm tracking-wide text-neutral-500">Header (sticky)</span>
+    </header>
+
+    <!-- Content — centred, tall enough that the sticky header is demonstrable -->
+    <main class="flex flex-1 justify-center px-6 py-10">
+      <section
+        class="flex min-h-[130vh] w-full max-w-6xl flex-col gap-6 border border-neutral-400 p-6"
+      >
+        <span class="text-center text-sm tracking-wide text-neutral-500">Content</span>
+
+        <div class="grid flex-1 gap-4 sm:grid-cols-3">
+          <div class="flex min-h-40 items-center justify-center border border-neutral-400">
+            <span class="text-sm tracking-wide text-neutral-500">Product Grid</span>
+          </div>
+          <div class="flex min-h-40 items-center justify-center border border-neutral-400">
+            <span class="text-sm tracking-wide text-neutral-500">Details</span>
+          </div>
+          <div class="flex min-h-40 items-center justify-center border border-neutral-400">
+            <span class="text-sm tracking-wide text-neutral-500">Checkout</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer — full width, bottom of the flow -->
+    <footer
+      class="flex h-24 shrink-0 items-center justify-center border-t border-neutral-400 bg-neutral-100"
+    >
+      <span class="text-sm tracking-wide text-neutral-500">Footer</span>
+    </footer>
+  </body>
+</html>
