@@ -63,7 +63,7 @@ flowchart LR
     end
     subgraph Managed services
         Razorpay["Razorpay"]
-        Cloudinary["Cloudinary"]
+        R2["Cloudflare R2"]
         Resend["Resend"]
     end
 
@@ -74,7 +74,7 @@ flowchart LR
     Backend --> Worker
     Worker --> Redis
     Backend <--> Razorpay
-    Backend --> Cloudinary
+    Backend --> R2
     Worker --> Resend
 ```
 
@@ -119,15 +119,18 @@ Folder/module structure is implementation detail owned by `backend/` itself, not
 
 High-level collection map (field-level detail belongs in each feature's SRS, not here):
 
-| Collection               | Owned by feature | Notes                                                                                   |
-| ------------------------ | ---------------- | --------------------------------------------------------------------------------------- |
-| `users`                  | Authentication   | Buyer + Admin accounts, role field for RBAC                                             |
-| `products`, `categories` | Product Catalog  | Indexed for Atlas Search                                                                |
-| `carts`                  | Shopping Cart    | One per guest session or user                                                           |
-| `orders`                 | Orders           | State machine: pending → paid → processing → shipped → delivered / cancelled / refunded |
-| `payments`               | Payments         | Razorpay order/payment IDs, webhook event log                                           |
+| Collection                                   | Owned by feature | Notes                                                                                       |
+| -------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------- |
+| `users`                                      | Authentication   | Buyer + Admin accounts, role field for RBAC                                                 |
+| `products`, `categories`                     | Product Catalog  | Indexed for Atlas Search; product variants are embedded on `products`, not a collection     |
+| `brands`                                     | Product Catalog  | Required reference on every product; backs the buyer brand filter                           |
+| `categorySpecifications`, `categoryVariants` | Product Catalog  | One document per category each — the spec schema and variant axes a category's products use |
+| `carts`                                      | Shopping Cart    | One per guest session or user                                                               |
+| `orders`                                     | Orders           | State machine: pending → paid → processing → shipped → delivered / cancelled / refunded     |
+| `payments`                                   | Payments         | Razorpay order/payment IDs, webhook event log                                               |
 
 - **Search:** MongoDB Atlas Search index on `products` — no separate search service at current scale.
+- **Object storage:** Cloudflare R2 (S3-compatible) for product, brand, and category images, via presigned direct upload — the backend never handles image bytes. See SRS v0.2 §2.12.
 - **Cache/queues:** Upstash Redis backs both backend response caching (where used) and the BullMQ queues.
 
 ---
