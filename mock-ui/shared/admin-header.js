@@ -1,7 +1,7 @@
 // Injects the console header into <div id="admin-header"></div> on every
 // admin/*.html page — sidebar toggle, catalog search, theme toggle, user menu.
 //
-// Built to docs/ui/admin-app.md section 3.1: every control here is functional.
+// Built to docs/ui/admin/admin-main-ui.md section 5.1: every control here is functional.
 // A visible-but-dead control advertises a capability that doesn't exist, which
 // is why there's no fullscreen or notification button — neither has a
 // requirement behind it. The one honest exception is the user menu's items:
@@ -145,7 +145,7 @@
     themeToggle.addEventListener("click", () => Shell.toggleTheme());
 
     // --- User menu: click/Enter to open, arrows to move, Esc to close and
-    // return focus to the trigger (docs/ui/admin-app.md section 4).
+    // return focus to the trigger (docs/ui/admin/admin-main-ui.md section 7.5).
     let open = false;
 
     function setOpen(next, focusIndex) {
@@ -216,7 +216,7 @@
 
   render();
 
-  // Esc closes the mobile drawer too (docs/ui/admin-app.md section 3.5).
+  // Esc closes the mobile drawer too (docs/ui/admin/admin-main-ui.md section 6.4).
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && Shell.isDrawerOpen()) {
       Shell.setDrawerOpen(false);

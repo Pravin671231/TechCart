@@ -1,7 +1,7 @@
 // Injects the console sidebar into <div id="admin-nav"></div> on every
 // admin/*.html page. `data-page` on <body> marks the active link.
 //
-// Built to docs/ui/admin-app.md section 3.2: the nav mirrors docs/srs/SRS.md
+// Built to docs/ui/admin/admin-main-ui.md section 5.2: the nav mirrors docs/srs/SRS.md
 // section 3's feature index, so navigation and project scope can't drift apart.
 // Only Product Catalog (v0.2) has a spec, so it's the only enabled entry; the
 // other five render disabled with their SRS version shown as visible text
@@ -80,7 +80,7 @@
   }
 
   // Disabled entries are not links and not focusable — there is nothing behind
-  // them yet (docs/ui/admin-app.md section 5.6).
+  // them yet (docs/ui/admin/admin-main-ui.md section 9.1).
   function disabledItem(item, collapsed) {
     const cls = `${BASE_ITEM} cursor-not-allowed text-slate-500 ${collapsed ? "justify-center px-0" : "justify-between"}`;
     const label = `${item.label} — not yet built, arrives in SRS ${item.version}`;
@@ -123,7 +123,7 @@
 
     // The sidebar is fixed beneath the header, so this mount occupies no
     // layout space at any breakpoint — <main> carries the offset instead
-    // (docs/ui/admin-app.md section 3.6).
+    // (docs/ui/admin/admin-main-ui.md section 5.5).
     mount.className = "";
 
     mount.innerHTML = `
@@ -162,7 +162,7 @@
   });
 
   // Let list pages refresh the count badges after a create/delete, so the
-  // sidebar can't go stale (docs/ui/admin-app.md section 6.6).
+  // sidebar can't go stale (docs/ui/admin/admin-main-ui.md section 10.2).
   window.AdminNav = { refresh: render };
 
   render();

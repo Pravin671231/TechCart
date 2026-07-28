@@ -1,5 +1,5 @@
 // Admin product create/edit wizard (admin/product-form.html).
-// Built to docs/ui/admin-app.md section 5.3: four steps — Basic Information,
+// Built to docs/ui/admin/product-catalog.md section 3.3: four steps — Basic Information,
 // Images and Specifications, Add Variants, Preview.
 //
 // Rules that shape this file (section 6.3):
@@ -65,7 +65,7 @@
   // --- Populate selects --------------------------------------------------
 
   // Inactive brands/categories stay selectable — inactive means hidden from
-  // buyers, not unusable by admins (docs/ui/admin-app.md section 6.5).
+  // buyers, not unusable by admins (docs/ui/admin/product-catalog.md section 4.3).
   function populateBrands() {
     el("field-brand").innerHTML =
       `<option value="">Select a brand</option>` +
@@ -155,7 +155,7 @@
 
   // Changing the category re-renders step 2's spec fields. Values for specs
   // that still exist are kept; the rest are dropped with a visible notice
-  // rather than silently (docs/ui/admin-app.md section 5.3).
+  // rather than silently (docs/ui/admin/product-catalog.md section 3.3).
   function onCategoryChange() {
     const previous = currentSpecValues();
     const hadValues = Object.values(previous).some((v) => v !== "");

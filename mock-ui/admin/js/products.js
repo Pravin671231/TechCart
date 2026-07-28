@@ -1,5 +1,5 @@
 // Admin product list — every status visible (FR-CAT-017), unlike any
-// buyer-facing endpoint. Built to docs/ui/admin-app.md section 5.1: sortable
+// buyer-facing endpoint. Built to docs/ui/admin/product-catalog.md section 3.1: sortable
 // columns, the product name links to the preview page, pagination below.
 
 (function () {
@@ -36,7 +36,7 @@
   };
 
   // The header search submits ?q=, so a search result is a linkable URL
-  // (docs/ui/admin-app.md section 3.1).
+  // (docs/ui/admin/admin-main-ui.md section 5.1).
   const params = new URLSearchParams(window.location.search);
 
   const state = {
@@ -124,7 +124,7 @@
   }
 
   // Any filter change resets to page 1; sorting leaves filters alone
-  // (docs/ui/admin-app.md section 6.2).
+  // (docs/ui/admin/admin-main-ui.md section 10.1).
   searchBox.addEventListener("input", () => {
     state.query = searchBox.value;
     state.page = 1;

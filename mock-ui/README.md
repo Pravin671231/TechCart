@@ -33,8 +33,10 @@ no fetch/XHR calls.
 | `buyer/`  | Catalog listing, category, product detail, and search pages                                                                                                                                                                                                    |
 | `admin/`  | Product list, product preview, the 4-step product wizard, category list (+ variant-type editor), brand list                                                                                                                                                    |
 
-The console shell is built to [`docs/ui/admin-app.md`](../docs/ui/admin-app.md): a full-width
-sticky header, a fixed sidebar beneath it generated from the SRS feature index
+The console shell is built to
+[`docs/ui/admin/admin-main-ui.md`](../docs/ui/admin/admin-main-ui.md): a
+full-width sticky header, a fixed sidebar beneath it generated from the SRS
+feature index
 (only Product Catalog is enabled — the rest render disabled with their SRS
 version), and `<main>` as the only scrollable region. `admin-shell.js` owns the
 theme and sidebar state; both persist to `localStorage`, and the theme class is
@@ -92,10 +94,12 @@ time that doc changes — there's no automated check tying the two together, so
 treat `docs/srs/features/0.2-product-catalog.md` §5 as the source of truth
 and update this prototype to match, not the other way around.
 
-This prototype is also the visual reference behind
-[`docs/ui/buyer-app.md`](../docs/ui/buyer-app.md) and
-[`docs/ui/admin-app.md`](../docs/ui/admin-app.md), which specify the design
-language and screens for the real apps. Those documents deliberately set a
+This prototype is also the visual reference behind the UI documents in
+[`docs/ui/`](../docs/ui/README.md) — a main document per app for the design
+language and shell ([`buyer`](../docs/ui/buyer/buyer-main-ui.md),
+[`admin`](../docs/ui/admin/admin-main-ui.md)), plus a document per feature for
+its screens ([`buyer`](../docs/ui/buyer/product-catalog.md),
+[`admin`](../docs/ui/admin/product-catalog.md)). Those documents deliberately set a
 higher bar than what's here — accessibility, the admin mobile drawer, and a
 handful of other gaps are called out in them as prototype shortfalls. When
 they and this prototype disagree, the documents win.

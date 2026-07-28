@@ -1,5 +1,5 @@
 // Shell state for every admin/*.html page: theme (light/dark) and sidebar
-// collapse. Both persist to localStorage per docs/ui/admin-app.md section 3.4.
+// collapse. Both persist to localStorage per docs/ui/admin/admin-main-ui.md section 5.4.
 //
 // The theme class itself is applied by a tiny inline script in each page's
 // <head> (see any admin/*.html) so it lands before first paint — a flash of the
@@ -76,7 +76,7 @@
   // --- Layout ------------------------------------------------------------
   //
   // The sidebar is fixed, so it occupies no layout space and <main> has to
-  // carry its own left offset (docs/ui/admin-app.md section 3.6). Driving that
+  // carry its own left offset (docs/ui/admin/admin-main-ui.md section 5.5). Driving that
   // offset from the same state as the sidebar itself is what stops the two
   // drifting out of sync.
 

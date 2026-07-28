@@ -1,5 +1,5 @@
 // Sortable table headers + pagination for the admin list screens.
-// Built to docs/ui/admin-app.md section 4: the sort control is a real <button>
+// Built to docs/ui/admin/admin-main-ui.md section 7.5: the sort control is a real <button>
 // inside the <th>, the <th> carries aria-sort, and the cycle is
 // ascending -> descending -> unsorted. Pagination sits below the table and
 // marks the active page with aria-current.

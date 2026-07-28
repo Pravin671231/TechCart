@@ -268,7 +268,7 @@
   }
 
   // The list, the sidebar badges and the result count refresh together after a
-  // mutation (docs/ui/admin-app.md section 6.6).
+  // mutation (docs/ui/admin/admin-main-ui.md section 10.2).
   function refreshCounts() {
     if (window.AdminNav) window.AdminNav.refresh();
   }
@@ -311,7 +311,7 @@
   document.getElementById("cancel-edit-btn").addEventListener("click", resetForm);
 
   // The Add button targets the side form rather than opening a modal — editing
-  // and creating share one persistent panel (docs/ui/admin-app.md section 4).
+  // and creating share one persistent panel (docs/ui/admin/product-catalog.md section 2).
   document.getElementById("add-btn").addEventListener("click", () => {
     resetForm();
     document.getElementById("cat-name").focus();

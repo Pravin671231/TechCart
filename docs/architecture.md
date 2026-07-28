@@ -29,7 +29,9 @@ TechCart/
 ├── admin-app/                  # React 19 + Vite console (SPA)
 ├── docs/
 │   ├── srs/                    # Versioned SRS — see srs/SRS.md
-│   ├── ui/                      # Per-app UI specs — buyer-app.md, admin-app.md
+│   ├── ui/                      # Per-app UI specs — see ui/README.md
+│   │   ├── admin/                # admin-main-ui.md + one doc per feature
+│   │   └── buyer/                # buyer-main-ui.md + one doc per feature
 │   └── architecture.md          # this file
 ├── .github/workflows/ci.yml      # single workflow, checks all three workspaces
 ├── package.json                  # root, npm workspaces: ["backend", "buyer-app", "admin-app"]
@@ -165,7 +167,7 @@ Formalized against the LeafFlow reference project, with several deliberate simpl
 - **CI/CD** — a single `.github/workflows/ci.yml` covering lint + test for all three workspaces on PRs into `main`. Exact triggers/jobs/matrix are a Foundation-phase decision.
 - **Shared validation** — deliberately **not** shared (see §6). No `packages/` directory exists in this repo at all.
 - **Node pinning** — `.nvmrc` + `.node-version`, both `"24"`, plus root `package.json` `"engines": { "node": ">=24" }`.
-- **Docs** — `docs/milestone.md` is the milestone-level roadmap (M0–M10); `docs/issues.md` is where issues are drafted (context, task checklist, test criteria) before being opened on GitHub, extended one milestone at a time as each feature's SRS doc is written; `docs/srs/SRS.md`'s §6 Traceability Matrix is the source of truth for the live feature↔milestone↔issue links once issues are actually open. `docs/ui/buyer-app.md` and `docs/ui/admin-app.md` are the design-system and screen-level source of truth for their app — they sit between each feature SRS's §6 (which owns _what_ the UI must do) and the implementation (which owns how it's built), and they take precedence over the `mock-ui/` prototype whenever the two disagree.
+- **Docs** — `docs/milestone.md` is the milestone-level roadmap (M0–M10); `docs/issues.md` is where issues are drafted (context, task checklist, test criteria) before being opened on GitHub, extended one milestone at a time as each feature's SRS doc is written; `docs/srs/SRS.md`'s §6 Traceability Matrix is the source of truth for the live feature↔milestone↔issue links once issues are actually open. `docs/ui/` is the design-system and screen-level source of truth for both apps, indexed by `docs/ui/README.md` and split two ways per app: a **main** document (`docs/ui/admin/admin-main-ui.md`, `docs/ui/buyer/buyer-main-ui.md`) owning the visual language, layout/shell, shared components and cross-cutting conventions, plus one **feature** document per specified feature (`docs/ui/<app>/<feature>.md`) owning that feature's pages, wireframes and components. They sit between each feature SRS's §6 (which owns _what_ the UI must do) and the implementation (which owns how it's built), and they take precedence over the `mock-ui/` prototype whenever the two disagree. A feature gets UI documents only once its SRS version is written and reviewed.
 - **Next.js version guard** — `buyer-app` gets its own `AGENTS.md` (a short warning that Next.js 16 has breaking changes from training-data-era APIs, read `node_modules/next/dist/docs/` first) with `buyer-app/CLAUDE.md` as a one-line `@AGENTS.md` import — created when `buyer-app/` is scaffolded, not now.
 - **Workspace-level documentation** — each of `backend/`, `buyer-app/`, `admin-app/` may keep its own `CLAUDE.md`, `AGENTS.md`, and `docs/architecture.md`, created when that workspace is scaffolded. Root-level docs (this file included) stay the source of truth for repo-wide architecture decisions and conventions; workspace-level docs cover only that app's own implementation details, guidelines, and development practices — they don't restate or override root-level decisions.
 
