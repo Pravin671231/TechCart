@@ -5,6 +5,10 @@ export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
     environment: "node",
+    env: {
+      MONGODB_URI: "mongodb://localhost:27017/techcart-test",
+      ADMIN_API_KEY: "test-admin-key",
+    },
     include: ["src/**/tests/**/*.test.ts", "__tests__/**/*.test.ts"],
     coverage: {
       provider: "v8",

@@ -1,5 +1,19 @@
-// Real Mongoose connection lands with M2 Product Catalog.
-// Stubbed here so the app has a stable connectDB() call site ready to wire in.
+import mongoose from "mongoose";
+import { env } from "./env";
+
 export async function connectDB(): Promise<void> {
-  return Promise.resolve();
+  try {
+    const uri = env.MONGODB_URI;
+    if (!uri) throw new Error("MONGODB_URI is not set");
+
+    await mongoose.connect(uri);
+    console.log("MongoDB connected");
+  } catch (error) {
+    console.error("MongoDB connection failed:", error);
+    throw error;
+  }
+}
+
+export async function disconnectDB(): Promise<void> {
+  await mongoose.disconnect();
 }
