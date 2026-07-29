@@ -15,7 +15,7 @@ Client
               → <feature>.repository.ts  Mongoose queries only (DB-backed modules)
                 → <feature>.model.ts      Mongoose schema
 
-  (thrown error at any layer)
+  (thrown error at any layer, including a ZodError from schema.parse(req.body))
   → src/middleware/errorHandler.ts   → { success:false, code, message } JSON, never leaks err.stack
 
   (no route matched)
@@ -26,37 +26,41 @@ Client
 
 Admin-only routes take one extra hop: `src/routes/admin.routes.ts` applies `adminAuth` (`src/middleware/adminAuth.ts`) via `router.use()` before any admin feature module's router, mounted at `/api/admin` in `src/routes/index.ts`. A missing/wrong `X-Admin-Key` header short-circuits straight to `errorHandler.ts` via `next(new AppError(401, ...))`, never reaching a feature module's controller.
 
+The `uploads` module (Issue #26 / M2.2) additionally calls out to `src/externalService/r2.ts` from its service layer — the first external-service client in the request flow, sitting between `uploads.service.ts` and the actual Cloudflare R2 API.
+
 ## Current file tree
 
 ```
 backend/
 ├── package.json           # name "backend", type "commonjs"; scripts: build (tsc), dev (tsx watch), test (vitest run)
 ├── tsconfig.json            # extends ../tsconfig.base.json
-├── vitest.config.ts           # node environment; test.env injects dummy MONGODB_URI/ADMIN_API_KEY; include src/**/tests/**/*.test.ts and __tests__/**/*.test.ts
-├── .env.example                 # PORT, NODE_ENV, MONGODB_URI, ADMIN_API_KEY
+├── vitest.config.ts           # node environment; test.env injects dummy MONGODB_URI/ADMIN_API_KEY/R2_*; include src/**/tests/**/*.test.ts and __tests__/**/*.test.ts
+├── .env.example                 # PORT, NODE_ENV, MONGODB_URI, ADMIN_API_KEY, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL_BASE
 ├── .env / .env.development / .env.test / .env.production   # all gitignored; mode-specific overrides layered on top of .env
 │
 ├── __tests__/
 │   ├── health/
 │   │   └── health.api.test.ts    # Supertest, full app, GET /health + 404 path
-│   └── admin-auth/
-│       └── admin-auth.api.test.ts  # Supertest, missing/wrong/correct X-Admin-Key against /api/admin
+│   ├── admin-auth/
+│   │   └── admin-auth.api.test.ts  # Supertest, missing/wrong/correct X-Admin-Key against /api/admin
+│   └── uploads/
+│       └── uploads.api.test.ts     # Supertest, POST /api/admin/uploads/{presign,direct}, r2.ts mocked
 │
 └── src/
     ├── index.ts                    # exports startServer(); require.main-guarded self-invocation
     ├── app.ts                       # express instance, mounts routes/index.ts + error middleware
     │
     ├── config/
-    │   ├── env.ts                    # zod-validated: PORT, NODE_ENV, MONGODB_URI, ADMIN_API_KEY; loads .env.<NODE_ENV> then .env
+    │   ├── env.ts                    # zod-validated: PORT, NODE_ENV, MONGODB_URI, ADMIN_API_KEY, R2_*; loads .env.<NODE_ENV> then .env; R2_* reshaped into env.R2.*
     │   └── db.ts                      # connectDB() / disconnectDB() — live mongoose.connect(env.MONGODB_URI)
     │
     ├── routes/
     │   ├── index.ts                    # imports each module's .module.ts, mounts it; mounts admin.routes.ts at /api/admin
-    │   └── admin.routes.ts               # adminRouter.use(adminAuth) — admin feature modules mount here
+    │   └── admin.routes.ts               # adminRouter.use(adminAuth); mounts uploadsModule and later admin feature modules
     │
     ├── middleware/
     │   ├── notFound.ts
-    │   ├── errorHandler.ts
+    │   ├── errorHandler.ts             # also translates a thrown ZodError into { success:false, code:"VALIDATION_ERROR", errors: { field: reason } }, and a thrown MulterError into { success:false, code:"FILE_TOO_LARGE"|"UPLOAD_ERROR", message }
     │   └── adminAuth.ts                # X-Admin-Key check → next(new AppError(401, ...)) on mismatch
     │
     ├── utils/
@@ -68,23 +72,35 @@ backend/
     ├── tests/
     │   └── index.test.ts               # mocks connectDB; asserts startServer()'s listen-vs-exit(1) branches
     │
-    ├── externalService/                # empty — third-party API clients; first is Cloudflare R2 (M2), then Razorpay (M6+)
+    ├── externalService/
+    │   └── r2.ts                        # first external client — S3-compatible presigned PUT URLs + a plain uploadObject() PUT, via @aws-sdk
     │
     └── modules/
-        └── health/
-            ├── health.module.ts
-            ├── health.routes.ts
-            ├── health.controller.ts
-            ├── health.service.ts
-            ├── health.repo.ts            # stub — health needs no DB access; keeps the template shape consistent
+        ├── health/
+        │   ├── health.module.ts
+        │   ├── health.routes.ts
+        │   ├── health.controller.ts
+        │   ├── health.service.ts
+        │   ├── health.repo.ts            # stub — health needs no DB access; keeps the template shape consistent
+        │   └── tests/
+        │       └── health.service.test.ts
+        │
+        └── uploads/
+            ├── uploads.module.ts          # { path: "/uploads", router }
+            ├── uploads.routes.ts          # POST /presign; POST /direct (multer memoryStorage, limits.fileSize = MAX_DIRECT_UPLOAD_BYTES)
+            ├── uploads.controller.ts      # zod-validates { purpose, contentType } or { purpose } + req.file, calls the service
+            ├── uploads.service.ts         # issuePresignedUpload + issueDirectUpload + consumeImageKeys/validateImageCount/normalizeImages
+            ├── uploads.repository.ts       # createPendingUpload / consumeByKey (findOneAndDelete)
+            ├── uploads.model.ts            # presignedUploads collection, TTL index on expiresAt
             └── tests/
-                └── health.service.test.ts
+                └── uploads.service.test.ts
 ```
 
 ## Config
 
-- `src/config/env.ts` validates `process.env` with a `zod` schema (`PORT` coerced to number default `4000`, `NODE_ENV` default `"development"`, `MONGODB_URI` and `ADMIN_API_KEY` both required strings). `envSchema.parse(process.env)` throws synchronously on import if a required var is missing or invalid — the process never starts against bad config. This is the first `zod` usage in the workspace (Issue #25 / M2.1).
+- `src/config/env.ts` validates `process.env` with a `zod` schema (`PORT` coerced to number default `4000`, `NODE_ENV` default `"development"`, `MONGODB_URI`/`ADMIN_API_KEY`/the five `R2_*` vars all required strings). `envSchema.parse(process.env)` throws synchronously on import if a required var is missing or invalid — the process never starts against bad config. This is the first `zod` usage in the workspace (Issue #25 / M2.1).
 - Env file loading is mode-based: `dotenv.config()` first loads a mode-specific file (`.env.development`, `.env.test`, or `.env.production`, chosen by `NODE_ENV`), then a second `dotenv.config()` call loads the shared `.env` to fill in anything the mode file didn't set. `dotenv` never overwrites a key already present in `process.env`, so this is a layering, not an override chain — a real environment variable (CI, a hosting platform) always wins over either file, the mode-specific file wins over the shared `.env`, and a missing mode-specific file is a silent no-op (not an error). All of `.env`, `.env.development`, `.env.test`, and `.env.production` are gitignored; only `.env.example` is committed as the documented template.
+- The five `R2_*` vars are parsed flat (env files can't nest keys) but reshaped before export so calling code reads `env.R2.ACCOUNT_ID`, `env.R2.ACCESS_KEY_ID`, `env.R2.SECRET_ACCESS_KEY`, `env.R2.BUCKET_NAME`, `env.R2.PUBLIC_URL_BASE` — a namespaced sub-object, not five flat top-level keys. `R2_PUBLIC_URL_BASE` (the browser-accessible bucket URL — custom domain or `r2.dev`) is distinct from the R2 API endpoint used to sign uploads, which `r2.ts` derives from `R2_ACCOUNT_ID` as `https://{accountId}.r2.cloudflarestorage.com`.
 - `src/config/db.ts` exports `connectDB()` (a thin `mongoose.connect(env.MONGODB_URI)` wrapper) and `disconnectDB()` (`mongoose.disconnect()`, for graceful shutdown — not yet wired into a signal handler, available for when that's needed). `connectDB()` is called from `src/index.ts`'s `startServer()`, not from `db.ts` itself.
 
 ## Startup
@@ -104,6 +120,25 @@ The file's only top-level side effect is `if (require.main === module) startServ
 
 `src/middleware/adminAuth.ts` compares the `X-Admin-Key` request header against `env.ADMIN_API_KEY`; a mismatch calls `next(new AppError(401, "UNAUTHORIZED", ...))` rather than writing `res.json` directly, so it flows through the same `errorHandler.ts` path as every other error. `src/routes/admin.routes.ts` applies it once via `router.use(adminAuth)` and is mounted at `/api/admin` — every later M2 admin feature module mounts under this router, so the guard is never duplicated per-route and the whole thing is a one-place swap when v0.3 lands real session/RBAC auth (`FR-CAT-088`–`090`).
 
+## R2 uploads (Issue #26 / M2.2)
+
+`src/externalService/r2.ts` wraps `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` — an `S3Client` pointed at R2's S3-compatible endpoint, exporting `createPresignedPutUrl(key, contentType)` for a 5-minute presigned PUT URL, and `uploadObject(key, body, contentType)`, a plain `PutObjectCommand` sent via `client.send()` for the direct-upload path below. Presigning is a local signature computation, not a network call, so it's fully unit-testable with dummy credentials; only the client's actual `PUT` upload (via the presigned URL, or via `uploadObject`) touches the network.
+
+`src/modules/uploads/` is entity-agnostic by design (`FR-CAT-077`–`084`, `097`–`100`) and exposes two upload paths:
+
+- `POST /presign` (mounted as `/api/admin/uploads/presign`) generates a server-side `{purpose}/{uuid}.{ext}` object key (never client-influenced, per `FR-CAT-079`), calls `r2.ts`'s `createPresignedPutUrl`, and persists a tracking record. This remains the default/preferred path — the backend never sees the raw file.
+- `POST /direct` (mounted as `/api/admin/uploads/direct`, SRS amendment `FR-CAT-097`–`100`) is the one deliberate exception to that rule: a `multer`-parsed (`memoryStorage`, `limits.fileSize` capped at `MAX_DIRECT_UPLOAD_BYTES` — 5 MB) `multipart/form-data` upload, for clients that can't perform a direct browser-to-R2 PUT. The controller validates `req.file.mimetype` against the same allow-list as presign, then `issueDirectUpload()` generates the same object-key format, calls `r2.ts`'s `uploadObject`, and persists the same kind of tracking record — so downstream registration can't tell which path produced a given key.
+
+Its service layer also exports three functions meant for reuse by later modules rather than being called only from this one's own controller:
+
+- `consumeImageKeys(keys)` — validates each key was actually issued and not already consumed (`FR-CAT-082`), via `uploads.repository.ts`'s atomic `findOneAndDelete`. Not-found collapses "never issued" and "already consumed" into a single rejection.
+- `validateImageCount(images, { min, max })` — bounds check (`FR-CAT-083`): `{min:1,max:8}` for products, `{min:0,max:2}` for variants.
+- `normalizeImages(images)` — ensures exactly one `isPrimary: true`, auto-promoting the first image if none is marked (`FR-CAT-084`); a pure function, no I/O.
+
+This module doesn't expose a `/products/:id/images`-style registration endpoint of its own — brands/categories/products don't exist as collections at this point in the build order. Issues #27 (brands), #28 (categories), and #31 (products/variants) import these three functions into their own create/update controllers rather than reimplementing key-consumption/bounds/primary-image logic.
+
+Issued-but-unconsumed keys live in a `presignedUploads` MongoDB collection, not in memory — a TTL index on `expiresAt` auto-deletes stale entries. In-memory tracking was considered and rejected: it wouldn't survive a process restart or work across multiple backend instances, both real correctness gaps given Mongo is already a required, live dependency (Issue #25 / M2.1).
+
 ## Path aliases
 
 `tsconfig.json`'s `paths` maps `@/*` → `src/*`. Use it for imports that would otherwise need `../` parent traversal; same-directory or one-level-down imports stay relative. This is a single source of truth resolved three different ways at runtime/build time:
@@ -116,5 +151,5 @@ The file's only top-level side effect is `if (require.main === module) startServ
 
 - **Unit tests** colocate near what they test: `src/modules/<feature>/tests/*.test.ts` for a module's own logic, or `src/<area>/tests/*.test.ts` for a cross-cutting utility that isn't a module (e.g. `src/utils/tests/apiResponse.test.ts`, `src/tests/index.test.ts`).
 - **Integration tests** live at the workspace root: `__tests__/<feature>/*.test.ts`, using Supertest against the exported `app` from `src/app.ts` — exercise the full request/response cycle including middleware.
-- Both globs (`src/**/tests/**/*.test.ts`, `__tests__/**/*.test.ts`) are registered in `vitest.config.ts`'s `test.include`. `test.env` there also injects placeholder `MONGODB_URI`/`ADMIN_API_KEY` values for the whole run, since `src/config/env.ts`'s `zod` schema would otherwise throw before any test file even loads — no test opens a real MongoDB connection; `connectDB` is mocked wherever `bootstrap()` is exercised.
+- Both globs (`src/**/tests/**/*.test.ts`, `__tests__/**/*.test.ts`) are registered in `vitest.config.ts`'s `test.include`. `test.env` there also injects placeholder `MONGODB_URI`/`ADMIN_API_KEY`/`R2_*` values for the whole run, since `src/config/env.ts`'s `zod` schema would otherwise throw before any test file even loads — no test opens a real MongoDB connection or a real R2 bucket; `connectDB` is mocked wherever `startServer()` is exercised, and `r2.ts`'s `createPresignedPutUrl`/`uploadObject` are mocked wherever the `uploads` module is exercised.
 - **Coverage**: `npm run test:coverage --workspace backend` (v8 provider, text + HTML reporters, configured in `vitest.config.ts`'s `test.coverage`). No enforced threshold yet — reporting only, per Issue #3's scope; a coverage gate lands once real features (not just the skeleton) exist to measure.
