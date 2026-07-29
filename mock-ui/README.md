@@ -43,6 +43,29 @@ skeleton / empty / error listing states on `home.html`, the two distinct empty s
 `search.html`, and the guard rejections (`FR-CAT-019`, `028`, `031`, `041`) shown inline on the
 admin pages that raise them.
 
+## Traceability to SRS v0.2 §6
+
+Every bullet in [`docs/srs/features/0.2-product-catalog.md`](../docs/srs/features/0.2-product-catalog.md)
+§6 (UI/UX Requirements) maps to exactly one mock-ui file:
+
+| SRS v0.2 §6 requirement           | Key states covered                                             | mock-ui file                                                                 |
+| --------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Home / catalog listing            | grid, sort, pagination, skeleton, empty, error                 | [`buyer-app/home.html`](buyer-app/home.html)                                 |
+| Category page                     | breadcrumb, pre-filtered grid, four-spec cards                 | [`buyer-app/category.html`](buyer-app/category.html)                         |
+| Search results                    | keyword shown, relevance sort, search-empty vs filter-empty    | [`buyer-app/search.html`](buyer-app/search.html)                             |
+| Product detail (buyer)            | gallery, variant selector, grouped specs, availability badge   | [`buyer-app/product-detail.html`](buyer-app/product-detail.html)             |
+| Product list (admin)              | all statuses, keyword/status/low-stock filters, pagination     | [`admin-app/product-list.html`](admin-app/product-list.html)                 |
+| Product detail (admin, read-only) | every field at any status                                      | [`admin-app/product-detail.html`](admin-app/product-detail.html)             |
+| Product create/edit form          | image widget, spec inputs, variant editor                      | [`admin-app/product-form.html`](admin-app/product-form.html)                 |
+| Category list and form            | tree, product counts, delete guard inline                      | [`admin-app/category-list.html`](admin-app/category-list.html)               |
+| Brand list and form               | logo, product counts, delete guard inline                      | [`admin-app/brand-list.html`](admin-app/brand-list.html)                     |
+| Category specification editor     | groups/fields, reorder, filterable's two effects, card preview | [`admin-app/specification-editor.html`](admin-app/specification-editor.html) |
+| Category variant-type editor      | axes, per-type control preview                                 | [`admin-app/variant-type-editor.html`](admin-app/variant-type-editor.html)   |
+
+Per-screen `FR-CAT-*` IDs are already annotated inline on each page (and summarized in the tables
+above); this table exists to answer the coarser question — "does every §6 requirement have a mock
+at all" — at a glance, per [SRS v0.2 §10](../docs/srs/features/0.2-product-catalog.md#10-open-questions).
+
 ## What these are — and are not
 
 **Structural wireframes.** They show layout, information hierarchy, and which requirement each
@@ -50,9 +73,9 @@ region satisfies. They are **not** visual design, not a design system, and not a
 library — no brand colours, type scale, or spacing system is implied by them. Where the SRS
 specifies UI _behaviour_, these mocks show _where that behaviour lives on the page_.
 
-Per [`docs/srs/features/0.2-product-catalog.md`](../docs/srs/features/0.2-product-catalog.md) §10
-Open Question 1, screen-level design was undecided at the time the SRS was drafted. These pages
-are a first pass at answering it and are not themselves normative — the SRS remains the source of
+Screen-level design was undecided when the SRS was first drafted; these pages are what
+[SRS v0.2 §10](../docs/srs/features/0.2-product-catalog.md#10-open-questions) now records as the
+resolution to that question. They are not themselves normative — the SRS remains the source of
 truth for what the UI must do. Placeholder content (product names, SKUs, prices, specification
 fields) is illustrative only.
 
