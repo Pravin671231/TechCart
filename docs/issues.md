@@ -37,4 +37,28 @@ Every milestone in the Backlog is a `###` section; every issue inside it follows
 
 Milestones in this section are fully drafted — issues with real Context/Tasks/Test Criteria — but not yet opened as real GitHub Issues or a GitHub Milestone. A milestone moves out of this section once its issues are actually opened via `gh issue create` (most recently M2, now Issues #25–#36).
 
-_Empty — nothing drafted yet for M3 onward._
+### M2 — Product Catalog (addendum)
+
+#### M2.13 — Mock UI verification & traceability for Product Catalog
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/41-mock-ui-verification
+**Labels:** documentation, catalog
+
+**Context**
+`mock-ui/` already contains a structural wireframe for every screen SRS v0.2 §6 calls for — 4 `buyer-app` screens and 7 `admin-app` screens, each annotated with its `FR-CAT-*` IDs, cross-linked into a click-through prototype. It was added via direct commits (`0b0f0e8`, `d2d95b3`) outside the normal Issue → Implement flow this repo otherwise enforces, and SRS v0.2 §10 still lists "screen-level UI design" as an open question even though `mock-ui/README.md` already answers it in practice. This issue brings that already-done design work under M2 tracking and closes the loop: verify it, document the SRS-to-mock-ui traceability, and formally resolve the open question — not add new wireframes.
+
+**Tasks**
+
+- [ ] Cross-check every §6 screen/state against its `mock-ui/*.html` file; note any gap
+- [ ] Fix any discrepancy found
+- [ ] Add a scan-able §6-requirement → `FR-CAT-*` → mock-ui file table to `mock-ui/README.md`
+- [ ] Move "screen-level UI design" from Open Question 1 to "Resolved during drafting" in `docs/srs/features/0.2-product-catalog.md` §10, referencing `mock-ui/`
+- [ ] Add a one-line pointer to `mock-ui/` from `buyer-app/CLAUDE.md` and `admin-app/CLAUDE.md`
+
+**Test Criteria**
+
+- Every §6 screen/state has a correctly annotated `mock-ui/*.html` counterpart
+- SRS v0.2 §10 no longer lists screen-level design as unresolved
+- `buyer-app/CLAUDE.md` and `admin-app/CLAUDE.md` each reference `mock-ui/`
+- No `mock-ui/*.html` file is orphaned from `mock-ui/index.html`; no internal link 404s
