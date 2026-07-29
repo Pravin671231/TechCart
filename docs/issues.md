@@ -13,6 +13,8 @@ This is where issues get drafted — full context, a build-order task checklist,
 
 ## Template
 
+`.github/ISSUE_TEMPLATE/feature-issue.md` mirrors the shape below for `gh issue create`/the GitHub web UI — keep the two in sync if this shape changes.
+
 Every milestone in the Backlog is a `###` section; every issue inside it follows this shape, one heading level deeper:
 
 ```
