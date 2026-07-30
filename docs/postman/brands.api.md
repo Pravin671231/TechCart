@@ -333,9 +333,8 @@ Same `errors`-object shape as `uploads.api.md` — see [that section](./uploads.
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #27 — not the full Product Catalog API. Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #27 — not the full Product Catalog API. Category management (`#28`) is now covered in [`categories.api.md`](./categories.api.md). Not yet implemented, each its own future issue:
 
-- Category management (`#28`)
 - Category-governed specifications (`#29`) and variant types (`#30`)
 - Product core CRUD (`#31`) and product variants (`#32`)
 - Status update APIs, including `PATCH /api/admin/brands/:id/status` (`#33`)

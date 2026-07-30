@@ -7,12 +7,14 @@ export type ProductStatus = "draft" | "published" | "archived";
 
 export type ProductDocument = {
   brand: Types.ObjectId;
+  category: Types.ObjectId;
   status: ProductStatus;
 };
 
 const productSchema = new Schema<ProductDocument>(
   {
     brand: { type: Schema.Types.ObjectId, ref: "Brand", required: true },
+    category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
     status: {
       type: String,
       enum: ["draft", "published", "archived"],
@@ -23,5 +25,6 @@ const productSchema = new Schema<ProductDocument>(
 );
 
 productSchema.index({ brand: 1 });
+productSchema.index({ category: 1 });
 
 export const Product = model<ProductDocument>("Product", productSchema);

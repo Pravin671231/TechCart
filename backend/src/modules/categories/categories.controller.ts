@@ -1,0 +1,100 @@
+import type { Request, Response } from "express";
+import { isValidObjectId, Types } from "mongoose";
+import { z } from "zod";
+import { successResponse } from "@/utils/apiResponse";
+import { parseObjectId } from "@/utils/objectId";
+import {
+  createCategory,
+  updateCategory,
+  getCategoryById,
+  listCategoriesForAdmin,
+  listCategoriesForPublic,
+  deleteCategory,
+} from "./categories.service";
+
+const categoryImageSchema = z.object({
+  objectKey: z.string().min(1),
+  alt: z.string().min(1).optional(),
+});
+
+const objectIdString = z.string().refine(isValidObjectId, { message: "Must be a valid id." });
+
+const createCategorySchema = z.object({
+  name: z.string().min(1),
+  description: z.string().min(1).optional(),
+  parentCategory: objectIdString.optional(),
+  image: categoryImageSchema.optional(),
+  sortOrder: z.number().int().optional(),
+  metaTitle: z.string().min(1).optional(),
+  metaDescription: z.string().min(1).optional(),
+});
+
+const updateCategorySchema = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().min(1).optional(),
+  // Tri-state, unlike every other field: absent (untouched), null (clear —
+  // promote to root), or a valid id string (set/change parent).
+  parentCategory: objectIdString.nullable().optional(),
+  image: categoryImageSchema.optional(),
+  sortOrder: z.number().int().optional(),
+  metaTitle: z.string().min(1).optional(),
+  metaDescription: z.string().min(1).optional(),
+});
+
+function toObjectIdOrNull(value: string | null | undefined): Types.ObjectId | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return new Types.ObjectId(value);
+}
+
+export async function createCategoryHandler(req: Request, res: Response): Promise<void> {
+  const input = createCategorySchema.parse(req.body);
+  const category = await createCategory({
+    name: input.name,
+    description: input.description,
+    parentCategory:
+      input.parentCategory !== undefined ? new Types.ObjectId(input.parentCategory) : undefined,
+    image: input.image,
+    sortOrder: input.sortOrder,
+    metaTitle: input.metaTitle,
+    metaDescription: input.metaDescription,
+  });
+  res.status(201).json(successResponse(category));
+}
+
+export async function updateCategoryHandler(req: Request, res: Response): Promise<void> {
+  const id = parseObjectId(req.params.id);
+  const input = updateCategorySchema.parse(req.body);
+  const category = await updateCategory(id, {
+    name: input.name,
+    description: input.description,
+    parentCategory: toObjectIdOrNull(input.parentCategory),
+    image: input.image,
+    sortOrder: input.sortOrder,
+    metaTitle: input.metaTitle,
+    metaDescription: input.metaDescription,
+  });
+  res.status(200).json(successResponse(category));
+}
+
+export async function getCategoryHandler(req: Request, res: Response): Promise<void> {
+  const id = parseObjectId(req.params.id);
+  const category = await getCategoryById(id);
+  res.status(200).json(successResponse(category));
+}
+
+export async function listCategoriesHandler(_req: Request, res: Response): Promise<void> {
+  const categories = await listCategoriesForAdmin();
+  res.status(200).json(successResponse(categories));
+}
+
+export async function deleteCategoryHandler(req: Request, res: Response): Promise<void> {
+  const id = parseObjectId(req.params.id);
+  await deleteCategory(id);
+  res.status(200).json(successResponse(null));
+}
+
+export async function listPublicCategoriesHandler(_req: Request, res: Response): Promise<void> {
+  const categories = await listCategoriesForPublic();
+  res.status(200).json(successResponse(categories));
+}

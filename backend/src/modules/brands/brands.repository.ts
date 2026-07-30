@@ -26,11 +26,17 @@ export async function slugExists(slug: string): Promise<boolean> {
   return existing !== null;
 }
 
+// Wrapped in $set: a plain object with no operator keys is treated by
+// MongoDB as a full replacement document, not a partial update — it would
+// silently drop every field not present in `patch` (including `slug`,
+// which has no default and no validators run on findByIdAndUpdate by
+// default). $set guarantees partial-update semantics regardless of what's
+// omitted.
 export async function updateById(
   id: Types.ObjectId,
   patch: UpdateBrandDoc,
 ): Promise<BrandRecord | null> {
-  return Brand.findByIdAndUpdate(id, patch, { new: true }).lean();
+  return Brand.findByIdAndUpdate(id, { $set: patch }, { new: true }).lean();
 }
 
 export async function deleteById(id: Types.ObjectId): Promise<void> {

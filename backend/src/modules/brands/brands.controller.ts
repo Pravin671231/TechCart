@@ -1,8 +1,7 @@
 import type { Request, Response } from "express";
-import { isValidObjectId, Types } from "mongoose";
 import { z } from "zod";
 import { successResponse } from "@/utils/apiResponse";
-import { AppError } from "@/utils/AppError";
+import { parseObjectId } from "@/utils/objectId";
 import {
   createBrand,
   updateBrand,
@@ -28,17 +27,6 @@ const updateBrandSchema = z.object({
   description: z.string().min(1).optional(),
   logo: logoSchema.optional(),
 });
-
-// Neither existing module (health, uploads) has an :id route, and
-// errorHandler.ts has no CastError handling — an invalid ObjectId string
-// would otherwise fall through to a generic 500. Validate the shape here so
-// it becomes the standard 400 error contract instead.
-function parseObjectId(id: string | string[] | undefined): Types.ObjectId {
-  if (typeof id !== "string" || !isValidObjectId(id)) {
-    throw new AppError(400, "INVALID_ID", `"${String(id)}" is not a valid id.`);
-  }
-  return new Types.ObjectId(id);
-}
 
 export async function createBrandHandler(req: Request, res: Response): Promise<void> {
   const input = createBrandSchema.parse(req.body);
