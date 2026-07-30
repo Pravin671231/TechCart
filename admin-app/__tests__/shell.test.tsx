@@ -8,7 +8,7 @@ describe("AdminShell", () => {
 
     const sidebar = screen.getByRole("complementary");
     expect(sidebar).toHaveTextContent("TechCart");
-    expect(sidebar).toHaveTextContent("Products");
+    expect(sidebar).toHaveTextContent("Product Catalog");
 
     const header = screen.getByRole("banner");
     expect(header).toHaveTextContent("Admin");

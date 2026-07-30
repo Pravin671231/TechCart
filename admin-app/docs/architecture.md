@@ -14,21 +14,22 @@ src/
 │   └── AppRoutes.tsx             # Routes tree — AdminShell layout route wrapping every page below
 ├── layout/
 │   ├── AdminShell.tsx          # composes Sidebar + Header + MainSection
-│   ├── Sidebar.tsx                # dark full-height nav — brand mark + real catalog nav items
+│   ├── Sidebar.tsx                # dark full-height nav — Dashboard link + collapsible "Product Catalog" group
 │   ├── Header.tsx                 # top bar — search, notification/theme icons, user info
 │   └── MainSection.tsx              # <main> wrapper rendering <Outlet />, page-level padding
 ├── features/
 │   ├── dashboard/Dashboard.tsx        # "/" — catalog stat cards (placeholder data)
-│   ├── products/ProductsPlaceholder.tsx        # "/products"
-│   ├── categories/CategoriesPlaceholder.tsx    # "/categories"
-│   ├── brands/BrandsPlaceholder.tsx            # "/brands"
-│   ├── specifications/SpecificationsPlaceholder.tsx # "/specifications"
-│   └── variant-types/VariantTypesPlaceholder.tsx    # "/variant-types"
+│   └── product-catalog/                 # every screen SRS v0.2 (Product Catalog) covers
+│       ├── products/ProductsPlaceholder.tsx        # "/product-catalog/products"
+│       ├── categories/CategoriesPlaceholder.tsx    # "/product-catalog/categories"
+│       ├── brands/BrandsPlaceholder.tsx            # "/product-catalog/brands"
+│       ├── specifications/SpecificationsPlaceholder.tsx # "/product-catalog/specifications"
+│       └── variant-types/VariantTypesPlaceholder.tsx    # "/product-catalog/variant-types"
 ├── main.tsx                    # Vite entry — mounts <App /> into #root
 └── index.css                     # @import "tailwindcss"; + design-token @theme block
 ```
 
-Each nav destination in `Sidebar.tsx` is a real route rendering a placeholder page, not a dead link — the same "coming soon" idiom the first placeholder (`LandingPlaceholder`, now superseded by `Dashboard`) established, kept consistent across every future screen until its real implementation lands.
+Each nav destination in `Sidebar.tsx` is a real route rendering a placeholder page, not a dead link — the same "coming soon" idiom the first placeholder (`LandingPlaceholder`, now superseded by `Dashboard`) established, kept consistent across every future screen until its real implementation lands. `product-catalog/` groups every one of those placeholders under the SRS feature they belong to (`docs/srs/features/0.2-product-catalog.md`), separate from `dashboard/`, which isn't part of that SRS feature — and `AppRoutes.tsx` nests their URLs under `/product-catalog/*` to match, rather than leaving the file grouping and the URL structure out of sync. `Sidebar.tsx` mirrors the same grouping one level further: the five product-catalog links sit behind a collapsible "Product Catalog" toggle (local `useState`, defaulting open when the current route is already under `/product-catalog`), rather than as flat top-level items.
 
 See `AGENTS.md` for the full `app/` vs `features/` convention.
 
@@ -59,7 +60,7 @@ admin-app/
     ├── app/App.tsx
     ├── router/AppRoutes.tsx
     ├── layout/{AdminShell.tsx,Sidebar.tsx,Header.tsx,MainSection.tsx}
-    └── features/{dashboard,products,categories,brands,specifications,variant-types}/*.tsx
+    └── features/{dashboard,product-catalog/{products,categories,brands,specifications,variant-types}}/*.tsx
 ```
 
 ## Config
