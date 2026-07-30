@@ -11,7 +11,10 @@ src/
 ├── app/
 │   └── App.tsx              # BrowserRouter + Routes — AdminShell layout route wrapping LandingPlaceholder at "/"
 ├── layout/
-│   └── AdminShell.tsx          # sidebar + header + content chrome every route mounts inside, via <Outlet />
+│   ├── AdminShell.tsx          # composes Sidebar + Header + MainSection
+│   ├── Sidebar.tsx                # left-hand full-height nav placeholder
+│   ├── Header.tsx                 # top bar placeholder
+│   └── MainSection.tsx              # <main> wrapper rendering <Outlet />
 ├── features/
 │   └── landing/
 │       └── LandingPlaceholder.tsx  # first feature — static placeholder content
@@ -45,7 +48,7 @@ admin-app/
     ├── main.tsx
     ├── index.css
     ├── app/App.tsx
-    ├── layout/AdminShell.tsx
+    ├── layout/{AdminShell.tsx,Sidebar.tsx,Header.tsx,MainSection.tsx}
     └── features/landing/LandingPlaceholder.tsx
 ```
 
