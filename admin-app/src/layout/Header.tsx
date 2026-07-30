@@ -1,13 +1,18 @@
 import { LuBell, LuMaximize, LuMenu, LuMoon, LuSearch } from "react-icons/lu";
 
-export function Header() {
+type HeaderProps = {
+  onToggleSidebar: () => void;
+};
+
+export function Header({ onToggleSidebar }: HeaderProps) {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-4 rounded-2xl border border-neutral-200 bg-white px-4">
       <div className="flex flex-1 items-center gap-4">
         <button
           type="button"
           aria-label="Toggle menu"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100"
+          onClick={onToggleSidebar}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 lg:hidden"
         >
           <LuMenu className="h-5 w-5" />
         </button>
@@ -33,7 +38,7 @@ export function Header() {
         <button
           type="button"
           aria-label="Toggle fullscreen"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100"
+          className="hidden h-9 w-9 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 sm:flex"
         >
           <LuMaximize className="h-4 w-4" />
         </button>

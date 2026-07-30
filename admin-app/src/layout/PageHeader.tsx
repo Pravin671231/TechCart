@@ -12,7 +12,7 @@ type PageHeaderProps = {
 
 export function PageHeader({ title, breadcrumbs, action }: PageHeaderProps) {
   return (
-    <div className="mb-6 flex items-start justify-between gap-4">
+    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-neutral-800">{title}</h1>
         <nav className="mb-1 flex items-center gap-1 text-sm text-neutral-500">
@@ -36,7 +36,7 @@ export function PageHeader({ title, breadcrumbs, action }: PageHeaderProps) {
       {action && (
         <button
           type="button"
-          className="flex h-10 shrink-0 items-center gap-2 rounded-lg bg-primary-600 px-4 text-sm font-medium text-white hover:bg-primary-hover"
+          className="flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 text-sm font-medium text-white hover:bg-primary-hover sm:w-auto"
         >
           {action.icon ? <action.icon className="h-4 w-4" /> : null}
           {action.label}

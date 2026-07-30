@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router";
 import {
   LuChevronDown,
@@ -9,6 +9,7 @@ import {
   LuPackage,
   LuSlidersHorizontal,
   LuTag,
+  LuX,
 } from "react-icons/lu";
 import type { IconType } from "react-icons";
 
@@ -27,58 +28,99 @@ const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
       : "text-neutral-300 hover:bg-neutral-800 hover:text-white"
   }`;
 
-export function Sidebar() {
+type SidebarProps = {
+  isOpen: boolean;
+  onClose: () => void;
+};
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
   const isProductCatalogActive = location.pathname.startsWith("/product-catalog");
   const [isProductCatalogOpen, setIsProductCatalogOpen] = useState(isProductCatalogActive);
 
+  // Below `lg`, the sidebar is an off-canvas drawer — close it on Escape,
+  // matching standard dialog/drawer dismissal behavior.
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   return (
-    <aside className="flex w-60 shrink-0 flex-col gap-6 rounded-2xl bg-neutral-900 p-4 text-neutral-300">
-      <div className="flex items-center gap-2 px-2 py-1">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold text-white">
-          T
-        </span>
-        <span className="text-lg font-semibold tracking-tight text-white">TechCart</span>
-      </div>
+    <>
+      {isOpen && (
+        <div
+          data-testid="sidebar-backdrop"
+          aria-hidden="true"
+          onClick={onClose}
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+        />
+      )}
 
-      <nav className="flex flex-col gap-1">
-        <span className="px-2 text-xs font-medium tracking-wider text-neutral-500">MAIN</span>
-
-        <NavLink to="/" end className={navLinkClassName}>
-          <LuLayoutDashboard className="h-4 w-4 shrink-0" />
-          Dashboard
-        </NavLink>
-
-        <button
-          type="button"
-          aria-expanded={isProductCatalogOpen}
-          onClick={() => setIsProductCatalogOpen((open) => !open)}
-          className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-            isProductCatalogActive
-              ? "bg-primary-600 text-white"
-              : "text-neutral-300 hover:bg-neutral-800 hover:text-white"
-          }`}
-        >
-          <span className="flex items-center gap-3">
-            <LuLayers className="h-4 w-4 shrink-0" />
-            Product Catalog
-          </span>
-          <LuChevronDown
-            className={`h-4 w-4 shrink-0 transition-transform ${isProductCatalogOpen ? "rotate-180" : ""}`}
-          />
-        </button>
-
-        {isProductCatalogOpen && (
-          <div className="ml-4 flex flex-col gap-1 border-l border-neutral-800 pl-3">
-            {productCatalogItems.map(({ to, label, icon: Icon }) => (
-              <NavLink key={to} to={to} className={navLinkClassName}>
-                <Icon className="h-4 w-4 shrink-0" />
-                {label}
-              </NavLink>
-            ))}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 flex-col gap-6 bg-neutral-900 p-4 text-neutral-300 transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 lg:rounded-2xl ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2 px-2 py-1">
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold text-white">
+              T
+            </span>
+            <span className="text-lg font-semibold tracking-tight text-white">TechCart</span>
           </div>
-        )}
-      </nav>
-    </aside>
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={onClose}
+            className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-800 hover:text-white lg:hidden"
+          >
+            <LuX className="h-5 w-5" />
+          </button>
+        </div>
+
+        <nav className="flex flex-col gap-1">
+          <span className="px-2 text-xs font-medium tracking-wider text-neutral-500">MAIN</span>
+
+          <NavLink to="/" end className={navLinkClassName}>
+            <LuLayoutDashboard className="h-4 w-4 shrink-0" />
+            Dashboard
+          </NavLink>
+
+          <button
+            type="button"
+            aria-expanded={isProductCatalogOpen}
+            onClick={() => setIsProductCatalogOpen((open) => !open)}
+            className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isProductCatalogActive
+                ? "bg-primary-600 text-white"
+                : "text-neutral-300 hover:bg-neutral-800 hover:text-white"
+            }`}
+          >
+            <span className="flex items-center gap-3">
+              <LuLayers className="h-4 w-4 shrink-0" />
+              Product Catalog
+            </span>
+            <LuChevronDown
+              className={`h-4 w-4 shrink-0 transition-transform ${isProductCatalogOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {isProductCatalogOpen && (
+            <div className="ml-4 flex flex-col gap-1 border-l border-neutral-800 pl-3">
+              {productCatalogItems.map(({ to, label, icon: Icon }) => (
+                <NavLink key={to} to={to} className={navLinkClassName}>
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {label}
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </nav>
+      </aside>
+    </>
   );
 }

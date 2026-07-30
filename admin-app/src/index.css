@@ -7,6 +7,13 @@
  * stay on Tailwind's built-in `neutral-*` scale directly, not aliased.
  */
 @theme {
+  /*
+   * Large Desktop starts at 1440px per docs/design-tokens.md's Layout
+   * section — overrides Tailwind's default 2xl (1536px) rather than
+   * adding a new breakpoint name.
+   */
+  --breakpoint-2xl: 90rem;
+
   --color-primary-50: var(--color-green-50);
   --color-primary-100: var(--color-green-100);
   --color-primary-200: var(--color-green-200);

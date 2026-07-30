@@ -30,8 +30,11 @@ export function DataTable<T extends MRT_RowData>({
     enableRowSelection: false,
     enableColumnActions: false,
     enableStickyHeader: true,
+    // Viewport-relative, not a flat px value, so the table doesn't overflow the
+    // 768px-tall "minimum desktop" target while still using the extra room
+    // available at 1080px+ (see docs/design-tokens.md's Layout section).
     muiTableContainerProps: {
-      sx: { maxHeight: "600px" },
+      sx: { maxHeight: "calc(100vh - 320px)" },
     },
     // Only the fullscreen button remains — omits MRT's default "Show/Hide columns" button.
     renderToolbarInternalActions: ({ table }) => <MRT_ToggleFullScreenButton table={table} />,

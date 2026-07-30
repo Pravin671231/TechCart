@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import App from "@/app/App";
 
 describe("AdminShell", () => {
@@ -17,5 +17,25 @@ describe("AdminShell", () => {
     expect(
       screen.getByRole("main").querySelector("h1"),
     ).toHaveTextContent("Dashboard");
+  });
+
+  it("toggles the mobile sidebar drawer via the header's menu button, backdrop click, close button, and Escape", () => {
+    render(<App />);
+
+    expect(screen.queryByTestId("sidebar-backdrop")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle menu" }));
+    expect(screen.getByTestId("sidebar-backdrop")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("sidebar-backdrop"));
+    expect(screen.queryByTestId("sidebar-backdrop")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle menu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close menu" }));
+    expect(screen.queryByTestId("sidebar-backdrop")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle menu" }));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByTestId("sidebar-backdrop")).not.toBeInTheDocument();
   });
 });
