@@ -5,6 +5,7 @@ import { truncate } from "@/utils/text";
 import { consumeImageKeys, buildPublicUrl } from "@/modules/uploads/uploads.service";
 import { countByCategory, countByCategoryIds } from "@/modules/products/products.repository";
 import { deleteForCategory as deleteSpecificationsForCategory } from "@/modules/categorySpecifications/categorySpecifications.service";
+import { deleteForCategory as deleteVariantsForCategory } from "@/modules/categoryVariants/categoryVariants.service";
 import type { CategoryImage } from "./categories.model";
 import {
   create,
@@ -61,7 +62,10 @@ function notFound(id: Types.ObjectId): AppError {
   return new AppError(404, "CATEGORY_NOT_FOUND", `Category ${id.toString()} was not found.`);
 }
 
-async function resolveImage(image: { objectKey: string; alt?: string | undefined }): Promise<CategoryImage> {
+async function resolveImage(image: {
+  objectKey: string;
+  alt?: string | undefined;
+}): Promise<CategoryImage> {
   await consumeImageKeys([image.objectKey]);
   const url = buildPublicUrl(image.objectKey);
   return image.alt !== undefined ? { url, alt: image.alt } : { url };
@@ -172,7 +176,8 @@ export async function listCategoriesForPublic(): Promise<PublicCategory[]> {
   return categories.map((category) => {
     const metaTitle = category.metaTitle ?? category.name;
     const metaDescription =
-      category.metaDescription ?? (category.description ? truncate(category.description) : category.name);
+      category.metaDescription ??
+      (category.description ? truncate(category.description) : category.name);
 
     const publicCategory: PublicCategory = {
       _id: category._id,
@@ -188,10 +193,13 @@ export async function listCategoriesForPublic(): Promise<PublicCategory[]> {
   });
 }
 
-// Cascades to the category's specification document (FR-CAT-019, #29).
-// Variant-type cascade still waits for #30 — extend this once it lands.
+// Cascades to the category's specification document (FR-CAT-019, #29) and
+// its variant-type document (#30).
 export async function deleteCategory(id: Types.ObjectId): Promise<void> {
-  const [productCount, subcategoryCount] = await Promise.all([countByCategory(id), countByParent(id)]);
+  const [productCount, subcategoryCount] = await Promise.all([
+    countByCategory(id),
+    countByParent(id),
+  ]);
 
   if (productCount > 0 || subcategoryCount > 0) {
     const reasons: string[] = [];
@@ -206,7 +214,11 @@ export async function deleteCategory(id: Types.ObjectId): Promise<void> {
 
   // Safe without an additional guard here — productCount === 0 above
   // already guarantees no product references any field in this category's
-  // spec schema, so there's nothing left to protect.
+  // spec schema, so there's nothing left to protect. The variant-type
+  // document needs no such guarantee at all (FR-CAT-037: never enforced
+  // against stored variant attributes), but is cascaded here too so no
+  // orphaned document is left behind once the category itself is gone.
   await deleteSpecificationsForCategory(id);
+  await deleteVariantsForCategory(id);
   await deleteById(id);
 }
