@@ -4,12 +4,14 @@ Implementation-level detail for `admin-app/`. This is the concrete companion to 
 
 ## Structure
 
-`src/app/` is routing only (explicit `react-router` route declarations, since there's no file-system router here). Actual UI/logic lives in `src/features/<feature>/`:
+`src/app/` is routing only (explicit `react-router` route declarations, since there's no file-system router here). Actual UI/logic lives in `src/features/<feature>/`. Cross-cutting page chrome that isn't owned by any single feature lives in `src/layout/`:
 
 ```
 src/
 ├── app/
-│   └── App.tsx              # BrowserRouter + Routes — imports and renders LandingPlaceholder at "/"
+│   └── App.tsx              # BrowserRouter + Routes — AdminShell layout route wrapping LandingPlaceholder at "/"
+├── layout/
+│   └── AdminShell.tsx          # sidebar + header + content chrome every route mounts inside, via <Outlet />
 ├── features/
 │   └── landing/
 │       └── LandingPlaceholder.tsx  # first feature — static placeholder content
@@ -37,11 +39,13 @@ admin-app/
 ├── docs/architecture.md                  # this file
 ├── __tests__/
 │   ├── app.test.tsx                        # renders src/app/App.tsx, asserts placeholder content
+│   ├── shell.test.tsx                        # renders src/app/App.tsx, asserts AdminShell sidebar/header/content
 │   └── mocks/{handlers.ts,server.ts}          # shared MSW server, extended by later feature tests
 └── src/
     ├── main.tsx
     ├── index.css
     ├── app/App.tsx
+    ├── layout/AdminShell.tsx
     └── features/landing/LandingPlaceholder.tsx
 ```
 
