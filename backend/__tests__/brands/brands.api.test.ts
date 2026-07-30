@@ -1,0 +1,236 @@
+import { Types } from "mongoose";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import request from "supertest";
+
+vi.mock("@/modules/brands/brands.repository", () => ({
+  create: vi.fn(),
+  findById: vi.fn(),
+  slugExists: vi.fn(),
+  updateById: vi.fn(),
+  deleteById: vi.fn(),
+  list: vi.fn(),
+  listActive: vi.fn(),
+}));
+
+vi.mock("@/modules/products/products.repository", () => ({
+  countByBrand: vi.fn(),
+  countByBrandIds: vi.fn(),
+}));
+
+vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/modules/uploads/uploads.service")>();
+  return {
+    ...actual,
+    consumeImageKeys: vi.fn(),
+    buildPublicUrl: vi.fn((objectKey: string) => `https://cdn.test.example/${objectKey}`),
+  };
+});
+
+import app from "@/app";
+import { env } from "@/config/env";
+import * as brandsRepository from "@/modules/brands/brands.repository";
+import * as productsRepository from "@/modules/products/products.repository";
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("POST /api/admin/brands", () => {
+  it("creates a brand and auto-generates a slug", async () => {
+    vi.mocked(brandsRepository.slugExists).mockResolvedValue(false);
+    const id = new Types.ObjectId();
+    vi.mocked(brandsRepository.create).mockImplementation(async (doc) => ({
+      _id: id,
+      status: true,
+      createdBy: null,
+      updatedBy: null,
+      ...doc,
+    }));
+
+    const res = await request(app)
+      .post("/api/admin/brands")
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ name: "Nova" });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ success: true, data: { name: "Nova", slug: "nova" } });
+  });
+
+  it("gives two brands created with the same name distinct slugs", async () => {
+    const idA = new Types.ObjectId();
+    const idB = new Types.ObjectId();
+    vi.mocked(brandsRepository.slugExists)
+      .mockResolvedValueOnce(false) // first create: "nova" is free
+      .mockResolvedValueOnce(true) // second create: "nova" now taken
+      .mockResolvedValueOnce(false); // "nova-2" is free
+    vi.mocked(brandsRepository.create)
+      .mockImplementationOnce(async (doc) => ({
+        _id: idA,
+        status: true,
+        createdBy: null,
+        updatedBy: null,
+        ...doc,
+      }))
+      .mockImplementationOnce(async (doc) => ({
+        _id: idB,
+        status: true,
+        createdBy: null,
+        updatedBy: null,
+        ...doc,
+      }));
+
+    const first = await request(app)
+      .post("/api/admin/brands")
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ name: "Nova" });
+    const second = await request(app)
+      .post("/api/admin/brands")
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ name: "Nova" });
+
+    expect(first.body.data.slug).toBe("nova");
+    expect(second.body.data.slug).toBe("nova-2");
+  });
+
+  it("rejects a request with no X-Admin-Key header", async () => {
+    const res = await request(app).post("/api/admin/brands").send({ name: "Nova" });
+
+    expect(res.status).toBe(401);
+    expect(brandsRepository.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a request with no name", async () => {
+    const res = await request(app)
+      .post("/api/admin/brands")
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+    expect(brandsRepository.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("PATCH /api/admin/brands/:id", () => {
+  it("rejects a malformed id", async () => {
+    const res = await request(app)
+      .patch("/api/admin/brands/not-an-id")
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ name: "X" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("INVALID_ID");
+  });
+
+  it("returns 404 when the brand doesn't exist", async () => {
+    vi.mocked(brandsRepository.updateById).mockResolvedValue(null);
+
+    const res = await request(app)
+      .patch(`/api/admin/brands/${new Types.ObjectId().toString()}`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ name: "X" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("BRAND_NOT_FOUND");
+  });
+
+  it("updates the provided fields and never patches the slug", async () => {
+    const id = new Types.ObjectId();
+    vi.mocked(brandsRepository.updateById).mockResolvedValue({
+      _id: id,
+      name: "Nova Updated",
+      slug: "nova",
+      status: true,
+      createdBy: null,
+      updatedBy: null,
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/brands/${id.toString()}`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ name: "Nova Updated" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.name).toBe("Nova Updated");
+    const patch = vi.mocked(brandsRepository.updateById).mock.calls[0]?.[1];
+    expect(patch).not.toHaveProperty("slug");
+  });
+});
+
+describe("GET /api/admin/brands", () => {
+  it("returns each brand with an accurate product count across statuses", async () => {
+    const idA = new Types.ObjectId();
+    const idB = new Types.ObjectId();
+    vi.mocked(brandsRepository.list).mockResolvedValue([
+      { _id: idA, name: "Nova", slug: "nova", status: true, createdBy: null, updatedBy: null },
+      { _id: idB, name: "Zeta", slug: "zeta", status: true, createdBy: null, updatedBy: null },
+    ]);
+    // Stands in for "brand A has 2 products (one draft, one archived), brand
+    // B has none" — the actual cross-status counting is products.repository's
+    // job (no status filter in its $match), verified by reading that source.
+    vi.mocked(productsRepository.countByBrandIds).mockResolvedValue(new Map([[idA.toString(), 2]]));
+
+    const res = await request(app).get("/api/admin/brands").set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual([
+      expect.objectContaining({ name: "Nova", productCount: 2 }),
+      expect.objectContaining({ name: "Zeta", productCount: 0 }),
+    ]);
+  });
+});
+
+describe("GET /api/admin/brands/:id", () => {
+  it("returns 404 for a brand that doesn't exist", async () => {
+    vi.mocked(brandsRepository.findById).mockResolvedValue(null);
+
+    const res = await request(app)
+      .get(`/api/admin/brands/${new Types.ObjectId().toString()}`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("BRAND_NOT_FOUND");
+  });
+});
+
+describe("DELETE /api/admin/brands/:id", () => {
+  it("rejects deletion when the brand is referenced by even an archived-only product", async () => {
+    vi.mocked(productsRepository.countByBrand).mockResolvedValue(1);
+
+    const res = await request(app)
+      .delete(`/api/admin/brands/${new Types.ObjectId().toString()}`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("BRAND_IN_USE");
+    expect(brandsRepository.deleteById).not.toHaveBeenCalled();
+  });
+
+  it("deletes when no products reference the brand", async () => {
+    vi.mocked(productsRepository.countByBrand).mockResolvedValue(0);
+
+    const res = await request(app)
+      .delete(`/api/admin/brands/${new Types.ObjectId().toString()}`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(res.status).toBe(200);
+    expect(brandsRepository.deleteById).toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/brands", () => {
+  it("requires no admin key and excludes inactive brands and admin-only fields", async () => {
+    const id = new Types.ObjectId();
+    vi.mocked(brandsRepository.listActive).mockResolvedValue([
+      { _id: id, name: "Nova", slug: "nova", status: true, createdBy: null, updatedBy: null },
+    ]);
+
+    const res = await request(app).get("/api/brands");
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual([{ _id: id.toString(), name: "Nova", slug: "nova" }]);
+    expect(res.body.data[0]).not.toHaveProperty("status");
+    expect(res.body.data[0]).not.toHaveProperty("createdBy");
+    expect(res.body.data[0]).not.toHaveProperty("updatedBy");
+  });
+});

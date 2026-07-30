@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the current TechCart backend API using Postman.
 
-**Scope:** this document covers what's actually implemented as of Issue #26 (M2.2 — Cloudflare R2 image uploads): the `GET /health` check and the two upload endpoints, `POST /api/admin/uploads/presign` and `POST /api/admin/uploads/direct` (SRS amendment `FR-CAT-097`–`100`). There is no login/session system yet — admin routes are gated by a single static `X-Admin-Key` header (`FR-CAT-088`–`090`), a placeholder until SRS v0.3 ships real authentication. Brands, categories, products, and every buyer-facing endpoint are separate, not-yet-implemented issues (#27–#36) — see [What's Not Here Yet](#whats-not-here-yet). Later endpoint groups get their own file (`brands.api.md`, `categories.api.md`, ...) alongside this one as they land.
+**Scope:** this document covers what's actually implemented as of Issue #26 (M2.2 — Cloudflare R2 image uploads): the `GET /health` check and the two upload endpoints, `POST /api/admin/uploads/presign` and `POST /api/admin/uploads/direct` (SRS amendment `FR-CAT-097`–`100`). There is no login/session system yet — admin routes are gated by a single static `X-Admin-Key` header (`FR-CAT-088`–`090`), a placeholder until SRS v0.3 ships real authentication. Categories, products, and every buyer-facing endpoint (besides the brand list) are separate, not-yet-implemented issues (#28–#36) — see [What's Not Here Yet](#whats-not-here-yet). Brand management (`#27`) has its own file, [`brands.api.md`](./brands.api.md); later endpoint groups (`categories.api.md`, ...) get their own file alongside this one as they land.
 
 ---
 
@@ -318,9 +318,8 @@ Fix the named field(s) in your request body — the `errors` object's keys tell 
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issues #25 (core plumbing) and #26 (R2 uploads) — not the full Product Catalog API. Not yet implemented, each its own future issue:
+This document is a snapshot of Issues #25 (core plumbing) and #26 (R2 uploads) — not the full Product Catalog API. Brand management (`#27`) is now covered in [`brands.api.md`](./brands.api.md). Not yet implemented, each its own future issue:
 
-- Brand management (`#27`)
 - Category management (`#28`)
 - Category-governed specifications (`#29`) and variant types (`#30`)
 - Product core CRUD (`#31`) and product variants (`#32`)

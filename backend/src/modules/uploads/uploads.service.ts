@@ -22,6 +22,10 @@ export const MAX_DIRECT_UPLOAD_BYTES = 5 * 1024 * 1024;
 // itself is already durably in R2 by the time this record is created.
 const PENDING_UPLOAD_TTL_SECONDS = 300;
 
+export function buildPublicUrl(objectKey: string): string {
+  return `${env.R2.PUBLIC_URL_BASE}/${objectKey}`;
+}
+
 export type PresignResult = {
   uploadUrl: string;
   objectKey: string;
@@ -48,7 +52,7 @@ export async function issuePresignedUpload(
   return {
     uploadUrl,
     objectKey,
-    publicUrl: `${env.R2.PUBLIC_URL_BASE}/${objectKey}`,
+    publicUrl: buildPublicUrl(objectKey),
     expiresAt,
   };
 }
@@ -67,7 +71,7 @@ export async function issueDirectUpload(
 
   return {
     objectKey,
-    publicUrl: `${env.R2.PUBLIC_URL_BASE}/${objectKey}`,
+    publicUrl: buildPublicUrl(objectKey),
     expiresAt,
   };
 }
