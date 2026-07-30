@@ -14,6 +14,20 @@ Same as [`uploads.api.md`](./uploads.api.md#prerequisites): backend running (`np
 
 ---
 
+## Related Endpoints — Specifications
+
+Each category can also have its own specification schema — the set of specification fields (name, type, whether it's required/filterable) that products in that category are allowed to carry. It's a large, structurally distinct resource (nested groups of fields, no `slug`/`status`, no public endpoint of its own), so it's documented separately rather than folded into this file:
+
+| Method  | Path                                                | Purpose                                                          |
+| ------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
+| `GET`   | `/api/admin/categories/:id/specifications`           | Read a category's specification schema                          |
+| `PUT`   | `/api/admin/categories/:id/specifications`           | Define or replace the schema                                    |
+| `PATCH` | `/api/admin/categories/:id/specifications`           | Targeted update: rename/delete a group, update/delete a field   |
+
+Full request/response examples, error cases, and the four `PATCH` operation shapes (`renameGroup`/`deleteGroup`/`updateField`/`deleteField`): see [`categorySpecifications.api.md`](./categorySpecifications.api.md).
+
+---
+
 ## `POST /api/admin/categories`
 
 Creates a category. The slug is auto-generated from `name` server-side, same as brands. Categories are at most **two levels deep** — a category with a `parentCategory` cannot itself be given children.
@@ -418,13 +432,12 @@ Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #28 — not the full Product Catalog API. Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #28 — not the full Product Catalog API. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), including the specification half of `DELETE`'s cascade clause. Not yet implemented, each its own future issue:
 
-- Category-governed specifications (`#29`) and variant types (`#30`)
+- Category-governed variant types (`#30`) — the variant-type half of `DELETE`'s cascade clause waits on this
 - Product core CRUD (`#31`) and product variants (`#32`)
 - Status update APIs, including `PATCH /api/admin/categories/:id/status` (`#33`)
 - Admin search, including `search` on `GET /api/admin/categories` (`#34`)
-- Cascade-deleting a category's specification/variant-type documents on `DELETE` (`FR-CAT-019`'s cascade clause) — nothing to cascade to until `#29`/`#30` land
 - Buyer browsing/search/inventory visibility (`#35`)
 - Buyer filtering, sorting, and card content (`#36`)
 
