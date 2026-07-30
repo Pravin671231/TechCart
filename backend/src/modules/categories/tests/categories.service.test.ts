@@ -27,10 +27,15 @@ vi.mock("@/modules/categorySpecifications/categorySpecifications.service", () =>
   deleteForCategory: vi.fn(),
 }));
 
+vi.mock("@/modules/categoryVariants/categoryVariants.service", () => ({
+  deleteForCategory: vi.fn(),
+}));
+
 import * as categoriesRepository from "../categories.repository";
 import * as productsRepository from "@/modules/products/products.repository";
 import * as uploadsService from "@/modules/uploads/uploads.service";
 import * as categorySpecificationsService from "@/modules/categorySpecifications/categorySpecifications.service";
+import * as categoryVariantsService from "@/modules/categoryVariants/categoryVariants.service";
 import {
   createCategory,
   updateCategory,
@@ -106,7 +111,9 @@ describe("createCategory", () => {
   });
 
   it("appends a numeric suffix when the slug collides", async () => {
-    vi.mocked(categoriesRepository.slugExists).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    vi.mocked(categoriesRepository.slugExists)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
     vi.mocked(categoriesRepository.create).mockResolvedValue(categoryA);
 
     await createCategory({ name: "Electronics" });
@@ -157,7 +164,9 @@ describe("createCategory", () => {
     vi.mocked(categoriesRepository.slugExists).mockResolvedValue(false);
     vi.mocked(categoriesRepository.findById).mockResolvedValue(null);
 
-    await expect(createCategory({ name: "Phones", parentCategory: idParent })).rejects.toMatchObject({
+    await expect(
+      createCategory({ name: "Phones", parentCategory: idParent }),
+    ).rejects.toMatchObject({
       statusCode: 404,
       code: "PARENT_CATEGORY_NOT_FOUND",
     });
@@ -168,7 +177,9 @@ describe("createCategory", () => {
     vi.mocked(categoriesRepository.slugExists).mockResolvedValue(false);
     vi.mocked(categoriesRepository.findById).mockResolvedValue(deepParent);
 
-    await expect(createCategory({ name: "Phones", parentCategory: idParent })).rejects.toMatchObject({
+    await expect(
+      createCategory({ name: "Phones", parentCategory: idParent }),
+    ).rejects.toMatchObject({
       statusCode: 400,
       code: "PARENT_CATEGORY_TOO_DEEP",
     });
@@ -209,7 +220,10 @@ describe("updateCategory", () => {
   });
 
   it("clears the parent when parentCategory is explicitly null", async () => {
-    vi.mocked(categoriesRepository.updateById).mockResolvedValue({ ...categoryA, parentCategory: null });
+    vi.mocked(categoriesRepository.updateById).mockResolvedValue({
+      ...categoryA,
+      parentCategory: null,
+    });
 
     await updateCategory(idA, { parentCategory: null });
 
@@ -311,7 +325,9 @@ describe("getCategoryById", () => {
 describe("listCategoriesForAdmin", () => {
   it("merges each category with its product count, defaulting to 0", async () => {
     vi.mocked(categoriesRepository.list).mockResolvedValue([categoryA, categoryB]);
-    vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(new Map([[idA.toString(), 5]]));
+    vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(
+      new Map([[idA.toString(), 5]]),
+    );
 
     const result = await listCategoriesForAdmin();
 
@@ -420,6 +436,7 @@ describe("deleteCategory", () => {
     await deleteCategory(idA);
 
     expect(categorySpecificationsService.deleteForCategory).toHaveBeenCalledWith(idA);
+    expect(categoryVariantsService.deleteForCategory).toHaveBeenCalledWith(idA);
     expect(categoriesRepository.deleteById).toHaveBeenCalledWith(idA);
   });
 });

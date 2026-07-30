@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the Category Specifications endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #29 (M2.5 — Category-governed specifications, `FR-CAT-030`–`035`): the three admin endpoints under `/api/admin/categories/:id/specifications`. Unlike brands/categories, this resource has **no public endpoint at all** — it's a schema-definition tool for admins, not something buyers ever read directly. It's also **no** status-toggle and **no** search, same deferral pattern as brands/categories (there's nothing here for `#33`/`#34` to defer, since this resource has neither `status` nor a list view). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup; see [`categories.api.md`](./categories.api.md) for the parent resource this hangs off of. This doc assumes collection setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #29 (M2.5 — Category-governed specifications, `FR-CAT-030`–`035`): the three admin endpoints under `/api/admin/categories/:id/specifications`. Unlike brands/categories, this resource has **no public endpoint at all** — it's a schema-definition tool for admins, not something buyers ever read directly. It's also **no** status-toggle and **no** search, same deferral pattern as brands/categories (there's nothing here for `#33`/`#34` to defer, since this resource has neither `status` nor a list view). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup; see [`categories.api.md`](./categories.api.md) for the parent resource this hangs off of; see [`categoryVariants.api.md`](./categoryVariants.api.md) for the sibling resource with the identical `GET`/`PUT`/`PATCH`-only shape, minus the in-use delete guard this one has. This doc assumes collection setup is already done and reuses the same collection.
 
 ---
 
@@ -329,9 +329,8 @@ Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #29 — not the full Product Catalog API. Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #29 — not the full Product Catalog API. Category-governed variant types (`#30`), the sibling resource to this one, is now covered in [`categoryVariants.api.md`](./categoryVariants.api.md). Not yet implemented, each its own future issue:
 
-- Category-governed variant types (`#30`) — the sibling resource to this one, same `GET`/`PUT`/`PATCH`-only shape
 - Product core CRUD (`#31`) and product variants (`#32`) — the actual consumer of this schema (`FR-CAT-032`'s product-side validation doesn't exist yet)
 - Status update APIs (`#33`) and admin search (`#34`) — not applicable to this resource at all (no `status`, no list view)
 - Buyer browsing/search/inventory visibility (`#35`)

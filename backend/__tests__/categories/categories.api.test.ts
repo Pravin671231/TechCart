@@ -33,6 +33,10 @@ vi.mock("@/modules/categorySpecifications/categorySpecifications.service", () =>
   deleteForCategory: vi.fn(),
 }));
 
+vi.mock("@/modules/categoryVariants/categoryVariants.service", () => ({
+  deleteForCategory: vi.fn(),
+}));
+
 import app from "@/app";
 import { env } from "@/config/env";
 import * as categoriesRepository from "@/modules/categories/categories.repository";
@@ -61,7 +65,10 @@ describe("POST /api/admin/categories", () => {
       .send({ name: "Electronics" });
 
     expect(res.status).toBe(201);
-    expect(res.body).toMatchObject({ success: true, data: { name: "Electronics", slug: "electronics" } });
+    expect(res.body).toMatchObject({
+      success: true,
+      data: { name: "Electronics", slug: "electronics" },
+    });
   });
 
   it("rejects a request with no X-Admin-Key header", async () => {
@@ -199,12 +206,34 @@ describe("GET /api/admin/categories", () => {
     const idA = new Types.ObjectId();
     const idB = new Types.ObjectId();
     vi.mocked(categoriesRepository.list).mockResolvedValue([
-      { _id: idA, name: "Electronics", slug: "electronics", parentCategory: null, sortOrder: 0, status: true, createdBy: null, updatedBy: null },
-      { _id: idB, name: "Furniture", slug: "furniture", parentCategory: null, sortOrder: 1, status: true, createdBy: null, updatedBy: null },
+      {
+        _id: idA,
+        name: "Electronics",
+        slug: "electronics",
+        parentCategory: null,
+        sortOrder: 0,
+        status: true,
+        createdBy: null,
+        updatedBy: null,
+      },
+      {
+        _id: idB,
+        name: "Furniture",
+        slug: "furniture",
+        parentCategory: null,
+        sortOrder: 1,
+        status: true,
+        createdBy: null,
+        updatedBy: null,
+      },
     ]);
-    vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(new Map([[idA.toString(), 4]]));
+    vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(
+      new Map([[idA.toString(), 4]]),
+    );
 
-    const res = await request(app).get("/api/admin/categories").set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await request(app)
+      .get("/api/admin/categories")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
 
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual([
