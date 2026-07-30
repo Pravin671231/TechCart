@@ -4,12 +4,14 @@ Implementation-level detail for `admin-app/`. This is the concrete companion to 
 
 ## Structure
 
-`src/app/` is routing only (explicit `react-router` route declarations, since there's no file-system router here). Actual UI/logic lives in `src/features/<feature>/`. Cross-cutting page chrome that isn't owned by any single feature lives in `src/layout/`:
+`src/app/` holds just the `BrowserRouter` entry point; the actual `react-router` route declarations live in `src/router/` (there's no file-system router here). Actual UI/logic lives in `src/features/<feature>/`. Cross-cutting page chrome that isn't owned by any single feature lives in `src/layout/`:
 
 ```
 src/
 ├── app/
-│   └── App.tsx              # BrowserRouter + Routes — AdminShell layout route wrapping every page below
+│   └── App.tsx                # BrowserRouter wrapper — renders AppRoutes
+├── router/
+│   └── AppRoutes.tsx             # Routes tree — AdminShell layout route wrapping every page below
 ├── layout/
 │   ├── AdminShell.tsx          # composes Sidebar + Header + MainSection
 │   ├── Sidebar.tsx                # dark full-height nav — brand mark + real catalog nav items
@@ -55,6 +57,7 @@ admin-app/
     ├── main.tsx
     ├── index.css
     ├── app/App.tsx
+    ├── router/AppRoutes.tsx
     ├── layout/{AdminShell.tsx,Sidebar.tsx,Header.tsx,MainSection.tsx}
     └── features/{dashboard,products,categories,brands,specifications,variant-types}/*.tsx
 ```
