@@ -3,6 +3,7 @@ import type { MRT_ColumnDef } from "material-react-table";
 import { LuPlus } from "react-icons/lu";
 import { PageHeader } from "@/layout/PageHeader";
 import { DataTable } from "@/components/DataTable";
+import { rightAlignedHeadCellProps } from "@/components/tableCellProps";
 import { StatusBadge } from "@/components/StatusBadge";
 import { mockBrands, type Brand } from "@/features/product-catalog/brands/mockBrands";
 
@@ -18,7 +19,7 @@ const columns: MRT_ColumnDef<Brand>[] = [
   {
     accessorKey: "productCount",
     header: "Products",
-    muiTableHeadCellProps: { align: "right" },
+    muiTableHeadCellProps: rightAlignedHeadCellProps,
     muiTableBodyCellProps: { align: "right" },
   },
   {

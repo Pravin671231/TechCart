@@ -26,7 +26,8 @@ export function DataTable<T extends MRT_RowData>({
     enableGlobalFilter: true,
     enableSorting: true,
     enablePagination: true,
-    enableRowSelection: true,
+    enableRowSelection: false,
+    enableColumnActions: false,
     muiTablePaperProps: {
       elevation: 0,
       sx: { border: "none", boxShadow: "none" },
