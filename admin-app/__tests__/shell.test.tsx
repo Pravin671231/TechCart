@@ -5,10 +5,17 @@ import App from "@/app/App";
 describe("AdminShell", () => {
   it("renders the sidebar, header, and routed content", () => {
     render(<App />);
-    expect(screen.getByRole("complementary")).toHaveTextContent("Sidebar");
-    expect(screen.getByRole("banner")).toHaveTextContent("Header");
+
+    const sidebar = screen.getByRole("complementary");
+    expect(sidebar).toHaveTextContent("TechCart");
+    expect(sidebar).toHaveTextContent("Products");
+
+    const header = screen.getByRole("banner");
+    expect(header).toHaveTextContent("Admin");
+    expect(header.querySelector('input[type="search"]')).toBeInTheDocument();
+
     expect(
       screen.getByRole("main").querySelector("h1"),
-    ).toHaveTextContent("TechCart Admin");
+    ).toHaveTextContent("Dashboard");
   });
 });

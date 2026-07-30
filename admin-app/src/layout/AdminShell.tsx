@@ -4,10 +4,10 @@ import { Sidebar } from "@/layout/Sidebar";
 
 export function AdminShell() {
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen gap-2 bg-neutral-100 p-2">
       <Sidebar />
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col gap-2">
         <Header />
         <MainSection />
       </div>

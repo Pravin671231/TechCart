@@ -18,10 +18,16 @@ components a semantic name (`bg-primary-600`) that stays stable if the brand col
 | Success   | `success` / `success-50`, `-100`, `-600`, `-700` | Tailwind `green` | "Published" status badges, success toasts — same hue as primary, intentional |
 | Warning   | `warning` / `warning-50`, `-100`, `-600`, `-700` | Tailwind `amber` | "Draft" status badges, low-stock flag (`FR-CAT-053`)                    |
 | Danger    | `danger` / `danger-50`, `-100`, `-600`, `-700`   | Tailwind `red`    | Destructive actions, delete-guard rejections (`FR-CAT-019`, `028`)      |
-| Neutral   | `neutral-*` (Tailwind default, unaliased) | Tailwind `neutral` | Chrome surfaces/borders (`Sidebar`/`Header`), muted text, "Archived" status |
+| Neutral   | `neutral-*` (Tailwind default, unaliased) | Tailwind `neutral` | Muted text, "Archived" status, and chrome surfaces/borders. `Header`/`MainSection`/cards use the light end (`neutral-50`…`neutral-200`); `Sidebar` intentionally inverts to `neutral-900`/`neutral-800` as a dark surface — the one deliberate light/dark split in the shell, not a general dark-mode toggle |
 
 `primary-600` is `#16A34A`. Use `primary` (not `primary-600`) in component code where possible —
 it stays correct if the underlying shade is ever adjusted.
+
+## Icons
+
+`react-icons`, using its `lu` (Lucide) set exclusively — `import { LuPackage } from "react-icons/lu"`.
+Don't mix in another icon set; picking one keeps stroke width and visual style consistent across
+`Sidebar`, `Header`, and every stat card.
 
 ## Radius
 
@@ -32,6 +38,7 @@ Tailwind's default radius scale, no new tokens — just usage rules:
 | `rounded-md`  | 6px   | Inputs, checkboxes, small controls             |
 | `rounded-lg`  | 8px   | Buttons, cards, table containers               |
 | `rounded-xl`  | 12px  | Modals, panels                                 |
+| `rounded-2xl` | 16px  | Shell chrome (`Sidebar`, `Header`)             |
 | `rounded-full`| —     | Avatars, badges, pills                         |
 
 ## Spacing
