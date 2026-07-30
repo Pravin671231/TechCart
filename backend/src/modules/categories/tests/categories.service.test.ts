@@ -23,9 +23,14 @@ vi.mock("@/modules/uploads/uploads.service", () => ({
   buildPublicUrl: vi.fn((objectKey: string) => `https://cdn.test/${objectKey}`),
 }));
 
+vi.mock("@/modules/categorySpecifications/categorySpecifications.service", () => ({
+  deleteForCategory: vi.fn(),
+}));
+
 import * as categoriesRepository from "../categories.repository";
 import * as productsRepository from "@/modules/products/products.repository";
 import * as uploadsService from "@/modules/uploads/uploads.service";
+import * as categorySpecificationsService from "@/modules/categorySpecifications/categorySpecifications.service";
 import {
   createCategory,
   updateCategory,
@@ -414,6 +419,7 @@ describe("deleteCategory", () => {
 
     await deleteCategory(idA);
 
+    expect(categorySpecificationsService.deleteForCategory).toHaveBeenCalledWith(idA);
     expect(categoriesRepository.deleteById).toHaveBeenCalledWith(idA);
   });
 });
