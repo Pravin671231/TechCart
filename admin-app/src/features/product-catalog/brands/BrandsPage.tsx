@@ -1,25 +1,36 @@
-import { useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
+import { useEffect, useState } from "react";
+import type { MRT_ColumnDef } from "material-react-table";
 import { LuPlus } from "react-icons/lu";
 import { PageHeader } from "@/layout/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
-import { SearchInput } from "@/components/SearchInput";
 import { mockBrands, type Brand } from "@/features/product-catalog/brands/mockBrands";
 
-const columns: ColumnDef<Brand>[] = [
+const columns: MRT_ColumnDef<Brand>[] = [
   {
     id: "logo",
     header: "Logo",
-    cell: () => <span className="block h-8 w-16 rounded bg-neutral-100" />,
+    enableSorting: false,
+    enableColumnFilter: false,
+    Cell: () => <span className="block h-8 w-16 rounded bg-neutral-100" />,
   },
   { accessorKey: "name", header: "Name" },
-  { accessorKey: "productCount", header: "Products" },
+  {
+    accessorKey: "productCount",
+    header: "Products",
+    muiTableHeadCellProps: { align: "right" },
+    muiTableBodyCellProps: { align: "right" },
+  },
   {
     accessorKey: "status",
     header: "Status",
-    cell: (info) => {
-      const status = info.getValue<Brand["status"]>();
+    filterVariant: "select",
+    filterSelectOptions: [
+      { value: "active", label: "Active" },
+      { value: "inactive", label: "Inactive" },
+    ],
+    Cell: ({ cell }) => {
+      const status = cell.getValue<Brand["status"]>();
       return (
         <StatusBadge
           label={status === "active" ? "Active" : "Inactive"}
@@ -31,11 +42,13 @@ const columns: ColumnDef<Brand>[] = [
 ];
 
 export function BrandsPage() {
-  const [search, setSearch] = useState("");
+  // Simulates the future TanStack Query fetch latency until a real list endpoint is wired.
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filtered = mockBrands.filter(
-    (brand) => search.trim() === "" || brand.name.toLowerCase().includes(search.trim().toLowerCase()),
-  );
+  useEffect(() => {
+    const timeout = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timeout);
+  }, []);
 
   return (
     <div className="flex flex-col">
@@ -48,11 +61,7 @@ export function BrandsPage() {
         action={{ label: "Add Brand", icon: LuPlus }}
       />
 
-      <div className="mb-4">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search by name..." />
-      </div>
-
-      <DataTable columns={columns} data={filtered} numericColumnIds={["productCount"]} />
+      <DataTable columns={columns} data={mockBrands} isLoading={isLoading} />
     </div>
   );
 }

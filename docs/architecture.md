@@ -103,7 +103,8 @@ flowchart LR
 
 - SPA with React Router; no SEO requirement, so Vite over a second Next.js instance.
 - Every route gated by role claim from the session (`catalog-manager`, `order-manager`, `super-admin`) — checked server-side by `backend` on every request, not just client-side route guards.
-- TanStack Query for data fetching/caching, TanStack Table for catalog/order grids, Recharts for dashboard charts.
+- TanStack Query for data fetching/caching, Recharts for dashboard charts.
+- Material React Table (MUI-based) for catalog/order grids — built-in filter, sorting, pagination, row selection, column visibility, and loading (spinner/skeleton) states, rather than hand-building each on top of headless TanStack Table. MUI's theme stays scoped to the table component only (`admin-app/src/components/DataTable.tsx`, custom-themed to match the Tailwind design tokens in `admin-app/docs/design-tokens.md`) — it is not applied app-wide, so it can't collide with the rest of `admin-app`'s Tailwind-only chrome.
 
 ### 4.3 backend (Node + Express)
 

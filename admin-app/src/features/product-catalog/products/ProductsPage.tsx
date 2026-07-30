@@ -1,15 +1,14 @@
-import { useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
+import { useEffect, useState } from "react";
+import type { MRT_ColumnDef } from "material-react-table";
 import { LuPlus } from "react-icons/lu";
 import { PageHeader } from "@/layout/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
-import { SearchInput } from "@/components/SearchInput";
-import { FilterDropdown } from "@/components/FilterDropdown";
-import { Pagination } from "@/components/Pagination";
-import { mockProducts, type Product, type ProductStatus } from "@/features/product-catalog/products/mockProducts";
-
-const PAGE_SIZE = 3;
+import {
+  mockProducts,
+  type Product,
+  type ProductStatus,
+} from "@/features/product-catalog/products/mockProducts";
 
 const currency = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -29,34 +28,29 @@ const statusLabels: Record<ProductStatus, string> = {
   archived: "Archived",
 };
 
-const statusFilterOptions = [
-  { label: "All", value: "all" },
-  { label: "Published", value: "published" },
-  { label: "Draft", value: "draft" },
-  { label: "Archived", value: "archived" },
-];
-
-const columns: ColumnDef<Product>[] = [
+const columns: MRT_ColumnDef<Product>[] = [
   { accessorKey: "name", header: "Name" },
   {
     accessorKey: "sku",
     header: "SKU",
-    cell: (info) => <span className="font-mono text-xs">{info.getValue<string>()}</span>,
+    Cell: ({ cell }) => <span className="font-mono text-xs">{cell.getValue<string>()}</span>,
   },
   { accessorKey: "brand", header: "Brand" },
   { accessorKey: "category", header: "Category" },
   {
     accessorKey: "sellingPrice",
     header: "Price",
-    cell: (info) => (
-      <span className="block text-right">{currency.format(info.getValue<number>())}</span>
-    ),
+    muiTableHeadCellProps: { align: "right" },
+    muiTableBodyCellProps: { align: "right" },
+    Cell: ({ cell }) => currency.format(cell.getValue<number>()),
   },
   {
     accessorKey: "stock",
     header: "Stock",
-    cell: (info) => {
-      const product = info.row.original;
+    muiTableHeadCellProps: { align: "right" },
+    muiTableBodyCellProps: { align: "right" },
+    Cell: ({ row }) => {
+      const product = row.original;
       const isLowStock = product.stock > 0 && product.stock <= product.lowStockThreshold;
       return (
         <span className="flex items-center justify-end gap-2">
@@ -69,35 +63,32 @@ const columns: ColumnDef<Product>[] = [
   {
     accessorKey: "status",
     header: "Status",
-    cell: (info) => {
-      const status = info.getValue<ProductStatus>();
+    filterVariant: "select",
+    filterSelectOptions: [
+      { value: "published", label: "Published" },
+      { value: "draft", label: "Draft" },
+      { value: "archived", label: "Archived" },
+    ],
+    Cell: ({ cell }) => {
+      const status = cell.getValue<ProductStatus>();
       return <StatusBadge label={statusLabels[status]} tone={statusTones[status]} />;
     },
   },
 ];
 
 export function ProductsPage() {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("all");
   const [lowStockOnly, setLowStockOnly] = useState(false);
-  const [page, setPage] = useState(1);
+  // Simulates the future TanStack Query fetch latency until a real list endpoint is wired.
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filtered = mockProducts.filter((product) => {
-    const matchesSearch =
-      search.trim() === "" ||
-      product.name.toLowerCase().includes(search.trim().toLowerCase()) ||
-      product.sku.toLowerCase().includes(search.trim().toLowerCase());
-    const matchesStatus = status === "all" || product.status === status;
-    const matchesLowStock =
-      !lowStockOnly || (product.stock > 0 && product.stock <= product.lowStockThreshold);
-    return matchesSearch && matchesStatus && matchesLowStock;
-  });
+  useEffect(() => {
+    const timeout = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timeout);
+  }, []);
 
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  function resetToFirstPage() {
-    setPage(1);
-  }
+  const data = lowStockOnly
+    ? mockProducts.filter((product) => product.stock > 0 && product.stock <= product.lowStockThreshold)
+    : mockProducts;
 
   return (
     <div className="flex flex-col">
@@ -110,40 +101,16 @@ export function ProductsPage() {
         action={{ label: "Add Product", icon: LuPlus }}
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <SearchInput
-          value={search}
-          onChange={(value) => {
-            setSearch(value);
-            resetToFirstPage();
-          }}
-          placeholder="Search name or SKU..."
+      <label className="mb-4 flex h-9 w-fit items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm text-neutral-600">
+        <input
+          type="checkbox"
+          checked={lowStockOnly}
+          onChange={(event) => setLowStockOnly(event.target.checked)}
         />
-        <FilterDropdown
-          label="Status"
-          value={status}
-          options={statusFilterOptions}
-          onChange={(value) => {
-            setStatus(value);
-            resetToFirstPage();
-          }}
-        />
-        <label className="flex h-9 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm text-neutral-600">
-          <input
-            type="checkbox"
-            checked={lowStockOnly}
-            onChange={(event) => {
-              setLowStockOnly(event.target.checked);
-              resetToFirstPage();
-            }}
-          />
-          Low stock only
-        </label>
-      </div>
+        Low stock only
+      </label>
 
-      <DataTable columns={columns} data={paginated} numericColumnIds={["sellingPrice", "stock"]} />
-
-      <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} onPageChange={setPage} />
+      <DataTable columns={columns} data={data} isLoading={isLoading} />
     </div>
   );
 }

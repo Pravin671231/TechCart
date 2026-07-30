@@ -1,18 +1,17 @@
-import { useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
+import { useEffect, useState } from "react";
+import type { MRT_ColumnDef } from "material-react-table";
 import { LuPlus } from "react-icons/lu";
 import { PageHeader } from "@/layout/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
-import { SearchInput } from "@/components/SearchInput";
 import { mockCategories, type Category } from "@/features/product-catalog/categories/mockCategories";
 
-const columns: ColumnDef<Category>[] = [
+const columns: MRT_ColumnDef<Category>[] = [
   {
     accessorKey: "name",
     header: "Name",
-    cell: (info) => {
-      const category = info.row.original;
+    Cell: ({ row }) => {
+      const category = row.original;
       return category.parent ? (
         <span className="pl-6">↳ {category.name}</span>
       ) : (
@@ -23,15 +22,30 @@ const columns: ColumnDef<Category>[] = [
   {
     accessorKey: "parent",
     header: "Parent",
-    cell: (info) => info.getValue<string | null>() ?? <span className="text-neutral-400">—</span>,
+    Cell: ({ cell }) => cell.getValue<string | null>() ?? <span className="text-neutral-400">—</span>,
   },
-  { accessorKey: "productCount", header: "Products" },
-  { accessorKey: "sortOrder", header: "Sort" },
+  {
+    accessorKey: "productCount",
+    header: "Products",
+    muiTableHeadCellProps: { align: "right" },
+    muiTableBodyCellProps: { align: "right" },
+  },
+  {
+    accessorKey: "sortOrder",
+    header: "Sort",
+    muiTableHeadCellProps: { align: "right" },
+    muiTableBodyCellProps: { align: "right" },
+  },
   {
     accessorKey: "status",
     header: "Status",
-    cell: (info) => {
-      const status = info.getValue<Category["status"]>();
+    filterVariant: "select",
+    filterSelectOptions: [
+      { value: "active", label: "Active" },
+      { value: "inactive", label: "Inactive" },
+    ],
+    Cell: ({ cell }) => {
+      const status = cell.getValue<Category["status"]>();
       return (
         <StatusBadge
           label={status === "active" ? "Active" : "Inactive"}
@@ -43,12 +57,13 @@ const columns: ColumnDef<Category>[] = [
 ];
 
 export function CategoriesPage() {
-  const [search, setSearch] = useState("");
+  // Simulates the future TanStack Query fetch latency until a real list endpoint is wired.
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filtered = mockCategories.filter(
-    (category) =>
-      search.trim() === "" || category.name.toLowerCase().includes(search.trim().toLowerCase()),
-  );
+  useEffect(() => {
+    const timeout = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timeout);
+  }, []);
 
   return (
     <div className="flex flex-col">
@@ -61,11 +76,7 @@ export function CategoriesPage() {
         action={{ label: "Add Category", icon: LuPlus }}
       />
 
-      <div className="mb-4">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search by name..." />
-      </div>
-
-      <DataTable columns={columns} data={filtered} numericColumnIds={["productCount", "sortOrder"]} />
+      <DataTable columns={columns} data={mockCategories} isLoading={isLoading} />
     </div>
   );
 }

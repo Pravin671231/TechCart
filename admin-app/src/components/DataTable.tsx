@@ -1,56 +1,37 @@
-import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
+import {
+  MaterialReactTable,
+  useMaterialReactTable,
+  type MRT_ColumnDef,
+  type MRT_RowData,
+} from "material-react-table";
+import { ThemeProvider } from "@mui/material/styles";
+import { muiTheme } from "@/components/muiTheme";
 
-type DataTableProps<T> = {
-  columns: ColumnDef<T>[];
+type DataTableProps<T extends MRT_RowData> = {
+  columns: MRT_ColumnDef<T>[];
   data: T[];
-  numericColumnIds?: string[];
+  isLoading?: boolean;
 };
 
-export function DataTable<T>({ columns, data, numericColumnIds = [] }: DataTableProps<T>) {
-  const table = useReactTable({
-    data,
+export function DataTable<T extends MRT_RowData>({
+  columns,
+  data,
+  isLoading = false,
+}: DataTableProps<T>) {
+  const table = useMaterialReactTable({
     columns,
-    getCoreRowModel: getCoreRowModel(),
+    data,
+    state: { isLoading, showProgressBars: isLoading },
+    enableColumnFilters: true,
+    enableGlobalFilter: true,
+    enableSorting: true,
+    enablePagination: true,
+    enableRowSelection: true,
   });
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
-      <table className="w-full text-sm">
-        <thead className="border-b border-neutral-200 bg-neutral-50 text-left">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className={`px-3 py-2 font-medium text-neutral-600 ${
-                    numericColumnIds.includes(header.column.id) ? "text-right" : ""
-                  }`}
-                >
-                  {flexRender(header.column.columnDef.header, header.getContext())}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody className="divide-y divide-neutral-100">
-          {table.getRowModel().rows.length === 0 && (
-            <tr>
-              <td colSpan={columns.length} className="px-3 py-6 text-center text-neutral-400">
-                No records found.
-              </td>
-            </tr>
-          )}
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-3 py-2 text-neutral-700">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <ThemeProvider theme={muiTheme}>
+      <MaterialReactTable table={table} />
+    </ThemeProvider>
   );
 }

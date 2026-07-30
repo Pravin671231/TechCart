@@ -19,22 +19,20 @@ src/
 │   ├── MainSection.tsx              # <main> wrapper rendering <Outlet />, page-level padding
 │   └── PageHeader.tsx                 # reusable breadcrumb + title (<h1>) + top-right action button
 ├── components/
-│   ├── DataTable.tsx           # generic <T,> TanStack Table wrapper (headers, rows, empty state)
-│   ├── StatusBadge.tsx            # { label, tone } pill, tone → success/warning/danger/neutral tokens
-│   ├── SearchInput.tsx              # controlled search box with icon
-│   ├── FilterDropdown.tsx             # controlled labeled <select>
-│   └── Pagination.tsx                   # "Showing X–Y of Z" + Prev/page-numbers/Next
+│   ├── DataTable.tsx           # generic <T,> Material React Table wrapper, MUI theme scoped here only
+│   ├── muiTheme.ts                # MUI theme matched to the Tailwind design tokens — DataTable-only
+│   └── StatusBadge.tsx            # { label, tone } pill, tone → success/warning/danger/neutral tokens
 ├── features/
 │   ├── dashboard/Dashboard.tsx        # "/" — catalog stat cards (placeholder data)
 │   └── product-catalog/                 # every screen SRS v0.2 (Product Catalog) covers
 │       ├── products/                                # "/product-catalog/products"
-│       │   ├── ProductsPage.tsx                        # search + status/low-stock filter + DataTable + pagination
+│       │   ├── ProductsPage.tsx                        # low-stock toggle + DataTable (search/filter/sort/pagination/selection built in)
 │       │   └── mockProducts.ts                           # Product type + mock rows
 │       ├── categories/                              # "/product-catalog/categories"
-│       │   ├── CategoriesPage.tsx                      # search + DataTable (two-level indent)
+│       │   ├── CategoriesPage.tsx                      # DataTable (two-level indent)
 │       │   └── mockCategories.ts                         # Category type + mock rows
 │       ├── brands/                                  # "/product-catalog/brands"
-│       │   ├── BrandsPage.tsx                          # search + DataTable
+│       │   ├── BrandsPage.tsx                          # DataTable
 │       │   └── mockBrands.ts                             # Brand type + mock rows
 │       ├── specifications/SpecificationsPlaceholder.tsx # "/product-catalog/specifications"
 │       └── variant-types/VariantTypesPlaceholder.tsx    # "/product-catalog/variant-types"
@@ -44,7 +42,9 @@ src/
 
 Each nav destination in `Sidebar.tsx` is a real route rendering a placeholder page, not a dead link — the same "coming soon" idiom the first placeholder (`LandingPlaceholder`, now superseded by `Dashboard`) established, kept consistent across every future screen until its real implementation lands. `product-catalog/` groups every one of those placeholders under the SRS feature they belong to (`docs/srs/features/0.2-product-catalog.md`), separate from `dashboard/`, which isn't part of that SRS feature — and `AppRoutes.tsx` nests their URLs under `/product-catalog/*` to match, rather than leaving the file grouping and the URL structure out of sync. `Sidebar.tsx` mirrors the same grouping one level further: the five product-catalog links sit behind a collapsible "Product Catalog" toggle (local `useState`, defaulting open when the current route is already under `/product-catalog`), rather than as flat top-level items.
 
-`ProductsPage.tsx`, `CategoriesPage.tsx`, and `BrandsPage.tsx` are the placeholders promoted to real (mock-data) content — per root `docs/architecture.md` §4.2's tech blueprint ("TanStack Table for catalog/order grids"), all three render mock data through the shared `DataTable` (`@tanstack/react-table`). Each composes the shared `PageHeader` rather than `MainSection.tsx` owning that chrome directly, because `MainSection` wraps every route including `Dashboard`, whose header shape (stat cards) is entirely different — `PageHeader` is the reusable piece, used per-page, not baked into the universal wrapper. `DataTable`/`StatusBadge`/`SearchInput`/`FilterDropdown`/`Pagination` live in `src/components/`, not `src/layout/`, because they're generic reusable widgets, not page-layout chrome — same distinction as keeping `AdminShell`/`Sidebar` out of `src/features/`. Filtering/pagination is client-side over the static mock arrays; there's no backend list endpoint wired into `admin-app` yet (that's a separate TanStack Query integration). Following each page's own mock exactly: Products gets the full toolbar (search + status filter + low-stock filter + pagination); Categories and Brands get search only, since `category-list.html`/`brand-list.html` show no filter/pagination controls and have small record counts. Specifications/Variant Types stay plain placeholders, and none of the three real pages include the inline create/edit form panel shown in their mocks — that's a separate, larger feature.
+`ProductsPage.tsx`, `CategoriesPage.tsx`, and `BrandsPage.tsx` are the placeholders promoted to real (mock-data) content — per root `docs/architecture.md` §4.2's tech blueprint, all three render mock data through the shared `DataTable`, backed by **Material React Table** (search, per-column filters, sorting, pagination, row selection, and column visibility all built in, rather than hand-built — see `docs/design-tokens.md`'s design-tokens note and `muiTheme.ts`). Each composes the shared `PageHeader` rather than `MainSection.tsx` owning that chrome directly, because `MainSection` wraps every route including `Dashboard`, whose header shape (stat cards) is entirely different — `PageHeader` is the reusable piece, used per-page, not baked into the universal wrapper. `DataTable`/`StatusBadge` live in `src/components/`, not `src/layout/`, because they're generic reusable widgets, not page-layout chrome — same distinction as keeping `AdminShell`/`Sidebar` out of `src/features/`. There's no backend list endpoint wired into `admin-app` yet (that's a separate TanStack Query integration) — each page simulates a brief loading delay (`isLoading` state, ~500ms `setTimeout` on mount) so `DataTable`'s skeleton/spinner states are genuinely exercised rather than left as unused props. Products additionally keeps one small piece of custom state — a "low stock only" checkbox — since that's a derived cross-field filter (`stock <= lowStockThreshold`) MRT has no native column concept for; everything else (search, the Status column's filter, sorting, pagination, row selection, column visibility) is MRT's built-in toolbar. Specifications/Variant Types stay plain placeholders, and none of the three real pages include the inline create/edit form panel shown in their mocks — that's a separate, larger feature.
+
+**MUI stays scoped to `DataTable.tsx`.** Material React Table pulls in `@mui/material`/`@mui/icons-material`/`@emotion/react`/`@emotion/styled` as peer dependencies — a second styling system alongside `admin-app`'s Tailwind-only setup everywhere else. `muiTheme.ts` is a custom MUI theme (primary color matched to the `#16A34A` design token, `shape.borderRadius: 8` matching `rounded-lg`) wrapped in a `<ThemeProvider>` **only** inside `DataTable.tsx` — no `CssBaseline`, no app-wide provider — so it can't leak into or reset `Sidebar`/`Header`/`PageHeader`, which stay pure Tailwind.
 
 See `AGENTS.md` for the full `app/` vs `features/` convention.
 
@@ -68,9 +68,9 @@ admin-app/
 │   ├── app.test.tsx                        # renders src/app/App.tsx, asserts the Dashboard renders at "/"
 │   ├── shell.test.tsx                        # renders src/app/App.tsx, asserts AdminShell sidebar/header/content
 │   ├── routes.test.tsx                        # clicks each sidebar nav link, asserts the matching page heading
-│   ├── products.test.tsx                      # ProductsPage: pagination, search, status filter, low-stock filter
-│   ├── categories.test.tsx                    # CategoriesPage: renders mock rows, search narrows results
-│   ├── brands.test.tsx                        # BrandsPage: renders mock rows, search narrows results
+│   ├── products.test.tsx                      # ProductsPage: renders after simulated load, low-stock toggle filters
+│   ├── categories.test.tsx                    # CategoriesPage: renders mock rows, subcategory indentation
+│   ├── brands.test.tsx                        # BrandsPage: renders mock rows
 │   └── mocks/{handlers.ts,server.ts}          # shared MSW server, extended by later feature tests
 └── src/
     ├── main.tsx
@@ -78,7 +78,7 @@ admin-app/
     ├── app/App.tsx
     ├── router/AppRoutes.tsx
     ├── layout/{AdminShell.tsx,Sidebar.tsx,Header.tsx,MainSection.tsx,PageHeader.tsx}
-    ├── components/{DataTable.tsx,StatusBadge.tsx,SearchInput.tsx,FilterDropdown.tsx,Pagination.tsx}
+    ├── components/{DataTable.tsx,muiTheme.ts,StatusBadge.tsx}
     └── features/{dashboard,product-catalog/{products/{ProductsPage.tsx,mockProducts.ts},categories/{CategoriesPage.tsx,mockCategories.ts},brands/{BrandsPage.tsx,mockBrands.ts},specifications,variant-types}}/*.tsx
 ```
 
@@ -88,7 +88,7 @@ admin-app/
 - **Path aliases**: `@/*` → `./src/*` is resolved by the `vite-tsconfig-paths` plugin in `vite.config.ts`, for both dev and build. This is a deliberate difference from `backend/vitest.config.ts`'s `resolve: { tsconfigPaths: true }` — that option is **not real** (Vite silently ignores it; confirmed while fixing `buyer-app`'s Vitest config in Issue #5), so it's never used here.
 - **Tailwind CSS 4**: CSS-first config — no `tailwind.config.js`. Wired via the `@tailwindcss/vite` plugin in `vite.config.ts` and a single `@import "tailwindcss";` in `src/index.css` — the Vite-native equivalent of `buyer-app`'s PostCSS-based `@tailwindcss/postcss` wiring. `src/index.css` also carries the `@theme` design-token block — see `docs/design-tokens.md`.
 - **Icons**: `react-icons`, using its `lu` (Lucide) icon set exclusively (`react-icons/lu`) for a consistent line-icon style across `Sidebar`, `Header`, and `Dashboard`.
-- **Tables**: `@tanstack/react-table` for catalog/order grids, per root `docs/architecture.md` §4.2. Wrapped once by `src/components/DataTable.tsx` — headless (`useReactTable` + `getCoreRowModel`, rendered via `flexRender`), styled entirely with Tailwind — rather than each page building its own `useReactTable` call. Sorting isn't wired (separate FR-CAT-050/053 scope); filtering/pagination are plain client-side array operations in each page, not TanStack Table features.
+- **Tables**: `material-react-table` for catalog/order grids, per root `docs/architecture.md` §4.2 — chosen over hand-building on headless `@tanstack/react-table` because it ships filter, sort, pagination, row selection, column visibility, and loading (spinner/skeleton) states out of the box. Wrapped once by `src/components/DataTable.tsx` rather than each page building its own `useMaterialReactTable` call. Its MUI peer dependencies (`@mui/material`, `@mui/icons-material`, `@emotion/react`, `@emotion/styled`) and `src/components/muiTheme.ts` are scoped to `DataTable.tsx` only — see the "MUI stays scoped" note above.
 - **ESLint**: `eslint.config.mjs` uses `typescript-eslint` + `eslint-plugin-react-hooks` + `eslint-plugin-react-refresh` (the standard Vite React-TS template set) — resolved when `eslint` runs from within `admin-app/` (e.g. `npm run lint --workspace admin-app`). The root `eslint.config.ts` still covers `admin-app/**` with baseline TS rules when run repo-wide (`npx eslint .` from root) — same non-conflicting layering as `buyer-app`.
 
 ## Testing
