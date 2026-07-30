@@ -46,6 +46,8 @@ Each nav destination in `Sidebar.tsx` is a real route rendering a placeholder pa
 
 **MUI stays scoped to `DataTable.tsx`.** Material React Table pulls in `@mui/material`/`@mui/icons-material`/`@emotion/react`/`@emotion/styled` as peer dependencies — a second styling system alongside `admin-app`'s Tailwind-only setup everywhere else. `muiTheme.ts` is a custom MUI theme (primary color matched to the `#16A34A` design token, `shape.borderRadius: 8` matching `rounded-lg`) wrapped in a `<ThemeProvider>` **only** inside `DataTable.tsx` — no `CssBaseline`, no app-wide provider — so it can't leak into or reset `Sidebar`/`Header`/`PageHeader`, which stay pure Tailwind.
 
+**Horizontal-overflow containment.** A wide table (many columns + MRT's own toolbar) can exceed the space left after the sidebar. Flexbox's default `min-width: auto` means a flex item won't shrink below its content's width unless told to — so without intervention, that width demand propagates all the way up through `MainSection`'s `<main>` and `AdminShell`'s right-column `<div>`, growing the whole page past the viewport and scrolling the fixed-width `Sidebar` out of view instead of scrolling just the table. Fixed at both ends of the chain: `AdminShell.tsx`'s right column and `MainSection.tsx`'s `<main>` both carry `min-w-0` (so they're capped at their allotted width, never grown to fit a descendant), and `DataTable.tsx` wraps its table output in a `<section data-testid="data-table-section">` with its own `min-w-0 overflow-x-auto` — the one place a horizontal scrollbar is allowed to appear. Removing `min-w-0` from any point in that chain reintroduces the bug even if the others stay in place.
+
 See `AGENTS.md` for the full `app/` vs `features/` convention.
 
 ## Current file tree

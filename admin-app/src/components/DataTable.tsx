@@ -27,11 +27,20 @@ export function DataTable<T extends MRT_RowData>({
     enableSorting: true,
     enablePagination: true,
     enableRowSelection: true,
+    muiTablePaperProps: {
+      elevation: 0,
+      sx: { border: "none", boxShadow: "none" },
+    },
   });
 
   return (
     <ThemeProvider theme={muiTheme}>
-      <MaterialReactTable table={table} />
+      <section
+        data-testid="data-table-section"
+        className="min-w-0 overflow-x-auto rounded-lg border border-neutral-200"
+      >
+        <MaterialReactTable table={table} />
+      </section>
     </ThemeProvider>
   );
 }
