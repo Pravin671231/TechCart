@@ -44,3 +44,18 @@ export async function countByCategoryIds(
 
   return new Map(results.map((r) => [r._id.toString(), r.count]));
 }
+
+// The `category` filter is load-bearing, not defensive: two categories can
+// each define a same-named field, and a product's specifications are only
+// ever valid against its own category's schema (FR-CAT-034) — omitting it
+// would let another category's same-named field inflate the count.
+export async function countBySpecificationField(
+  categoryId: Types.ObjectId,
+  groupName: string,
+  name: string,
+): Promise<number> {
+  return Product.countDocuments({
+    category: categoryId,
+    specifications: { $elemMatch: { groupName, values: { $elemMatch: { name } } } },
+  });
+}

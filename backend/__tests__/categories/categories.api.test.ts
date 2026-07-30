@@ -29,6 +29,10 @@ vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
   };
 });
 
+vi.mock("@/modules/categorySpecifications/categorySpecifications.service", () => ({
+  deleteForCategory: vi.fn(),
+}));
+
 import app from "@/app";
 import { env } from "@/config/env";
 import * as categoriesRepository from "@/modules/categories/categories.repository";

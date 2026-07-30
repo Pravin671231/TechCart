@@ -4,6 +4,7 @@ import { generateUniqueSlug } from "@/utils/slug";
 import { truncate } from "@/utils/text";
 import { consumeImageKeys, buildPublicUrl } from "@/modules/uploads/uploads.service";
 import { countByCategory, countByCategoryIds } from "@/modules/products/products.repository";
+import { deleteForCategory as deleteSpecificationsForCategory } from "@/modules/categorySpecifications/categorySpecifications.service";
 import type { CategoryImage } from "./categories.model";
 import {
   create,
@@ -187,10 +188,8 @@ export async function listCategoriesForPublic(): Promise<PublicCategory[]> {
   });
 }
 
-// Cascade to the category's specification/variant-type documents (FR-CAT-019)
-// is deliberately not implemented here — #29/#30 don't exist yet, so there's
-// nothing to cascade to. Extend this once they land, don't treat the
-// omission as a bug.
+// Cascades to the category's specification document (FR-CAT-019, #29).
+// Variant-type cascade still waits for #30 — extend this once it lands.
 export async function deleteCategory(id: Types.ObjectId): Promise<void> {
   const [productCount, subcategoryCount] = await Promise.all([countByCategory(id), countByParent(id)]);
 
@@ -205,5 +204,9 @@ export async function deleteCategory(id: Types.ObjectId): Promise<void> {
     );
   }
 
+  // Safe without an additional guard here — productCount === 0 above
+  // already guarantees no product references any field in this category's
+  // spec schema, so there's nothing left to protect.
+  await deleteSpecificationsForCategory(id);
   await deleteById(id);
 }
