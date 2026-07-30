@@ -9,6 +9,7 @@ This is the `admin-app` workspace of a monorepo. Root-level decisions (monorepo 
 - This mirrors `backend/src/modules/<feature>/` and `buyer-app/src/features/<feature>/`'s feature-based organization (see `backend/AGENTS.md`, `buyer-app/AGENTS.md`), adapted for React Router instead of a file-system router.
 - `src/layout/` holds cross-cutting page chrome that every route mounts inside — kept separate from `src/features/<feature>/` because it isn't owned by any single feature, the same way `backend/src/middleware/` and `backend/src/utils/` sit alongside (not inside) `backend/src/modules/` for non-feature code. `AdminShell.tsx` composes the three region components (`Sidebar.tsx`, `Header.tsx`, `MainSection.tsx` — the last renders child routes via `<Outlet />`), kept as separate files so each region can grow its own real content independently later.
 - Screen-level design reference: [`mock-ui/`](../mock-ui/) — static wireframes per feature's SRS doc, not a workspace of its own. Consult it before building a feature's UI.
+- Visual design reference: [`docs/design-tokens.md`](docs/design-tokens.md) — colors, radius, and spacing conventions (admin-app only). Consult it alongside `mock-ui/` before styling a feature's UI.
 
 ## Testing
 
