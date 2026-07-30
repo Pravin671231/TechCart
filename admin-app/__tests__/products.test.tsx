@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { ProductsPage } from "@/features/product-catalog/products/ProductsPage";
 
@@ -34,5 +34,20 @@ describe("ProductsPage", () => {
 
     expect(screen.getByText("Nova Lite Smartphone")).toBeInTheDocument();
     expect(screen.queryByText("Aurora X12 Smartphone")).not.toBeInTheDocument();
+  });
+
+  it("changes a row's status via its dropdown", async () => {
+    renderProductsPage();
+
+    await screen.findByText("Aurora X12 Smartphone");
+
+    const statusSelects = screen.getAllByRole("combobox");
+    const firstRowStatus = statusSelects[0];
+    expect(firstRowStatus).toHaveTextContent("Published");
+
+    fireEvent.mouseDown(firstRowStatus);
+    fireEvent.click(within(screen.getByRole("listbox")).getByText("Draft"));
+
+    expect(firstRowStatus).toHaveTextContent("Draft");
   });
 });

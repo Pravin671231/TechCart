@@ -3,8 +3,8 @@ import type { MRT_ColumnDef } from "material-react-table";
 import { LuPlus } from "react-icons/lu";
 import { PageHeader } from "@/layout/PageHeader";
 import { DataTable } from "@/components/DataTable";
-import { rightAlignedHeadCellProps } from "@/components/tableCellProps";
 import { StatusBadge } from "@/components/StatusBadge";
+import { StatusSelect } from "@/components/StatusSelect";
 import {
   mockProducts,
   type Product,
@@ -17,67 +17,19 @@ const currency = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
-const statusTones: Record<ProductStatus, "success" | "warning" | "neutral"> = {
-  published: "success",
-  draft: "warning",
-  archived: "neutral",
-};
-
-const statusLabels: Record<ProductStatus, string> = {
-  published: "Published",
-  draft: "Draft",
-  archived: "Archived",
-};
-
-const columns: MRT_ColumnDef<Product>[] = [
-  { accessorKey: "name", header: "Name" },
-  {
-    accessorKey: "sku",
-    header: "SKU",
-    Cell: ({ cell }) => <span className="font-mono text-xs">{cell.getValue<string>()}</span>,
-  },
-  { accessorKey: "brand", header: "Brand" },
-  { accessorKey: "category", header: "Category" },
-  {
-    accessorKey: "sellingPrice",
-    header: "Price",
-    muiTableHeadCellProps: rightAlignedHeadCellProps,
-    muiTableBodyCellProps: { align: "right" },
-    Cell: ({ cell }) => currency.format(cell.getValue<number>()),
-  },
-  {
-    accessorKey: "stock",
-    header: "Stock",
-    muiTableHeadCellProps: rightAlignedHeadCellProps,
-    muiTableBodyCellProps: { align: "right" },
-    Cell: ({ row }) => {
-      const product = row.original;
-      const isLowStock = product.stock > 0 && product.stock <= product.lowStockThreshold;
-      return (
-        <span className="flex items-center justify-end gap-2">
-          {product.stock}
-          {isLowStock && <StatusBadge label="Low" tone="warning" />}
-        </span>
-      );
-    },
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    filterVariant: "select",
-    filterSelectOptions: [
-      { value: "published", label: "Published" },
-      { value: "draft", label: "Draft" },
-      { value: "archived", label: "Archived" },
-    ],
-    Cell: ({ cell }) => {
-      const status = cell.getValue<ProductStatus>();
-      return <StatusBadge label={statusLabels[status]} tone={statusTones[status]} />;
-    },
-  },
+const statusOptions = [
+  { value: "published", label: "Published" },
+  { value: "draft", label: "Draft" },
+  { value: "archived", label: "Archived" },
 ];
 
+const centerAlign = {
+  muiTableHeadCellProps: { align: "center" as const },
+  muiTableBodyCellProps: { align: "center" as const },
+};
+
 export function ProductsPage() {
+  const [products, setProducts] = useState<Product[]>(mockProducts);
   const [lowStockOnly, setLowStockOnly] = useState(false);
   // Simulates the future TanStack Query fetch latency until a real list endpoint is wired.
   const [isLoading, setIsLoading] = useState(true);
@@ -87,9 +39,64 @@ export function ProductsPage() {
     return () => clearTimeout(timeout);
   }, []);
 
+  function handleStatusChange(id: string, status: string) {
+    setProducts((prev) =>
+      prev.map((product) =>
+        product.id === id ? { ...product, status: status as ProductStatus } : product,
+      ),
+    );
+  }
+
+  const columns: MRT_ColumnDef<Product>[] = [
+    { accessorKey: "name", header: "Name" },
+    {
+      accessorKey: "sku",
+      header: "SKU",
+      ...centerAlign,
+      Cell: ({ cell }) => <span className="font-mono text-xs">{cell.getValue<string>()}</span>,
+    },
+    { accessorKey: "brand", header: "Brand", ...centerAlign },
+    { accessorKey: "category", header: "Category", ...centerAlign },
+    {
+      accessorKey: "sellingPrice",
+      header: "Price",
+      ...centerAlign,
+      Cell: ({ cell }) => currency.format(cell.getValue<number>()),
+    },
+    {
+      accessorKey: "stock",
+      header: "Stock",
+      ...centerAlign,
+      Cell: ({ row }) => {
+        const product = row.original;
+        const isLowStock = product.stock > 0 && product.stock <= product.lowStockThreshold;
+        return (
+          <span className="flex items-center justify-center gap-2">
+            {product.stock}
+            {isLowStock && <StatusBadge label="Low" tone="warning" />}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      ...centerAlign,
+      filterVariant: "select",
+      filterSelectOptions: statusOptions,
+      Cell: ({ row }) => (
+        <StatusSelect
+          value={row.original.status}
+          onChange={(value) => handleStatusChange(row.original.id, value)}
+          options={statusOptions}
+        />
+      ),
+    },
+  ];
+
   const data = lowStockOnly
-    ? mockProducts.filter((product) => product.stock > 0 && product.stock <= product.lowStockThreshold)
-    : mockProducts;
+    ? products.filter((product) => product.stock > 0 && product.stock <= product.lowStockThreshold)
+    : products;
 
   return (
     <div className="flex flex-col">

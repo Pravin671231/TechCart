@@ -1,5 +1,6 @@
 import {
   MaterialReactTable,
+  MRT_ToggleFullScreenButton,
   useMaterialReactTable,
   type MRT_ColumnDef,
   type MRT_RowData,
@@ -28,6 +29,12 @@ export function DataTable<T extends MRT_RowData>({
     enablePagination: true,
     enableRowSelection: false,
     enableColumnActions: false,
+    enableStickyHeader: true,
+    muiTableContainerProps: {
+      sx: { maxHeight: "600px" },
+    },
+    // Only the fullscreen button remains — omits MRT's default "Show/Hide columns" button.
+    renderToolbarInternalActions: ({ table }) => <MRT_ToggleFullScreenButton table={table} />,
     muiTablePaperProps: {
       elevation: 0,
       sx: { border: "none", boxShadow: "none" },
