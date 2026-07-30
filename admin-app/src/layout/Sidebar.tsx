@@ -33,7 +33,7 @@ export function Sidebar() {
   const [isProductCatalogOpen, setIsProductCatalogOpen] = useState(isProductCatalogActive);
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col gap-6 rounded-2xl bg-neutral-900 p-4 text-neutral-300">
+    <aside className="flex w-60 shrink-0 flex-col gap-6 rounded-2xl bg-neutral-900 p-4 text-neutral-300">
       <div className="flex items-center gap-2 px-2 py-1">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold text-white">
           T

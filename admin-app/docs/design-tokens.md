@@ -23,6 +23,20 @@ components a semantic name (`bg-primary-600`) that stays stable if the brand col
 `primary-600` is `#16A34A`. Use `primary` (not `primary-600`) in component code where possible —
 it stays correct if the underlying shade is ever adjusted.
 
+## Layout
+
+- **Reference design viewport: 1440px.** The primary width layout decisions are made and checked
+  against — a good balance for most users, per the design brief this was decided from. Not a hard
+  breakpoint; the layout below adapts continuously above and below it.
+- **Sidebar: fixed 240px** (`w-60` in `Sidebar.tsx`), full height, `shrink-0` — never shrinks or
+  grows regardless of viewport width. (`mock-ui/admin-app/index.html`'s original shell wireframe
+  used `w-64`/256px, and `product-list.html` etc. used `w-56`/224px — neither was a deliberate
+  pixel decision, just wireframe defaults; 240px is the real, settled value.)
+- **Content area: fluid, no max-width cap.** `AdminShell.tsx`'s right column and `MainSection.tsx`
+  are both `flex-1 min-w-0` — they fill whatever space remains after the sidebar at any viewport
+  width, from smaller laptops up through larger monitors, rather than capping at a fixed width and
+  leaving dead space on wide screens.
+
 ## Icons
 
 `react-icons`, using its `lu` (Lucide) set exclusively — `import { LuPackage } from "react-icons/lu"`.
