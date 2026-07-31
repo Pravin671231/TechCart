@@ -8,6 +8,7 @@ vi.mock("@/modules/products/products.repository", () => ({
   slugExists: vi.fn(),
   skuInUse: vi.fn(),
   updateById: vi.fn(),
+  replaceVariants: vi.fn(),
   listPaginated: vi.fn(),
 }));
 
@@ -105,6 +106,36 @@ const validBody = {
   mrp: 99900,
   discount: 10,
   stock: 10,
+};
+
+const variantId = new Types.ObjectId();
+
+const existingVariant = {
+  _id: variantId,
+  sku: "SKU-1-RED-L",
+  attributes: [
+    { name: "Color", value: "Red" },
+    { name: "Size", value: "L" },
+  ],
+  images: [],
+  mrp: 51000,
+  discount: 0,
+  sellingPrice: 51000,
+  stock: 5,
+  active: true,
+};
+
+const productWithVariant: ProductRecord = { ...productStub, variants: [existingVariant] };
+
+const addVariantBody = {
+  sku: "SKU-1-BLUE-M",
+  attributes: [
+    { name: "Color", value: "Blue" },
+    { name: "Size", value: "M" },
+  ],
+  mrp: 51000,
+  discount: 0,
+  stock: 3,
 };
 
 afterEach(() => {
@@ -388,6 +419,158 @@ describe("PATCH /api/admin/products/:id/stock", () => {
   it("rejects negative stock", async () => {
     const res = await request(app)
       .patch(`/api/admin/products/${productId.toString()}/stock`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ stock: -1 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+});
+
+describe("POST /api/admin/products/:id/variants", () => {
+  it("rejects a request with no X-Admin-Key header", async () => {
+    const res = await request(app)
+      .post(`/api/admin/products/${productId.toString()}/variants`)
+      .send(addVariantBody);
+    expect(res.status).toBe(401);
+  });
+
+  it("adds a variant with a server-computed sellingPrice", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariant);
+    vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
+    vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariant);
+
+    const res = await request(app)
+      .post(`/api/admin/products/${productId.toString()}/variants`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ ...addVariantBody, mrp: 60000, discount: 10 });
+
+    expect(res.status).toBe(201);
+    const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
+    expect(persisted?.[1]).toMatchObject({
+      sku: "SKU-1-BLUE-M",
+      active: true,
+      sellingPrice: 54000,
+    });
+  });
+
+  it("returns PRODUCT_NOT_FOUND for a nonexistent product", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(null);
+
+    const res = await request(app)
+      .post(`/api/admin/products/${productId.toString()}/variants`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send(addVariantBody);
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("PRODUCT_NOT_FOUND");
+  });
+
+  it("rejects a variant sku already used by a sibling variant", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariant);
+
+    const res = await request(app)
+      .post(`/api/admin/products/${productId.toString()}/variants`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ ...addVariantBody, sku: existingVariant.sku });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("DUPLICATE_SKU");
+    expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
+  });
+
+  it("rejects an attribute combination duplicating an existing variant's, regardless of order", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariant);
+    vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
+
+    const res = await request(app)
+      .post(`/api/admin/products/${productId.toString()}/variants`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({
+        ...addVariantBody,
+        sku: "SKU-1-UNIQUE",
+        attributes: [
+          { name: "Size", value: "L" },
+          { name: "Color", value: "Red" },
+        ],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("DUPLICATE_VARIANT_ATTRIBUTES");
+  });
+
+  it("rejects a non-positive mrp with a validation error", async () => {
+    const res = await request(app)
+      .post(`/api/admin/products/${productId.toString()}/variants`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ ...addVariantBody, mrp: 0 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rejects an empty attributes array", async () => {
+    const res = await request(app)
+      .post(`/api/admin/products/${productId.toString()}/variants`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ ...addVariantBody, attributes: [] });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+});
+
+describe("PATCH /api/admin/products/:id/variants/:variantId", () => {
+  const url = `/api/admin/products/${productId.toString()}/variants/${variantId.toString()}`;
+
+  it("deactivates a variant, leaving it embedded rather than removed", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariant);
+    vi.mocked(productsRepository.replaceVariants).mockResolvedValue({
+      ...productWithVariant,
+      variants: [{ ...existingVariant, active: false }],
+    });
+
+    const res = await request(app)
+      .patch(url)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ active: false });
+
+    expect(res.status).toBe(200);
+    const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
+    expect(persisted).toHaveLength(1);
+    expect(persisted?.[0]).toMatchObject({ _id: variantId, active: false });
+    expect(res.body.data.variants[0].active).toBe(false);
+  });
+
+  it("returns VARIANT_NOT_FOUND for a variantId that isn't on this product", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariant);
+
+    const res = await request(app)
+      .patch(
+        `/api/admin/products/${productId.toString()}/variants/${new Types.ObjectId().toString()}`,
+      )
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ stock: 1 });
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("VARIANT_NOT_FOUND");
+  });
+
+  it("returns PRODUCT_NOT_FOUND for a nonexistent product", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(null);
+
+    const res = await request(app)
+      .patch(url)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ stock: 1 });
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("PRODUCT_NOT_FOUND");
+  });
+
+  it("rejects negative stock", async () => {
+    const res = await request(app)
+      .patch(url)
       .set("X-Admin-Key", env.ADMIN_API_KEY)
       .send({ stock: -1 });
 

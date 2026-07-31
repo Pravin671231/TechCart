@@ -329,9 +329,8 @@ Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #29 — not the full Product Catalog API. Category-governed variant types (`#30`), the sibling resource to this one, is now covered in [`categoryVariants.api.md`](./categoryVariants.api.md), and product core CRUD (`#31`) — the actual consumer of this schema (`FR-CAT-032`) — in [`products.api.md`](./products.api.md). Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #29 — not the full Product Catalog API. Category-governed variant types (`#30`), the sibling resource to this one, is now covered in [`categoryVariants.api.md`](./categoryVariants.api.md), and product core CRUD (`#31`) — the actual consumer of this schema (`FR-CAT-032`) — plus product variants (`#32`, which carry no `specifications` of their own, so this schema doesn't apply to them) in [`products.api.md`](./products.api.md). Not yet implemented, each its own future issue:
 
-- Product variants (`#32`)
 - Status update APIs (`#33`) and admin search (`#34`) — not applicable to this resource at all (no `status`, no list view)
 - Buyer browsing/search/inventory visibility (`#35`)
 - Buyer filtering, sorting, and card content (`#36`) — this is where `filterable` fields actually become buyer-facing facets and card content

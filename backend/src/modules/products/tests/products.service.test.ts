@@ -10,6 +10,7 @@ vi.mock("../products.repository", () => ({
   slugExists: vi.fn(),
   skuInUse: vi.fn(),
   updateById: vi.fn(),
+  replaceVariants: vi.fn(),
   listPaginated: vi.fn(),
 }));
 
@@ -46,12 +47,17 @@ import {
   listProductsForAdmin,
   deleteProduct,
   updateStock,
+  addVariant,
+  updateVariant,
 } from "../products.service";
+import type { ProductVariant } from "../products.model";
 
 const productId = new Types.ObjectId();
 const brandId = new Types.ObjectId();
 const categoryId = new Types.ObjectId();
 const otherCategoryId = new Types.ObjectId();
+const variantId = new Types.ObjectId();
+const otherVariantId = new Types.ObjectId();
 
 const brandStub: BrandRecord = {
   _id: brandId,
@@ -93,6 +99,53 @@ const productStub: ProductRecord = {
   status: "draft",
   createdBy: null,
   updatedBy: null,
+};
+
+const existingVariant: ProductVariant = {
+  _id: variantId,
+  sku: "SKU-1-RED-L",
+  attributes: [
+    { name: "Color", value: "Red" },
+    { name: "Size", value: "L" },
+  ],
+  images: [],
+  mrp: 51000,
+  discount: 0,
+  sellingPrice: 51000,
+  stock: 5,
+  active: true,
+};
+
+const otherExistingVariant: ProductVariant = {
+  _id: otherVariantId,
+  sku: "SKU-1-BLUE-M",
+  attributes: [
+    { name: "Color", value: "Blue" },
+    { name: "Size", value: "M" },
+  ],
+  images: [],
+  mrp: 51000,
+  discount: 0,
+  sellingPrice: 51000,
+  stock: 3,
+  active: true,
+};
+
+const productWithVariants: ProductRecord = {
+  ...productStub,
+  variants: [existingVariant, otherExistingVariant],
+};
+
+const baseAddVariantInput = {
+  sku: "SKU-1-GREEN-S",
+  attributes: [
+    { name: "Color", value: "Green" },
+    { name: "Size", value: "S" },
+  ],
+  images: [] as { objectKey: string }[],
+  mrp: 51000,
+  discount: 0,
+  stock: 4,
 };
 
 const baseCreateInput = {
@@ -485,6 +538,240 @@ describe("updateStock", () => {
     vi.mocked(productsRepository.updateById).mockResolvedValue(null);
 
     await expect(updateStock(productId, 42)).rejects.toMatchObject({
+      statusCode: 404,
+      code: "PRODUCT_NOT_FOUND",
+    });
+  });
+});
+
+describe("addVariant", () => {
+  it("throws PRODUCT_NOT_FOUND when the product doesn't exist", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(null);
+
+    await expect(addVariant(productId, baseAddVariantInput)).rejects.toMatchObject({
+      statusCode: 404,
+      code: "PRODUCT_NOT_FOUND",
+    });
+    expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
+  });
+
+  it("rejects a sku matching the parent product's own sku", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+
+    await expect(
+      addVariant(productId, { ...baseAddVariantInput, sku: productStub.sku }),
+    ).rejects.toMatchObject({ statusCode: 400, code: "DUPLICATE_SKU" });
+    expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
+  });
+
+  it("rejects a sku matching an existing sibling variant's sku", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+
+    await expect(
+      addVariant(productId, { ...baseAddVariantInput, sku: existingVariant.sku }),
+    ).rejects.toMatchObject({ statusCode: 400, code: "DUPLICATE_SKU" });
+    expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
+  });
+
+  it("rejects a sku already in use elsewhere, checked via skuInUse excluding this product", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+    vi.mocked(productsRepository.skuInUse).mockResolvedValue(true);
+
+    await expect(addVariant(productId, baseAddVariantInput)).rejects.toMatchObject({
+      statusCode: 400,
+      code: "DUPLICATE_SKU",
+    });
+    expect(productsRepository.skuInUse).toHaveBeenCalledWith(baseAddVariantInput.sku, productId);
+    expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
+  });
+
+  it("rejects an attribute combination that duplicates an existing variant's, regardless of pair order", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+    vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
+
+    await expect(
+      addVariant(productId, {
+        ...baseAddVariantInput,
+        sku: "SKU-1-UNIQUE",
+        // Same pairs as existingVariant, reversed order.
+        attributes: [
+          { name: "Size", value: "L" },
+          { name: "Color", value: "Red" },
+        ],
+      }),
+    ).rejects.toMatchObject({ statusCode: 400, code: "DUPLICATE_VARIANT_ATTRIBUTES" });
+    expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
+  });
+
+  it("adds the variant, active by default, with a server-computed sellingPrice", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+    vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
+    vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
+
+    await addVariant(productId, { ...baseAddVariantInput, mrp: 60000, discount: 10 });
+
+    const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
+    expect(persisted).toHaveLength(3);
+    const added = persisted?.[2];
+    expect(added).toMatchObject({
+      sku: "SKU-1-GREEN-S",
+      active: true,
+      mrp: 60000,
+      discount: 10,
+      sellingPrice: 54000,
+    });
+    expect(added?._id).toBeDefined();
+  });
+
+  it("omits weight when not provided and includes it when provided", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+    vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
+    vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
+
+    await addVariant(productId, baseAddVariantInput);
+    let added = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1]?.[2];
+    expect(added).not.toHaveProperty("weight");
+
+    await addVariant(productId, { ...baseAddVariantInput, sku: "SKU-1-OTHER", weight: 1.5 });
+    added = vi.mocked(productsRepository.replaceVariants).mock.calls[1]?.[1]?.[2];
+    expect(added).toHaveProperty("weight", 1.5);
+  });
+
+  it("resolves images only when at least one is submitted", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+    vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
+    vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
+
+    await addVariant(productId, baseAddVariantInput);
+    expect(uploadsService.validateImageCount).not.toHaveBeenCalled();
+
+    await addVariant(productId, {
+      ...baseAddVariantInput,
+      sku: "SKU-1-WITH-IMAGE",
+      images: [{ objectKey: "product-image/variant.png" }],
+    });
+    expect(uploadsService.validateImageCount).toHaveBeenCalledWith(
+      [{ objectKey: "product-image/variant.png" }],
+      { min: 1, max: 2 },
+    );
+    expect(uploadsService.consumeImageKeys).toHaveBeenCalledWith(["product-image/variant.png"]);
+  });
+});
+
+describe("updateVariant", () => {
+  it("throws PRODUCT_NOT_FOUND when the product doesn't exist", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(null);
+
+    await expect(updateVariant(productId, variantId, { stock: 1 })).rejects.toMatchObject({
+      statusCode: 404,
+      code: "PRODUCT_NOT_FOUND",
+    });
+  });
+
+  it("throws VARIANT_NOT_FOUND when the variantId doesn't match any variant on this product", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+
+    await expect(
+      updateVariant(productId, new Types.ObjectId(), { stock: 1 }),
+    ).rejects.toMatchObject({ statusCode: 404, code: "VARIANT_NOT_FOUND" });
+    expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
+  });
+
+  it("deactivates a variant via active: false without touching its other fields", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+    vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
+
+    await updateVariant(productId, variantId, { active: false });
+
+    const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
+    expect(persisted).toHaveLength(2);
+    expect(persisted?.[0]).toMatchObject({ ...existingVariant, active: false });
+    // Never removed — the array length is unchanged, matching FR-CAT-040's
+    // "variants are never hard-removed" rule.
+    expect(persisted?.[1]).toEqual(otherExistingVariant);
+  });
+
+  it("does not re-check sku uniqueness when sku is resubmitted unchanged", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+    vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
+
+    await updateVariant(productId, variantId, { sku: existingVariant.sku, stock: 9 });
+
+    expect(productsRepository.skuInUse).not.toHaveBeenCalled();
+  });
+
+  it("rejects recoding sku to collide with a sibling variant", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+
+    await expect(
+      updateVariant(productId, variantId, { sku: otherExistingVariant.sku }),
+    ).rejects.toMatchObject({ statusCode: 400, code: "DUPLICATE_SKU" });
+    expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
+  });
+
+  it("rejects recoding sku to collide with the parent product's own sku", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+
+    await expect(
+      updateVariant(productId, variantId, { sku: productStub.sku }),
+    ).rejects.toMatchObject({ statusCode: 400, code: "DUPLICATE_SKU" });
+  });
+
+  it("accepts a new, globally-unique sku", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+    vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
+    vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
+
+    await updateVariant(productId, variantId, { sku: "SKU-1-RECODED" });
+
+    expect(productsRepository.skuInUse).toHaveBeenCalledWith("SKU-1-RECODED", productId);
+    const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
+    expect(persisted?.[0]).toMatchObject({ sku: "SKU-1-RECODED" });
+  });
+
+  it("rejects attributes duplicating a sibling variant's set", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+
+    await expect(
+      updateVariant(productId, variantId, { attributes: otherExistingVariant.attributes }),
+    ).rejects.toMatchObject({ statusCode: 400, code: "DUPLICATE_VARIANT_ATTRIBUTES" });
+    expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
+  });
+
+  it("recomputes sellingPrice from the new mrp and the existing discount when only mrp changes", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+    vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
+
+    await updateVariant(productId, variantId, { mrp: 60000 });
+
+    const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
+    expect(persisted?.[0]).toMatchObject({
+      mrp: 60000,
+      discount: existingVariant.discount,
+      sellingPrice: 60000,
+    });
+  });
+
+  it("does not touch pricing fields when neither mrp nor discount changes", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+    vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
+
+    await updateVariant(productId, variantId, { stock: 2 });
+
+    const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
+    expect(persisted?.[0]).toMatchObject({
+      mrp: existingVariant.mrp,
+      discount: existingVariant.discount,
+      sellingPrice: existingVariant.sellingPrice,
+      stock: 2,
+    });
+  });
+
+  it("throws PRODUCT_NOT_FOUND when the repository update itself finds nothing", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+    vi.mocked(productsRepository.replaceVariants).mockResolvedValue(null);
+
+    await expect(updateVariant(productId, variantId, { stock: 1 })).rejects.toMatchObject({
       statusCode: 404,
       code: "PRODUCT_NOT_FOUND",
     });

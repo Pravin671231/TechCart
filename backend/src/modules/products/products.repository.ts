@@ -5,6 +5,7 @@ import {
   type ProductImage,
   type ProductSpecificationGroup,
   type ProductStatus,
+  type ProductVariant,
 } from "./products.model";
 
 export type ProductRecord = ProductDocument & { _id: Types.ObjectId };
@@ -66,6 +67,20 @@ export async function updateById(
   patch: UpdateProductDoc,
 ): Promise<ProductRecord | null> {
   return Product.findByIdAndUpdate(id, { $set: patch }, { new: true }).lean();
+}
+
+// Full-array replace — same reasoning as categorySpecifications'/
+// categoryVariants' replaceGroups/replaceAxes: MongoDB positional array
+// update operators are brittle for a low-traffic admin tool, so the service
+// layer mutates a plain in-memory copy of `variants` and this persists the
+// whole array in one write. Kept separate from updateById/UpdateProductDoc
+// since products.controller.ts never accepts `variants` directly — only
+// addVariant/updateVariant in products.service.ts write through here.
+export async function replaceVariants(
+  id: Types.ObjectId,
+  variants: ProductVariant[],
+): Promise<ProductRecord | null> {
+  return Product.findByIdAndUpdate(id, { $set: { variants } }, { new: true }).lean();
 }
 
 export type ProductListFilter = { lowStock?: boolean };

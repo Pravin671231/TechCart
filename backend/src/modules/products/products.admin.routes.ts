@@ -6,6 +6,8 @@ import {
   listProductsHandler,
   updateProductHandler,
   updateStockHandler,
+  addVariantHandler,
+  updateVariantHandler,
 } from "./products.controller";
 
 const router = Router();
@@ -16,5 +18,7 @@ router.post("/", createProductHandler);
 router.patch("/:id", updateProductHandler);
 router.patch("/:id/stock", updateStockHandler);
 router.delete("/:id", deleteProductHandler);
+router.post("/:id/variants", addVariantHandler);
+router.patch("/:id/variants/:variantId", updateVariantHandler);
 
 export default router;

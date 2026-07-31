@@ -1,4 +1,4 @@
-import type { Types } from "mongoose";
+import { Types } from "mongoose";
 import { AppError } from "@/utils/AppError";
 import { generateUniqueSlug } from "@/utils/slug";
 import { computeSellingPrice } from "@/utils/pricing";
@@ -12,13 +12,19 @@ import {
 import { getBrandById } from "@/modules/brands/brands.service";
 import { getCategoryById } from "@/modules/categories/categories.service";
 import { validateProductSpecifications } from "@/modules/categorySpecifications/categorySpecifications.service";
-import type { ProductImage, ProductSpecificationGroup } from "./products.model";
+import type {
+  ProductImage,
+  ProductSpecificationGroup,
+  ProductVariant,
+  ProductVariantAttribute,
+} from "./products.model";
 import {
   create,
   findById,
   slugExists,
   skuInUse,
   updateById,
+  replaceVariants,
   listPaginated,
   type ProductRecord,
   type CreateProductDoc,
@@ -79,8 +85,38 @@ export type ProductListParams = {
   lowStock: boolean;
 };
 
+// sku IS editable here, unlike the parent product's own — FR-CAT-004
+// explicitly enumerates products' editable fields and omits sku, but
+// FR-CAT-040's "admin can update a variant" names no such exclusion list,
+// so a variant's sku is treated as editable, re-validated identically to
+// create when it changes.
+export type AddVariantInput = {
+  sku: string;
+  attributes: ProductVariantAttribute[];
+  images: ProductImageInput[];
+  mrp: number;
+  discount: number;
+  stock: number;
+  weight?: number | undefined;
+};
+
+export type UpdateVariantInput = {
+  sku?: string | undefined;
+  attributes?: ProductVariantAttribute[] | undefined;
+  images?: ProductImageInput[] | undefined;
+  mrp?: number | undefined;
+  discount?: number | undefined;
+  stock?: number | undefined;
+  weight?: number | undefined;
+  active?: boolean | undefined;
+};
+
 function notFound(id: Types.ObjectId): AppError {
   return new AppError(404, "PRODUCT_NOT_FOUND", `Product ${id.toString()} was not found.`);
+}
+
+function variantNotFound(variantId: Types.ObjectId): AppError {
+  return new AppError(404, "VARIANT_NOT_FOUND", `Variant ${variantId.toString()} was not found.`);
 }
 
 function duplicateSku(sku: string): AppError {
@@ -91,11 +127,29 @@ function duplicateSku(sku: string): AppError {
   );
 }
 
+function duplicateVariantAttributes(): AppError {
+  return new AppError(
+    400,
+    "DUPLICATE_VARIANT_ATTRIBUTES",
+    "A variant with this exact attribute combination already exists on this product.",
+  );
+}
+
+// Canonical form for comparing attribute sets regardless of submission order
+// (FR-CAT-041) — two variants sharing {Color:Red, Size:L} collide whether one
+// submits them as [Color,Size] and the other as [Size,Color].
+function attributeSetKey(attributes: ProductVariantAttribute[]): string {
+  return attributes
+    .map((attribute) => `${attribute.name}=${attribute.value}`)
+    .sort()
+    .join("|");
+}
+
 // Shared by create and update. validateImageCount/consumeImageKeys/
 // normalizeImages/buildPublicUrl are uploads.service.ts exports built during
 // #26 specifically for this call — see backend/CLAUDE.md's R2 uploads
-// section. { min: 1, max: 8 } matches FR-CAT-083's product bound (variants'
-// { min: 0, max: 2 } is #32's concern).
+// section. { min: 1, max: 8 } matches FR-CAT-083's product bound; variants'
+// bespoke { min: 0/1, max: 2 } bound is resolveVariantImages below.
 async function resolveImages(images: ProductImageInput[]): Promise<ProductImage[]> {
   validateImageCount(images, { min: 1, max: 8 });
   await consumeImageKeys(images.map((image) => image.objectKey));
@@ -231,5 +285,131 @@ export async function deleteProduct(id: Types.ObjectId): Promise<void> {
 export async function updateStock(id: Types.ObjectId, stock: number): Promise<ProductRecord> {
   const updated = await updateById(id, { stock });
   if (!updated) throw notFound(id);
+  return updated;
+}
+
+// Same shape as resolveImages above, different bound: FR-CAT-064's "0 or 1-2"
+// rather than FR-CAT-083's "1-8" — an empty array is valid (falls back to the
+// parent's images at read time, #35's concern), so the count guard only
+// engages once at least one image is submitted.
+async function resolveVariantImages(images: ProductImageInput[]): Promise<ProductImage[]> {
+  if (images.length === 0) return [];
+
+  validateImageCount(images, { min: 1, max: 2 });
+  await consumeImageKeys(images.map((image) => image.objectKey));
+
+  const withUrls: ProductImage[] = images.map((image) => {
+    const resolved: ProductImage = {
+      url: buildPublicUrl(image.objectKey),
+      isPrimary: image.isPrimary ?? false,
+    };
+    if (image.alt !== undefined) resolved.alt = image.alt;
+    return resolved;
+  });
+
+  return normalizeImages(withUrls);
+}
+
+// The three-part SKU cross-check FR-CAT-003's shared namespace needs: against
+// the parent product's own sku, against every *other* variant already on
+// this product, and — via skuInUse(sku, productId) — against every other
+// product's own sku and variants anywhere else. skuInUse excludes the whole
+// current product doc by id, so it deliberately doesn't cover the first two
+// cases; those are checked locally against the already-fetched `product`.
+async function assertVariantSkuAvailable(
+  product: ProductRecord,
+  sku: string,
+  excludeVariantId?: Types.ObjectId,
+): Promise<void> {
+  if (sku === product.sku) throw duplicateSku(sku);
+  const collidesWithSibling = product.variants.some(
+    (variant) => !(excludeVariantId && variant._id.equals(excludeVariantId)) && variant.sku === sku,
+  );
+  if (collidesWithSibling) throw duplicateSku(sku);
+  if (await skuInUse(sku, product._id)) throw duplicateSku(sku);
+}
+
+export async function addVariant(
+  productId: Types.ObjectId,
+  input: AddVariantInput,
+): Promise<ProductRecord> {
+  const product = await findById(productId);
+  if (!product) throw notFound(productId);
+
+  await assertVariantSkuAvailable(product, input.sku);
+
+  const key = attributeSetKey(input.attributes);
+  if (product.variants.some((variant) => attributeSetKey(variant.attributes) === key)) {
+    throw duplicateVariantAttributes();
+  }
+
+  const images = await resolveVariantImages(input.images);
+  const sellingPrice = computeSellingPrice(input.mrp, input.discount);
+
+  const variant: ProductVariant = {
+    _id: new Types.ObjectId(),
+    sku: input.sku,
+    attributes: input.attributes,
+    images,
+    mrp: input.mrp,
+    discount: input.discount,
+    sellingPrice,
+    stock: input.stock,
+    active: true,
+  };
+  if (input.weight !== undefined) variant.weight = input.weight;
+
+  const updated = await replaceVariants(productId, [...product.variants, variant]);
+  if (!updated) throw notFound(productId);
+  return updated;
+}
+
+// Deactivation (`active: false`) is just another field on this same PATCH —
+// FR-CAT-040 doesn't split it into a separate endpoint, and a variant is
+// never hard-removed regardless of `active`'s value.
+export async function updateVariant(
+  productId: Types.ObjectId,
+  variantId: Types.ObjectId,
+  input: UpdateVariantInput,
+): Promise<ProductRecord> {
+  const product = await findById(productId);
+  if (!product) throw notFound(productId);
+
+  const index = product.variants.findIndex((variant) => variant._id.equals(variantId));
+  if (index === -1) throw variantNotFound(variantId);
+  const existingVariant = product.variants[index]!;
+
+  if (input.sku !== undefined && input.sku !== existingVariant.sku) {
+    await assertVariantSkuAvailable(product, input.sku, variantId);
+  }
+
+  if (input.attributes !== undefined) {
+    const key = attributeSetKey(input.attributes);
+    const collidesWithSibling = product.variants.some(
+      (variant, i) => i !== index && attributeSetKey(variant.attributes) === key,
+    );
+    if (collidesWithSibling) throw duplicateVariantAttributes();
+  }
+
+  const updatedVariant: ProductVariant = { ...existingVariant };
+  if (input.sku !== undefined) updatedVariant.sku = input.sku;
+  if (input.attributes !== undefined) updatedVariant.attributes = input.attributes;
+  if (input.images !== undefined) updatedVariant.images = await resolveVariantImages(input.images);
+  if (input.mrp !== undefined || input.discount !== undefined) {
+    const mrp = input.mrp ?? existingVariant.mrp;
+    const discount = input.discount ?? existingVariant.discount;
+    updatedVariant.mrp = mrp;
+    updatedVariant.discount = discount;
+    updatedVariant.sellingPrice = computeSellingPrice(mrp, discount);
+  }
+  if (input.stock !== undefined) updatedVariant.stock = input.stock;
+  if (input.weight !== undefined) updatedVariant.weight = input.weight;
+  if (input.active !== undefined) updatedVariant.active = input.active;
+
+  const updatedVariants = [...product.variants];
+  updatedVariants[index] = updatedVariant;
+
+  const updated = await replaceVariants(productId, updatedVariants);
+  if (!updated) throw notFound(productId);
   return updated;
 }

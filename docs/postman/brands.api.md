@@ -333,9 +333,8 @@ Same `errors`-object shape as `uploads.api.md` — see [that section](./uploads.
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #27 — not the full Product Catalog API. Category management (`#28`), category-governed specifications (`#29`), category-governed variant types (`#30`), and product core CRUD (`#31`) are now covered in [`categories.api.md`](./categories.api.md), [`categorySpecifications.api.md`](./categorySpecifications.api.md), [`categoryVariants.api.md`](./categoryVariants.api.md), and [`products.api.md`](./products.api.md) respectively. Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #27 — not the full Product Catalog API. Category management (`#28`), category-governed specifications (`#29`), category-governed variant types (`#30`), and product core CRUD plus product variants (`#31`, `#32`) are now covered in [`categories.api.md`](./categories.api.md), [`categorySpecifications.api.md`](./categorySpecifications.api.md), [`categoryVariants.api.md`](./categoryVariants.api.md), and [`products.api.md`](./products.api.md) respectively. Not yet implemented, each its own future issue:
 
-- Product variants (`#32`)
 - Status update APIs, including `PATCH /api/admin/brands/:id/status` (`#33`)
 - Admin search, including `search` on `GET /api/admin/brands` (`#34`)
 - Buyer browsing/search/inventory visibility (`#35`)

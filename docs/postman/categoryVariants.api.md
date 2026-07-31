@@ -289,9 +289,8 @@ Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #30 — not the full Product Catalog API. Product core CRUD (`#31`) is now covered in [`products.api.md`](./products.api.md), though it isn't a consumer of this axis list either — that's still `#32` (embedded product variants), the actual consumer of this axis list on the admin side (`FR-CAT-038`'s per-axis control rendering doesn't exist yet); unlike `categorySpecifications`, product variants are never validated _against_ this list at all (`FR-CAT-037`). Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #30 — not the full Product Catalog API. Product core CRUD and product variants (`#31`, `#32`) are now covered in [`products.api.md`](./products.api.md), but — confirming `FR-CAT-037`'s own wording — a variant's `attributes` are never validated against this axis list at all, even now that variants exist: this list is purely a rendering guide for the admin product-variant _editor_, and that editor (`FR-CAT-038`'s per-axis control rendering) is `admin-app` frontend work with no drafted issue yet, so nothing in the backend ever reads this document to check a variant's attributes. Not yet implemented, each its own future issue:
 
-- Product variants (`#32`)
 - Status update APIs (`#33`) and admin search (`#34`) — not applicable to this resource at all (no `status`, no list view)
 - Buyer browsing/search/inventory visibility (`#35`)
 - Buyer filtering, sorting, and card content (`#36`)
