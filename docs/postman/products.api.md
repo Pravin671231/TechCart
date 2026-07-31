@@ -1,8 +1,8 @@
 # Postman Manual — TechCart Backend API (Products)
 
-A step-by-step guide to testing the Product core CRUD and pricing endpoints in Postman.
+A step-by-step guide to testing the Product core CRUD, pricing, and variant endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #31 (M2.7 — Product core CRUD and pricing, `FR-CAT-001`–`013`, `FR-CAT-085`–`087`): the five admin endpoints under `/api/admin/products` plus a dedicated stock-only path. It's deliberately scoped to issue #31's own checklist — there is **no** embedded-variant CRUD (`FR-CAT-039`–`044`, `#32`), **no** status-transition endpoint (`PATCH /api/admin/products/:id/status`, `FR-CAT-045`, `#33`), **no** admin search (`FR-CAT-050`, `#34`), and **no buyer-facing endpoint at all** yet (`GET /api/products`, `GET /api/products/:slug`, `#35`). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup; see [`brands.api.md`](./brands.api.md) and [`categories.api.md`](./categories.api.md) for the two entities every product references; see [`categorySpecifications.api.md`](./categorySpecifications.api.md) for the schema a product's `specifications` are validated against. This doc assumes collection setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #31 (M2.7 — Product core CRUD and pricing, `FR-CAT-001`–`013`, `FR-CAT-085`–`087`) and Issue #32 (M2.8 — Product variants, `FR-CAT-039`–`044`): the five product-level admin endpoints under `/api/admin/products`, a dedicated stock-only path, and the two embedded-variant endpoints. It's deliberately scoped to those two issues' own checklists — there is **no** status-transition endpoint (`PATCH /api/admin/products/:id/status`, `FR-CAT-045`, `#33`), **no** admin search (`FR-CAT-050`, `#34`), and **no buyer-facing endpoint at all** yet (`GET /api/products`, `GET /api/products/:slug`, `#35`). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup; see [`brands.api.md`](./brands.api.md) and [`categories.api.md`](./categories.api.md) for the two entities every product references; see [`categorySpecifications.api.md`](./categorySpecifications.api.md) for the schema a product's `specifications` are validated against. This doc assumes collection setup is already done and reuses the same collection.
 
 ---
 
@@ -17,7 +17,7 @@ Same as [`uploads.api.md`](./uploads.api.md#prerequisites): backend running (`np
 3. (Optional) A specification schema for that category — `PUT /api/admin/categories/:id/specifications` (see [`categorySpecifications.api.md`](./categorySpecifications.api.md)) — only needed if you want to test `specifications` validation below.
 4. At least one image object key — `POST /api/admin/uploads/presign` or `POST /api/admin/uploads/direct` with `"purpose": "product-image"` (see [`uploads.api.md`](./uploads.api.md)). A product create/update rejects any `objectKey` that wasn't actually issued by one of those two endpoints.
 
-**Optional collection variable:** add `product_id` (leave the value empty) so you can paste a created product's `_id` into it and reuse `{{product_id}}` across the `GET/PATCH/DELETE :id` requests below.
+**Optional collection variables:** add `product_id` and `variant_id` (leave both empty) so you can paste a created product's/variant's `_id` into them and reuse `{{product_id}}`/`{{variant_id}}` across the requests below.
 
 ---
 
@@ -108,7 +108,7 @@ Content-Type: application/json
 - **`sellingPrice: 89910`** — computed server-side as `mrp - floor(mrp * discount / 100)` = `99900 - floor(9990) = 89910` (`FR-CAT-087`). Try adding `"sellingPrice": 1` to your request body — it has no effect; the response still shows `89910`.
 - `slug` collision handling is identical to brands/categories: a numeric suffix (`-2`, `-3`, ...) is appended if the generated slug already exists.
 - `status` always starts as `"draft"` — there's no way to create a product already `published` in this issue (that's `#33`'s status-transition endpoint).
-- `variants` is always `[]` in this issue — the embedded-variant create endpoint doesn't exist yet (`#32`).
+- `variants` is always `[]` on a freshly-created product — add variants afterward via `POST .../variants` below.
 - `createdBy`/`updatedBy` are always `null` for now — reserved fields, unused until v0.3 authentication.
 - Paste the returned `_id` into the `product_id` collection variable to use in the requests below.
 
@@ -454,6 +454,194 @@ Content-Type: application/json
 
 ---
 
+## `POST /api/admin/products/:id/variants`
+
+Adds a sellable variant to a product — its own SKU, attribute combination, price, and stock, independent of the parent product's own.
+
+| Field  | Value                                                     |
+| ------ | --------------------------------------------------------- |
+| Method | `POST`                                                    |
+| URL    | `{{base_url}}/api/admin/products/{{product_id}}/variants` |
+| Name   | `Add Product Variant`                                     |
+
+**Headers tab:**
+
+```
+X-Admin-Key: {{admin_api_key}}
+Content-Type: application/json
+```
+
+**Body tab → raw → JSON:**
+
+```json
+{
+  "sku": "NOVA-X1-001-BLK-128",
+  "attributes": [
+    { "name": "Color", "value": "Black" },
+    { "name": "Storage", "value": "128GB" }
+  ],
+  "mrp": 104900,
+  "discount": 10,
+  "stock": 15,
+  "weight": 0.19
+}
+```
+
+- `sku` — required, in the **same shared namespace** as every product's own `sku` (`FR-CAT-003`) — rejected if it collides with any product's `sku` or any variant's `sku` anywhere, including this same product. Unlike the parent product's own `sku`, a variant's `sku` **can** be changed later via `PATCH` (see below).
+- `attributes` — required, 1+ `{name, value}` pairs. No two variants of this product (active or inactive) may share an identical set — order doesn't matter (`Color=Black, Storage=128GB` collides with `Storage=128GB, Color=Black`).
+- `images` — optional, omit entirely or send `0` items for "no images of its own" (falls back to the parent's images once buyer endpoints exist, `#35`); if you do send images, it must be **1 or 2**, each an `objectKey` from a prior presign/direct-upload call, same rules as the parent's own `images`.
+- `mrp`/`discount`/`stock` — identical validation to the parent product's own fields (`FR-CAT-042`).
+- `weight` — optional, a positive number.
+- `active` is not accepted here — every new variant starts `active: true`; deactivate it afterward via `PATCH`.
+
+**Click Send. Expected response — `201 Created`:** the full updated product (same shape as `GET :id`), with the new variant appended to `variants`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "66a1f0c9e4b0a1a2b3c4d5e6",
+    "...": "... every other product field ...",
+    "variants": [
+      {
+        "_id": "66a1f0c9e4b0a1a2b3c4d5e9",
+        "sku": "NOVA-X1-001-BLK-128",
+        "attributes": [
+          { "name": "Color", "value": "Black" },
+          { "name": "Storage", "value": "128GB" }
+        ],
+        "images": [],
+        "mrp": 104900,
+        "discount": 10,
+        "sellingPrice": 94410,
+        "stock": 15,
+        "weight": 0.19,
+        "active": true,
+        "createdAt": "2026-08-03T10:00:00.000Z",
+        "updatedAt": "2026-08-03T10:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+- **`sellingPrice: 94410`** — computed server-side identically to a product (`104900 - floor(10490) = 94410`), never accepted from you.
+- Paste the new variant's `_id` into the `variant_id` collection variable to use in the `PATCH` request below.
+
+### Error cases
+
+**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`.
+
+**Nonexistent product id:** same `PRODUCT_NOT_FOUND` shape as `GET :id` above.
+
+**Empty `attributes` array:**
+
+```
+400 Bad Request
+```
+
+```json
+{
+  "success": false,
+  "code": "VALIDATION_ERROR",
+  "errors": {
+    "attributes": "Too small: expected array to have >=1 items"
+  }
+}
+```
+
+**`sku` colliding with the parent product's own `sku`, a sibling variant's `sku`, or any other product's `sku`/variant `sku`:**
+
+```json
+{
+  "success": false,
+  "code": "DUPLICATE_SKU",
+  "message": "SKU \"NOVA-X1-001-BLK-128\" is already in use by another product or variant."
+}
+```
+
+**Attribute combination duplicating an existing variant's** (add the same variant twice, or the same pairs in a different order):
+
+```json
+{
+  "success": false,
+  "code": "DUPLICATE_VARIANT_ATTRIBUTES",
+  "message": "A variant with this exact attribute combination already exists on this product."
+}
+```
+
+**Non-positive `mrp`, `discount: 100`, negative/fractional `stock`, or non-positive `weight`:** same `VALIDATION_ERROR` shapes as `POST /api/admin/products` above.
+
+**More than 2 images, or exactly 0 explicitly-rejected count** (only reachable by sending 3+, since 0 is valid):
+
+```json
+{
+  "success": false,
+  "code": "IMAGE_COUNT_OUT_OF_BOUNDS",
+  "message": "Expected between 1 and 2 images, got 3."
+}
+```
+
+---
+
+## `PATCH /api/admin/products/:id/variants/:variantId`
+
+Updates any variant field, or deactivates it by setting `active: false` — a soft delete. All fields optional — send only what's changing.
+
+| Field  | Value                                                                    |
+| ------ | ------------------------------------------------------------------------ |
+| Method | `PATCH`                                                                  |
+| URL    | `{{base_url}}/api/admin/products/{{product_id}}/variants/{{variant_id}}` |
+| Name   | `Update Product Variant`                                                 |
+
+**Headers tab:**
+
+```
+X-Admin-Key: {{admin_api_key}}
+Content-Type: application/json
+```
+
+**Body tab → raw → JSON** (example — deactivates the variant):
+
+```json
+{ "active": false }
+```
+
+**Click Send. Expected response — `200 OK`:** the full updated product — the variant is still present in `variants`, now with `"active": false`. It is **never removed** from the array, regardless of `active`'s value (`FR-CAT-040`).
+
+- Updating `mrp` and/or `discount` recomputes `sellingPrice` the same way the product-level `PATCH` does — submitting only one still recomputes correctly, using the variant's own currently-stored value for the other.
+- `sku` **can** be changed here (unlike the parent product's own `sku`) — re-validated against every other product/variant plus this product's own `sku` and sibling variants, identically to create.
+- Changing `attributes` re-checks the duplicate-combination guard against every _other_ variant on this product.
+- Sending new `images` replaces the variant's entire image array (same `0` or `1`–`2` bound as create).
+
+### Error cases
+
+**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`.
+
+**Nonexistent product id:** same `PRODUCT_NOT_FOUND` shape as `GET :id` above.
+
+**`variantId` doesn't match any variant on this product:**
+
+```
+404 Not Found
+```
+
+```json
+{
+  "success": false,
+  "code": "VARIANT_NOT_FOUND",
+  "message": "Variant 66a1f0c9e4b0a1a2b3c4d5e9 was not found."
+}
+```
+
+**Recoding `sku` to collide with the parent product's own `sku`, a sibling variant's `sku`, or any other product's:** same `DUPLICATE_SKU` shape as `POST .../variants` above.
+
+**Changing `attributes` to duplicate a sibling variant's combination:** same `DUPLICATE_VARIANT_ATTRIBUTES` shape as `POST .../variants` above.
+
+**Non-positive `mrp`, `discount: 100`, negative/fractional `stock`, or non-positive `weight`:** same `VALIDATION_ERROR` shapes as `POST /api/admin/products` above.
+
+---
+
 ## Error Code Reference
 
 Product-specific codes, in addition to the ones already documented in [`uploads.api.md`](./uploads.api.md#error-code-reference) (`UNAUTHORIZED`, `VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR`, `OBJECT_KEY_NOT_ISSUED`, `IMAGE_COUNT_OUT_OF_BOUNDS`), [`brands.api.md`](./brands.api.md#error-code-reference) (`INVALID_ID`, `BRAND_NOT_FOUND`), [`categories.api.md`](./categories.api.md#error-code-reference) (`CATEGORY_NOT_FOUND`), and [`categorySpecifications.api.md`](./categorySpecifications.api.md#error-code-reference):
@@ -461,22 +649,23 @@ Product-specific codes, in addition to the ones already documented in [`uploads.
 | Code                              | Status | Where it comes from                                                                                                                                  | Reachable via an existing endpoint?                 |
 | --------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
 | `PRODUCT_NOT_FOUND`               | 404    | `products.service.ts` — `:id` doesn't match any product                                                                                              | Yes                                                 |
-| `DUPLICATE_SKU`                   | 400    | `products.service.ts`'s `createProduct()` — `sku` collides with another product's own `sku` or any variant's `sku`                                   | Yes                                                 |
+| `VARIANT_NOT_FOUND`               | 404    | `products.service.ts`'s `updateVariant()` — `:variantId` doesn't match any variant on that product                                                   | Yes                                                 |
+| `DUPLICATE_SKU`                   | 400    | `products.service.ts` — `sku` collides with another product's own `sku`, or any variant's `sku` anywhere (including a sibling on the same product)   | Yes                                                 |
+| `DUPLICATE_VARIANT_ATTRIBUTES`    | 400    | `products.service.ts`'s `addVariant()`/`updateVariant()` — the attribute-pair set duplicates another variant's on the same product                   | Yes                                                 |
 | `SPECIFICATION_VALIDATION_FAILED` | 400    | `categorySpecifications.service.ts`'s `validateProductSpecifications()`, called from `products.service.ts` on create and on category-changing update | Yes — requires a specification schema defined first |
 
 ---
 
 ## Understanding Validation Errors
 
-Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For products, the fields that can appear as keys include `name`, `description`, `sku`, `brand`, `category`, `images`, `specifications`, `mrp`, `discount`, `stock`, `lowStockThreshold`, `isFeatured`, `metaTitle`, `metaDescription`, and — on the list endpoint — `page`, `limit`, `sort`, `lowStock`.
+Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For products, the fields that can appear as keys include `name`, `description`, `sku`, `brand`, `category`, `images`, `specifications`, `mrp`, `discount`, `stock`, `lowStockThreshold`, `isFeatured`, `metaTitle`, `metaDescription`, and — on the list endpoint — `page`, `limit`, `sort`, `lowStock`. For the two variant endpoints: `sku`, `attributes`, `images`, `mrp`, `discount`, `stock`, `weight`.
 
 ---
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #31 — not the full Product Catalog API. Not yet implemented, each its own future issue:
+This document is a snapshot of Issues #31 and #32 — not the full Product Catalog API. Not yet implemented, each its own future issue:
 
-- Embedded product variants — `POST /api/admin/products/:id/variants`, `PATCH /api/admin/products/:id/variants/:variantId` (`#32`)
 - Status transition endpoint, `PATCH /api/admin/products/:id/status` (`FR-CAT-045`, `#33`)
 - Admin search, including `search` on `GET /api/admin/products` (`FR-CAT-050`, `#34`)
 - Buyer browsing/search/inventory visibility, including `GET /api/products` and `GET /api/products/:slug` (`#35`)

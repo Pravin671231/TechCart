@@ -10,6 +10,8 @@ import {
   listProductsForAdmin,
   deleteProduct,
   updateStock,
+  addVariant,
+  updateVariant,
 } from "./products.service";
 import type { ProductSortField } from "./products.repository";
 
@@ -72,6 +74,36 @@ const updateProductSchema = z.object({
 });
 
 const updateStockSchema = z.object({ stock: z.number().int().min(0) });
+
+const productVariantAttributeSchema = z.object({
+  name: z.string().min(1),
+  value: z.string().min(1),
+});
+
+// Same mrp/discount/stock rules as products (FR-CAT-042); images has no
+// count bound here — that's enforced by resolveVariantImages' bespoke
+// { min: 1, max: 2 } call, only once at least one image is submitted, same
+// "one authoritative source" reasoning as the product schema above.
+const addVariantSchema = z.object({
+  sku: z.string().min(1),
+  attributes: z.array(productVariantAttributeSchema).min(1),
+  images: z.array(productImageSchema).optional().default([]),
+  mrp: z.number().int().positive(),
+  discount: z.number().int().min(0).max(99).optional().default(0),
+  stock: z.number().int().min(0),
+  weight: z.number().positive().optional(),
+});
+
+const updateVariantSchema = z.object({
+  sku: z.string().min(1).optional(),
+  attributes: z.array(productVariantAttributeSchema).min(1).optional(),
+  images: z.array(productImageSchema).optional(),
+  mrp: z.number().int().positive().optional(),
+  discount: z.number().int().min(0).max(99).optional(),
+  stock: z.number().int().min(0).optional(),
+  weight: z.number().positive().optional(),
+  active: z.boolean().optional(),
+});
 
 const SORT_VALUES = [
   "createdAt",
@@ -174,5 +206,23 @@ export async function updateStockHandler(req: Request, res: Response): Promise<v
   const id = parseObjectId(req.params.id);
   const input = updateStockSchema.parse(req.body);
   const product = await updateStock(id, input.stock);
+  res.status(200).json(successResponse(product));
+}
+
+// Both variant handlers return the full updated product, same as
+// create/update above — variants are embedded, so there's no standalone
+// variant resource to fetch on its own.
+export async function addVariantHandler(req: Request, res: Response): Promise<void> {
+  const productId = parseObjectId(req.params.id);
+  const input = addVariantSchema.parse(req.body);
+  const product = await addVariant(productId, input);
+  res.status(201).json(successResponse(product));
+}
+
+export async function updateVariantHandler(req: Request, res: Response): Promise<void> {
+  const productId = parseObjectId(req.params.id);
+  const variantId = parseObjectId(req.params.variantId);
+  const input = updateVariantSchema.parse(req.body);
+  const product = await updateVariant(productId, variantId, input);
   res.status(200).json(successResponse(product));
 }

@@ -446,9 +446,8 @@ Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #28 — not the full Product Catalog API. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), category-governed variant types (`#30`) in [`categoryVariants.api.md`](./categoryVariants.api.md) — together they cover both halves of `DELETE`'s cascade clause — and product core CRUD (`#31`) in [`products.api.md`](./products.api.md), which also completes `DELETE`'s product half of the `CATEGORY_IN_USE` guard above. Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #28 — not the full Product Catalog API. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), category-governed variant types (`#30`) in [`categoryVariants.api.md`](./categoryVariants.api.md) — together they cover both halves of `DELETE`'s cascade clause — and product core CRUD plus product variants (`#31`, `#32`) in [`products.api.md`](./products.api.md), which also completes `DELETE`'s product half of the `CATEGORY_IN_USE` guard above. Not yet implemented, each its own future issue:
 
-- Product variants (`#32`)
 - Status update APIs, including `PATCH /api/admin/categories/:id/status` (`#33`)
 - Admin search, including `search` on `GET /api/admin/categories` (`#34`)
 - Buyer browsing/search/inventory visibility (`#35`)
