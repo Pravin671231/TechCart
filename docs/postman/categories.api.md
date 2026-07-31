@@ -280,7 +280,7 @@ Lists every category, any status, each with its `parentCategory` and its product
 }
 ```
 
-- `productCount` reflects products of **any** status directly assigned to that category — not counting products in its subcategories, and not yet testable since no product-creation endpoint exists (#31).
+- `productCount` reflects products of **any** status directly assigned to that category — not counting products in its subcategories. Create a product against this category via [`products.api.md`](./products.api.md) (`#31`) to see this go above `0`.
 - Each item's `parentCategory` is a raw id (or `null`) — this is a **flat array, not a nested tree**. Build the two-level hierarchy client-side by grouping on `parentCategory`.
 - **No guaranteed order** — unlike the public list below, this endpoint doesn't sort. No `search` query param either (admin search lands in #34).
 
@@ -330,7 +330,7 @@ Fetches a single category by id, any status.
 
 ## `DELETE /api/admin/categories/:id`
 
-Deletes a category — but only if it has **zero** products directly assigned to it **and** zero subcategories (`FR-CAT-019`). There's no product-creation endpoint yet (#31), so only the subcategory half of this guard is currently reproducible in Postman.
+Deletes a category — but only if it has **zero** products directly assigned to it **and** zero subcategories (`FR-CAT-019`). Create a product against this category via [`products.api.md`](./products.api.md) (`#31`) to exercise the product half of this guard.
 
 | Field  | Value                                              |
 | ------ | ------------------------------------------------------ |
@@ -369,7 +369,7 @@ Deletes a category — but only if it has **zero** products directly assigned to
 }
 ```
 
-**Category has both products and subcategories** — the message names both, in one response (not reproducible today without products, listed for completeness):
+**Category has both products and subcategories** — the message names both, in one response:
 
 ```json
 {
@@ -434,7 +434,7 @@ Category-specific codes, in addition to the ones already documented in [`uploads
 | `PARENT_CATEGORY_NOT_FOUND`  | 404    | same — the referenced `parentCategory` doesn't exist                                                    | Yes                                                            |
 | `PARENT_CATEGORY_TOO_DEEP`   | 400    | same — the referenced `parentCategory` already has a parent of its own                                 | Yes                                                            |
 | `CATEGORY_HAS_SUBCATEGORIES` | 400    | same — update-only: this category already has children and can't also be given a parent                | Yes                                                            |
-| `CATEGORY_IN_USE`            | 409    | `categories.service.ts`'s `deleteCategory()` — referenced by ≥1 product and/or ≥1 subcategory           | Subcategory case yes; product case not yet (no product endpoint, #31) |
+| `CATEGORY_IN_USE`            | 409    | `categories.service.ts`'s `deleteCategory()` — referenced by ≥1 product and/or ≥1 subcategory           | Yes — see [`products.api.md`](./products.api.md) (#31) for the product case |
 
 ---
 
@@ -446,9 +446,9 @@ Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #28 — not the full Product Catalog API. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), and category-governed variant types (`#30`) in [`categoryVariants.api.md`](./categoryVariants.api.md) — together they cover both halves of `DELETE`'s cascade clause. Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #28 — not the full Product Catalog API. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), category-governed variant types (`#30`) in [`categoryVariants.api.md`](./categoryVariants.api.md) — together they cover both halves of `DELETE`'s cascade clause — and product core CRUD (`#31`) in [`products.api.md`](./products.api.md), which also completes `DELETE`'s product half of the `CATEGORY_IN_USE` guard above. Not yet implemented, each its own future issue:
 
-- Product core CRUD (`#31`) and product variants (`#32`)
+- Product variants (`#32`)
 - Status update APIs, including `PATCH /api/admin/categories/:id/status` (`#33`)
 - Admin search, including `search` on `GET /api/admin/categories` (`#34`)
 - Buyer browsing/search/inventory visibility (`#35`)

@@ -141,7 +141,7 @@ Lists every brand, any status, each with its product count.
 }
 ```
 
-- `productCount` reflects products of **any** status (`draft`, `published`, `archived`) referencing the brand — not just published ones. There's no product-creation endpoint yet (#31), so this will be `0` for every brand until then.
+- `productCount` reflects products of **any** status (`draft`, `published`, `archived`) referencing the brand — not just published ones. Create a product against this brand via [`products.api.md`](./products.api.md) (`#31`) to see this go above `0`.
 - No `search` query param — admin search lands in #34.
 - No `pagination` key — every brand is returned in one response at this scale.
 
@@ -232,7 +232,7 @@ Same `INVALID_ID` (malformed id) and `BRAND_NOT_FOUND` (no such brand) as the `G
 
 ## `DELETE /api/admin/brands/:id`
 
-Deletes a brand — but only if **zero** products of any status reference it (`FR-CAT-028`). There's no product-creation endpoint yet (#31), so every delete will succeed in a fresh environment; the guard becomes testable once products exist.
+Deletes a brand — but only if **zero** products of any status reference it (`FR-CAT-028`). Create a product against this brand via [`products.api.md`](./products.api.md) (`#31`) first to exercise the guard below; otherwise the delete succeeds unconditionally.
 
 | Field  | Value                                    |
 | ------ | ------------------------------------------ |
@@ -271,7 +271,7 @@ Deletes a brand — but only if **zero** products of any status reference it (`F
 }
 ```
 
-Not reproducible in Postman today since no product-creation endpoint exists yet — listed for completeness.
+Reproducible now — create a product against the brand via [`products.api.md`](./products.api.md), then retry this delete.
 
 ---
 
@@ -321,7 +321,7 @@ Brand-specific codes, in addition to the ones already documented in [`uploads.ap
 | ----------------- | ------ | --------------------------------------------------------------------------------- | ------------------------------------ |
 | `INVALID_ID`       | 400    | `brands.controller.ts`'s `parseObjectId()` — the `:id` segment isn't a valid Mongo ObjectId | Yes                                  |
 | `BRAND_NOT_FOUND`  | 404    | `brands.service.ts` — `GET`/`PATCH` by an id with no matching brand               | Yes                                  |
-| `BRAND_IN_USE`     | 409    | `brands.service.ts`'s `deleteBrand()` — the brand is referenced by ≥1 product, any status | Not yet — no product-creation endpoint exists (#31) to create the reference |
+| `BRAND_IN_USE`     | 409    | `brands.service.ts`'s `deleteBrand()` — the brand is referenced by ≥1 product, any status | Yes — see [`products.api.md`](./products.api.md) (#31) |
 
 ---
 
@@ -333,10 +333,9 @@ Same `errors`-object shape as `uploads.api.md` — see [that section](./uploads.
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #27 — not the full Product Catalog API. Category management (`#28`) is now covered in [`categories.api.md`](./categories.api.md). Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #27 — not the full Product Catalog API. Category management (`#28`), category-governed specifications (`#29`), category-governed variant types (`#30`), and product core CRUD (`#31`) are now covered in [`categories.api.md`](./categories.api.md), [`categorySpecifications.api.md`](./categorySpecifications.api.md), [`categoryVariants.api.md`](./categoryVariants.api.md), and [`products.api.md`](./products.api.md) respectively. Not yet implemented, each its own future issue:
 
-- Category-governed specifications (`#29`) and variant types (`#30`)
-- Product core CRUD (`#31`) and product variants (`#32`)
+- Product variants (`#32`)
 - Status update APIs, including `PATCH /api/admin/brands/:id/status` (`#33`)
 - Admin search, including `search` on `GET /api/admin/brands` (`#34`)
 - Buyer browsing/search/inventory visibility (`#35`)

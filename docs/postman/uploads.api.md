@@ -135,7 +135,7 @@ Content-Type: application/json
 
 - `objectKey` always matches `{purpose}/{uuid}.{ext}` — server-generated, never derived from the client's request beyond `purpose`/`contentType` (`FR-CAT-079`). The client cannot choose or influence it.
 - `uploadUrl` expires **5 minutes** after issuance (`FR-CAT-080`) — upload to it with a `PUT` request (raw binary body, matching `Content-Type` header) before then. Testing that R2 actually rejects it after 5 minutes requires a real R2 account; this can't be simulated locally.
-- `publicUrl` is where the file will be reachable once uploaded — built from your `R2_PUBLIC_URL_BASE` + the object key. This is the URL that would eventually get stored as an `images[].url` on a product/brand/category, once those endpoints exist (#27, #28, #31).
+- `publicUrl` is where the file will be reachable once uploaded — built from your `R2_PUBLIC_URL_BASE` + the object key. This is the URL stored as an `images[].url` (or a brand's/category's single `logo`/`image`) once you register the key against a brand ([`brands.api.md`](./brands.api.md), #27), category ([`categories.api.md`](./categories.api.md), #28), or product ([`products.api.md`](./products.api.md), #31).
 - No `pagination` key — this is a detail-shaped response, not a list.
 
 ### Error cases
@@ -230,7 +230,7 @@ Do **not** set `Content-Type` manually here — Postman sets `multipart/form-dat
 ```
 
 - No `uploadUrl` in this response — unlike `/presign`, the file is already uploaded by the time you get a response; there's nothing left for the client to `PUT`.
-- `objectKey` and `publicUrl` follow the exact same format as the presign response (`FR-CAT-099`). Once brand/category/product registration exists (#27, #28, #31), a key issued here is consumed identically to a presigned one — the registration endpoint can't tell which path produced it.
+- `objectKey` and `publicUrl` follow the exact same format as the presign response (`FR-CAT-099`). A key issued here is consumed identically to a presigned one by brand, category, or product create/update — the registration endpoint can't tell which path produced it.
 
 ### Error cases
 
@@ -284,14 +284,14 @@ Every code below was found by grepping every `AppError(...)`/error-producing cal
 | `VALIDATION_ERROR`          | 400    | `errorHandler.ts` — a thrown `ZodError` (e.g. bad `purpose`/`contentType`), reported as an `errors` object keyed by field | Yes                                                                                                                                                                 |
 | `NOT_FOUND`                 | 404    | `notFound.ts` — unmatched route                                                                                           | Yes                                                                                                                                                                 |
 | `INTERNAL_ERROR`            | 500    | `errorHandler.ts` — fallback for anything unrecognized                                                                    | Yes, but not triggered in normal use                                                                                                                                |
-| `OBJECT_KEY_NOT_ISSUED`     | 400    | `uploads.service.ts`'s `consumeImageKeys()` — a key that was never issued or is already consumed                          | **Not yet** — this function exists but isn't wired to any route yet; it will be called internally once #27/#28/#31 (brand/category/product create-and-update) exist |
-| `IMAGE_COUNT_OUT_OF_BOUNDS` | 400    | `uploads.service.ts`'s `validateImageCount()` — image array outside its allowed bounds                                    | **Not yet** — same as above                                                                                                                                         |
+| `OBJECT_KEY_NOT_ISSUED`     | 400    | `uploads.service.ts`'s `consumeImageKeys()` — a key that was never issued or is already consumed                          | Yes — via brand/category/product create-and-update, see [`brands.api.md`](./brands.api.md), [`categories.api.md`](./categories.api.md), [`products.api.md`](./products.api.md) |
+| `IMAGE_COUNT_OUT_OF_BOUNDS` | 400    | `uploads.service.ts`'s `validateImageCount()` — image array outside its allowed bounds                                    | Yes — products only (1–8 images); brands/categories cap at a single image with no count check — see [`products.api.md`](./products.api.md)                          |
 | `NO_FILE_UPLOADED`          | 400    | `uploads.controller.ts`'s `directUpload()` — `POST /direct` called with no `file` field attached                          | Yes                                                                                                                                                                 |
 | `UNSUPPORTED_CONTENT_TYPE`  | 400    | `uploads.controller.ts`'s `directUpload()` — attached file's `mimetype` isn't JPEG/PNG/WebP                               | Yes                                                                                                                                                                 |
 | `FILE_TOO_LARGE`            | 400    | `errorHandler.ts` — a thrown `MulterError` with code `LIMIT_FILE_SIZE` (file over `MAX_DIRECT_UPLOAD_BYTES`, 5 MB)        | Yes                                                                                                                                                                 |
 | `UPLOAD_ERROR`              | 400    | `errorHandler.ts` — any other thrown `MulterError` (e.g. malformed multipart body)                                        | Only via a malformed request — not triggered by normal Postman use                                                                                                  |
 
-The last two are listed for completeness rather than omitted — they're real code paths in this codebase, just not reachable through any HTTP request today.
+`UPLOAD_ERROR` is listed for completeness rather than omitted — it's a real code path in this codebase, just not something a normal Postman request triggers (it needs a malformed multipart body, not just a bad field value).
 
 ---
 
@@ -318,11 +318,9 @@ Fix the named field(s) in your request body — the `errors` object's keys tell 
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issues #25 (core plumbing) and #26 (R2 uploads) — not the full Product Catalog API. Brand management (`#27`) is now covered in [`brands.api.md`](./brands.api.md). Not yet implemented, each its own future issue:
+This document is a snapshot of Issues #25 (core plumbing) and #26 (R2 uploads) — not the full Product Catalog API. Brand management (`#27`), category management (`#28`), category-governed specifications (`#29`), category-governed variant types (`#30`), and product core CRUD (`#31`) are now covered in [`brands.api.md`](./brands.api.md), [`categories.api.md`](./categories.api.md), [`categorySpecifications.api.md`](./categorySpecifications.api.md), [`categoryVariants.api.md`](./categoryVariants.api.md), and [`products.api.md`](./products.api.md) respectively. Not yet implemented, each its own future issue:
 
-- Category management (`#28`)
-- Category-governed specifications (`#29`) and variant types (`#30`)
-- Product core CRUD (`#31`) and product variants (`#32`)
+- Product variants (`#32`)
 - Status update APIs (`#33`)
 - Admin search (`#34`)
 - Buyer browsing/search/inventory visibility (`#35`)

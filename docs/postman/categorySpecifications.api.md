@@ -266,7 +266,7 @@ Removes the field. **Guarded** — rejected if any product references it (see be
 }
 ```
 
-**Deleting a field currently referenced by a product** (not reproducible in Postman today — no product-creation endpoint exists yet, `#31` — listed for completeness):
+**Deleting a field currently referenced by a product** (create a product against this category via [`products.api.md`](./products.api.md) (`#31`) that supplies this field in its `specifications`, then retry the delete):
 
 ```
 409 Conflict
@@ -317,7 +317,7 @@ Codes specific to this resource, in addition to the ones already documented in [
 | `SPECIFICATION_FIELD_NOT_FOUND` | 404    | same — `updateField`/`deleteField` names a field that doesn't exist in that group              | Yes                                                       |
 | `DUPLICATE_SPECIFICATION_GROUP` | 400    | same — `PUT` payload has a repeated `groupName`, or `renameGroup`/`updateField` collides       | Yes                                                       |
 | `DUPLICATE_SPECIFICATION_FIELD` | 400    | same — `PUT` payload has a repeated field `name` within one group, or `updateField` collides   | Yes                                                       |
-| `SPECIFICATION_FIELD_IN_USE`    | 409    | same — `deleteField`/`deleteGroup` blocked by ≥1 product referencing a field                   | Not yet — no product-creation endpoint exists yet (`#31`) |
+| `SPECIFICATION_FIELD_IN_USE`    | 409    | same — `deleteField`/`deleteGroup` blocked by ≥1 product referencing a field                   | Yes — see [`products.api.md`](./products.api.md) (#31) |
 
 ---
 
@@ -329,9 +329,9 @@ Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #29 — not the full Product Catalog API. Category-governed variant types (`#30`), the sibling resource to this one, is now covered in [`categoryVariants.api.md`](./categoryVariants.api.md). Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #29 — not the full Product Catalog API. Category-governed variant types (`#30`), the sibling resource to this one, is now covered in [`categoryVariants.api.md`](./categoryVariants.api.md), and product core CRUD (`#31`) — the actual consumer of this schema (`FR-CAT-032`) — in [`products.api.md`](./products.api.md). Not yet implemented, each its own future issue:
 
-- Product core CRUD (`#31`) and product variants (`#32`) — the actual consumer of this schema (`FR-CAT-032`'s product-side validation doesn't exist yet)
+- Product variants (`#32`)
 - Status update APIs (`#33`) and admin search (`#34`) — not applicable to this resource at all (no `status`, no list view)
 - Buyer browsing/search/inventory visibility (`#35`)
 - Buyer filtering, sorting, and card content (`#36`) — this is where `filterable` fields actually become buyer-facing facets and card content

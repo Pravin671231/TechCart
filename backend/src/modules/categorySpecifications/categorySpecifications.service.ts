@@ -3,11 +3,26 @@ import { AppError } from "@/utils/AppError";
 import { findById as findCategoryById } from "@/modules/categories/categories.repository";
 import { countBySpecificationField } from "@/modules/products/products.repository";
 import type { SpecificationField, SpecificationGroup } from "./categorySpecifications.model";
-import { findByCategory, replaceGroups, deleteByCategory } from "./categorySpecifications.repository";
+import {
+  findByCategory,
+  replaceGroups,
+  deleteByCategory,
+} from "./categorySpecifications.repository";
 
 export type CategorySpecificationsView = {
   category: Types.ObjectId;
   specificationGroups: SpecificationGroup[];
+};
+
+// Deliberately decoupled from products.model.ts's ProductSpecificationGroup/
+// ProductSpecificationValue rather than importing them — the two types are
+// structurally compatible, and importing would make this module reach into
+// products.model.ts for a type only, on top of the existing
+// products.repository value import below.
+export type SubmittedSpecificationValue = { name: string; value: string | number | boolean };
+export type SubmittedSpecificationGroup = {
+  groupName: string;
+  values: SubmittedSpecificationValue[];
 };
 
 // PATCH only ever operates on things that already exist (FR-CAT-031's verbs
@@ -40,7 +55,11 @@ function fieldNotFound(groupName: string, name: string): AppError {
 }
 
 function duplicateGroup(groupName: string): AppError {
-  return new AppError(400, "DUPLICATE_SPECIFICATION_GROUP", `A group named "${groupName}" already exists.`);
+  return new AppError(
+    400,
+    "DUPLICATE_SPECIFICATION_GROUP",
+    `A group named "${groupName}" already exists.`,
+  );
 }
 
 function duplicateField(groupName: string, name: string): AppError {
@@ -84,7 +103,9 @@ async function loadGroups(categoryId: Types.ObjectId): Promise<SpecificationGrou
   return doc ? doc.specificationGroups : [];
 }
 
-export async function getSpecifications(categoryId: Types.ObjectId): Promise<CategorySpecificationsView> {
+export async function getSpecifications(
+  categoryId: Types.ObjectId,
+): Promise<CategorySpecificationsView> {
   await assertCategoryExists(categoryId);
   const specificationGroups = await loadGroups(categoryId);
   return { category: categoryId, specificationGroups };
@@ -236,4 +257,81 @@ async function deleteField(
 // schema by the time this runs.
 export async function deleteForCategory(categoryId: Types.ObjectId): Promise<void> {
   await deleteByCategory(categoryId);
+}
+
+function specValidationFailed(parts: string[]): AppError {
+  return new AppError(
+    400,
+    "SPECIFICATION_VALIDATION_FAILED",
+    `Specifications do not satisfy the category's schema: ${parts.join("; ")}.`,
+  );
+}
+
+function specTypeMatches(field: SpecificationField, value: string | number | boolean): boolean {
+  switch (field.type) {
+    case "text":
+      return typeof value === "string";
+    case "number":
+      return typeof value === "number" && Number.isFinite(value);
+    case "boolean":
+      return typeof value === "boolean";
+    case "enum":
+      return typeof value === "string" && (field.options ?? []).includes(value);
+  }
+}
+
+// FR-CAT-032/034's shared validator, called by products.service.ts on both
+// create and category-changing update — the one deliberate service-to-service
+// import in the opposite direction of the categories cascade above (safe:
+// this module never imports products.service.ts, only products.repository.ts
+// for countBySpecificationField, so there's no cycle). Matches on
+// groupName + name, same key shape as the PATCH operations above; identifies
+// every offending field in one error rather than failing on the first (same
+// house style as deleteGroup's blocking-field list).
+export async function validateProductSpecifications(
+  categoryId: Types.ObjectId,
+  specifications: SubmittedSpecificationGroup[],
+): Promise<void> {
+  const schemaGroups = await loadGroups(categoryId);
+  const schema = new Map<string, SpecificationField>();
+  for (const group of schemaGroups) {
+    for (const field of group.specifications) {
+      schema.set(`${group.groupName}::${field.name}`, field);
+    }
+  }
+
+  const submitted = new Set<string>();
+  const unknown: string[] = [];
+  const invalid: string[] = [];
+
+  for (const group of specifications) {
+    for (const value of group.values) {
+      const key = `${group.groupName}::${value.name}`;
+      submitted.add(key);
+
+      const field = schema.get(key);
+      if (!field) {
+        unknown.push(value.name);
+      } else if (!specTypeMatches(field, value.value)) {
+        invalid.push(value.name);
+      }
+    }
+  }
+
+  const missing: string[] = [];
+  for (const group of schemaGroups) {
+    for (const field of group.specifications) {
+      if (field.required && !submitted.has(`${group.groupName}::${field.name}`)) {
+        missing.push(field.name);
+      }
+    }
+  }
+
+  if (missing.length === 0 && unknown.length === 0 && invalid.length === 0) return;
+
+  const parts: string[] = [];
+  if (missing.length > 0) parts.push(`missing required field(s): ${missing.join(", ")}`);
+  if (unknown.length > 0) parts.push(`unknown field(s): ${unknown.join(", ")}`);
+  if (invalid.length > 0) parts.push(`invalid value for field(s): ${invalid.join(", ")}`);
+  throw specValidationFailed(parts);
 }
