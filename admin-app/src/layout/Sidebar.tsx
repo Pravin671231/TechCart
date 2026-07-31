@@ -82,7 +82,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </button>
         </div>
 
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-1 flex-col gap-1">
           <span className="px-2 text-xs font-medium tracking-wider text-neutral-500">MAIN</span>
 
           <NavLink to="/" end className={navLinkClassName}>
@@ -120,6 +120,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
           )}
         </nav>
+
+        <div className="flex items-center gap-2 border-t border-neutral-800 pt-4">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
+            A
+          </span>
+          <div className="text-sm leading-tight">
+            <p className="font-semibold text-white">Admin</p>
+            <p className="text-neutral-400">Administrator</p>
+          </div>
+        </div>
       </aside>
     </>
   );

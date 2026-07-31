@@ -18,7 +18,7 @@ components a semantic name (`bg-primary-600`) that stays stable if the brand col
 | Success   | `success` / `success-50`, `-100`, `-600`, `-700` | Tailwind `green` | "Published" status badges, success toasts — same hue as primary, intentional |
 | Warning   | `warning` / `warning-50`, `-100`, `-600`, `-700` | Tailwind `amber` | "Draft" status badges, low-stock flag (`FR-CAT-053`)                    |
 | Danger    | `danger` / `danger-50`, `-100`, `-600`, `-700`   | Tailwind `red`    | Destructive actions, delete-guard rejections (`FR-CAT-019`, `028`)      |
-| Neutral   | `neutral-*` (Tailwind default, unaliased) | Tailwind `neutral` | Muted text, "Archived" status, and chrome surfaces/borders. `Header`/`MainSection`/cards use the light end (`neutral-50`…`neutral-200`); `Sidebar` intentionally inverts to `neutral-900`/`neutral-800` as a dark surface — the one deliberate light/dark split in the shell, not a general dark-mode toggle |
+| Neutral   | `neutral-*` (Tailwind default, unaliased) | Tailwind `neutral` | Muted text, "Archived" status, and chrome surfaces/borders. `MobileMenuBar`/`MainSection`/cards use the light end (`neutral-50`…`neutral-200`); `Sidebar` intentionally inverts to `neutral-900`/`neutral-800` as a dark surface — the one deliberate light/dark split in the shell, not a general dark-mode toggle |
 
 `primary-600` is `#16A34A`. Use `primary` (not `primary-600`) in component code where possible —
 it stays correct if the underlying shade is ever adjusted.
@@ -43,14 +43,21 @@ it stays correct if the underlying shade is ever adjusted.
 - **Sidebar: fixed 240px on Laptop and up** (`w-60` in `Sidebar.tsx`, `lg:static lg:translate-x-0`),
   full height, `shrink-0` — never shrinks/grows above `lg`. Below `lg` (Mobile/Tablet) it becomes an
   off-canvas drawer: `fixed inset-y-0 left-0`, hidden by default (`-translate-x-full`), slid in via
-  `translate-x-0` when open. Opened by `Header`'s hamburger button (hidden itself at `lg:hidden`,
-  since there's nothing to toggle once the sidebar is always visible); closed by a semi-transparent
-  backdrop click, an in-drawer close (`✕`) button, or Escape. Open/close state (`isSidebarOpen`) is
-  lifted into `AdminShell.tsx`, the nearest common parent of `Sidebar` and `Header`, and passed down
-  as props (`isOpen`/`onClose` to `Sidebar`, `onToggleSidebar` to `Header`).
+  `translate-x-0` when open. Opened by `MobileMenuBar`'s hamburger button (that bar is itself
+  `lg:hidden` in full — not just visually hidden but taking no layout space — since there's nothing
+  to toggle once the sidebar is always visible); closed by a semi-transparent backdrop click, an
+  in-drawer close (`✕`) button, or Escape. Open/close state (`isSidebarOpen`) is lifted into
+  `AdminShell.tsx`, the nearest common parent of `Sidebar` and `MobileMenuBar`, and passed down as
+  props (`isOpen`/`onClose` to `Sidebar`, `onToggleSidebar` to `MobileMenuBar`).
   (`mock-ui/admin-app/index.html`'s original shell wireframe used `w-64`/256px, and
   `product-list.html` etc. used `w-56`/224px — neither was a deliberate pixel decision, just
   wireframe defaults; 240px is the real, settled value.)
+- **No full-width header.** There used to be a `Header.tsx` (search, theme/fullscreen toggles,
+  notifications, profile) spanning the full content-column width. It's gone — replaced by
+  `MobileMenuBar.tsx` (just the hamburger button, `lg:hidden`) and the profile block, which moved
+  into the bottom of `Sidebar.tsx` instead (`<nav>` is `flex-1`, pushing the profile block that
+  follows it down to the sidebar's bottom edge — present in both the static column and the drawer).
+  Search/theme/fullscreen/notifications were removed outright, not relocated.
 - **Content area: fluid, no max-width cap.** `AdminShell.tsx`'s right column and `MainSection.tsx`
   are both `flex-1 min-w-0` — they fill whatever space remains after the sidebar (when it's in
   flow, `lg`+) or the full viewport width (when the sidebar is an overlay, below `lg`), from Mobile
@@ -74,7 +81,7 @@ it stays correct if the underlying shade is ever adjusted.
 
 `react-icons`, using its `lu` (Lucide) set exclusively — `import { LuPackage } from "react-icons/lu"`.
 Don't mix in another icon set; picking one keeps stroke width and visual style consistent across
-`Sidebar`, `Header`, and every stat card.
+`Sidebar`, `MobileMenuBar`, and every stat card.
 
 ## Radius
 
@@ -85,7 +92,7 @@ Tailwind's default radius scale, no new tokens — just usage rules:
 | `rounded-md`  | 6px   | Inputs, checkboxes, small controls             |
 | `rounded-lg`  | 8px   | Buttons, cards, table containers               |
 | `rounded-xl`  | 12px  | Modals, panels                                 |
-| `rounded-2xl` | 16px  | Shell chrome (`Sidebar`, `Header`)             |
+| `rounded-2xl` | 16px  | Shell chrome (`Sidebar`, `MobileMenuBar`)      |
 | `rounded-full`| —     | Avatars, badges, pills                         |
 
 ## Spacing

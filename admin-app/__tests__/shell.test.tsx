@@ -3,23 +3,24 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import App from "@/app/App";
 
 describe("AdminShell", () => {
-  it("renders the sidebar, header, and routed content", () => {
+  it("renders the sidebar (with profile block), mobile menu bar, and routed content", () => {
     render(<App />);
 
     const sidebar = screen.getByRole("complementary");
     expect(sidebar).toHaveTextContent("TechCart");
     expect(sidebar).toHaveTextContent("Product Catalog");
+    expect(sidebar).toHaveTextContent("Admin");
+    expect(sidebar).toHaveTextContent("Administrator");
 
-    const header = screen.getByRole("banner");
-    expect(header).toHaveTextContent("Admin");
-    expect(header.querySelector('input[type="search"]')).toBeInTheDocument();
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Toggle menu" })).toBeInTheDocument();
 
     expect(
       screen.getByRole("main").querySelector("h1"),
     ).toHaveTextContent("Dashboard");
   });
 
-  it("toggles the mobile sidebar drawer via the header's menu button, backdrop click, close button, and Escape", () => {
+  it("toggles the mobile sidebar drawer via the menu bar's button, backdrop click, close button, and Escape", () => {
     render(<App />);
 
     expect(screen.queryByTestId("sidebar-backdrop")).not.toBeInTheDocument();
