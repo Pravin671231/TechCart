@@ -8,9 +8,9 @@
  */
 @theme {
   /*
-   * Large Desktop starts at 1440px per docs/design-tokens.md's Layout
-   * section — overrides Tailwind's default 2xl (1536px) rather than
-   * adding a new breakpoint name.
+   * Large Desktop starts at 1440px per design.md's Layout section —
+   * overrides Tailwind's default 2xl (1536px) rather than adding a new
+   * breakpoint name.
    */
   --breakpoint-2xl: 90rem;
 
