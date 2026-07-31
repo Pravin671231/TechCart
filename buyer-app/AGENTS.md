@@ -15,6 +15,7 @@ This is the `buyer-app` workspace of a monorepo. Root-level decisions (monorepo 
 - `src/features/<feature>/` holds the actual UI/logic for that feature. `src/features/home/HomePlaceholder.tsx` is the current worked example, rendered by `src/app/page.tsx`.
 - This mirrors `backend/src/modules/<feature>/`'s feature-based organization (see `backend/AGENTS.md`), adapted for Next's routing constraints — named `features` here rather than `modules`, since this is a different framework with its own conventions.
 - Screen-level design reference: [`mock-ui/`](../mock-ui/) — static wireframes per feature's SRS doc, not a workspace of its own. Consult it before building a feature's UI.
+- Visual design reference: [`docs/design.md`](docs/design.md) — colors, typography, radius, borders, spacing, breakpoints, and layout behavior (buyer-app only; `admin-app` has its own separate `admin-app/docs/design.md`). Consult it alongside `mock-ui/` before styling a feature's UI.
 
 ## Testing
 
