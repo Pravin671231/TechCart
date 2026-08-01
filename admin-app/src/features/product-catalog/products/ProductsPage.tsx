@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import type { MRT_ColumnDef } from "material-react-table";
 import { LuPlus } from "react-icons/lu";
 import { PageHeader } from "@/layout/PageHeader";
@@ -29,6 +30,7 @@ const centerAlign = {
 };
 
 export function ProductsPage() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>(mockProducts);
   const [lowStockOnly, setLowStockOnly] = useState(false);
   // Simulates the future TanStack Query fetch latency until a real list endpoint is wired.
@@ -106,7 +108,11 @@ export function ProductsPage() {
           { label: "Home", to: "/" },
           { label: "Product Catalog" },
         ]}
-        action={{ label: "Add Product", icon: LuPlus }}
+        action={{
+          label: "Add Product",
+          icon: LuPlus,
+          onClick: () => navigate("/product-catalog/products/new"),
+        }}
       />
 
       <label className="mb-4 flex h-9 w-fit items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm text-neutral-600">

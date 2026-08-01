@@ -7,7 +7,7 @@ type Breadcrumb = { label: string; to?: string };
 type PageHeaderProps = {
   title: string;
   breadcrumbs: Breadcrumb[];
-  action?: { label: string; icon?: IconType };
+  action?: { label: string; icon?: IconType; onClick?: () => void };
 };
 
 export function PageHeader({ title, breadcrumbs, action }: PageHeaderProps) {
@@ -36,6 +36,7 @@ export function PageHeader({ title, breadcrumbs, action }: PageHeaderProps) {
       {action && (
         <button
           type="button"
+          onClick={action.onClick}
           className="flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 text-sm font-medium text-white hover:bg-primary-hover sm:w-auto"
         >
           {action.icon ? <action.icon className="h-4 w-4" /> : null}

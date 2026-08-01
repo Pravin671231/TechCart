@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { ProductsPage } from "@/features/product-catalog/products/ProductsPage";
+import { ProductFormPage } from "@/features/product-catalog/product-form/ProductFormPage";
 
 function renderProductsPage() {
   render(
@@ -49,5 +50,20 @@ describe("ProductsPage", () => {
     fireEvent.click(within(screen.getByRole("listbox")).getByText("Draft"));
 
     expect(firstRowStatus).toHaveTextContent("Draft");
+  });
+
+  it("navigates to the Add Product page when its button is clicked", () => {
+    render(
+      <MemoryRouter initialEntries={["/product-catalog/products"]}>
+        <Routes>
+          <Route path="/product-catalog/products" element={<ProductsPage />} />
+          <Route path="/product-catalog/products/new" element={<ProductFormPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Add Product/i }));
+
+    expect(screen.getByRole("heading", { level: 1, name: "Add Product" })).toBeInTheDocument();
   });
 });
