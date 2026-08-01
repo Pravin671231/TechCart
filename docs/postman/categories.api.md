@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the Category management endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #28 (M2.4 — Category management, `FR-CAT-014`–`022`) and Issue #33 (M2.9 — Status update APIs, `FR-CAT-046`, `048` for this entity): the five admin CRUD endpoints under `/api/admin/categories`, the status-toggle endpoint, and the public `GET /api/categories`. There is still **no** search on the admin list (`FR-CAT-051`) — a separate, later issue (`#34`) that waits until brands, categories, and products all exist. See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup (`base_url`, `admin_api_key` variables); see [`brands.api.md`](./brands.api.md) for the sibling entity this module closely mirrors. This doc assumes collection setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #28 (M2.4 — Category management, `FR-CAT-014`–`022`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-046`, `048` for this entity), and Issue #34 (M2.10 — Admin search, `FR-CAT-051` for this entity): the five admin CRUD endpoints under `/api/admin/categories`, the status-toggle endpoint, `search` on the admin list, and the public `GET /api/categories`. See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup (`base_url`, `admin_api_key` variables); see [`brands.api.md`](./brands.api.md) for the sibling entity this module closely mirrors. This doc assumes collection setup is already done and reuses the same collection.
 
 ---
 
@@ -310,6 +310,14 @@ Lists every category, any status, each with its `parentCategory` and its product
 
 **Headers tab:** `X-Admin-Key: {{admin_api_key}}`. No body.
 
+**Query params (optional):**
+
+| Param    | Values                                                           | Default |
+| -------- | ---------------------------------------------------------------- | ------- |
+| `search` | free text — matched against `name`, partial and case-insensitive | omitted |
+
+Try: `{{base_url}}/api/admin/categories?search=elec` — matches "Electronics" regardless of case or position within the name (`FR-CAT-051`).
+
 **Click Send. Expected response — `200 OK`:**
 
 ```json
@@ -335,7 +343,9 @@ Lists every category, any status, each with its `parentCategory` and its product
 
 - `productCount` reflects products of **any** status directly assigned to that category — not counting products in its subcategories. Create a product against this category via [`products.api.md`](./products.api.md) (`#31`) to see this go above `0`.
 - Each item's `parentCategory` is a raw id (or `null`) — this is a **flat array, not a nested tree**. Build the two-level hierarchy client-side by grouping on `parentCategory`.
-- **No guaranteed order** — unlike the public list below, this endpoint doesn't sort. No `search` query param either (admin search lands in #34).
+- **No guaranteed order** — unlike the public list below, this endpoint doesn't sort, with or without `search`.
+- `search` spans **all** statuses, same as the unfiltered list — it doesn't hide inactive categories.
+- `search` is a plain MongoDB regex query, not Atlas Search — same mechanism as `search` on [`GET /api/admin/products`](./products.api.md#get-apiadminproducts) and [`GET /api/admin/brands`](./brands.api.md#get-apiadminbrands) (`FR-CAT-050`–`052`).
 
 ---
 
@@ -493,15 +503,14 @@ Category-specific codes, in addition to the ones already documented in [`uploads
 
 ## Understanding Validation Errors
 
-Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For categories, the fields that can appear as keys are `name`, `description`, `parentCategory`, `image.objectKey`, `image.alt`, `sortOrder`, `metaTitle`, and `metaDescription`.
+Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For categories, the fields that can appear as keys are `name`, `description`, `parentCategory`, `image.objectKey`, `image.alt`, `sortOrder`, `metaTitle`, `metaDescription`, and — on the list endpoint — `search`.
 
 ---
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #28 (plus #33's status endpoint, folded into this same doc) — not the full Product Catalog API. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), category-governed variant types (`#30`) in [`categoryVariants.api.md`](./categoryVariants.api.md) — together they cover both halves of `DELETE`'s cascade clause — and product core CRUD plus product variants (`#31`, `#32`) in [`products.api.md`](./products.api.md), which also completes `DELETE`'s product half of the `CATEGORY_IN_USE` guard above. Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #28 (plus #33's status endpoint and #34's `search` param, folded into this same doc) — not the full Product Catalog API. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), category-governed variant types (`#30`) in [`categoryVariants.api.md`](./categoryVariants.api.md) — together they cover both halves of `DELETE`'s cascade clause — and product core CRUD plus product variants (`#31`, `#32`) in [`products.api.md`](./products.api.md), which also completes `DELETE`'s product half of the `CATEGORY_IN_USE` guard above. Not yet implemented, each its own future issue:
 
-- Admin search, including `search` on `GET /api/admin/categories` (`#34`)
 - Buyer browsing/search/inventory visibility (`#35`)
 - Buyer filtering, sorting, and card content (`#36`)
 

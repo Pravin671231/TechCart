@@ -84,6 +84,8 @@ export type ProductListParams = {
   limit: number;
   sort: { field: ProductSortField; order: 1 | -1 };
   lowStock: boolean;
+  search?: string | undefined;
+  status?: ProductStatus | undefined;
 };
 
 // sku IS editable here, unlike the parent product's own — FR-CAT-004
@@ -255,10 +257,11 @@ export async function getProductById(id: Types.ObjectId): Promise<ProductRecord>
 export async function listProductsForAdmin(
   params: ProductListParams,
 ): Promise<{ items: ProductRecord[]; pagination: Pagination }> {
-  const { items, total } = await listPaginated({ lowStock: params.lowStock }, params.sort, {
-    page: params.page,
-    limit: params.limit,
-  });
+  const { items, total } = await listPaginated(
+    { lowStock: params.lowStock, search: params.search, status: params.status },
+    params.sort,
+    { page: params.page, limit: params.limit },
+  );
 
   const totalPages = Math.max(1, Math.ceil(total / params.limit));
   return {

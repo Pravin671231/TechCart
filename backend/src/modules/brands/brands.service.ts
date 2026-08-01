@@ -87,8 +87,8 @@ export async function getBrandById(id: Types.ObjectId): Promise<BrandRecord> {
   return brand;
 }
 
-export async function listBrandsForAdmin(): Promise<BrandListItem[]> {
-  const brands = await list();
+export async function listBrandsForAdmin(search?: string): Promise<BrandListItem[]> {
+  const brands = await list(search);
   const counts = await countByBrandIds(brands.map((brand) => brand._id));
 
   return brands.map((brand) => ({

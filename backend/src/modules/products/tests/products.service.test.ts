@@ -493,6 +493,43 @@ describe("listProductsForAdmin", () => {
     );
   });
 
+  it("passes the search term through to the repository", async () => {
+    vi.mocked(productsRepository.listPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    await listProductsForAdmin({
+      page: 1,
+      limit: 20,
+      sort: { field: "createdAt", order: -1 },
+      lowStock: false,
+      search: "SKU-1",
+    });
+
+    expect(productsRepository.listPaginated).toHaveBeenCalledWith(
+      { lowStock: false, search: "SKU-1", status: undefined },
+      { field: "createdAt", order: -1 },
+      { page: 1, limit: 20 },
+    );
+  });
+
+  it("passes the status filter through to the repository, composed with search", async () => {
+    vi.mocked(productsRepository.listPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    await listProductsForAdmin({
+      page: 1,
+      limit: 20,
+      sort: { field: "createdAt", order: -1 },
+      lowStock: false,
+      search: "phone",
+      status: "published",
+    });
+
+    expect(productsRepository.listPaginated).toHaveBeenCalledWith(
+      { lowStock: false, search: "phone", status: "published" },
+      { field: "createdAt", order: -1 },
+      { page: 1, limit: 20 },
+    );
+  });
+
   it("reports hasNextPage: false on the last page", async () => {
     vi.mocked(productsRepository.listPaginated).mockResolvedValue({ items: [], total: 20 });
 

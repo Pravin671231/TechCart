@@ -176,6 +176,15 @@ describe("listBrandsForAdmin", () => {
     ]);
     expect(productsRepository.countByBrandIds).toHaveBeenCalledWith([idA, idB]);
   });
+
+  it("passes the search term through to the repository", async () => {
+    vi.mocked(brandsRepository.list).mockResolvedValue([brandA]);
+    vi.mocked(productsRepository.countByBrandIds).mockResolvedValue(new Map());
+
+    await listBrandsForAdmin("nov");
+
+    expect(brandsRepository.list).toHaveBeenCalledWith("nov");
+  });
 });
 
 describe("listBrandsForPublic", () => {

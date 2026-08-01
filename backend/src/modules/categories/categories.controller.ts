@@ -44,6 +44,8 @@ const updateCategorySchema = z.object({
 
 const updateStatusSchema = z.object({ status: z.boolean() });
 
+const listCategoriesQuerySchema = z.object({ search: z.string().min(1).optional() });
+
 function toObjectIdOrNull(value: string | null | undefined): Types.ObjectId | null | undefined {
   if (value === undefined) return undefined;
   if (value === null) return null;
@@ -86,8 +88,9 @@ export async function getCategoryHandler(req: Request, res: Response): Promise<v
   res.status(200).json(successResponse(category));
 }
 
-export async function listCategoriesHandler(_req: Request, res: Response): Promise<void> {
-  const categories = await listCategoriesForAdmin();
+export async function listCategoriesHandler(req: Request, res: Response): Promise<void> {
+  const query = listCategoriesQuerySchema.parse(req.query);
+  const categories = await listCategoriesForAdmin(query.search);
   res.status(200).json(successResponse(categories));
 }
 

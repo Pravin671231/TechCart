@@ -19,6 +19,8 @@ const logoSchema = z.object({
 
 const updateStatusSchema = z.object({ status: z.boolean() });
 
+const listBrandsQuerySchema = z.object({ search: z.string().min(1).optional() });
+
 const createBrandSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1).optional(),
@@ -50,8 +52,9 @@ export async function getBrandHandler(req: Request, res: Response): Promise<void
   res.status(200).json(successResponse(brand));
 }
 
-export async function listBrandsHandler(_req: Request, res: Response): Promise<void> {
-  const brands = await listBrandsForAdmin();
+export async function listBrandsHandler(req: Request, res: Response): Promise<void> {
+  const query = listBrandsQuerySchema.parse(req.query);
+  const brands = await listBrandsForAdmin(query.search);
   res.status(200).json(successResponse(brands));
 }
 

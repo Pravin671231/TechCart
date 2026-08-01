@@ -241,6 +241,17 @@ describe("GET /api/admin/categories", () => {
       expect.objectContaining({ name: "Furniture", productCount: 0 }),
     ]);
   });
+
+  it("passes a search query param through to the repository", async () => {
+    vi.mocked(categoriesRepository.list).mockResolvedValue([]);
+    vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(new Map());
+
+    await request(app)
+      .get("/api/admin/categories?search=elec")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(categoriesRepository.list).toHaveBeenCalledWith("elec");
+  });
 });
 
 describe("GET /api/admin/categories/:id", () => {

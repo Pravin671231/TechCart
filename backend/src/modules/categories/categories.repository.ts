@@ -1,4 +1,5 @@
-import type { Types } from "mongoose";
+import type { QueryFilter, Types } from "mongoose";
+import { escapeRegExp } from "@/utils/text";
 import { Category, type CategoryDocument, type CategoryImage } from "./categories.model";
 
 export type CategoryRecord = CategoryDocument & { _id: Types.ObjectId };
@@ -51,8 +52,12 @@ export async function deleteById(id: Types.ObjectId): Promise<void> {
   await Category.findByIdAndDelete(id);
 }
 
-export async function list(): Promise<CategoryRecord[]> {
-  return Category.find().lean();
+// FR-CAT-051: case-insensitive partial match on name, same plain-regex
+// mechanism as brands'/products' own admin search.
+export async function list(search?: string): Promise<CategoryRecord[]> {
+  const query: QueryFilter<CategoryDocument> = {};
+  if (search) query.name = { $regex: escapeRegExp(search), $options: "i" };
+  return Category.find(query).lean();
 }
 
 export async function listActive(): Promise<CategoryRecord[]> {

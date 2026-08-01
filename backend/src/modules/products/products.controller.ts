@@ -120,8 +120,8 @@ const SORT_VALUES = [
   "-stock",
 ] as const;
 
-// No search parameter here — FR-CAT-050's admin search is #34's scope, same
-// deferral brands/categories already made for their own admin lists.
+// search (FR-CAT-050) and status (FR-CAT-053, narrows the all-statuses admin
+// grid further) are the two additions #34 makes to this schema.
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
@@ -130,6 +130,8 @@ const listQuerySchema = z.object({
   // string has no boolean type, and "?lowStock=true" reads more explicitly
   // than accepting any truthy-looking value.
   lowStock: z.enum(["true"]).optional(),
+  search: z.string().min(1).optional(),
+  status: z.enum(PRODUCT_STATUSES).optional(),
 });
 
 // Pure mapping, no I/O — SORT_VALUES already constrains the input via Zod,
@@ -196,6 +198,8 @@ export async function listProductsHandler(req: Request, res: Response): Promise<
     limit: query.limit,
     sort,
     lowStock: query.lowStock === "true",
+    search: query.search,
+    status: query.status,
   });
   res.status(200).json(successResponse(items, pagination));
 }

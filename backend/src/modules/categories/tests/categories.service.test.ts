@@ -338,6 +338,15 @@ describe("listCategoriesForAdmin", () => {
     ]);
     expect(productsRepository.countByCategoryIds).toHaveBeenCalledWith([idA, idB]);
   });
+
+  it("passes the search term through to the repository", async () => {
+    vi.mocked(categoriesRepository.list).mockResolvedValue([categoryA]);
+    vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(new Map());
+
+    await listCategoriesForAdmin("elec");
+
+    expect(categoriesRepository.list).toHaveBeenCalledWith("elec");
+  });
 });
 
 describe("listCategoriesForPublic", () => {
