@@ -14,7 +14,10 @@ export type CreateCategoryDoc = {
   metaDescription?: string;
 };
 
-export type UpdateCategoryDoc = Partial<CreateCategoryDoc>;
+// status isn't part of CreateCategoryDoc — a category is always created
+// active (FR-CAT-046's toggle is a dedicated PATCH .../status path, #33, not
+// something set at create time).
+export type UpdateCategoryDoc = Partial<CreateCategoryDoc> & { status?: boolean };
 
 export async function create(doc: CreateCategoryDoc): Promise<CategoryRecord> {
   const category = await Category.create(doc);

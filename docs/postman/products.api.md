@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the Product core CRUD, pricing, and variant endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #31 (M2.7 — Product core CRUD and pricing, `FR-CAT-001`–`013`, `FR-CAT-085`–`087`) and Issue #32 (M2.8 — Product variants, `FR-CAT-039`–`044`): the five product-level admin endpoints under `/api/admin/products`, a dedicated stock-only path, and the two embedded-variant endpoints. It's deliberately scoped to those two issues' own checklists — there is **no** status-transition endpoint (`PATCH /api/admin/products/:id/status`, `FR-CAT-045`, `#33`), **no** admin search (`FR-CAT-050`, `#34`), and **no buyer-facing endpoint at all** yet (`GET /api/products`, `GET /api/products/:slug`, `#35`). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup; see [`brands.api.md`](./brands.api.md) and [`categories.api.md`](./categories.api.md) for the two entities every product references; see [`categorySpecifications.api.md`](./categorySpecifications.api.md) for the schema a product's `specifications` are validated against. This doc assumes collection setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #31 (M2.7 — Product core CRUD and pricing, `FR-CAT-001`–`013`, `FR-CAT-085`–`087`), Issue #32 (M2.8 — Product variants, `FR-CAT-039`–`044`), and Issue #33 (M2.9 — Status update APIs, `FR-CAT-045`, `048`–`049` for this entity): the five product-level admin CRUD endpoints under `/api/admin/products`, the stock-only and status-transition paths, and the two embedded-variant endpoints. There is still **no** admin search (`FR-CAT-050`, `#34`) and **no buyer-facing endpoint at all** yet (`GET /api/products`, `GET /api/products/:slug`, `#35`). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup; see [`brands.api.md`](./brands.api.md) and [`categories.api.md`](./categories.api.md) for the two entities every product references; see [`categorySpecifications.api.md`](./categorySpecifications.api.md) for the schema a product's `specifications` are validated against. This doc assumes collection setup is already done and reuses the same collection.
 
 ---
 
@@ -107,7 +107,7 @@ Content-Type: application/json
 
 - **`sellingPrice: 89910`** — computed server-side as `mrp - floor(mrp * discount / 100)` = `99900 - floor(9990) = 89910` (`FR-CAT-087`). Try adding `"sellingPrice": 1` to your request body — it has no effect; the response still shows `89910`.
 - `slug` collision handling is identical to brands/categories: a numeric suffix (`-2`, `-3`, ...) is appended if the generated slug already exists.
-- `status` always starts as `"draft"` — there's no way to create a product already `published` in this issue (that's `#33`'s status-transition endpoint).
+- `status` always starts as `"draft"` — there's no way to create a product already `published`; use `PATCH .../status` below afterward.
 - `variants` is always `[]` on a freshly-created product — add variants afterward via `POST .../variants` below.
 - `createdBy`/`updatedBy` are always `null` for now — reserved fields, unused until v0.3 authentication.
 - Paste the returned `_id` into the `product_id` collection variable to use in the requests below.
@@ -398,6 +398,7 @@ Soft-deletes a product — flips `status` to `"archived"`; the document is **nev
 Confirm by re-running `GET /api/admin/products/:id` — the product is still there, now with `"status": "archived"`.
 
 - **Unlike brands'/categories' guarded deletes**, a nonexistent id here returns `404 PRODUCT_NOT_FOUND`, not a silent `200`/`data: null` — there's no in-use guard with a "naturally zero" fallback to lean on; this is a plain status flip.
+- Equivalent to `PATCH /api/admin/products/:id/status` with `{"status": "archived"}` below — same underlying write, different response shape (`null` here vs. the full product there).
 
 ### Error cases
 
@@ -451,6 +452,61 @@ Content-Type: application/json
 ```
 
 **Nonexistent id:** same `PRODUCT_NOT_FOUND` shape as `GET :id` above.
+
+---
+
+## `PATCH /api/admin/products/:id/status`
+
+Sets the product's status directly to any of the three states (`FR-CAT-045`) — not a toggle like brands'/categories' boolean `status`, since a product has three states, not two.
+
+| Field  | Value                                                   |
+| ------ | ------------------------------------------------------- |
+| Method | `PATCH`                                                 |
+| URL    | `{{base_url}}/api/admin/products/{{product_id}}/status` |
+| Name   | `Update Product Status`                                 |
+
+**Headers tab:**
+
+```
+X-Admin-Key: {{admin_api_key}}
+Content-Type: application/json
+```
+
+**Body tab → raw → JSON:**
+
+```json
+{ "status": "published" }
+```
+
+- `status` — one of `"draft"`, `"published"`, or `"archived"`.
+
+**Click Send. Expected response — `200 OK`:** the full updated product, `status: "published"`, every other field unchanged.
+
+- **This is the only way to publish a product** — `POST` above always creates a product as `"draft"`.
+- Setting `status: "archived"` here has the identical effect to `DELETE /api/admin/products/:id` above — both end up calling the same underlying status update; there's no difference in the stored result.
+- **A product in a deactivated category or carrying a deactivated brand still keeps its own `status` here** (`FR-CAT-049`) — this endpoint only ever touches the product's own field, never its brand's/category's. Whether it actually appears in a _buyer_ listing for that category/brand once one exists (`#35`) is a separate, read-time concern this endpoint doesn't need to know about.
+
+### Error cases
+
+**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`.
+
+**Nonexistent id:** same `PRODUCT_NOT_FOUND` shape as `GET :id` above.
+
+**Unrecognized `status` value:**
+
+```
+400 Bad Request
+```
+
+```json
+{
+  "success": false,
+  "code": "VALIDATION_ERROR",
+  "errors": {
+    "status": "Invalid option: expected one of \"draft\"|\"published\"|\"archived\""
+  }
+}
+```
 
 ---
 
@@ -658,15 +714,14 @@ Product-specific codes, in addition to the ones already documented in [`uploads.
 
 ## Understanding Validation Errors
 
-Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For products, the fields that can appear as keys include `name`, `description`, `sku`, `brand`, `category`, `images`, `specifications`, `mrp`, `discount`, `stock`, `lowStockThreshold`, `isFeatured`, `metaTitle`, `metaDescription`, and — on the list endpoint — `page`, `limit`, `sort`, `lowStock`. For the two variant endpoints: `sku`, `attributes`, `images`, `mrp`, `discount`, `stock`, `weight`.
+Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For products, the fields that can appear as keys include `name`, `description`, `sku`, `brand`, `category`, `images`, `specifications`, `mrp`, `discount`, `stock`, `lowStockThreshold`, `isFeatured`, `metaTitle`, `metaDescription`, and — on the list endpoint — `page`, `limit`, `sort`, `lowStock`. For the two variant endpoints: `sku`, `attributes`, `images`, `mrp`, `discount`, `stock`, `weight`. For the status endpoint: `status`.
 
 ---
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issues #31 and #32 — not the full Product Catalog API. Not yet implemented, each its own future issue:
+This document is a snapshot of Issues #31, #32, and #33 (status endpoint, folded into this same doc) — not the full Product Catalog API. Not yet implemented, each its own future issue:
 
-- Status transition endpoint, `PATCH /api/admin/products/:id/status` (`FR-CAT-045`, `#33`)
 - Admin search, including `search` on `GET /api/admin/products` (`FR-CAT-050`, `#34`)
 - Buyer browsing/search/inventory visibility, including `GET /api/products` and `GET /api/products/:slug` (`#35`)
 - Buyer filtering, sorting, and card content (`#36`)

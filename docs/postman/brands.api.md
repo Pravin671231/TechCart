@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the Brand management endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #27 (M2.3 — Brand management, `FR-CAT-023`–`029`): the five admin endpoints under `/api/admin/brands` and the public `GET /api/brands`. It's deliberately scoped to issue #27's own checklist — there is **no** status-toggle endpoint (`PATCH /api/admin/brands/:id/status`, `FR-CAT-047`) and **no** search on the admin list (`FR-CAT-052`) yet; both are separate, later issues (#33, #34) that wait until brands, categories, and products all exist. See [`uploads.api.md`](./uploads.api.md) for `GET /health` and the R2 upload endpoints, and for the one-time Postman collection setup (`base_url`, `admin_api_key` variables) — this doc assumes that setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #27 (M2.3 — Brand management, `FR-CAT-023`–`029`) and Issue #33 (M2.9 — Status update APIs, `FR-CAT-047`–`048` for this entity): the five admin CRUD endpoints under `/api/admin/brands`, the status-toggle endpoint, and the public `GET /api/brands`. There is still **no** search on the admin list (`FR-CAT-052`) — a separate, later issue (`#34`) that waits until brands, categories, and products all exist. See [`uploads.api.md`](./uploads.api.md) for `GET /health` and the R2 upload endpoints, and for the one-time Postman collection setup (`base_url`, `admin_api_key` variables) — this doc assumes that setup is already done and reuses the same collection.
 
 ---
 
@@ -230,6 +230,59 @@ Same `INVALID_ID` (malformed id) and `BRAND_NOT_FOUND` (no such brand) as the `G
 
 ---
 
+## `PATCH /api/admin/brands/:id/status`
+
+Toggles the brand's boolean `status` (`FR-CAT-047`) — active/inactive, not a soft delete. A dedicated endpoint rather than folded into the general `PATCH` above, matching categories'/products' own status endpoints.
+
+| Field  | Value                                           |
+| ------ | -------------------------------------------------- |
+| Method | `PATCH`                                             |
+| URL    | `{{base_url}}/api/admin/brands/{{brand_id}}/status` |
+| Name   | `Update Brand Status`                               |
+
+**Headers tab:**
+
+```
+X-Admin-Key: {{admin_api_key}}
+Content-Type: application/json
+```
+
+**Body tab → raw → JSON:**
+
+```json
+{ "status": false }
+```
+
+**Click Send. Expected response — `200 OK`:** the full updated brand, `status: false`, every other field unchanged.
+
+- **Deactivating never checks or bypasses the `DELETE` guard above** (`FR-CAT-048`) — a brand referenced by products can always be deactivated; only an actual `DELETE` is blocked while products reference it.
+- **Immediately hides the brand from `GET /api/brands`** below (`FR-CAT-048`) — that endpoint already filters `status: true`, so no separate propagation step is needed. `GET /api/admin/brands/:id` still returns it regardless of `status`.
+- Re-run with `{"status": true}` to reactivate.
+
+### Error cases
+
+**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`.
+
+**Nonexistent id:** same `BRAND_NOT_FOUND` shape as `GET :id` above.
+
+**Non-boolean `status`:**
+
+```
+400 Bad Request
+```
+
+```json
+{
+  "success": false,
+  "code": "VALIDATION_ERROR",
+  "errors": {
+    "status": "Invalid input: expected boolean, received string"
+  }
+}
+```
+
+---
+
 ## `DELETE /api/admin/brands/:id`
 
 Deletes a brand — but only if **zero** products of any status reference it (`FR-CAT-028`). Create a product against this brand via [`products.api.md`](./products.api.md) (`#31`) first to exercise the guard below; otherwise the delete succeeds unconditionally.
@@ -307,7 +360,7 @@ No headers, no body.
 }
 ```
 
-- Only brands with `status: true` are returned — there's no status-toggle endpoint yet (#33), so every brand you create stays active until one exists.
+- Only brands with `status: true` are returned — deactivate one via `PATCH /api/admin/brands/:id/status` above to see it drop out of this list.
 - `status`, `createdBy`, `updatedBy`, `createdAt`, `updatedAt` are stripped entirely — this response only ever has `_id`, `name`, `slug`, and (when present) `logo`/`description`.
 - No auth header required — sending an `X-Admin-Key` here has no effect either way.
 
@@ -320,7 +373,7 @@ Brand-specific codes, in addition to the ones already documented in [`uploads.ap
 | Code              | Status | Where it comes from                                                             | Reachable via an existing endpoint? |
 | ----------------- | ------ | --------------------------------------------------------------------------------- | ------------------------------------ |
 | `INVALID_ID`       | 400    | `brands.controller.ts`'s `parseObjectId()` — the `:id` segment isn't a valid Mongo ObjectId | Yes                                  |
-| `BRAND_NOT_FOUND`  | 404    | `brands.service.ts` — `GET`/`PATCH` by an id with no matching brand               | Yes                                  |
+| `BRAND_NOT_FOUND`  | 404    | `brands.service.ts` — `GET`/`PATCH`/`PATCH .../status` by an id with no matching brand | Yes                                  |
 | `BRAND_IN_USE`     | 409    | `brands.service.ts`'s `deleteBrand()` — the brand is referenced by ≥1 product, any status | Yes — see [`products.api.md`](./products.api.md) (#31) |
 
 ---
@@ -333,9 +386,8 @@ Same `errors`-object shape as `uploads.api.md` — see [that section](./uploads.
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #27 — not the full Product Catalog API. Category management (`#28`), category-governed specifications (`#29`), category-governed variant types (`#30`), and product core CRUD plus product variants (`#31`, `#32`) are now covered in [`categories.api.md`](./categories.api.md), [`categorySpecifications.api.md`](./categorySpecifications.api.md), [`categoryVariants.api.md`](./categoryVariants.api.md), and [`products.api.md`](./products.api.md) respectively. Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #27 (plus #33's status endpoint, folded into this same doc) — not the full Product Catalog API. Category management (`#28`), category-governed specifications (`#29`), category-governed variant types (`#30`), and product core CRUD plus product variants (`#31`, `#32`) are now covered in [`categories.api.md`](./categories.api.md), [`categorySpecifications.api.md`](./categorySpecifications.api.md), [`categoryVariants.api.md`](./categoryVariants.api.md), and [`products.api.md`](./products.api.md) respectively. Not yet implemented, each its own future issue:
 
-- Status update APIs, including `PATCH /api/admin/brands/:id/status` (`#33`)
 - Admin search, including `search` on `GET /api/admin/brands` (`#34`)
 - Buyer browsing/search/inventory visibility (`#35`)
 - Buyer filtering, sorting, and card content (`#36`)

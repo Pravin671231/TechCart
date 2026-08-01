@@ -47,6 +47,7 @@ import {
   listProductsForAdmin,
   deleteProduct,
   updateStock,
+  updateProductStatus,
   addVariant,
   updateVariant,
 } from "../products.service";
@@ -503,6 +504,28 @@ describe("listProductsForAdmin", () => {
     });
 
     expect(result.pagination.hasNextPage).toBe(false);
+  });
+});
+
+describe("updateProductStatus", () => {
+  it("sets the requested status", async () => {
+    vi.mocked(productsRepository.updateById).mockResolvedValue({
+      ...productStub,
+      status: "published",
+    });
+
+    await updateProductStatus(productId, "published");
+
+    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, { status: "published" });
+  });
+
+  it("throws PRODUCT_NOT_FOUND when the id doesn't match any product", async () => {
+    vi.mocked(productsRepository.updateById).mockResolvedValue(null);
+
+    await expect(updateProductStatus(productId, "archived")).rejects.toMatchObject({
+      statusCode: 404,
+      code: "PRODUCT_NOT_FOUND",
+    });
   });
 });
 

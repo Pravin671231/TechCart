@@ -10,9 +10,11 @@ import {
   listProductsForAdmin,
   deleteProduct,
   updateStock,
+  updateProductStatus,
   addVariant,
   updateVariant,
 } from "./products.service";
+import { PRODUCT_STATUSES } from "./products.model";
 import type { ProductSortField } from "./products.repository";
 
 const objectIdString = z.string().refine(isValidObjectId, { message: "Must be a valid id." });
@@ -74,6 +76,8 @@ const updateProductSchema = z.object({
 });
 
 const updateStockSchema = z.object({ stock: z.number().int().min(0) });
+
+const updateStatusSchema = z.object({ status: z.enum(PRODUCT_STATUSES) });
 
 const productVariantAttributeSchema = z.object({
   name: z.string().min(1),
@@ -206,6 +210,13 @@ export async function updateStockHandler(req: Request, res: Response): Promise<v
   const id = parseObjectId(req.params.id);
   const input = updateStockSchema.parse(req.body);
   const product = await updateStock(id, input.stock);
+  res.status(200).json(successResponse(product));
+}
+
+export async function updateStatusHandler(req: Request, res: Response): Promise<void> {
+  const id = parseObjectId(req.params.id);
+  const input = updateStatusSchema.parse(req.body);
+  const product = await updateProductStatus(id, input.status);
   res.status(200).json(successResponse(product));
 }
 

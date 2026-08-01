@@ -43,6 +43,7 @@ import {
   listCategoriesForAdmin,
   listCategoriesForPublic,
   deleteCategory,
+  updateCategoryStatus,
 } from "../categories.service";
 
 const idA = new Types.ObjectId();
@@ -438,5 +439,33 @@ describe("deleteCategory", () => {
     expect(categorySpecificationsService.deleteForCategory).toHaveBeenCalledWith(idA);
     expect(categoryVariantsService.deleteForCategory).toHaveBeenCalledWith(idA);
     expect(categoriesRepository.deleteById).toHaveBeenCalledWith(idA);
+  });
+});
+
+describe("updateCategoryStatus", () => {
+  it("sets the requested boolean status", async () => {
+    vi.mocked(categoriesRepository.updateById).mockResolvedValue({ ...categoryA, status: false });
+
+    await updateCategoryStatus(idA, false);
+
+    expect(categoriesRepository.updateById).toHaveBeenCalledWith(idA, { status: false });
+  });
+
+  it("throws CATEGORY_NOT_FOUND when the id doesn't match any category", async () => {
+    vi.mocked(categoriesRepository.updateById).mockResolvedValue(null);
+
+    await expect(updateCategoryStatus(idA, false)).rejects.toMatchObject({
+      statusCode: 404,
+      code: "CATEGORY_NOT_FOUND",
+    });
+  });
+
+  it("never touches the product/subcategory delete guard — no guard calls happen at all", async () => {
+    vi.mocked(categoriesRepository.updateById).mockResolvedValue({ ...categoryA, status: false });
+
+    await updateCategoryStatus(idA, false);
+
+    expect(productsRepository.countByCategory).not.toHaveBeenCalled();
+    expect(categoriesRepository.countByParent).not.toHaveBeenCalled();
   });
 });

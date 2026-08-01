@@ -256,6 +256,62 @@ describe("GET /api/admin/categories/:id", () => {
   });
 });
 
+describe("PATCH /api/admin/categories/:id/status", () => {
+  it("rejects a request with no X-Admin-Key header", async () => {
+    const res = await request(app)
+      .patch(`/api/admin/categories/${new Types.ObjectId().toString()}/status`)
+      .send({ status: false });
+    expect(res.status).toBe(401);
+  });
+
+  it("deactivates a category without checking the delete guard", async () => {
+    const id = new Types.ObjectId();
+    vi.mocked(categoriesRepository.updateById).mockResolvedValue({
+      _id: id,
+      name: "Electronics",
+      slug: "electronics",
+      parentCategory: null,
+      sortOrder: 0,
+      status: false,
+      createdBy: null,
+      updatedBy: null,
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/categories/${id.toString()}/status`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ status: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe(false);
+    expect(categoriesRepository.updateById).toHaveBeenCalledWith(id, { status: false });
+    expect(productsRepository.countByCategory).not.toHaveBeenCalled();
+    expect(categoriesRepository.countByParent).not.toHaveBeenCalled();
+  });
+
+  it("returns CATEGORY_NOT_FOUND for a nonexistent id", async () => {
+    vi.mocked(categoriesRepository.updateById).mockResolvedValue(null);
+
+    const res = await request(app)
+      .patch(`/api/admin/categories/${new Types.ObjectId().toString()}/status`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ status: false });
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("CATEGORY_NOT_FOUND");
+  });
+
+  it("rejects a non-boolean status", async () => {
+    const res = await request(app)
+      .patch(`/api/admin/categories/${new Types.ObjectId().toString()}/status`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ status: "inactive" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+});
+
 describe("DELETE /api/admin/categories/:id", () => {
   it("names both blocking reasons when the category has products and subcategories", async () => {
     vi.mocked(productsRepository.countByCategory).mockResolvedValue(3);

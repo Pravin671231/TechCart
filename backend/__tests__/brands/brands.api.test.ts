@@ -193,6 +193,59 @@ describe("GET /api/admin/brands/:id", () => {
   });
 });
 
+describe("PATCH /api/admin/brands/:id/status", () => {
+  it("rejects a request with no X-Admin-Key header", async () => {
+    const res = await request(app)
+      .patch(`/api/admin/brands/${new Types.ObjectId().toString()}/status`)
+      .send({ status: false });
+    expect(res.status).toBe(401);
+  });
+
+  it("deactivates a brand without checking the delete guard", async () => {
+    const id = new Types.ObjectId();
+    vi.mocked(brandsRepository.updateById).mockResolvedValue({
+      _id: id,
+      name: "Nova",
+      slug: "nova",
+      status: false,
+      createdBy: null,
+      updatedBy: null,
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/brands/${id.toString()}/status`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ status: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe(false);
+    expect(brandsRepository.updateById).toHaveBeenCalledWith(id, { status: false });
+    expect(productsRepository.countByBrand).not.toHaveBeenCalled();
+  });
+
+  it("returns BRAND_NOT_FOUND for a nonexistent id", async () => {
+    vi.mocked(brandsRepository.updateById).mockResolvedValue(null);
+
+    const res = await request(app)
+      .patch(`/api/admin/brands/${new Types.ObjectId().toString()}/status`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ status: false });
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("BRAND_NOT_FOUND");
+  });
+
+  it("rejects a non-boolean status", async () => {
+    const res = await request(app)
+      .patch(`/api/admin/brands/${new Types.ObjectId().toString()}/status`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ status: "inactive" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+});
+
 describe("DELETE /api/admin/brands/:id", () => {
   it("rejects deletion when the brand is referenced by even an archived-only product", async () => {
     vi.mocked(productsRepository.countByBrand).mockResolvedValue(1);

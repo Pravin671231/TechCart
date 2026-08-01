@@ -15,6 +15,7 @@ import { validateProductSpecifications } from "@/modules/categorySpecifications/
 import type {
   ProductImage,
   ProductSpecificationGroup,
+  ProductStatus,
   ProductVariant,
   ProductVariantAttribute,
 } from "./products.model";
@@ -272,14 +273,27 @@ export async function listProductsForAdmin(
   };
 }
 
+// FR-CAT-045 — the general three-state setter. Unlike brands'/categories'
+// boolean toggle, a product's status is a tri-state enum, so this is a plain
+// pass-through rather than a flip; validity of the value itself is Zod's job
+// in products.controller.ts.
+export async function updateProductStatus(
+  id: Types.ObjectId,
+  status: ProductStatus,
+): Promise<ProductRecord> {
+  const updated = await updateById(id, { status });
+  if (!updated) throw notFound(id);
+  return updated;
+}
+
 // Soft delete only (FR-CAT-007) — Orders (v0.5) will hold product references
 // that must not dangle. Unlike brands'/categories' guarded deletes, there's
 // no in-use count to check (nothing downstream references products yet), so
-// this is a plain status flip; a nonexistent id 404s rather than silently
-// no-opping, since there's no "naturally zero" guard count to fall back on.
+// this is just updateProductStatus(id, "archived") under a delete-shaped
+// name; a nonexistent id 404s rather than silently no-opping, since there's
+// no "naturally zero" guard count to fall back on.
 export async function deleteProduct(id: Types.ObjectId): Promise<void> {
-  const updated = await updateById(id, { status: "archived" });
-  if (!updated) throw notFound(id);
+  await updateProductStatus(id, "archived");
 }
 
 export async function updateStock(id: Types.ObjectId, stock: number): Promise<ProductRecord> {

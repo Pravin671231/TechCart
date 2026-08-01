@@ -32,6 +32,7 @@ import {
   listBrandsForAdmin,
   listBrandsForPublic,
   deleteBrand,
+  updateBrandStatus,
 } from "../brands.service";
 
 const idA = new Types.ObjectId();
@@ -77,14 +78,19 @@ describe("createBrand", () => {
 
     await createBrand({ name: "Nova" });
 
-    expect(brandsRepository.create).toHaveBeenCalledWith(expect.objectContaining({ slug: "nova-2" }));
+    expect(brandsRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({ slug: "nova-2" }),
+    );
   });
 
   it("consumes the logo key and stores a built url when a logo is provided", async () => {
     vi.mocked(brandsRepository.slugExists).mockResolvedValue(false);
     vi.mocked(brandsRepository.create).mockResolvedValue(brandA);
 
-    await createBrand({ name: "Nova", logo: { objectKey: "brand-logo/abc.png", alt: "Nova logo" } });
+    await createBrand({
+      name: "Nova",
+      logo: { objectKey: "brand-logo/abc.png", alt: "Nova logo" },
+    });
 
     expect(uploadsService.consumeImageKeys).toHaveBeenCalledWith(["brand-logo/abc.png"]);
     expect(brandsRepository.create).toHaveBeenCalledWith(
@@ -199,5 +205,32 @@ describe("deleteBrand", () => {
     await deleteBrand(idA);
 
     expect(brandsRepository.deleteById).toHaveBeenCalledWith(idA);
+  });
+});
+
+describe("updateBrandStatus", () => {
+  it("sets the requested boolean status", async () => {
+    vi.mocked(brandsRepository.updateById).mockResolvedValue({ ...brandA, status: false });
+
+    await updateBrandStatus(idA, false);
+
+    expect(brandsRepository.updateById).toHaveBeenCalledWith(idA, { status: false });
+  });
+
+  it("throws BRAND_NOT_FOUND when the id doesn't match any brand", async () => {
+    vi.mocked(brandsRepository.updateById).mockResolvedValue(null);
+
+    await expect(updateBrandStatus(idA, false)).rejects.toMatchObject({
+      statusCode: 404,
+      code: "BRAND_NOT_FOUND",
+    });
+  });
+
+  it("never touches the product delete guard — no guard calls happen at all", async () => {
+    vi.mocked(brandsRepository.updateById).mockResolvedValue({ ...brandA, status: false });
+
+    await updateBrandStatus(idA, false);
+
+    expect(productsRepository.countByBrand).not.toHaveBeenCalled();
   });
 });
