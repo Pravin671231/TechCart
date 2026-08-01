@@ -1,6 +1,10 @@
 import { Schema, model, type Types } from "mongoose";
 
-export type ProductStatus = "draft" | "published" | "archived";
+// Single source of truth for the three states — reused by products.model.ts's
+// own schema enum below and by products.controller.ts's status-update Zod
+// schema (FR-CAT-045), so the two can't drift apart.
+export const PRODUCT_STATUSES = ["draft", "published", "archived"] as const;
+export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
 
 export type ProductImage = {
   url: string;
@@ -145,7 +149,7 @@ const productSchema = new Schema<ProductDocument>(
     isFeatured: { type: Boolean, required: true, default: false },
     status: {
       type: String,
-      enum: ["draft", "published", "archived"],
+      enum: PRODUCT_STATUSES,
       required: true,
       default: "draft",
     },

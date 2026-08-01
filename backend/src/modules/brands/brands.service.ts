@@ -45,7 +45,10 @@ function notFound(id: Types.ObjectId): AppError {
 // Verifies the key was actually presigned (FR-CAT-082) and turns it into the
 // stored subdocument. Shared by create and update — a logo swap on update
 // re-consumes the new key exactly like a fresh create does.
-async function resolveLogo(logo: { objectKey: string; alt?: string | undefined }): Promise<BrandLogo> {
+async function resolveLogo(logo: {
+  objectKey: string;
+  alt?: string | undefined;
+}): Promise<BrandLogo> {
   await consumeImageKeys([logo.objectKey]);
   const url = buildPublicUrl(logo.objectKey);
   return logo.alt !== undefined ? { url, alt: logo.alt } : { url };
@@ -105,13 +108,28 @@ export async function listBrandsForPublic(): Promise<PublicBrand[]> {
   });
 }
 
+// FR-CAT-047's boolean toggle. Deactivating never touches, checks, or
+// bypasses the delete guard below (FR-CAT-028) — that guard only ever counts
+// products, never looks at status — so a brand with products can be freely
+// deactivated (hidden from listBrandsForPublic immediately) without needing
+// to satisfy the guard first (FR-CAT-048).
+export async function updateBrandStatus(id: Types.ObjectId, status: boolean): Promise<BrandRecord> {
+  const updated = await updateById(id, { status });
+  if (!updated) throw notFound(id);
+  return updated;
+}
+
 // TOCTOU note: a product could be created between this count and the delete
 // below. No transactions exist anywhere in this codebase yet (categories'
 // FR-CAT-019 guard will have the identical gap) — accepted, not fixed here.
 export async function deleteBrand(id: Types.ObjectId): Promise<void> {
   const count = await countByBrand(id);
   if (count > 0) {
-    throw new AppError(409, "BRAND_IN_USE", `Cannot delete brand: referenced by ${count} product(s).`);
+    throw new AppError(
+      409,
+      "BRAND_IN_USE",
+      `Cannot delete brand: referenced by ${count} product(s).`,
+    );
   }
   await deleteById(id);
 }

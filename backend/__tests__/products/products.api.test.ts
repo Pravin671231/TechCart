@@ -427,6 +427,53 @@ describe("PATCH /api/admin/products/:id/stock", () => {
   });
 });
 
+describe("PATCH /api/admin/products/:id/status", () => {
+  it("rejects a request with no X-Admin-Key header", async () => {
+    const res = await request(app)
+      .patch(`/api/admin/products/${productId.toString()}/status`)
+      .send({ status: "published" });
+    expect(res.status).toBe(401);
+  });
+
+  it("sets the requested status", async () => {
+    vi.mocked(productsRepository.updateById).mockResolvedValue({
+      ...productStub,
+      status: "published",
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/products/${productId.toString()}/status`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ status: "published" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe("published");
+    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, { status: "published" });
+  });
+
+  it("returns PRODUCT_NOT_FOUND for a nonexistent id", async () => {
+    vi.mocked(productsRepository.updateById).mockResolvedValue(null);
+
+    const res = await request(app)
+      .patch(`/api/admin/products/${productId.toString()}/status`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ status: "published" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("PRODUCT_NOT_FOUND");
+  });
+
+  it("rejects an unrecognized status value", async () => {
+    const res = await request(app)
+      .patch(`/api/admin/products/${productId.toString()}/status`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ status: "deleted" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+});
+
 describe("POST /api/admin/products/:id/variants", () => {
   it("rejects a request with no X-Admin-Key header", async () => {
     const res = await request(app)

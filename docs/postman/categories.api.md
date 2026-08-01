@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the Category management endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #28 (M2.4 — Category management, `FR-CAT-014`–`022`): the five admin endpoints under `/api/admin/categories` and the public `GET /api/categories`. It's deliberately scoped to issue #28's own checklist — there is **no** status-toggle endpoint (`PATCH /api/admin/categories/:id/status`, `FR-CAT-046`) and **no** search on the admin list (`FR-CAT-051`) yet; both are separate, later issues (#33, #34) that wait until brands, categories, and products all exist. See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup (`base_url`, `admin_api_key` variables); see [`brands.api.md`](./brands.api.md) for the sibling entity this module closely mirrors. This doc assumes collection setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #28 (M2.4 — Category management, `FR-CAT-014`–`022`) and Issue #33 (M2.9 — Status update APIs, `FR-CAT-046`, `048` for this entity): the five admin CRUD endpoints under `/api/admin/categories`, the status-toggle endpoint, and the public `GET /api/categories`. There is still **no** search on the admin list (`FR-CAT-051`) — a separate, later issue (`#34`) that waits until brands, categories, and products all exist. See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup (`base_url`, `admin_api_key` variables); see [`brands.api.md`](./brands.api.md) for the sibling entity this module closely mirrors. This doc assumes collection setup is already done and reuses the same collection.
 
 ---
 
@@ -245,6 +245,59 @@ Same `INVALID_ID` (malformed `:id`) and `CATEGORY_NOT_FOUND` (no such category) 
 
 ---
 
+## `PATCH /api/admin/categories/:id/status`
+
+Toggles the category's boolean `status` (`FR-CAT-046`) — active/inactive, not a soft delete. A dedicated endpoint rather than folded into the general `PATCH` above, matching brands'/products' own status endpoints.
+
+| Field  | Value                                                    |
+| ------ | ------------------------------------------------------------ |
+| Method | `PATCH`                                                       |
+| URL    | `{{base_url}}/api/admin/categories/{{category_id}}/status`   |
+| Name   | `Update Category Status`                                      |
+
+**Headers tab:**
+
+```
+X-Admin-Key: {{admin_api_key}}
+Content-Type: application/json
+```
+
+**Body tab → raw → JSON:**
+
+```json
+{ "status": false }
+```
+
+**Click Send. Expected response — `200 OK`:** the full updated category, `status: false`, every other field unchanged.
+
+- **Deactivating never checks or bypasses the `DELETE` guard below** (`FR-CAT-048`) — a category referenced by products/subcategories can always be deactivated; only an actual `DELETE` is blocked while either reference exists.
+- **Immediately hides the category from `GET /api/categories`** below (`FR-CAT-048`) — that endpoint already filters `status: true`, so no separate propagation step is needed. `GET /api/admin/categories/:id` still returns it regardless of `status`.
+- Re-run with `{"status": true}` to reactivate.
+
+### Error cases
+
+**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`.
+
+**Nonexistent id:** same `CATEGORY_NOT_FOUND` shape as `GET :id` above.
+
+**Non-boolean `status`:**
+
+```
+400 Bad Request
+```
+
+```json
+{
+  "success": false,
+  "code": "VALIDATION_ERROR",
+  "errors": {
+    "status": "Invalid input: expected boolean, received string"
+  }
+}
+```
+
+---
+
 ## `GET /api/admin/categories`
 
 Lists every category, any status, each with its `parentCategory` and its product count.
@@ -413,7 +466,7 @@ No headers, no body.
 ```
 
 - **Ordered by `sortOrder` ascending, then `name` ascending** (`FR-CAT-020`) — unlike the admin list. Create a few categories with different `sortOrder` values to see this.
-- Only `status: true` categories are returned — there's no status-toggle endpoint yet (#33), so every category stays active until one exists.
+- Only `status: true` categories are returned — deactivate one via `PATCH /api/admin/categories/:id/status` above to see it drop out of this list.
 - **`metaTitle`/`metaDescription` are always present here**, unlike the admin endpoints — this is the one place the SEO fallback (`FR-CAT-022`) is actually applied:
   - `metaTitle` falls back to `name` when unset.
   - `metaDescription` falls back to a 160-character, word-boundary-safe truncation of `description` when unset; if there's no `description` either, it falls back to `name`.
@@ -429,7 +482,7 @@ Category-specific codes, in addition to the ones already documented in [`uploads
 
 | Code                       | Status | Where it comes from                                                                                  | Reachable via an existing endpoint?                          |
 | --------------------------- | ------ | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| `CATEGORY_NOT_FOUND`         | 404    | `categories.service.ts` — `GET`/`PATCH` by an id with no matching category                             | Yes                                                            |
+| `CATEGORY_NOT_FOUND`         | 404    | `categories.service.ts` — `GET`/`PATCH`/`PATCH .../status` by an id with no matching category           | Yes                                                            |
 | `INVALID_PARENT_CATEGORY`    | 400    | `categories.service.ts`'s `validateParentCategory()` — `parentCategory` set to the category's own id   | Yes (on `PATCH` only — create can't self-reference, no id yet) |
 | `PARENT_CATEGORY_NOT_FOUND`  | 404    | same — the referenced `parentCategory` doesn't exist                                                    | Yes                                                            |
 | `PARENT_CATEGORY_TOO_DEEP`   | 400    | same — the referenced `parentCategory` already has a parent of its own                                 | Yes                                                            |
@@ -446,9 +499,8 @@ Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #28 — not the full Product Catalog API. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), category-governed variant types (`#30`) in [`categoryVariants.api.md`](./categoryVariants.api.md) — together they cover both halves of `DELETE`'s cascade clause — and product core CRUD plus product variants (`#31`, `#32`) in [`products.api.md`](./products.api.md), which also completes `DELETE`'s product half of the `CATEGORY_IN_USE` guard above. Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #28 (plus #33's status endpoint, folded into this same doc) — not the full Product Catalog API. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), category-governed variant types (`#30`) in [`categoryVariants.api.md`](./categoryVariants.api.md) — together they cover both halves of `DELETE`'s cascade clause — and product core CRUD plus product variants (`#31`, `#32`) in [`products.api.md`](./products.api.md), which also completes `DELETE`'s product half of the `CATEGORY_IN_USE` guard above. Not yet implemented, each its own future issue:
 
-- Status update APIs, including `PATCH /api/admin/categories/:id/status` (`#33`)
 - Admin search, including `search` on `GET /api/admin/categories` (`#34`)
 - Buyer browsing/search/inventory visibility (`#35`)
 - Buyer filtering, sorting, and card content (`#36`)

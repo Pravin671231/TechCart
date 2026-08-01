@@ -193,6 +193,20 @@ export async function listCategoriesForPublic(): Promise<PublicCategory[]> {
   });
 }
 
+// FR-CAT-046's boolean toggle. Deactivating never touches, checks, or
+// bypasses the FR-CAT-019 delete guard below — that guard only ever counts
+// products/subcategories, never looks at status — so a category with
+// products can be freely deactivated (hidden from listCategoriesForPublic
+// immediately) without needing to satisfy the guard first (FR-CAT-048).
+export async function updateCategoryStatus(
+  id: Types.ObjectId,
+  status: boolean,
+): Promise<CategoryRecord> {
+  const updated = await updateById(id, { status });
+  if (!updated) throw notFound(id);
+  return updated;
+}
+
 // Cascades to the category's specification document (FR-CAT-019, #29) and
 // its variant-type document (#30).
 export async function deleteCategory(id: Types.ObjectId): Promise<void> {

@@ -9,12 +9,15 @@ import {
   listBrandsForAdmin,
   listBrandsForPublic,
   deleteBrand,
+  updateBrandStatus,
 } from "./brands.service";
 
 const logoSchema = z.object({
   objectKey: z.string().min(1),
   alt: z.string().min(1).optional(),
 });
+
+const updateStatusSchema = z.object({ status: z.boolean() });
 
 const createBrandSchema = z.object({
   name: z.string().min(1),
@@ -56,6 +59,13 @@ export async function deleteBrandHandler(req: Request, res: Response): Promise<v
   const id = parseObjectId(req.params.id);
   await deleteBrand(id);
   res.status(200).json(successResponse(null));
+}
+
+export async function updateBrandStatusHandler(req: Request, res: Response): Promise<void> {
+  const id = parseObjectId(req.params.id);
+  const input = updateStatusSchema.parse(req.body);
+  const brand = await updateBrandStatus(id, input.status);
+  res.status(200).json(successResponse(brand));
 }
 
 export async function listPublicBrandsHandler(_req: Request, res: Response): Promise<void> {

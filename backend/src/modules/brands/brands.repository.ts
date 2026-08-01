@@ -10,7 +10,10 @@ export type CreateBrandDoc = {
   description?: string;
 };
 
-export type UpdateBrandDoc = Partial<CreateBrandDoc>;
+// status isn't part of CreateBrandDoc — a brand is always created active
+// (FR-CAT-047's toggle is a dedicated PATCH .../status path, #33, not
+// something set at create time).
+export type UpdateBrandDoc = Partial<CreateBrandDoc> & { status?: boolean };
 
 export async function create(doc: CreateBrandDoc): Promise<BrandRecord> {
   const brand = await Brand.create(doc);

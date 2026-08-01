@@ -10,6 +10,7 @@ import {
   listCategoriesForAdmin,
   listCategoriesForPublic,
   deleteCategory,
+  updateCategoryStatus,
 } from "./categories.service";
 
 const categoryImageSchema = z.object({
@@ -40,6 +41,8 @@ const updateCategorySchema = z.object({
   metaTitle: z.string().min(1).optional(),
   metaDescription: z.string().min(1).optional(),
 });
+
+const updateStatusSchema = z.object({ status: z.boolean() });
 
 function toObjectIdOrNull(value: string | null | undefined): Types.ObjectId | null | undefined {
   if (value === undefined) return undefined;
@@ -92,6 +95,13 @@ export async function deleteCategoryHandler(req: Request, res: Response): Promis
   const id = parseObjectId(req.params.id);
   await deleteCategory(id);
   res.status(200).json(successResponse(null));
+}
+
+export async function updateCategoryStatusHandler(req: Request, res: Response): Promise<void> {
+  const id = parseObjectId(req.params.id);
+  const input = updateStatusSchema.parse(req.body);
+  const category = await updateCategoryStatus(id, input.status);
+  res.status(200).json(successResponse(category));
 }
 
 export async function listPublicCategoriesHandler(_req: Request, res: Response): Promise<void> {
