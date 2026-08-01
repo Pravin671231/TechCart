@@ -14,7 +14,7 @@
         >
           TechCart Admin
         </div>
-        <nav class="flex flex-col p-2 text-sm text-neutral-600">
+        <nav class="flex flex-1 flex-col p-2 text-sm text-neutral-600">
           <a class="border border-neutral-500 bg-white px-3 py-2" href="./product-list.html">
             Products
           </a>
@@ -23,12 +23,21 @@
           <a class="px-3 py-2" href="./specification-editor.html">Specifications</a>
           <a class="px-3 py-2" href="./variant-type-editor.html">Variant types</a>
         </nav>
+        <div class="flex items-center gap-2 border-t border-neutral-400 p-3 text-sm">
+          <span
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-neutral-400 bg-white text-xs"
+          >
+            AD
+          </span>
+          <div class="flex flex-col leading-tight">
+            <span class="font-medium">Admin User</span>
+            <span class="text-xs text-neutral-500">Administrator</span>
+          </div>
+        </div>
       </aside>
 
-      <div class="flex min-w-0 flex-1 flex-col">
-        <header
-          class="flex h-16 shrink-0 items-center justify-between border-b border-neutral-400 bg-neutral-100 px-6"
-        >
+      <main class="min-w-0 flex-1 overflow-auto p-6">
+        <div class="mb-4 flex items-center justify-between">
           <h1 class="text-sm font-medium">
             <a class="text-neutral-500" href="./product-list.html">Products</a>
             <span class="mx-1 text-neutral-400">/</span>
@@ -40,14 +49,12 @@
               Edit
             </a>
           </div>
-        </header>
-
-        <main class="flex-1 overflow-auto p-6">
-          <p class="mb-4 text-[11px] text-neutral-400">
-            admin-app · Product detail, read-only —
-            <code class="text-neutral-500">FR-CAT-006, 013, 045</code> · A separate view from the
-            create/edit form, showing every field at any status
-          </p>
+        </div>
+        <p class="mb-4 text-[11px] text-neutral-400">
+          admin-app · Product detail, read-only —
+          <code class="text-neutral-500">FR-CAT-006, 013, 045</code> · A separate view from the
+          create/edit form, showing every field at any status
+        </p>
 
           <div class="mb-6 flex flex-wrap items-center gap-3">
             <span class="border border-dashed border-neutral-500 px-2 py-0.5 text-xs">Draft</span>
@@ -239,8 +246,7 @@
               price becomes a “starting from” value · FR-CAT-043
             </p>
           </section>
-        </main>
-      </div>
+      </main>
     </div>
   </body>
 </html>

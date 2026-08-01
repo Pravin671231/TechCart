@@ -8,25 +8,22 @@
   </head>
   <body class="h-screen bg-white text-neutral-600">
     <div class="flex h-screen">
-      <!-- Sidebar — full height, left edge -->
+      <!-- Sidebar — full height, left edge, nav area + bottom profile block -->
       <aside
-        class="flex w-64 shrink-0 items-center justify-center border-r border-neutral-400 bg-neutral-100"
+        class="flex w-64 shrink-0 flex-col border-r border-neutral-400 bg-neutral-100"
       >
-        <span class="text-sm tracking-wide text-neutral-500">Side bar</span>
+        <div class="flex flex-1 items-center justify-center">
+          <span class="text-sm tracking-wide text-neutral-500">Side bar</span>
+        </div>
+        <div class="flex items-center justify-center border-t border-neutral-400 py-4">
+          <span class="text-sm tracking-wide text-neutral-500">Profile</span>
+        </div>
       </aside>
 
-      <!-- Right column — header stacked above content -->
-      <div class="flex flex-1 flex-col">
-        <header
-          class="flex h-16 shrink-0 items-center justify-center border-b border-neutral-400 bg-neutral-100"
-        >
-          <span class="text-sm tracking-wide text-neutral-500">Header</span>
-        </header>
-
-        <main class="flex flex-1 items-center justify-center">
-          <span class="text-sm tracking-wide text-neutral-500">Content</span>
-        </main>
-      </div>
+      <!-- Content — no header; fills remaining space directly -->
+      <main class="flex flex-1 items-center justify-center">
+        <span class="text-sm tracking-wide text-neutral-500">Content</span>
+      </main>
     </div>
   </body>
 </html>

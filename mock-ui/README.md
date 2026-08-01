@@ -8,7 +8,7 @@ The outer page chrome each app's real routes mount inside. Grayscale boxes with 
 
 | File                                           | Layout                                    |
 | ---------------------------------------------- | ----------------------------------------- |
-| [`admin-app/index.html`](admin-app/index.html) | Side bar (full height) + Header + Content |
+| [`admin-app/index.html`](admin-app/index.html) | Side bar (full height, nav + bottom profile) + Content |
 | [`buyer-app/index.html`](buyer-app/index.html) | Header (sticky) + Content + Footer        |
 
 ## Catalog screens — SRS v0.2
@@ -72,6 +72,10 @@ at all" — at a glance, per [SRS v0.2 §10](../docs/srs/features/0.2-product-ca
 region satisfies. They are **not** visual design, not a design system, and not a component
 library — no brand colours, type scale, or spacing system is implied by them. Where the SRS
 specifies UI _behaviour_, these mocks show _where that behaviour lives on the page_.
+
+The one exception is the `admin-app` shell's layout (no header, sidebar carrying a bottom profile
+block) — that decision is recorded in
+[`admin-app/docs/design.md`](../admin-app/docs/design.md).
 
 Screen-level design was undecided when the SRS was first drafted; these pages are what
 [SRS v0.2 §10](../docs/srs/features/0.2-product-catalog.md#10-open-questions) now records as the
