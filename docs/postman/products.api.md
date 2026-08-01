@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the Product core CRUD, pricing, and variant endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #31 (M2.7 — Product core CRUD and pricing, `FR-CAT-001`–`013`, `FR-CAT-085`–`087`), Issue #32 (M2.8 — Product variants, `FR-CAT-039`–`044`), and Issue #33 (M2.9 — Status update APIs, `FR-CAT-045`, `048`–`049` for this entity): the five product-level admin CRUD endpoints under `/api/admin/products`, the stock-only and status-transition paths, and the two embedded-variant endpoints. There is still **no** admin search (`FR-CAT-050`, `#34`) and **no buyer-facing endpoint at all** yet (`GET /api/products`, `GET /api/products/:slug`, `#35`). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup; see [`brands.api.md`](./brands.api.md) and [`categories.api.md`](./categories.api.md) for the two entities every product references; see [`categorySpecifications.api.md`](./categorySpecifications.api.md) for the schema a product's `specifications` are validated against. This doc assumes collection setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #31 (M2.7 — Product core CRUD and pricing, `FR-CAT-001`–`013`, `FR-CAT-085`–`087`), Issue #32 (M2.8 — Product variants, `FR-CAT-039`–`044`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-045`, `048`–`049` for this entity), and Issue #34 (M2.10 — Admin search, `FR-CAT-050`, `053` for this entity): the five product-level admin CRUD endpoints under `/api/admin/products`, the stock-only and status-transition paths, the two embedded-variant endpoints, and `search`/`status` filtering on the admin list. There is still **no buyer-facing endpoint at all** yet (`GET /api/products`, `GET /api/products/:slug`, `#35`). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup; see [`brands.api.md`](./brands.api.md) and [`categories.api.md`](./categories.api.md) for the two entities every product references; see [`categorySpecifications.api.md`](./categorySpecifications.api.md) for the schema a product's `specifications` are validated against. This doc assumes collection setup is already done and reuses the same collection.
 
 ---
 
@@ -315,8 +315,14 @@ Lists products at **any** status, paginated and sortable (`FR-CAT-005`) — the 
 | `limit`    | integer 1–100                                                                              | `20`         |
 | `sort`     | `createdAt` \| `-createdAt` \| `name` \| `-name` \| `mrp` \| `-mrp` \| `stock` \| `-stock` | `-createdAt` |
 | `lowStock` | `true` (presence-based — any other value is rejected)                                      | omitted      |
+| `search`   | free text — matched against `name` (partial, case-insensitive) and `sku` (exact-or-prefix) | omitted      |
+| `status`   | `draft` \| `published` \| `archived`                                                       | omitted      |
 
 Try: `{{base_url}}/api/admin/products?page=1&limit=10&sort=-mrp`
+
+Try search: `{{base_url}}/api/admin/products?search=NOVA-X1-001` — pasting the full SKU returns exactly that one product; `?search=nova` matches by name too, case-insensitively and partially (`FR-CAT-050`).
+
+Try search + status together: `{{base_url}}/api/admin/products?search=nova&status=draft` — `status` narrows the result set `search` already produced; it doesn't replace it (`FR-CAT-053`). `search` alone still searches across **all** statuses, matching the admin grid's existing all-statuses visibility rule (`FR-CAT-005`).
 
 **Click Send. Expected response — `200 OK`:**
 
@@ -343,7 +349,8 @@ Try: `{{base_url}}/api/admin/products?page=1&limit=10&sort=-mrp`
 
 - **`-` prefix means descending** — `sort=-mrp` orders highest price first; `sort=mrp` orders lowest first.
 - **`lowStock=true`** filters to products whose `stock` is at or below their own `lowStockThreshold` (`FR-CAT-011`) — each product's own threshold, not a fixed number.
-- No `search` query param — that's `FR-CAT-050`'s admin-search scope (`#34`), same deferral brands/categories already made.
+- **`search` is a plain MongoDB query, not Atlas Search** — a case-insensitive, unanchored regex on `name`, `OR`ed with a `^`-anchored (exact-or-prefix) regex on `sku`. Consistent with `search` on `GET /api/admin/categories`/`GET /api/admin/brands` — all three admin lists use the identical mechanism (`FR-CAT-050`–`052`).
+- **`status` and `search` are independent filters, not mutually exclusive** — send either alone, both together, or neither. Neither one narrows the other incorrectly: `search` alone still spans all three statuses; adding `status` only ever removes results that don't also match `search`.
 - An oversized `limit` (e.g. `?limit=1000`) is **rejected**, not silently clamped:
 
 ```
@@ -368,6 +375,18 @@ Try: `{{base_url}}/api/admin/products?page=1&limit=10&sort=-mrp`
   "code": "VALIDATION_ERROR",
   "errors": {
     "sort": "Invalid option: expected one of \"createdAt\"|\"-createdAt\"|\"name\"|\"-name\"|\"mrp\"|\"-mrp\"|\"stock\"|\"-stock\""
+  }
+}
+```
+
+**An unrecognized `status` value:**
+
+```json
+{
+  "success": false,
+  "code": "VALIDATION_ERROR",
+  "errors": {
+    "status": "Invalid option: expected one of \"draft\"|\"published\"|\"archived\""
   }
 }
 ```
@@ -714,15 +733,14 @@ Product-specific codes, in addition to the ones already documented in [`uploads.
 
 ## Understanding Validation Errors
 
-Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For products, the fields that can appear as keys include `name`, `description`, `sku`, `brand`, `category`, `images`, `specifications`, `mrp`, `discount`, `stock`, `lowStockThreshold`, `isFeatured`, `metaTitle`, `metaDescription`, and — on the list endpoint — `page`, `limit`, `sort`, `lowStock`. For the two variant endpoints: `sku`, `attributes`, `images`, `mrp`, `discount`, `stock`, `weight`. For the status endpoint: `status`.
+Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For products, the fields that can appear as keys include `name`, `description`, `sku`, `brand`, `category`, `images`, `specifications`, `mrp`, `discount`, `stock`, `lowStockThreshold`, `isFeatured`, `metaTitle`, `metaDescription`, and — on the list endpoint — `page`, `limit`, `sort`, `lowStock`, `search`, `status`. For the two variant endpoints: `sku`, `attributes`, `images`, `mrp`, `discount`, `stock`, `weight`. For the status endpoint: `status`.
 
 ---
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issues #31, #32, and #33 (status endpoint, folded into this same doc) — not the full Product Catalog API. Not yet implemented, each its own future issue:
+This document is a snapshot of Issues #31, #32, #33 (status endpoint), and #34 (`search`/`status` filtering, folded into this same doc) — not the full Product Catalog API. Not yet implemented, each its own future issue:
 
-- Admin search, including `search` on `GET /api/admin/products` (`FR-CAT-050`, `#34`)
 - Buyer browsing/search/inventory visibility, including `GET /api/products` and `GET /api/products/:slug` (`#35`)
 - Buyer filtering, sorting, and card content (`#36`)
 

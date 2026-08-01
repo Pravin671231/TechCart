@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the Brand management endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #27 (M2.3 — Brand management, `FR-CAT-023`–`029`) and Issue #33 (M2.9 — Status update APIs, `FR-CAT-047`–`048` for this entity): the five admin CRUD endpoints under `/api/admin/brands`, the status-toggle endpoint, and the public `GET /api/brands`. There is still **no** search on the admin list (`FR-CAT-052`) — a separate, later issue (`#34`) that waits until brands, categories, and products all exist. See [`uploads.api.md`](./uploads.api.md) for `GET /health` and the R2 upload endpoints, and for the one-time Postman collection setup (`base_url`, `admin_api_key` variables) — this doc assumes that setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #27 (M2.3 — Brand management, `FR-CAT-023`–`029`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-047`–`048` for this entity), and Issue #34 (M2.10 — Admin search, `FR-CAT-052` for this entity): the five admin CRUD endpoints under `/api/admin/brands`, the status-toggle endpoint, `search` on the admin list, and the public `GET /api/brands`. See [`uploads.api.md`](./uploads.api.md) for `GET /health` and the R2 upload endpoints, and for the one-time Postman collection setup (`base_url`, `admin_api_key` variables) — this doc assumes that setup is already done and reuses the same collection.
 
 ---
 
@@ -120,6 +120,14 @@ Lists every brand, any status, each with its product count.
 
 **Headers tab:** `X-Admin-Key: {{admin_api_key}}`. No body.
 
+**Query params (optional):**
+
+| Param    | Values                                                           | Default |
+| -------- | ---------------------------------------------------------------- | ------- |
+| `search` | free text — matched against `name`, partial and case-insensitive | omitted |
+
+Try: `{{base_url}}/api/admin/brands?search=nova` — matches "Nova Electronics" regardless of case or position within the name (`FR-CAT-052`).
+
 **Click Send. Expected response — `200 OK`:**
 
 ```json
@@ -142,7 +150,8 @@ Lists every brand, any status, each with its product count.
 ```
 
 - `productCount` reflects products of **any** status (`draft`, `published`, `archived`) referencing the brand — not just published ones. Create a product against this brand via [`products.api.md`](./products.api.md) (`#31`) to see this go above `0`.
-- No `search` query param — admin search lands in #34.
+- `search` spans **all** statuses, same as the unfiltered list — it doesn't hide inactive brands.
+- `search` is a plain MongoDB regex query, not Atlas Search — same mechanism as `search` on [`GET /api/admin/products`](./products.api.md#get-apiadminproducts) and [`GET /api/admin/categories`](./categories.api.md#get-apiadmincategories) (`FR-CAT-050`–`052`).
 - No `pagination` key — every brand is returned in one response at this scale.
 
 ---
@@ -380,15 +389,14 @@ Brand-specific codes, in addition to the ones already documented in [`uploads.ap
 
 ## Understanding Validation Errors
 
-Same `errors`-object shape as `uploads.api.md` — see [that section](./uploads.api.md#understanding-validation-errors) for the general explanation. For brands, the fields that can appear as keys are `name`, `description`, `logo.objectKey`, and `logo.alt`.
+Same `errors`-object shape as `uploads.api.md` — see [that section](./uploads.api.md#understanding-validation-errors) for the general explanation. For brands, the fields that can appear as keys are `name`, `description`, `logo.objectKey`, `logo.alt`, and — on the list endpoint — `search`.
 
 ---
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #27 (plus #33's status endpoint, folded into this same doc) — not the full Product Catalog API. Category management (`#28`), category-governed specifications (`#29`), category-governed variant types (`#30`), and product core CRUD plus product variants (`#31`, `#32`) are now covered in [`categories.api.md`](./categories.api.md), [`categorySpecifications.api.md`](./categorySpecifications.api.md), [`categoryVariants.api.md`](./categoryVariants.api.md), and [`products.api.md`](./products.api.md) respectively. Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #27 (plus #33's status endpoint and #34's `search` param, folded into this same doc) — not the full Product Catalog API. Category management (`#28`), category-governed specifications (`#29`), category-governed variant types (`#30`), and product core CRUD plus product variants (`#31`, `#32`) are now covered in [`categories.api.md`](./categories.api.md), [`categorySpecifications.api.md`](./categorySpecifications.api.md), [`categoryVariants.api.md`](./categoryVariants.api.md), and [`products.api.md`](./products.api.md) respectively. Not yet implemented, each its own future issue:
 
-- Admin search, including `search` on `GET /api/admin/brands` (`#34`)
 - Buyer browsing/search/inventory visibility (`#35`)
 - Buyer filtering, sorting, and card content (`#36`)
 

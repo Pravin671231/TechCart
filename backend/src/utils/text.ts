@@ -10,3 +10,12 @@ export function truncate(text: string, maxLength = 160): string {
 
   return `${cut.trimEnd()}...`;
 }
+
+// Reusable by every admin list search (categories, brands, products —
+// FR-CAT-050–052): user-submitted search text is interpolated into a Mongo
+// regex, so any regex metacharacter in it (e.g. a literal ".") must be
+// escaped first or it would be interpreted as a pattern rather than matched
+// literally.
+export function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

@@ -1,4 +1,5 @@
 import type { QueryFilter, Types } from "mongoose";
+import { escapeRegExp } from "@/utils/text";
 import {
   Product,
   type ProductDocument,
@@ -83,7 +84,11 @@ export async function replaceVariants(
   return Product.findByIdAndUpdate(id, { $set: { variants } }, { new: true }).lean();
 }
 
-export type ProductListFilter = { lowStock?: boolean };
+export type ProductListFilter = {
+  lowStock?: boolean;
+  search?: string | undefined;
+  status?: ProductStatus | undefined;
+};
 export type ProductSortField = "createdAt" | "name" | "mrp" | "stock";
 export type ProductListSort = { field: ProductSortField; order: 1 | -1 };
 export type ProductListPage = { page: number; limit: number };
@@ -98,6 +103,18 @@ export async function listPaginated(
   // (stock vs. its own lowStockThreshold) can't be expressed as a plain
   // query-operator filter.
   if (filter.lowStock) query.$expr = { $lte: ["$stock", "$lowStockThreshold"] };
+  // FR-CAT-053: search stays over all statuses (the admin grid's existing
+  // all-statuses visibility rule) unless a status filter narrows it further.
+  if (filter.status) query.status = filter.status;
+  // FR-CAT-050: name is an unanchored, case-insensitive partial match; sku is
+  // anchored at the start (exact-or-prefix) so pasting a full sku returns
+  // exactly that product. A plain MongoDB regex, not Atlas Search — see
+  // docs/srs/features/0.2-product-catalog.md's note accepting the resulting
+  // name-side collection scan at this catalog's scale.
+  if (filter.search) {
+    const escaped = escapeRegExp(filter.search);
+    query.$or = [{ name: { $regex: escaped, $options: "i" } }, { sku: { $regex: `^${escaped}` } }];
+  }
 
   const skip = (page.page - 1) * page.limit;
   const [items, total] = await Promise.all([

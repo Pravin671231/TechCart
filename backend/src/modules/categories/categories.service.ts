@@ -160,8 +160,8 @@ export async function getCategoryById(id: Types.ObjectId): Promise<CategoryRecor
   return category;
 }
 
-export async function listCategoriesForAdmin(): Promise<CategoryListItem[]> {
-  const categories = await list();
+export async function listCategoriesForAdmin(search?: string): Promise<CategoryListItem[]> {
+  const categories = await list(search);
   const counts = await countByCategoryIds(categories.map((category) => category._id));
 
   return categories.map((category) => ({

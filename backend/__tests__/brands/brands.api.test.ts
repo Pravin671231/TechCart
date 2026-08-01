@@ -178,6 +178,15 @@ describe("GET /api/admin/brands", () => {
       expect.objectContaining({ name: "Zeta", productCount: 0 }),
     ]);
   });
+
+  it("passes a search query param through to the repository", async () => {
+    vi.mocked(brandsRepository.list).mockResolvedValue([]);
+    vi.mocked(productsRepository.countByBrandIds).mockResolvedValue(new Map());
+
+    await request(app).get("/api/admin/brands?search=nov").set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(brandsRepository.list).toHaveBeenCalledWith("nov");
+  });
 });
 
 describe("GET /api/admin/brands/:id", () => {

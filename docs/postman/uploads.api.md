@@ -318,10 +318,8 @@ Fix the named field(s) in your request body — the `errors` object's keys tell 
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issues #25 (core plumbing) and #26 (R2 uploads) — not the full Product Catalog API. Brand management (`#27`), category management (`#28`), category-governed specifications (`#29`), category-governed variant types (`#30`), and product core CRUD plus product variants (`#31`, `#32`) are now covered in [`brands.api.md`](./brands.api.md), [`categories.api.md`](./categories.api.md), [`categorySpecifications.api.md`](./categorySpecifications.api.md), [`categoryVariants.api.md`](./categoryVariants.api.md), and [`products.api.md`](./products.api.md) respectively. Not yet implemented, each its own future issue:
+This document is a snapshot of Issues #25 (core plumbing) and #26 (R2 uploads) — not the full Product Catalog API. Brand management (`#27`), category management (`#28`), category-governed specifications (`#29`), category-governed variant types (`#30`), product core CRUD plus product variants (`#31`, `#32`), status update APIs (`#33`), and admin search (`#34`) are now covered in [`brands.api.md`](./brands.api.md), [`categories.api.md`](./categories.api.md), [`categorySpecifications.api.md`](./categorySpecifications.api.md), [`categoryVariants.api.md`](./categoryVariants.api.md), and [`products.api.md`](./products.api.md) respectively. Not yet implemented, each its own future issue:
 
-- Status update APIs (`#33`)
-- Admin search (`#34`)
 - Buyer browsing/search/inventory visibility (`#35`)
 - Buyer filtering, sorting, and card content (`#36`)
 

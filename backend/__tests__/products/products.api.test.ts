@@ -373,6 +373,43 @@ describe("GET /api/admin/products", () => {
       { page: 1, limit: 20 },
     );
   });
+
+  it("passes the search term through to the repository", async () => {
+    vi.mocked(productsRepository.listPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    await request(app)
+      .get("/api/admin/products?search=SKU-1")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(productsRepository.listPaginated).toHaveBeenCalledWith(
+      { lowStock: false, search: "SKU-1", status: undefined },
+      { field: "createdAt", order: -1 },
+      { page: 1, limit: 20 },
+    );
+  });
+
+  it("composes search with a status filter without narrowing either incorrectly", async () => {
+    vi.mocked(productsRepository.listPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    await request(app)
+      .get("/api/admin/products?search=phone&status=published")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(productsRepository.listPaginated).toHaveBeenCalledWith(
+      { lowStock: false, search: "phone", status: "published" },
+      { field: "createdAt", order: -1 },
+      { page: 1, limit: 20 },
+    );
+  });
+
+  it("rejects an unrecognized status filter value", async () => {
+    const res = await request(app)
+      .get("/api/admin/products?status=deleted")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
 });
 
 describe("DELETE /api/admin/products/:id", () => {
