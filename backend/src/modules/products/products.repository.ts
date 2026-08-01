@@ -63,23 +63,90 @@ export async function findPublishedBySlug(slug: string): Promise<PublicProductDo
     .lean();
 }
 
-export type PublicProductFilter = { categoryIds?: Types.ObjectId[] };
+// #36 (FR-CAT-068–076): the buyer listing's full filter surface. categoryIds
+// is #35's original field; everything else is new. variantAttribute/
+// specFilters are the two dimensions FR-CAT-071/072 route through Atlas
+// Search rather than a plain query (see buildSearchFilters/
+// searchPublicPaginated below) — every other field here is a plain MongoDB
+// operator, composable with each other and with either query path
+// (FR-CAT-076).
+export type VariantAttributeFilter = { name: string; value: string };
+export type SpecValueFilter = { name: string; kind: "value"; value: string | number | boolean };
+export type SpecRangeFilter = { name: string; kind: "range"; min?: number; max?: number };
+export type SpecFilter = SpecValueFilter | SpecRangeFilter;
+
+export type PublicProductFilter = {
+  categoryIds?: Types.ObjectId[];
+  brandIds?: Types.ObjectId[];
+  minPrice?: number;
+  maxPrice?: number;
+  inStockOnly?: boolean;
+  onSaleOnly?: boolean;
+  variantAttribute?: VariantAttributeFilter;
+  specFilters?: SpecFilter[];
+};
+
+export type PublicSort = "relevance" | "price_asc" | "price_desc" | "newest";
+
+// Shared by both query paths below — every filter dimension here is a plain
+// MongoDB operator. variantAttribute/specFilters never reach this function;
+// they're Atlas-only (see buildSearchFilters), since they need to match a
+// name/value pair against the *same* array element, not just "somewhere in
+// the document," and Atlas Search's embeddedDocument operator is how that's
+// expressed outside a plain $elemMatch query.
+function buildMatchStage(filter: PublicProductFilter): QueryFilter<ProductDocument> {
+  const query: QueryFilter<ProductDocument> = { status: "published" };
+  if (filter.categoryIds) query.category = { $in: filter.categoryIds };
+  if (filter.brandIds) query.brand = { $in: filter.brandIds };
+  if (filter.minPrice !== undefined || filter.maxPrice !== undefined) {
+    const range: { $gte?: number; $lte?: number } = {};
+    if (filter.minPrice !== undefined) range.$gte = filter.minPrice;
+    if (filter.maxPrice !== undefined) range.$lte = filter.maxPrice;
+    query.sellingPrice = range;
+  }
+  if (filter.onSaleOnly) query.discount = { $gt: 0 };
+  if (filter.inStockOnly) {
+    // FR-CAT-073: no variants -> in stock via the product's own stock; with
+    // variants -> in stock when any *active* variant has stock above zero.
+    query.$or = [
+      { variants: { $size: 0 }, stock: { $gt: 0 } },
+      { variants: { $elemMatch: { active: true, stock: { $gt: 0 } } } },
+    ];
+  }
+  return query;
+}
+
+// FR-CAT-075: price sorts always target sellingPrice, never mrp. "relevance"
+// only means something alongside $search's own score order (see
+// searchPublicPaginated) — the plain .find() path here has no score to sort
+// by, so it falls back to newest-first, same as the unscoped default.
+function sortSpec(sort: PublicSort): Record<string, 1 | -1> {
+  switch (sort) {
+    case "price_asc":
+      return { sellingPrice: 1 };
+    case "price_desc":
+      return { sellingPrice: -1 };
+    case "newest":
+    case "relevance":
+      return { createdAt: -1 };
+  }
+}
 
 // Plain listing — FR-CAT-054 (flat) and FR-CAT-055 (category-scoped, via
-// categoryIds) share this one function; the ?q= keyword-search case below is
-// a genuinely different query shape ($search must lead an aggregation
+// categoryIds) share this one function; the Atlas Search case below is a
+// genuinely different query shape ($search must lead an aggregation
 // pipeline, incompatible with a plain .find()), not a variant of this.
 export async function listPublicPaginated(
   filter: PublicProductFilter,
+  sort: PublicSort,
   page: ProductListPage,
 ): Promise<{ items: PublicProductDoc[]; total: number }> {
-  const query: QueryFilter<ProductDocument> = { status: "published" };
-  if (filter.categoryIds) query.category = { $in: filter.categoryIds };
+  const query = buildMatchStage(filter);
 
   const skip = (page.page - 1) * page.limit;
   const [items, total] = await Promise.all([
     Product.find(query)
-      .sort({ createdAt: -1 })
+      .sort(sortSpec(sort))
       .skip(skip)
       .limit(page.limit)
       .populate<{ brand: PopulatedRef }>("brand", "name slug")
@@ -91,45 +158,131 @@ export async function listPublicPaginated(
   return { items, total };
 }
 
-// FR-CAT-065: MongoDB Atlas Search keyword search over name/description,
-// fuzzy-matched — see backend/atlas-search/README.md for the index this
-// depends on (named "products_search", provisioned against the `products`
-// collection; a real Atlas-cluster setup step, not something this code can
-// create). $search must be the pipeline's first stage; $match narrows to
-// published (and, when scoped, to categoryIds) after scoring, and $facet
-// runs the paginated slice and the total count in one round trip.
+// FR-CAT-071/072: a variant-attribute or filterable-specification filter,
+// each expressed as a nested embeddedDocument operator so "name X and value
+// Y on the same array element" is enforced the way $elemMatch enforces it in
+// a plain query — a top-level equals on each path independently would also
+// match a product where X and Y appear on *different* elements.
+function buildSearchFilters(filter: PublicProductFilter): Record<string, unknown>[] {
+  const filters: Record<string, unknown>[] = [];
+
+  if (filter.variantAttribute) {
+    filters.push({
+      embeddedDocument: {
+        path: "variants",
+        operator: {
+          compound: {
+            filter: [
+              { equals: { path: "variants.active", value: true } },
+              {
+                embeddedDocument: {
+                  path: "variants.attributes",
+                  operator: {
+                    compound: {
+                      filter: [
+                        {
+                          equals: {
+                            path: "variants.attributes.name",
+                            value: filter.variantAttribute.name,
+                          },
+                        },
+                        {
+                          equals: {
+                            path: "variants.attributes.value",
+                            value: filter.variantAttribute.value,
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+  }
+
+  for (const spec of filter.specFilters ?? []) {
+    // FR-CAT-072: enum/boolean match by exact value; number filters by
+    // range — either bound alone is valid ("at least" / "at most").
+    const valueClauses: Record<string, unknown>[] =
+      spec.kind === "value"
+        ? [{ equals: { path: "specifications.values.value", value: spec.value } }]
+        : [
+            ...(spec.min !== undefined
+              ? [{ range: { path: "specifications.values.value", gte: spec.min } }]
+              : []),
+            ...(spec.max !== undefined
+              ? [{ range: { path: "specifications.values.value", lte: spec.max } }]
+              : []),
+          ];
+
+    filters.push({
+      embeddedDocument: {
+        path: "specifications.values",
+        operator: {
+          compound: {
+            filter: [
+              { equals: { path: "specifications.values.name", value: spec.name } },
+              ...valueClauses,
+            ],
+          },
+        },
+      },
+    });
+  }
+
+  return filters;
+}
+
+// FR-CAT-065/071/072: MongoDB Atlas Search — keyword search (fuzzy, over
+// name/description) and/or variant-attribute/specification filtering, both
+// riding the same $search stage since Atlas Search requires it to lead the
+// pipeline. See backend/atlas-search/README.md for the index this depends
+// on (named "products_search"; a real Atlas-cluster provisioning step, not
+// something this code can create or verify without one — the
+// embeddedDocument filter shape here is this codebase's best-faith
+// translation of Atlas Search's documented syntax for "array of
+// subdocuments" exact/range matching, unverified against a live cluster).
+// Every other filter dimension (category/brand/price/in-stock/on-sale)
+// still narrows via a plain $match after scoring, identical to
+// listPublicPaginated's own buildMatchStage. `q` is optional — this function
+// is also the query path for a variant-attribute/spec filter with no
+// keyword search at all, since Atlas Search's embeddedDocument filters
+// can't be expressed as a plain query.
 export async function searchPublicPaginated(
-  q: string,
+  q: string | undefined,
   filter: PublicProductFilter,
+  sort: PublicSort,
   page: ProductListPage,
 ): Promise<{ items: PublicProductDoc[]; total: number }> {
-  const matchStage: QueryFilter<ProductDocument> = { status: "published" };
-  if (filter.categoryIds) matchStage.category = { $in: filter.categoryIds };
+  const matchStage = buildMatchStage(filter);
+  const must = q ? [{ text: { query: q, path: ["name", "description"], fuzzy: {} } }] : [];
+  const searchFilters = buildSearchFilters(filter);
 
   const skip = (page.page - 1) * page.limit;
+  const itemsPipeline: Record<string, unknown>[] = [{ $skip: skip }, { $limit: page.limit }];
+  // A non-relevance sort (price/newest) always wins outright — an explicit
+  // buyer choice, never overridden by search scoring. "relevance" with no
+  // `q` has nothing to rank by (only attribute/spec filters, no keyword
+  // search), so it falls back to newest-first too, same as the plain
+  // .find() path's own default.
+  if (sort !== "relevance" || !q) {
+    itemsPipeline.unshift({ $sort: sortSpec(sort === "relevance" ? "newest" : sort) });
+  }
+
+  const pipeline = [
+    { $search: { compound: { must, filter: searchFilters } } },
+    { $match: matchStage },
+    { $facet: { items: itemsPipeline, totalCount: [{ $count: "count" }] } },
+  ];
+
   const [result] = await Product.aggregate<{
     items: ProductRecord[];
     totalCount: { count: number }[];
-  }>([
-    {
-      $search: {
-        index: "products_search",
-        text: { query: q, path: ["name", "description"], fuzzy: {} },
-      },
-    },
-    { $match: matchStage },
-    {
-      // No explicit $sort here — $search already returns documents in
-      // relevance order, and neither $match nor $skip/$limit reorders
-      // within a $facet sub-pipeline, so omitting it keeps relevance order
-      // while sidestepping Mongoose's PipelineStage type not (yet)
-      // recognizing $meta: "searchScore" as a valid sort key.
-      $facet: {
-        items: [{ $skip: skip }, { $limit: page.limit }],
-        totalCount: [{ $count: "count" }],
-      },
-    },
-  ]);
+  }>(pipeline as Parameters<typeof Product.aggregate>[0]);
 
   const items = result?.items ?? [];
   const total = result?.totalCount[0]?.count ?? 0;

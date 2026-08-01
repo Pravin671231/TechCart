@@ -38,6 +38,8 @@ vi.mock("@/modules/categories/categories.service", () => ({
 
 vi.mock("@/modules/categorySpecifications/categorySpecifications.service", () => ({
   validateProductSpecifications: vi.fn(),
+  getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
+  getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
 }));
 
 import * as productsRepository from "../products.repository";
@@ -865,6 +867,7 @@ describe("listPublicProducts", () => {
 
     expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
       {},
+      "newest",
       { page: 1, limit: 24 },
     );
     expect(productsRepository.searchPublicPaginated).not.toHaveBeenCalled();
@@ -881,6 +884,7 @@ describe("listPublicProducts", () => {
     expect(productsRepository.searchPublicPaginated).toHaveBeenCalledWith(
       "phone",
       {},
+      "relevance",
       { page: 1, limit: 24 },
     );
     expect(productsRepository.listPublicPaginated).not.toHaveBeenCalled();
@@ -951,6 +955,201 @@ describe("listPublicProducts", () => {
 
     expect(result.items[0]?.availability).toBe("in_stock");
   });
+
+  it("passes price/brand/in-stock/on-sale filters and an explicit sort through to the repository", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+    const otherBrandId = new Types.ObjectId();
+
+    await listPublicProducts({
+      page: 1,
+      limit: 24,
+      brandIds: [brandId, otherBrandId],
+      minPrice: 1000,
+      maxPrice: 5000,
+      inStockOnly: true,
+      onSaleOnly: true,
+      sort: "price_desc",
+    });
+
+    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
+      {
+        brandIds: [brandId, otherBrandId],
+        minPrice: 1000,
+        maxPrice: 5000,
+        inStockOnly: true,
+        onSaleOnly: true,
+      },
+      "price_desc",
+      { page: 1, limit: 24 },
+    );
+  });
+
+  it("resolves categorySlug (FR-CAT-070's flat-listing category filter) the same way the nested route does", async () => {
+    const subcategoryId = new Types.ObjectId();
+    vi.mocked(categoriesService.getActiveCategoryBySlug).mockResolvedValue(categoryStub);
+    vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([subcategoryId]);
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    await listPublicProducts({ page: 1, limit: 24, categorySlug: "electronics" });
+
+    expect(categoriesService.getActiveCategoryBySlug).toHaveBeenCalledWith("electronics");
+    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
+      { categoryIds: [categoryId, subcategoryId] },
+      "newest",
+      { page: 1, limit: 24 },
+    );
+  });
+
+  it("routes a variant-attribute filter through Atlas Search even with no q", async () => {
+    vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    await listPublicProducts({
+      page: 1,
+      limit: 24,
+      variantAttribute: { name: "Color", value: "Red" },
+    });
+
+    expect(productsRepository.searchPublicPaginated).toHaveBeenCalledWith(
+      undefined,
+      { variantAttribute: { name: "Color", value: "Red" } },
+      "newest",
+      { page: 1, limit: 24 },
+    );
+    expect(productsRepository.listPublicPaginated).not.toHaveBeenCalled();
+  });
+
+  it("routes a specification filter through Atlas Search even with no q, once validated against the category", async () => {
+    vi.mocked(categoriesService.getActiveCategoryBySlug).mockResolvedValue(categoryStub);
+    vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([]);
+    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
+      new Map([["RAM", { name: "RAM", type: "enum", options: ["8GB"], required: false, filterable: true }]]),
+    );
+    vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    await listPublicProducts({
+      page: 1,
+      limit: 24,
+      categorySlug: "electronics",
+      specFilters: [{ name: "RAM", kind: "value", value: "8GB" }],
+    });
+
+    expect(productsRepository.searchPublicPaginated).toHaveBeenCalledWith(
+      undefined,
+      {
+        categoryIds: [categoryId],
+        specFilters: [{ name: "RAM", kind: "value", value: "8GB" }],
+      },
+      "newest",
+      { page: 1, limit: 24 },
+    );
+  });
+
+  it("rejects a specification filter on a field that isn't filterable for the resolved category", async () => {
+    vi.mocked(categoriesService.getActiveCategoryBySlug).mockResolvedValue(categoryStub);
+    vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([]);
+    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(new Map());
+
+    await expect(
+      listPublicProducts({
+        page: 1,
+        limit: 24,
+        categorySlug: "electronics",
+        specFilters: [{ name: "NotFilterable", kind: "value", value: "x" }],
+      }),
+    ).rejects.toMatchObject({ statusCode: 400, code: "INVALID_SPECIFICATION_FILTER" });
+    expect(productsRepository.searchPublicPaginated).not.toHaveBeenCalled();
+  });
+
+  it("rejects a range filter submitted against a non-number filterable field", async () => {
+    vi.mocked(categoriesService.getActiveCategoryBySlug).mockResolvedValue(categoryStub);
+    vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([]);
+    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
+      new Map([["RAM", { name: "RAM", type: "enum", options: ["8GB"], required: false, filterable: true }]]),
+    );
+
+    await expect(
+      listPublicProducts({
+        page: 1,
+        limit: 24,
+        categorySlug: "electronics",
+        specFilters: [{ name: "RAM", kind: "range", min: 1 }],
+      }),
+    ).rejects.toMatchObject({ statusCode: 400, code: "INVALID_SPECIFICATION_FILTER" });
+  });
+
+  it("does not validate spec filters against any schema on an unscoped (no category) listing", async () => {
+    vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    await listPublicProducts({
+      page: 1,
+      limit: 24,
+      specFilters: [{ name: "Anything", kind: "value", value: "x" }],
+    });
+
+    expect(categorySpecificationsService.getFilterableFieldsByCategory).not.toHaveBeenCalled();
+    expect(productsRepository.searchPublicPaginated).toHaveBeenCalledWith(
+      undefined,
+      { specFilters: [{ name: "Anything", kind: "value", value: "x" }] },
+      "newest",
+      { page: 1, limit: 24 },
+    );
+  });
+
+  it("computes cardSpecifications from the product's own category's filterable fields", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
+      items: [
+        {
+          ...publicProductStub,
+          specifications: [
+            { groupName: "Display", values: [{ name: "Screen Size", value: 6.1 }] },
+          ],
+        },
+      ],
+      total: 1,
+    });
+    vi.mocked(categorySpecificationsService.getCardFieldsByCategoryIds).mockResolvedValue(
+      new Map([[categoryId.toString(), [{ name: "Screen Size", unit: "inch" }]]]),
+    );
+
+    const result = await listPublicProducts({ page: 1, limit: 24 });
+
+    expect(result.items[0]?.cardSpecifications).toEqual([
+      { name: "Screen Size", value: 6.1, unit: "inch" },
+    ]);
+    expect(categorySpecificationsService.getCardFieldsByCategoryIds).toHaveBeenCalledWith([
+      categoryId,
+    ]);
+  });
+
+  it("skips a card field the product has no stored value for, rather than padding with null", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
+      items: [{ ...publicProductStub, specifications: [] }],
+      total: 1,
+    });
+    vi.mocked(categorySpecificationsService.getCardFieldsByCategoryIds).mockResolvedValue(
+      new Map([[categoryId.toString(), [{ name: "Screen Size", unit: "inch" }]]]),
+    );
+
+    const result = await listPublicProducts({ page: 1, limit: 24 });
+
+    expect(result.items[0]?.cardSpecifications).toEqual([]);
+  });
+
+  it("defaults unit to null when the filterable field has none", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
+      items: [
+        { ...publicProductStub, specifications: [{ groupName: "G", values: [{ name: "RAM", value: "8GB" }] }] },
+      ],
+      total: 1,
+    });
+    vi.mocked(categorySpecificationsService.getCardFieldsByCategoryIds).mockResolvedValue(
+      new Map([[categoryId.toString(), [{ name: "RAM" }]]]),
+    );
+
+    const result = await listPublicProducts({ page: 1, limit: 24 });
+
+    expect(result.items[0]?.cardSpecifications).toEqual([{ name: "RAM", value: "8GB", unit: null }]);
+  });
 });
 
 describe("listPublicProductsByCategorySlug", () => {
@@ -965,6 +1164,7 @@ describe("listPublicProductsByCategorySlug", () => {
     expect(categoriesService.getActiveCategoryBySlug).toHaveBeenCalledWith("electronics");
     expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
       { categoryIds: [categoryId, subcategoryId] },
+      "newest",
       { page: 1, limit: 24 },
     );
   });
@@ -978,6 +1178,34 @@ describe("listPublicProductsByCategorySlug", () => {
       listPublicProductsByCategorySlug("missing", { page: 1, limit: 24 }),
     ).rejects.toMatchObject({ statusCode: 404, code: "CATEGORY_NOT_FOUND" });
     expect(productsRepository.listPublicPaginated).not.toHaveBeenCalled();
+  });
+
+  it("composes brand/price/in-stock/on-sale/sort with the category scope, same as the flat listing", async () => {
+    vi.mocked(categoriesService.getActiveCategoryBySlug).mockResolvedValue(categoryStub);
+    vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([]);
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    await listPublicProductsByCategorySlug("electronics", {
+      page: 1,
+      limit: 24,
+      brandIds: [brandId],
+      minPrice: 1000,
+      inStockOnly: true,
+      onSaleOnly: true,
+      sort: "price_asc",
+    });
+
+    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
+      {
+        categoryIds: [categoryId],
+        brandIds: [brandId],
+        minPrice: 1000,
+        inStockOnly: true,
+        onSaleOnly: true,
+      },
+      "price_asc",
+      { page: 1, limit: 24 },
+    );
   });
 });
 

@@ -5,6 +5,7 @@ import { countBySpecificationField } from "@/modules/products/products.repositor
 import type { SpecificationField, SpecificationGroup } from "./categorySpecifications.model";
 import {
   findByCategory,
+  findByCategoryIds,
   replaceGroups,
   deleteByCategory,
 } from "./categorySpecifications.repository";
@@ -334,4 +335,58 @@ export async function validateProductSpecifications(
   if (unknown.length > 0) parts.push(`unknown field(s): ${unknown.join(", ")}`);
   if (invalid.length > 0) parts.push(`invalid value for field(s): ${invalid.join(", ")}`);
   throw specValidationFailed(parts);
+}
+
+export type CardSpecificationField = { name: string; unit?: string };
+
+// FR-CAT-092: the first four *filterable* fields per category, in schema
+// declaration order — computed in bulk for a whole listing page (#36's
+// products.service.ts is the one consumer). Matched against a product's own
+// specifications by name only (not groupName + name) when building the
+// actual card values, same simplification getFilterableFieldsByCategory
+// below documents — declaration order is preserved by iterating groups then
+// fields in stored array order, exactly as they'd render in the admin editor.
+export async function getCardFieldsByCategoryIds(
+  categoryIds: Types.ObjectId[],
+): Promise<Map<string, CardSpecificationField[]>> {
+  const groupsByCategory = await findByCategoryIds(categoryIds);
+  const result = new Map<string, CardSpecificationField[]>();
+
+  for (const [categoryId, groups] of groupsByCategory) {
+    const fields: CardSpecificationField[] = [];
+    for (const group of groups) {
+      for (const field of group.specifications) {
+        if (!field.filterable) continue;
+        const cardField: CardSpecificationField = { name: field.name };
+        if (field.unit !== undefined) cardField.unit = field.unit;
+        fields.push(cardField);
+      }
+    }
+    result.set(categoryId, fields.slice(0, 4));
+  }
+
+  return result;
+}
+
+// FR-CAT-072/035: which specification filters a buyer is allowed to submit
+// against a single category's schema, keyed by field name — used to reject
+// a filter on a field that either doesn't exist or isn't filterable
+// (FR-CAT-035's "text fields are never filterable" falls out naturally,
+// since only filterable:true fields are included). Matched by name alone,
+// not groupName + name, the same simplification the card-field lookup above
+// makes — the buyer-facing filter rail has no reason to expose group
+// structure, and categorySpecifications' own duplicate-name guard only
+// applies within a single group, not across a whole category, so this is a
+// deliberate (rare-collision-accepting) simplification, not an oversight.
+export async function getFilterableFieldsByCategory(
+  categoryId: Types.ObjectId,
+): Promise<Map<string, SpecificationField>> {
+  const groups = await loadGroups(categoryId);
+  const result = new Map<string, SpecificationField>();
+  for (const group of groups) {
+    for (const field of group.specifications) {
+      if (field.filterable) result.set(field.name, field);
+    }
+  }
+  return result;
 }

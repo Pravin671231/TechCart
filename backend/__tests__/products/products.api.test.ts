@@ -21,10 +21,14 @@ vi.mock("@/modules/brands/brands.service", () => ({
 
 vi.mock("@/modules/categories/categories.service", () => ({
   getCategoryById: vi.fn(),
+  getActiveCategoryBySlug: vi.fn(),
+  listActiveSubcategoryIds: vi.fn(),
 }));
 
 vi.mock("@/modules/categorySpecifications/categorySpecifications.service", () => ({
   validateProductSpecifications: vi.fn(),
+  getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
+  getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
 }));
 
 // Partial mock via importOriginal — the real app boots uploads.routes.ts too
@@ -728,6 +732,7 @@ describe("GET /api/products", () => {
     expect(res.status).toBe(200);
     expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
       {},
+      "newest",
       { page: 1, limit: 48 },
     );
   });
@@ -744,9 +749,191 @@ describe("GET /api/products", () => {
     expect(productsRepository.searchPublicPaginated).toHaveBeenCalledWith(
       "phone",
       {},
+      "relevance",
       { page: 1, limit: 24 },
     );
     expect(productsRepository.listPublicPaginated).not.toHaveBeenCalled();
+  });
+
+  it("filters by price range, brand, in-stock, and on-sale, all composed together", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+    const otherBrandId = new Types.ObjectId();
+
+    const res = await request(app).get(
+      `/api/products?minPrice=1000&maxPrice=5000&brand=${brandId.toString()},${otherBrandId.toString()}&inStock=true&onSale=true&sort=price_asc`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
+      {
+        brandIds: [brandId, otherBrandId],
+        minPrice: 1000,
+        maxPrice: 5000,
+        inStockOnly: true,
+        onSaleOnly: true,
+      },
+      "price_asc",
+      { page: 1, limit: 24 },
+    );
+  });
+
+  it("resolves ?category= to the active category plus its subcategories", async () => {
+    const subcategoryId = new Types.ObjectId();
+    vi.mocked(categoriesService.getActiveCategoryBySlug).mockResolvedValue({
+      _id: categoryId,
+      name: "Electronics",
+      slug: "electronics",
+      parentCategory: null,
+      sortOrder: 0,
+      status: true,
+      createdBy: null,
+      updatedBy: null,
+    });
+    vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([subcategoryId]);
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    const res = await request(app).get("/api/products?category=electronics");
+
+    expect(res.status).toBe(200);
+    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
+      { categoryIds: [categoryId, subcategoryId] },
+      "newest",
+      { page: 1, limit: 24 },
+    );
+  });
+
+  it("routes a variant-attribute filter through Atlas Search even with no q", async () => {
+    vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    const res = await request(app).get("/api/products?attributeName=Color&attributeValue=Red");
+
+    expect(res.status).toBe(200);
+    expect(productsRepository.searchPublicPaginated).toHaveBeenCalledWith(
+      undefined,
+      { variantAttribute: { name: "Color", value: "Red" } },
+      "newest",
+      { page: 1, limit: 24 },
+    );
+    expect(productsRepository.listPublicPaginated).not.toHaveBeenCalled();
+  });
+
+  it("rejects attributeName submitted without attributeValue", async () => {
+    const res = await request(app).get("/api/products?attributeName=Color");
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rejects an invalid brand id", async () => {
+    const res = await request(app).get("/api/products?brand=not-an-id");
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("parses a bracket-notation spec value filter and routes it through Atlas Search", async () => {
+    vi.mocked(categoriesService.getActiveCategoryBySlug).mockResolvedValue({
+      _id: categoryId,
+      name: "Electronics",
+      slug: "electronics",
+      parentCategory: null,
+      sortOrder: 0,
+      status: true,
+      createdBy: null,
+      updatedBy: null,
+    });
+    vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([]);
+    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
+      new Map([["RAM", { name: "RAM", type: "enum", options: ["8GB"], required: false, filterable: true }]]),
+    );
+    vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    const res = await request(app).get("/api/products?category=electronics&spec[RAM]=8GB");
+
+    expect(res.status).toBe(200);
+    expect(productsRepository.searchPublicPaginated).toHaveBeenCalledWith(
+      undefined,
+      { categoryIds: [categoryId], specFilters: [{ name: "RAM", kind: "value", value: "8GB" }] },
+      "newest",
+      { page: 1, limit: 24 },
+    );
+  });
+
+  it("parses a bracket-notation spec range filter", async () => {
+    vi.mocked(categoriesService.getActiveCategoryBySlug).mockResolvedValue({
+      _id: categoryId,
+      name: "Electronics",
+      slug: "electronics",
+      parentCategory: null,
+      sortOrder: 0,
+      status: true,
+      createdBy: null,
+      updatedBy: null,
+    });
+    vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([]);
+    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
+      new Map([["ScreenSize", { name: "ScreenSize", type: "number", required: false, filterable: true }]]),
+    );
+    vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    const res = await request(app).get(
+      "/api/products?category=electronics&spec[ScreenSize][min]=6&spec[ScreenSize][max]=6.5",
+    );
+
+    expect(res.status).toBe(200);
+    expect(productsRepository.searchPublicPaginated).toHaveBeenCalledWith(
+      undefined,
+      {
+        categoryIds: [categoryId],
+        specFilters: [{ name: "ScreenSize", kind: "range", min: 6, max: 6.5 }],
+      },
+      "newest",
+      { page: 1, limit: 24 },
+    );
+  });
+
+  it("returns INVALID_SPECIFICATION_FILTER for a spec filter on a non-filterable field", async () => {
+    vi.mocked(categoriesService.getActiveCategoryBySlug).mockResolvedValue({
+      _id: categoryId,
+      name: "Electronics",
+      slug: "electronics",
+      parentCategory: null,
+      sortOrder: 0,
+      status: true,
+      createdBy: null,
+      updatedBy: null,
+    });
+    vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([]);
+    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(new Map());
+
+    const res = await request(app).get("/api/products?category=electronics&spec[Resolution]=1080p");
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("INVALID_SPECIFICATION_FILTER");
+  });
+
+  it("includes cardSpecifications on each list item", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
+      items: [
+        {
+          ...publicProductStub,
+          specifications: [
+            { groupName: "Display", values: [{ name: "Screen Size", value: 6.1 }] },
+          ],
+        },
+      ],
+      total: 1,
+    });
+    vi.mocked(categorySpecificationsService.getCardFieldsByCategoryIds).mockResolvedValue(
+      new Map([[categoryId.toString(), [{ name: "Screen Size", unit: "inch" }]]]),
+    );
+
+    const res = await request(app).get("/api/products");
+
+    expect(res.status).toBe(200);
+    expect(res.body.data[0].cardSpecifications).toEqual([
+      { name: "Screen Size", value: 6.1, unit: "inch" },
+    ]);
   });
 });
 

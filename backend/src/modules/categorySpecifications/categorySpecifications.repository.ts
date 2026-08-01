@@ -13,6 +13,17 @@ export async function findByCategory(
   return CategorySpecifications.findOne({ category: categoryId }).lean();
 }
 
+// Bulk lookup for the buyer listing's card-content computation (#36,
+// FR-CAT-092) — one query for a whole result page instead of N. A category
+// with no specification document simply has no entry in the returned map;
+// callers should default to an empty field list for any id missing from it.
+export async function findByCategoryIds(
+  categoryIds: Types.ObjectId[],
+): Promise<Map<string, SpecificationGroup[]>> {
+  const docs = await CategorySpecifications.find({ category: { $in: categoryIds } }).lean();
+  return new Map(docs.map((doc) => [doc.category.toString(), doc.specificationGroups]));
+}
+
 // Full-replace upsert — the one write path both PUT and PATCH persist
 // through (see categorySpecifications.service.ts for why PATCH doesn't use
 // MongoDB's positional array update operators).
