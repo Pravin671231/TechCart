@@ -73,9 +73,11 @@ region satisfies. They are **not** visual design, not a design system, and not a
 library — no brand colours, type scale, or spacing system is implied by them. Where the SRS
 specifies UI _behaviour_, these mocks show _where that behaviour lives on the page_.
 
-The one exception is `admin-app`, whose layout and visual design decisions (no header, sidebar
+The exceptions are `admin-app`, whose layout and visual design decisions (no header, sidebar
 carrying a bottom profile block, color palette) are recorded in
-[`admin-app/docs/design.md`](../admin-app/docs/design.md).
+[`admin-app/docs/design.md`](../admin-app/docs/design.md), and `buyer-app`, whose color palette and
+Flipkart-style card/badge patterns are recorded in
+[`buyer-app/docs/design.md`](../buyer-app/docs/design.md).
 
 Screen-level design was undecided when the SRS was first drafted; these pages are what
 [SRS v0.2 §10](../docs/srs/features/0.2-product-catalog.md#10-open-questions) now records as the
