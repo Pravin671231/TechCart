@@ -12,7 +12,7 @@ vi.mock("../brands.repository", () => ({
   listActive: vi.fn(),
 }));
 
-vi.mock("@/modules/products/products.repository", () => ({
+vi.mock("@/modules/product-catalog/features/products/products.repository", () => ({
   countByBrand: vi.fn(),
   countByBrandIds: vi.fn(),
 }));
@@ -23,7 +23,7 @@ vi.mock("@/modules/uploads/uploads.service", () => ({
 }));
 
 import * as brandsRepository from "../brands.repository";
-import * as productsRepository from "@/modules/products/products.repository";
+import * as productsRepository from "@/modules/product-catalog/features/products/products.repository";
 import * as uploadsService from "@/modules/uploads/uploads.service";
 import {
   createBrand,

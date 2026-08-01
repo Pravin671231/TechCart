@@ -2,7 +2,7 @@ import type { Types } from "mongoose";
 import { AppError } from "@/utils/AppError";
 import { generateUniqueSlug } from "@/utils/slug";
 import { consumeImageKeys, buildPublicUrl } from "@/modules/uploads/uploads.service";
-import { countByBrand, countByBrandIds } from "@/modules/products/products.repository";
+import { countByBrand, countByBrandIds } from "@/modules/product-catalog/features/products/products.repository";
 import type { BrandLogo } from "./brands.model";
 import {
   create,

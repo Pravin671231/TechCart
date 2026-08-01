@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { CategoryRecord } from "@/modules/categories/categories.repository";
+import type { CategoryRecord } from "@/modules/product-catalog/features/categories/categories.repository";
 import type { CategorySpecificationsRecord } from "../categorySpecifications.repository";
 import type { SpecificationGroup } from "../categorySpecifications.model";
 
@@ -11,17 +11,17 @@ vi.mock("../categorySpecifications.repository", () => ({
   deleteByCategory: vi.fn(),
 }));
 
-vi.mock("@/modules/categories/categories.repository", () => ({
+vi.mock("@/modules/product-catalog/features/categories/categories.repository", () => ({
   findById: vi.fn(),
 }));
 
-vi.mock("@/modules/products/products.repository", () => ({
+vi.mock("@/modules/product-catalog/features/products/products.repository", () => ({
   countBySpecificationField: vi.fn(),
 }));
 
 import * as categorySpecificationsRepository from "../categorySpecifications.repository";
-import * as categoriesRepository from "@/modules/categories/categories.repository";
-import * as productsRepository from "@/modules/products/products.repository";
+import * as categoriesRepository from "@/modules/product-catalog/features/categories/categories.repository";
+import * as productsRepository from "@/modules/product-catalog/features/products/products.repository";
 import {
   getSpecifications,
   defineSpecifications,

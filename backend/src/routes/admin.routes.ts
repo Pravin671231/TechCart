@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { adminAuth } from "@/middleware/adminAuth";
 import { uploadsModule } from "@/modules/uploads/uploads.module";
-import { brandsAdminModule } from "@/modules/brands/brands.module";
-import { categoriesAdminModule } from "@/modules/categories/categories.module";
-import { categorySpecificationsAdminModule } from "@/modules/categorySpecifications/categorySpecifications.module";
-import { categoryVariantsAdminModule } from "@/modules/categoryVariants/categoryVariants.module";
-import { productsAdminModule } from "@/modules/products/products.module";
+import { brandsAdminModule } from "@/modules/product-catalog/features/brands/brands.module";
+import { categoriesAdminModule } from "@/modules/product-catalog/features/categories/categories.module";
+import { categorySpecificationsAdminModule } from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.module";
+import { categoryVariantsAdminModule } from "@/modules/product-catalog/features/categoryVariants/categoryVariants.module";
+import { productsAdminModule } from "@/modules/product-catalog/features/products/products.module";
 
 const adminRouter = Router();
 adminRouter.use(adminAuth);

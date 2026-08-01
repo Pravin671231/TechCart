@@ -1,7 +1,7 @@
 import type { Types } from "mongoose";
 import { AppError } from "@/utils/AppError";
-import { findById as findCategoryById } from "@/modules/categories/categories.repository";
-import { countBySpecificationField } from "@/modules/products/products.repository";
+import { findById as findCategoryById } from "@/modules/product-catalog/features/categories/categories.repository";
+import { countBySpecificationField } from "@/modules/product-catalog/features/products/products.repository";
 import type { SpecificationField, SpecificationGroup } from "./categorySpecifications.model";
 import {
   findByCategory,

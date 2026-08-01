@@ -3,9 +3,9 @@ import { AppError } from "@/utils/AppError";
 import { generateUniqueSlug } from "@/utils/slug";
 import { truncate } from "@/utils/text";
 import { consumeImageKeys, buildPublicUrl } from "@/modules/uploads/uploads.service";
-import { countByCategory, countByCategoryIds } from "@/modules/products/products.repository";
-import { deleteForCategory as deleteSpecificationsForCategory } from "@/modules/categorySpecifications/categorySpecifications.service";
-import { deleteForCategory as deleteVariantsForCategory } from "@/modules/categoryVariants/categoryVariants.service";
+import { countByCategory, countByCategoryIds } from "@/modules/product-catalog/features/products/products.repository";
+import { deleteForCategory as deleteSpecificationsForCategory } from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service";
+import { deleteForCategory as deleteVariantsForCategory } from "@/modules/product-catalog/features/categoryVariants/categoryVariants.service";
 import type { CategoryImage } from "./categories.model";
 import {
   create,

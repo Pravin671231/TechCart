@@ -11,18 +11,18 @@ import {
   normalizeImages,
   buildPublicUrl,
 } from "@/modules/uploads/uploads.service";
-import { getBrandById } from "@/modules/brands/brands.service";
+import { getBrandById } from "@/modules/product-catalog/features/brands/brands.service";
 import {
   getCategoryById,
   getActiveCategoryBySlug,
   listActiveSubcategoryIds,
-} from "@/modules/categories/categories.service";
+} from "@/modules/product-catalog/features/categories/categories.service";
 import {
   validateProductSpecifications,
   getCardFieldsByCategoryIds,
   getFilterableFieldsByCategory,
   type CardSpecificationField,
-} from "@/modules/categorySpecifications/categorySpecifications.service";
+} from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service";
 import type {
   ProductImage,
   ProductSpecificationGroup,

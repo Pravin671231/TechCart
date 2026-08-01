@@ -15,7 +15,7 @@ vi.mock("../categories.repository", () => ({
   countByParent: vi.fn(),
 }));
 
-vi.mock("@/modules/products/products.repository", () => ({
+vi.mock("@/modules/product-catalog/features/products/products.repository", () => ({
   countByCategory: vi.fn(),
   countByCategoryIds: vi.fn(),
 }));
@@ -25,19 +25,19 @@ vi.mock("@/modules/uploads/uploads.service", () => ({
   buildPublicUrl: vi.fn((objectKey: string) => `https://cdn.test/${objectKey}`),
 }));
 
-vi.mock("@/modules/categorySpecifications/categorySpecifications.service", () => ({
+vi.mock("@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service", () => ({
   deleteForCategory: vi.fn(),
 }));
 
-vi.mock("@/modules/categoryVariants/categoryVariants.service", () => ({
+vi.mock("@/modules/product-catalog/features/categoryVariants/categoryVariants.service", () => ({
   deleteForCategory: vi.fn(),
 }));
 
 import * as categoriesRepository from "../categories.repository";
-import * as productsRepository from "@/modules/products/products.repository";
+import * as productsRepository from "@/modules/product-catalog/features/products/products.repository";
 import * as uploadsService from "@/modules/uploads/uploads.service";
-import * as categorySpecificationsService from "@/modules/categorySpecifications/categorySpecifications.service";
-import * as categoryVariantsService from "@/modules/categoryVariants/categoryVariants.service";
+import * as categorySpecificationsService from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service";
+import * as categoryVariantsService from "@/modules/product-catalog/features/categoryVariants/categoryVariants.service";
 import {
   createCategory,
   updateCategory,

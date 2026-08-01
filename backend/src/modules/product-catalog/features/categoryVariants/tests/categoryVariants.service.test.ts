@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { CategoryRecord } from "@/modules/categories/categories.repository";
+import type { CategoryRecord } from "@/modules/product-catalog/features/categories/categories.repository";
 import type { CategoryVariantsRecord } from "../categoryVariants.repository";
 import type { VariantAxis } from "../categoryVariants.model";
 
@@ -10,12 +10,12 @@ vi.mock("../categoryVariants.repository", () => ({
   deleteByCategory: vi.fn(),
 }));
 
-vi.mock("@/modules/categories/categories.repository", () => ({
+vi.mock("@/modules/product-catalog/features/categories/categories.repository", () => ({
   findById: vi.fn(),
 }));
 
 import * as categoryVariantsRepository from "../categoryVariants.repository";
-import * as categoriesRepository from "@/modules/categories/categories.repository";
+import * as categoriesRepository from "@/modules/product-catalog/features/categories/categories.repository";
 import {
   getVariantAxes,
   defineVariantAxes,

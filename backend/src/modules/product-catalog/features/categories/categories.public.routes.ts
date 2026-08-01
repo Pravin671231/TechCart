@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { listProductsByCategorySlugHandler } from "@/modules/products/products.controller";
+import { listProductsByCategorySlugHandler } from "@/modules/product-catalog/features/products/products.controller";
 import { listPublicCategoriesHandler, searchPublicCategoriesHandler } from "./categories.controller";
 
 const router = Router();

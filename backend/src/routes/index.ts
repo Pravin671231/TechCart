@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { healthModule } from "@/modules/health/health.module";
-import { brandsPublicModule } from "@/modules/brands/brands.module";
-import { categoriesPublicModule } from "@/modules/categories/categories.module";
-import { productsPublicModule } from "@/modules/products/products.module";
+import { brandsPublicModule } from "@/modules/product-catalog/features/brands/brands.module";
+import { categoriesPublicModule } from "@/modules/product-catalog/features/categories/categories.module";
+import { productsPublicModule } from "@/modules/product-catalog/features/products/products.module";
 import adminRouter from "./admin.routes";
 
 const router = Router();

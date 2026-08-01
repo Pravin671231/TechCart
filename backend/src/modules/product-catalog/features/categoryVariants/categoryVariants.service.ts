@@ -1,6 +1,6 @@
 import type { Types } from "mongoose";
 import { AppError } from "@/utils/AppError";
-import { findById as findCategoryById } from "@/modules/categories/categories.repository";
+import { findById as findCategoryById } from "@/modules/product-catalog/features/categories/categories.repository";
 import type { VariantAxis } from "./categoryVariants.model";
 import { findByCategory, replaceAxes, deleteByCategory } from "./categoryVariants.repository";
 

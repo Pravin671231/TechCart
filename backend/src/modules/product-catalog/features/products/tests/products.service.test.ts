@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { BrandRecord } from "@/modules/brands/brands.repository";
-import type { CategoryRecord } from "@/modules/categories/categories.repository";
+import type { BrandRecord } from "@/modules/product-catalog/features/brands/brands.repository";
+import type { CategoryRecord } from "@/modules/product-catalog/features/categories/categories.repository";
 import type { ProductRecord } from "../products.repository";
 
 vi.mock("../products.repository", () => ({
@@ -26,17 +26,17 @@ vi.mock("@/modules/uploads/uploads.service", () => ({
   buildPublicUrl: vi.fn((objectKey: string) => `https://cdn.test/${objectKey}`),
 }));
 
-vi.mock("@/modules/brands/brands.service", () => ({
+vi.mock("@/modules/product-catalog/features/brands/brands.service", () => ({
   getBrandById: vi.fn(),
 }));
 
-vi.mock("@/modules/categories/categories.service", () => ({
+vi.mock("@/modules/product-catalog/features/categories/categories.service", () => ({
   getCategoryById: vi.fn(),
   getActiveCategoryBySlug: vi.fn(),
   listActiveSubcategoryIds: vi.fn(),
 }));
 
-vi.mock("@/modules/categorySpecifications/categorySpecifications.service", () => ({
+vi.mock("@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service", () => ({
   validateProductSpecifications: vi.fn(),
   getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
   getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
@@ -44,9 +44,9 @@ vi.mock("@/modules/categorySpecifications/categorySpecifications.service", () =>
 
 import * as productsRepository from "../products.repository";
 import * as uploadsService from "@/modules/uploads/uploads.service";
-import * as brandsService from "@/modules/brands/brands.service";
-import * as categoriesService from "@/modules/categories/categories.service";
-import * as categorySpecificationsService from "@/modules/categorySpecifications/categorySpecifications.service";
+import * as brandsService from "@/modules/product-catalog/features/brands/brands.service";
+import * as categoriesService from "@/modules/product-catalog/features/categories/categories.service";
+import * as categorySpecificationsService from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service";
 import {
   createProduct,
   updateProduct,
