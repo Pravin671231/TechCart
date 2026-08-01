@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the Category management endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #28 (M2.4 — Category management, `FR-CAT-014`–`022`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-046`, `048` for this entity), and Issue #34 (M2.10 — Admin search, `FR-CAT-051` for this entity): the five admin CRUD endpoints under `/api/admin/categories`, the status-toggle endpoint, `search` on the admin list, and the public `GET /api/categories`. See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup (`base_url`, `admin_api_key` variables); see [`brands.api.md`](./brands.api.md) for the sibling entity this module closely mirrors. This doc assumes collection setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #28 (M2.4 — Category management, `FR-CAT-014`–`022`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-046`, `048` for this entity), Issue #34 (M2.10 — Admin search, `FR-CAT-051` for this entity), and Issue #35 (M2.11 — Buyer browsing, `FR-CAT-055`, `066` for this entity): the five admin CRUD endpoints under `/api/admin/categories`, the status-toggle endpoint, `search` on the admin list, the public `GET /api/categories`, `GET /api/categories/search`, and `GET /api/categories/:slug/products` (this last one returns *product* data — see [`products.api.md`](./products.api.md), the module its controller actually lives in). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup (`base_url`, `admin_api_key` variables); see [`brands.api.md`](./brands.api.md) for the sibling entity this module closely mirrors. This doc assumes collection setup is already done and reuses the same collection.
 
 ---
 
@@ -486,32 +486,100 @@ No headers, no body.
 
 ---
 
+## `GET /api/categories/search`
+
+Searches active categories by name — case-insensitive, partial match (`FR-CAT-066`). A plain MongoDB regex query, not Atlas Search — `categories` is too small a collection to warrant a second search index (unlike products' `?q=`, [`products.api.md`](./products.api.md)).
+
+| Field  | Value                                       |
+| ------ | ------------------------------------------- |
+| Method | `GET`                                       |
+| URL    | `{{base_url}}/api/categories/search?q=elec` |
+| Name   | `Search Categories (Buyer)`                 |
+
+No headers, no body.
+
+**Query params:**
+
+| Param | Values                            | Required? |
+| ----- | --------------------------------- | --------- |
+| `q`   | free text, matched against `name` | Yes       |
+
+**Click Send. Expected response — `200 OK`:** same item shape as `GET /api/categories` above, filtered to names matching `q` — `?q=elec` matches "Electronics" regardless of case or position within the name. `q` still only searches **active** categories, same as the unfiltered list.
+
+### Error cases
+
+**Missing `q`:**
+
+```
+400 Bad Request
+```
+
+```json
+{
+  "success": false,
+  "code": "VALIDATION_ERROR",
+  "errors": { "q": "Invalid input: expected string, received undefined" }
+}
+```
+
+---
+
+## `GET /api/categories/:slug/products`
+
+Lists **published-only** products within a category, including its subcategories (`FR-CAT-055`) — the response is product data, so its controller (`listProductsByCategorySlugHandler`) actually lives in `products.controller.ts`; only this route's wiring is declared here. See [`products.api.md`](./products.api.md#get-apiproducts) for the item shape, `availability`, and pagination-clamp behavior — identical to the flat `GET /api/products` listing, just scoped to this one category (and its direct subcategories; categories are at most two levels deep, so that already covers the whole subtree).
+
+| Field  | Value                                              |
+| ------ | -------------------------------------------------- |
+| Method | `GET`                                              |
+| URL    | `{{base_url}}/api/categories/electronics/products` |
+| Name   | `List Products by Category (Buyer)`                |
+
+No headers, no body. Same `page`/`limit` query params as `GET /api/products` (default `24`, clamped at `48`) — no `q` here, keyword search is flat-listing-only.
+
+**Click Send. Expected response — `200 OK`:** identical envelope shape to `GET /api/products`, scoped to the resolved category (and its active subcategories).
+
+- **Only an *active* category's slug resolves** — a deactivated category's slug 404s here exactly like a slug that never existed, mirroring the buyer-facing `GET /api/categories` list already excluding it.
+- **Subcategory expansion is direct children only** — categories are at most two levels deep, so a parent's direct active children already cover the whole subtree; querying a subcategory's own slug scopes to just that subcategory (it has no children of its own).
+
+### Error cases
+
+**Slug doesn't resolve to an active category:**
+
+```
+404 Not Found
+```
+
+```json
+{ "success": false, "code": "CATEGORY_NOT_FOUND", "message": "Category \"missing\" was not found." }
+```
+
+---
+
 ## Error Code Reference
 
 Category-specific codes, in addition to the ones already documented in [`uploads.api.md`](./uploads.api.md#error-code-reference) (`UNAUTHORIZED`, `VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR`, `OBJECT_KEY_NOT_ISSUED`) and [`brands.api.md`](./brands.api.md#error-code-reference) (`INVALID_ID`):
 
-| Code                       | Status | Where it comes from                                                                                  | Reachable via an existing endpoint?                          |
-| --------------------------- | ------ | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| `CATEGORY_NOT_FOUND`         | 404    | `categories.service.ts` — `GET`/`PATCH`/`PATCH .../status` by an id with no matching category           | Yes                                                            |
-| `INVALID_PARENT_CATEGORY`    | 400    | `categories.service.ts`'s `validateParentCategory()` — `parentCategory` set to the category's own id   | Yes (on `PATCH` only — create can't self-reference, no id yet) |
-| `PARENT_CATEGORY_NOT_FOUND`  | 404    | same — the referenced `parentCategory` doesn't exist                                                    | Yes                                                            |
-| `PARENT_CATEGORY_TOO_DEEP`   | 400    | same — the referenced `parentCategory` already has a parent of its own                                 | Yes                                                            |
-| `CATEGORY_HAS_SUBCATEGORIES` | 400    | same — update-only: this category already has children and can't also be given a parent                | Yes                                                            |
-| `CATEGORY_IN_USE`            | 409    | `categories.service.ts`'s `deleteCategory()` — referenced by ≥1 product and/or ≥1 subcategory           | Yes — see [`products.api.md`](./products.api.md) (#31) for the product case |
+| Code                         | Status | Where it comes from                                                                                                                                                     | Reachable via an existing endpoint?                                         |
+| ---------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `CATEGORY_NOT_FOUND`         | 404    | `categories.service.ts` — `GET`/`PATCH`/`PATCH .../status` by an id with no matching category, or `GET .../:slug/products` by a slug with no matching *active* category | Yes                                                                         |
+| `INVALID_PARENT_CATEGORY`    | 400    | `categories.service.ts`'s `validateParentCategory()` — `parentCategory` set to the category's own id                                                                    | Yes (on `PATCH` only — create can't self-reference, no id yet)              |
+| `PARENT_CATEGORY_NOT_FOUND`  | 404    | same — the referenced `parentCategory` doesn't exist                                                                                                                    | Yes                                                                         |
+| `PARENT_CATEGORY_TOO_DEEP`   | 400    | same — the referenced `parentCategory` already has a parent of its own                                                                                                  | Yes                                                                         |
+| `CATEGORY_HAS_SUBCATEGORIES` | 400    | same — update-only: this category already has children and can't also be given a parent                                                                                 | Yes                                                                         |
+| `CATEGORY_IN_USE`            | 409    | `categories.service.ts`'s `deleteCategory()` — referenced by ≥1 product and/or ≥1 subcategory                                                                           | Yes — see [`products.api.md`](./products.api.md) (#31) for the product case |
 
 ---
 
 ## Understanding Validation Errors
 
-Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For categories, the fields that can appear as keys are `name`, `description`, `parentCategory`, `image.objectKey`, `image.alt`, `sortOrder`, `metaTitle`, `metaDescription`, and — on the list endpoint — `search`.
+Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For categories, the fields that can appear as keys are `name`, `description`, `parentCategory`, `image.objectKey`, `image.alt`, `sortOrder`, `metaTitle`, `metaDescription`, and — on the admin list endpoint — `search`. `GET /api/categories/search` requires `q`; `GET /api/categories/:slug/products` accepts `page`/`limit`.
 
 ---
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #28 (plus #33's status endpoint and #34's `search` param, folded into this same doc) — not the full Product Catalog API. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), category-governed variant types (`#30`) in [`categoryVariants.api.md`](./categoryVariants.api.md) — together they cover both halves of `DELETE`'s cascade clause — and product core CRUD plus product variants (`#31`, `#32`) in [`products.api.md`](./products.api.md), which also completes `DELETE`'s product half of the `CATEGORY_IN_USE` guard above. Not yet implemented, each its own future issue:
+This document is a snapshot of Issue #28 (plus #33's status endpoint, #34's `search` param, and #35's `/search`+`/:slug/products` routes, folded into this same doc) — not the full Product Catalog API. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), category-governed variant types (`#30`) in [`categoryVariants.api.md`](./categoryVariants.api.md) — together they cover both halves of `DELETE`'s cascade clause — and product core CRUD plus product variants (`#31`, `#32`) in [`products.api.md`](./products.api.md), which also completes `DELETE`'s product half of the `CATEGORY_IN_USE` guard above. Not yet implemented, each its own future issue:
 
-- Buyer browsing/search/inventory visibility (`#35`)
 - Buyer filtering, sorting, and card content (`#36`)
 
 No real authentication exists yet either (v0.3) — the `X-Admin-Key` header is explicitly a temporary placeholder, not a long-term design.

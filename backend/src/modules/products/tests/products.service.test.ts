@@ -12,6 +12,9 @@ vi.mock("../products.repository", () => ({
   updateById: vi.fn(),
   replaceVariants: vi.fn(),
   listPaginated: vi.fn(),
+  findPublishedBySlug: vi.fn(),
+  listPublicPaginated: vi.fn(),
+  searchPublicPaginated: vi.fn(),
 }));
 
 vi.mock("@/modules/uploads/uploads.service", () => ({
@@ -29,6 +32,8 @@ vi.mock("@/modules/brands/brands.service", () => ({
 
 vi.mock("@/modules/categories/categories.service", () => ({
   getCategoryById: vi.fn(),
+  getActiveCategoryBySlug: vi.fn(),
+  listActiveSubcategoryIds: vi.fn(),
 }));
 
 vi.mock("@/modules/categorySpecifications/categorySpecifications.service", () => ({
@@ -50,8 +55,12 @@ import {
   updateProductStatus,
   addVariant,
   updateVariant,
+  listPublicProducts,
+  listPublicProductsByCategorySlug,
+  getPublicProductBySlug,
 } from "../products.service";
 import type { ProductVariant } from "../products.model";
+import type { PublicProductDoc } from "../products.repository";
 
 const productId = new Types.ObjectId();
 const brandId = new Types.ObjectId();
@@ -135,6 +144,13 @@ const otherExistingVariant: ProductVariant = {
 const productWithVariants: ProductRecord = {
   ...productStub,
   variants: [existingVariant, otherExistingVariant],
+};
+
+const publicProductStub: PublicProductDoc = {
+  ...productStub,
+  status: "published",
+  brand: { _id: brandId, name: "Nova", slug: "nova" },
+  category: { _id: categoryId, name: "Electronics", slug: "electronics" },
 };
 
 const baseAddVariantInput = {
@@ -835,5 +851,249 @@ describe("updateVariant", () => {
       statusCode: 404,
       code: "PRODUCT_NOT_FOUND",
     });
+  });
+});
+
+describe("listPublicProducts", () => {
+  it("uses listPublicPaginated when q is absent", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
+      items: [publicProductStub],
+      total: 1,
+    });
+
+    await listPublicProducts({ page: 1, limit: 24 });
+
+    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
+      {},
+      { page: 1, limit: 24 },
+    );
+    expect(productsRepository.searchPublicPaginated).not.toHaveBeenCalled();
+  });
+
+  it("uses searchPublicPaginated when q is present", async () => {
+    vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({
+      items: [publicProductStub],
+      total: 1,
+    });
+
+    await listPublicProducts({ page: 1, limit: 24, q: "phone" });
+
+    expect(productsRepository.searchPublicPaginated).toHaveBeenCalledWith(
+      "phone",
+      {},
+      { page: 1, limit: 24 },
+    );
+    expect(productsRepository.listPublicPaginated).not.toHaveBeenCalled();
+  });
+
+  it("computes pagination from the repository's total", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
+      items: [],
+      total: 50,
+    });
+
+    const result = await listPublicProducts({ page: 2, limit: 24 });
+
+    expect(result.pagination).toEqual({
+      page: 2,
+      limit: 24,
+      total: 50,
+      totalPages: 3,
+      hasNextPage: true,
+    });
+  });
+
+  it("maps each item to the public shape, stripping every admin-only field", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
+      items: [publicProductStub],
+      total: 1,
+    });
+
+    const result = await listPublicProducts({ page: 1, limit: 24 });
+
+    expect(result.items[0]).toMatchObject({
+      _id: productId,
+      name: "Phone",
+      slug: "phone",
+      brand: { _id: brandId, name: "Nova", slug: "nova" },
+      primaryImage: { url: "https://cdn.test/product-image/a.png" },
+      mrp: 50000,
+      discount: 0,
+      sellingPrice: 50000,
+      isFeatured: false,
+    });
+    for (const field of ["stock", "lowStockThreshold", "status", "createdBy", "updatedBy"]) {
+      expect(result.items[0]).not.toHaveProperty(field);
+    }
+  });
+
+  it("reports out_of_stock for a zero-stock product with no variants, and still returns it", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
+      items: [{ ...publicProductStub, stock: 0 }],
+      total: 1,
+    });
+
+    const result = await listPublicProducts({ page: 1, limit: 24 });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.availability).toBe("out_of_stock");
+  });
+
+  it("computes availability as the best state across active variants when variants exist", async () => {
+    const outOfStockVariant: ProductVariant = { ...existingVariant, stock: 0, active: true };
+    const inStockVariant: ProductVariant = { ...otherExistingVariant, stock: 10, active: true };
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
+      items: [{ ...publicProductStub, variants: [outOfStockVariant, inStockVariant] }],
+      total: 1,
+    });
+
+    const result = await listPublicProducts({ page: 1, limit: 24 });
+
+    expect(result.items[0]?.availability).toBe("in_stock");
+  });
+});
+
+describe("listPublicProductsByCategorySlug", () => {
+  it("scopes the listing to the category and its active subcategories", async () => {
+    const subcategoryId = new Types.ObjectId();
+    vi.mocked(categoriesService.getActiveCategoryBySlug).mockResolvedValue(categoryStub);
+    vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([subcategoryId]);
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    await listPublicProductsByCategorySlug("electronics", { page: 1, limit: 24 });
+
+    expect(categoriesService.getActiveCategoryBySlug).toHaveBeenCalledWith("electronics");
+    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
+      { categoryIds: [categoryId, subcategoryId] },
+      { page: 1, limit: 24 },
+    );
+  });
+
+  it("propagates CATEGORY_NOT_FOUND when the slug doesn't resolve to an active category", async () => {
+    vi.mocked(categoriesService.getActiveCategoryBySlug).mockRejectedValueOnce(
+      Object.assign(new Error("not found"), { statusCode: 404, code: "CATEGORY_NOT_FOUND" }),
+    );
+
+    await expect(
+      listPublicProductsByCategorySlug("missing", { page: 1, limit: 24 }),
+    ).rejects.toMatchObject({ statusCode: 404, code: "CATEGORY_NOT_FOUND" });
+    expect(productsRepository.listPublicPaginated).not.toHaveBeenCalled();
+  });
+});
+
+describe("getPublicProductBySlug", () => {
+  it("throws PRODUCT_NOT_FOUND when the slug doesn't match a published product", async () => {
+    vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue(null);
+
+    await expect(getPublicProductBySlug("missing")).rejects.toMatchObject({
+      statusCode: 404,
+      code: "PRODUCT_NOT_FOUND",
+    });
+  });
+
+  it("returns the detail shape, stripping every admin-only field", async () => {
+    vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue(publicProductStub);
+
+    const result = await getPublicProductBySlug("phone");
+
+    expect(result).toMatchObject({
+      _id: productId,
+      name: "Phone",
+      slug: "phone",
+      sku: "SKU-1",
+      description: "A phone",
+      brand: { _id: brandId, name: "Nova", slug: "nova" },
+      category: { _id: categoryId, name: "Electronics", slug: "electronics" },
+      hasVariants: false,
+      variants: [],
+    });
+    for (const field of ["stock", "lowStockThreshold", "status", "createdBy", "updatedBy"]) {
+      expect(result).not.toHaveProperty(field);
+    }
+  });
+
+  it("falls back to the product's own fields and stock-derived availability when there is no active variant", async () => {
+    vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue({
+      ...publicProductStub,
+      stock: 3,
+      lowStockThreshold: 5,
+    });
+
+    const result = await getPublicProductBySlug("phone");
+
+    expect(result.mrp).toBe(publicProductStub.mrp);
+    expect(result.sellingPrice).toBe(publicProductStub.sellingPrice);
+    expect(result.availability).toBe("low_stock");
+    expect(result.defaultVariantId).toBeUndefined();
+  });
+
+  it("defaults to the lowest-sellingPrice active variant, excluding inactive ones", async () => {
+    const cheaperVariant: ProductVariant = {
+      ...existingVariant,
+      sellingPrice: 40000,
+      active: true,
+    };
+    const pricierVariant: ProductVariant = {
+      ...otherExistingVariant,
+      sellingPrice: 60000,
+      active: true,
+    };
+    const inactiveCheapest: ProductVariant = {
+      ...existingVariant,
+      _id: new Types.ObjectId(),
+      sku: "SKU-1-INACTIVE",
+      sellingPrice: 10000,
+      active: false,
+    };
+    vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue({
+      ...publicProductStub,
+      variants: [pricierVariant, cheaperVariant, inactiveCheapest],
+    });
+
+    const result = await getPublicProductBySlug("phone");
+
+    expect(result.hasVariants).toBe(true);
+    expect(result.defaultVariantId).toEqual(cheaperVariant._id);
+    expect(result.sellingPrice).toBe(40000);
+    expect(result.variants).toHaveLength(2);
+    expect(result.variants.map((v) => v.sku)).not.toContain(inactiveCheapest.sku);
+  });
+
+  it("falls back to the parent's images for a variant with none of its own", async () => {
+    const variantWithoutImages: ProductVariant = { ...existingVariant, images: [], active: true };
+    vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue({
+      ...publicProductStub,
+      variants: [variantWithoutImages],
+    });
+
+    const result = await getPublicProductBySlug("phone");
+
+    expect(result.variants[0]?.images).toEqual([{ url: "https://cdn.test/product-image/a.png" }]);
+  });
+
+  it("falls back metaTitle to name and metaDescription to a truncation of description when unset", async () => {
+    vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue({
+      ...publicProductStub,
+      description: "a".repeat(200),
+    });
+
+    const result = await getPublicProductBySlug("phone");
+
+    expect(result.metaTitle).toBe("Phone");
+    expect(result.metaDescription).toBe(`${"a".repeat(160)}...`);
+  });
+
+  it("includes every specification group regardless of filterable", async () => {
+    const specifications = [
+      { groupName: "Display", values: [{ name: "Screen Size", value: 6.1 }] },
+    ];
+    vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue({
+      ...publicProductStub,
+      specifications,
+    });
+
+    const result = await getPublicProductBySlug("phone");
+
+    expect(result.specifications).toEqual(specifications);
   });
 });

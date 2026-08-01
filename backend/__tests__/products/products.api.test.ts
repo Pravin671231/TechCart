@@ -10,6 +10,9 @@ vi.mock("@/modules/products/products.repository", () => ({
   updateById: vi.fn(),
   replaceVariants: vi.fn(),
   listPaginated: vi.fn(),
+  findPublishedBySlug: vi.fn(),
+  listPublicPaginated: vi.fn(),
+  searchPublicPaginated: vi.fn(),
 }));
 
 vi.mock("@/modules/brands/brands.service", () => ({
@@ -44,7 +47,7 @@ vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
 import app from "@/app";
 import { env } from "@/config/env";
 import { AppError } from "@/utils/AppError";
-import type { ProductRecord } from "@/modules/products/products.repository";
+import type { ProductRecord, PublicProductDoc } from "@/modules/products/products.repository";
 import * as productsRepository from "@/modules/products/products.repository";
 import * as brandsService from "@/modules/brands/brands.service";
 import * as categoriesService from "@/modules/categories/categories.service";
@@ -106,6 +109,13 @@ const validBody = {
   mrp: 99900,
   discount: 10,
   stock: 10,
+};
+
+const publicProductStub: PublicProductDoc = {
+  ...productStub,
+  status: "published",
+  brand: { _id: brandId, name: "Nova", slug: "nova" },
+  category: { _id: categoryId, name: "Electronics", slug: "electronics" },
 };
 
 const variantId = new Types.ObjectId();
@@ -660,5 +670,133 @@ describe("PATCH /api/admin/products/:id/variants/:variantId", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+});
+
+describe("GET /api/products", () => {
+  it("requires no admin key and returns a paginated envelope", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
+      items: [publicProductStub],
+      total: 1,
+    });
+
+    const res = await request(app).get("/api/products");
+
+    expect(res.status).toBe(200);
+    expect(res.body.pagination).toEqual({
+      page: 1,
+      limit: 24,
+      total: 1,
+      totalPages: 1,
+      hasNextPage: false,
+    });
+    expect(res.body.data[0]).toMatchObject({
+      _id: productId.toString(),
+      name: "Phone",
+      slug: "phone",
+      brand: { _id: brandId.toString(), name: "Nova", slug: "nova" },
+    });
+  });
+
+  it("strips every admin-only field from each list item", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
+      items: [publicProductStub],
+      total: 1,
+    });
+
+    const res = await request(app).get("/api/products");
+
+    for (const field of ["stock", "lowStockThreshold", "status", "createdBy", "updatedBy"]) {
+      expect(res.body.data[0]).not.toHaveProperty(field);
+    }
+  });
+
+  it("returns a successful empty response for no matches, not an error", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    const res = await request(app).get("/api/products");
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual([]);
+  });
+
+  it("clamps an oversized limit rather than rejecting it", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    const res = await request(app).get("/api/products?limit=1000");
+
+    expect(res.status).toBe(200);
+    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
+      {},
+      { page: 1, limit: 48 },
+    );
+  });
+
+  it("uses Atlas Search when q is present", async () => {
+    vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({
+      items: [publicProductStub],
+      total: 1,
+    });
+
+    const res = await request(app).get("/api/products?q=phone");
+
+    expect(res.status).toBe(200);
+    expect(productsRepository.searchPublicPaginated).toHaveBeenCalledWith(
+      "phone",
+      {},
+      { page: 1, limit: 24 },
+    );
+    expect(productsRepository.listPublicPaginated).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/products/:slug", () => {
+  it("requires no admin key and returns the full detail shape", async () => {
+    vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue(publicProductStub);
+
+    const res = await request(app).get("/api/products/phone");
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      _id: productId.toString(),
+      name: "Phone",
+      slug: "phone",
+      sku: "SKU-1",
+      brand: { _id: brandId.toString(), name: "Nova", slug: "nova" },
+      category: { _id: categoryId.toString(), name: "Electronics", slug: "electronics" },
+      hasVariants: false,
+    });
+  });
+
+  it("strips every admin-only field from the detail response", async () => {
+    vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue(publicProductStub);
+
+    const res = await request(app).get("/api/products/phone");
+
+    for (const field of ["stock", "lowStockThreshold", "status", "createdBy", "updatedBy"]) {
+      expect(res.body.data).not.toHaveProperty(field);
+    }
+  });
+
+  it("returns PRODUCT_NOT_FOUND for a slug that doesn't match any published product", async () => {
+    vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue(null);
+
+    const res = await request(app).get("/api/products/missing");
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("PRODUCT_NOT_FOUND");
+  });
+
+  it("returns PRODUCT_NOT_FOUND for a draft/archived product's slug (findPublishedBySlug filters status itself)", async () => {
+    // findPublishedBySlug's own query already bakes in status:"published", so
+    // the repository correctly returns null for a draft/archived product's
+    // slug — this asserts the resulting 404 reaches the buyer indistinguishably
+    // from a slug that was never assigned (FR-CAT-060).
+    vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue(null);
+
+    const res = await request(app).get("/api/products/draft-product");
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("PRODUCT_NOT_FOUND");
   });
 });

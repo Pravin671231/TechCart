@@ -15,6 +15,8 @@ import {
   deleteById,
   list,
   listActive,
+  findActiveBySlug,
+  listActiveChildIds,
   countByParent,
   type CategoryRecord,
   type CreateCategoryDoc,
@@ -60,6 +62,10 @@ export type PublicCategory = {
 
 function notFound(id: Types.ObjectId): AppError {
   return new AppError(404, "CATEGORY_NOT_FOUND", `Category ${id.toString()} was not found.`);
+}
+
+function notFoundBySlug(slug: string): AppError {
+  return new AppError(404, "CATEGORY_NOT_FOUND", `Category "${slug}" was not found.`);
 }
 
 async function resolveImage(image: {
@@ -170,8 +176,11 @@ export async function listCategoriesForAdmin(search?: string): Promise<CategoryL
   }));
 }
 
-export async function listCategoriesForPublic(): Promise<PublicCategory[]> {
-  const categories = await listActive();
+// search (FR-CAT-066) is the same active-only query with an optional name
+// filter, reused by both GET /api/categories (no search) and
+// GET /api/categories/search?q= (search required at the controller layer).
+export async function listCategoriesForPublic(search?: string): Promise<PublicCategory[]> {
+  const categories = await listActive(search);
 
   return categories.map((category) => {
     const metaTitle = category.metaTitle ?? category.name;
@@ -191,6 +200,22 @@ export async function listCategoriesForPublic(): Promise<PublicCategory[]> {
     if (category.image) publicCategory.image = category.image;
     return publicCategory;
   });
+}
+
+// FR-CAT-055: resolves the ":slug" segment of GET /api/categories/:slug/products
+// to a category and its direct active subcategories (categories are at most
+// two levels deep, so "direct children" already covers the whole subtree).
+// Active-only and 404 on a miss — same reasoning as listCategoriesForPublic
+// only ever surfacing active categories: a deactivated category's slug
+// shouldn't resolve to a buyer-visible product listing either.
+export async function getActiveCategoryBySlug(slug: string): Promise<CategoryRecord> {
+  const category = await findActiveBySlug(slug);
+  if (!category) throw notFoundBySlug(slug);
+  return category;
+}
+
+export async function listActiveSubcategoryIds(parentId: Types.ObjectId): Promise<Types.ObjectId[]> {
+  return listActiveChildIds(parentId);
 }
 
 // FR-CAT-046's boolean toggle. Deactivating never touches, checks, or

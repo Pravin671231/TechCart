@@ -46,6 +46,10 @@ const updateStatusSchema = z.object({ status: z.boolean() });
 
 const listCategoriesQuerySchema = z.object({ search: z.string().min(1).optional() });
 
+// q is required here, unlike the admin list's optional search — this route
+// exists specifically to search (FR-CAT-066), not to list.
+const searchCategoriesQuerySchema = z.object({ q: z.string().min(1) });
+
 function toObjectIdOrNull(value: string | null | undefined): Types.ObjectId | null | undefined {
   if (value === undefined) return undefined;
   if (value === null) return null;
@@ -109,5 +113,11 @@ export async function updateCategoryStatusHandler(req: Request, res: Response): 
 
 export async function listPublicCategoriesHandler(_req: Request, res: Response): Promise<void> {
   const categories = await listCategoriesForPublic();
+  res.status(200).json(successResponse(categories));
+}
+
+export async function searchPublicCategoriesHandler(req: Request, res: Response): Promise<void> {
+  const query = searchCategoriesQuerySchema.parse(req.query);
+  const categories = await listCategoriesForPublic(query.q);
   res.status(200).json(successResponse(categories));
 }

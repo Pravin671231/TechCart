@@ -60,8 +60,26 @@ export async function list(search?: string): Promise<CategoryRecord[]> {
   return Category.find(query).lean();
 }
 
-export async function listActive(): Promise<CategoryRecord[]> {
-  return Category.find({ status: true }).sort({ sortOrder: 1, name: 1 }).lean();
+// FR-CAT-066: search is a second, optional parameter on the same active-only
+// query rather than a parallel function — "list active categories" and
+// "search active categories by name" differ only in whether a name filter is
+// applied, same relationship admin's list()/search param has to its own
+// unfiltered list.
+export async function listActive(search?: string): Promise<CategoryRecord[]> {
+  const query: QueryFilter<CategoryDocument> = { status: true };
+  if (search) query.name = { $regex: escapeRegExp(search), $options: "i" };
+  return Category.find(query).sort({ sortOrder: 1, name: 1 }).lean();
+}
+
+export async function findActiveBySlug(slug: string): Promise<CategoryRecord | null> {
+  return Category.findOne({ slug, status: true }).lean();
+}
+
+// Direct (one-level) active children only — categories are at most two
+// levels deep, so a parent's children never have children of their own.
+export async function listActiveChildIds(parentId: Types.ObjectId): Promise<Types.ObjectId[]> {
+  const children = await Category.find({ parentCategory: parentId, status: true }, { _id: 1 }).lean();
+  return children.map((child) => child._id);
 }
 
 export async function countByParent(parentId: Types.ObjectId): Promise<number> {
