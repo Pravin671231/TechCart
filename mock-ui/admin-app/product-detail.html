@@ -8,44 +8,47 @@
   </head>
   <body class="h-screen bg-white text-neutral-700">
     <div class="flex h-screen">
-      <aside class="flex w-56 shrink-0 flex-col border-r border-neutral-400 bg-neutral-100">
-        <div
-          class="flex h-16 shrink-0 items-center border-b border-neutral-400 px-4 text-sm font-medium"
-        >
-          TechCart Admin
+      <aside class="flex w-56 shrink-0 flex-col border-r border-neutral-800 bg-neutral-900">
+        <div class="flex h-16 shrink-0 items-center gap-2 border-b border-neutral-800 px-4">
+          <span
+            class="flex h-8 w-8 items-center justify-center rounded-lg bg-green-600 text-sm font-bold text-white"
+          >
+            T
+          </span>
+          <span class="text-sm font-semibold tracking-tight text-white">TechCart Admin</span>
         </div>
-        <nav class="flex flex-1 flex-col p-2 text-sm text-neutral-600">
-          <a class="border border-neutral-500 bg-white px-3 py-2" href="./product-list.html">
+        <nav class="flex flex-1 flex-col gap-1 p-2 text-sm text-neutral-300">
+          <a class="rounded-md bg-green-600 px-3 py-2 text-white" href="./product-list.html">
             Products
           </a>
-          <a class="px-3 py-2" href="./category-list.html">Categories</a>
-          <a class="px-3 py-2" href="./brand-list.html">Brands</a>
-          <a class="px-3 py-2" href="./specification-editor.html">Specifications</a>
-          <a class="px-3 py-2" href="./variant-type-editor.html">Variant types</a>
+          <a class="rounded-md px-3 py-2 hover:bg-neutral-800 hover:text-white" href="./category-list.html">Categories</a>
+          <a class="rounded-md px-3 py-2 hover:bg-neutral-800 hover:text-white" href="./brand-list.html">Brands</a>
+          <a class="rounded-md px-3 py-2 hover:bg-neutral-800 hover:text-white" href="./specification-editor.html">Specifications</a>
+          <a class="rounded-md px-3 py-2 hover:bg-neutral-800 hover:text-white" href="./variant-type-editor.html">Variant types</a>
         </nav>
-        <div class="flex items-center gap-2 border-t border-neutral-400 p-3 text-sm">
+        <div class="flex items-center gap-2 border-t border-neutral-800 p-3 text-sm">
           <span
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-neutral-400 bg-white text-xs"
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-600 text-xs font-medium text-white"
           >
             AD
           </span>
           <div class="flex flex-col leading-tight">
-            <span class="font-medium">Admin User</span>
-            <span class="text-xs text-neutral-500">Administrator</span>
+            <span class="font-medium text-neutral-100">Admin User</span>
+            <span class="text-xs text-neutral-400">Administrator</span>
           </div>
         </div>
       </aside>
 
       <main class="min-w-0 flex-1 overflow-auto p-6">
         <div class="mb-4 flex items-center justify-between">
-          <h1 class="text-sm font-medium">
-            <a class="text-neutral-500" href="./product-list.html">Products</a>
+          <h1 class="text-xl font-semibold tracking-tight text-neutral-900">
+            <a class="text-neutral-500 hover:text-green-700" href="./product-list.html">Products</a>
             <span class="mx-1 text-neutral-400">/</span>
             Product name
           </h1>
           <div class="flex items-center gap-2 text-sm">
-            <span class="border border-neutral-400 px-3 py-1.5">Change status ▾</span>
-            <a class="border border-neutral-600 bg-white px-3 py-1.5" href="./product-form.html">
+            <span class="rounded-lg border border-neutral-300 px-3 py-1.5 text-neutral-700 hover:bg-neutral-50">Change status ▾</span>
+            <a class="rounded-lg bg-green-600 px-3 py-1.5 text-white hover:bg-green-700" href="./product-form.html">
               Edit
             </a>
           </div>
@@ -57,7 +60,7 @@
         </p>
 
           <div class="mb-6 flex flex-wrap items-center gap-3">
-            <span class="border border-dashed border-neutral-500 px-2 py-0.5 text-xs">Draft</span>
+            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Draft</span>
             <span class="text-[11px] text-neutral-400">
               This view renders identically for <code>draft</code>, <code>published</code>, and
               <code>archived</code> · FR-CAT-006
@@ -66,17 +69,17 @@
 
           <div class="grid gap-6 lg:grid-cols-3">
             <!-- Images -->
-            <section class="border border-neutral-400 p-4">
+            <section class="rounded-lg border border-neutral-200 bg-white p-4">
               <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Images</h2>
               <div class="grid grid-cols-3 gap-2">
                 <div
-                  class="flex aspect-square items-center justify-center border-2 border-neutral-600 bg-neutral-100 text-[10px] text-neutral-500"
+                  class="flex aspect-square items-center justify-center rounded-md border-2 border-green-600 bg-neutral-100 text-[10px] text-neutral-500"
                 >
                   Primary
                 </div>
-                <div class="aspect-square border border-neutral-400 bg-neutral-100"></div>
-                <div class="aspect-square border border-neutral-400 bg-neutral-100"></div>
-                <div class="aspect-square border border-neutral-400 bg-neutral-100"></div>
+                <div class="aspect-square rounded-md border border-neutral-300 bg-neutral-100"></div>
+                <div class="aspect-square rounded-md border border-neutral-300 bg-neutral-100"></div>
+                <div class="aspect-square rounded-md border border-neutral-300 bg-neutral-100"></div>
               </div>
               <p class="mt-2 text-[11px] text-neutral-400">
                 4 of 8 max · each carries <code>alt</code> text · FR-CAT-083, 084
@@ -84,7 +87,7 @@
             </section>
 
             <!-- Core fields -->
-            <section class="border border-neutral-400 p-4 lg:col-span-2">
+            <section class="rounded-lg border border-neutral-200 bg-white p-4 lg:col-span-2">
               <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Details</h2>
               <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                 <div class="flex gap-2">
@@ -152,7 +155,7 @@
           </div>
 
           <!-- Specifications -->
-          <section class="mt-6 border border-neutral-400 p-4">
+          <section class="mt-6 rounded-lg border border-neutral-200 bg-white p-4">
             <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Specifications</h2>
             <div class="grid gap-4 sm:grid-cols-3">
               <div>
@@ -194,12 +197,12 @@
           </section>
 
           <!-- Variants -->
-          <section class="mt-6 border border-neutral-400 p-4">
+          <section class="mt-6 rounded-lg border border-neutral-200 bg-white p-4">
             <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Variants</h2>
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto rounded-lg border border-neutral-200">
               <table class="w-full min-w-[700px] border-collapse text-sm">
-                <thead class="bg-neutral-100 text-left">
-                  <tr class="border-b border-neutral-400">
+                <thead class="bg-neutral-50 text-left">
+                  <tr class="border-b border-neutral-200">
                     <th class="px-3 py-2 font-medium">SKU</th>
                     <th class="px-3 py-2 font-medium">Attributes</th>
                     <th class="px-3 py-2 text-right font-medium">MRP</th>

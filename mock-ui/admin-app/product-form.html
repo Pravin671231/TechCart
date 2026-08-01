@@ -8,44 +8,47 @@
   </head>
   <body class="h-screen bg-white text-neutral-700">
     <div class="flex h-screen">
-      <aside class="flex w-56 shrink-0 flex-col border-r border-neutral-400 bg-neutral-100">
-        <div
-          class="flex h-16 shrink-0 items-center border-b border-neutral-400 px-4 text-sm font-medium"
-        >
-          TechCart Admin
+      <aside class="flex w-56 shrink-0 flex-col border-r border-neutral-800 bg-neutral-900">
+        <div class="flex h-16 shrink-0 items-center gap-2 border-b border-neutral-800 px-4">
+          <span
+            class="flex h-8 w-8 items-center justify-center rounded-lg bg-green-600 text-sm font-bold text-white"
+          >
+            T
+          </span>
+          <span class="text-sm font-semibold tracking-tight text-white">TechCart Admin</span>
         </div>
-        <nav class="flex flex-1 flex-col p-2 text-sm text-neutral-600">
-          <a class="border border-neutral-500 bg-white px-3 py-2" href="./product-list.html">
+        <nav class="flex flex-1 flex-col gap-1 p-2 text-sm text-neutral-300">
+          <a class="rounded-md bg-green-600 px-3 py-2 text-white" href="./product-list.html">
             Products
           </a>
-          <a class="px-3 py-2" href="./category-list.html">Categories</a>
-          <a class="px-3 py-2" href="./brand-list.html">Brands</a>
-          <a class="px-3 py-2" href="./specification-editor.html">Specifications</a>
-          <a class="px-3 py-2" href="./variant-type-editor.html">Variant types</a>
+          <a class="rounded-md px-3 py-2 hover:bg-neutral-800 hover:text-white" href="./category-list.html">Categories</a>
+          <a class="rounded-md px-3 py-2 hover:bg-neutral-800 hover:text-white" href="./brand-list.html">Brands</a>
+          <a class="rounded-md px-3 py-2 hover:bg-neutral-800 hover:text-white" href="./specification-editor.html">Specifications</a>
+          <a class="rounded-md px-3 py-2 hover:bg-neutral-800 hover:text-white" href="./variant-type-editor.html">Variant types</a>
         </nav>
-        <div class="flex items-center gap-2 border-t border-neutral-400 p-3 text-sm">
+        <div class="flex items-center gap-2 border-t border-neutral-800 p-3 text-sm">
           <span
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-neutral-400 bg-white text-xs"
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-600 text-xs font-medium text-white"
           >
             AD
           </span>
           <div class="flex flex-col leading-tight">
-            <span class="font-medium">Admin User</span>
-            <span class="text-xs text-neutral-500">Administrator</span>
+            <span class="font-medium text-neutral-100">Admin User</span>
+            <span class="text-xs text-neutral-400">Administrator</span>
           </div>
         </div>
       </aside>
 
       <main class="min-w-0 flex-1 overflow-auto p-6">
         <div class="mb-4 flex items-center justify-between">
-          <h1 class="text-sm font-medium">
-            <a class="text-neutral-500" href="./product-list.html">Products</a>
+          <h1 class="text-xl font-semibold tracking-tight text-neutral-900">
+            <a class="text-neutral-500 hover:text-green-700" href="./product-list.html">Products</a>
             <span class="mx-1 text-neutral-400">/</span>
             Edit product
           </h1>
           <div class="flex gap-2 text-sm">
-            <span class="border border-neutral-400 px-3 py-1.5">Cancel</span>
-            <span class="border border-neutral-600 bg-white px-3 py-1.5">Save</span>
+            <span class="rounded-lg border border-neutral-300 px-3 py-1.5 text-neutral-700 hover:bg-neutral-50">Cancel</span>
+            <span class="rounded-lg bg-green-600 px-3 py-1.5 text-white hover:bg-green-700">Save</span>
           </div>
         </div>
         <p class="mb-4 text-[11px] text-neutral-400">
@@ -57,12 +60,12 @@
 
           <div class="max-w-4xl space-y-6">
             <!-- Basics -->
-            <section class="border border-neutral-400 p-4">
+            <section class="rounded-lg border border-neutral-200 bg-white p-4">
               <h2 class="mb-4 text-xs font-medium tracking-wide uppercase">Basics</h2>
               <div class="grid gap-4 sm:grid-cols-2">
                 <label class="block text-sm">
                   <span class="text-neutral-500">Name *</span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2">Product name</span>
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">Product name</span>
                 </label>
                 <label class="block text-sm">
                   <span class="text-neutral-500">Slug</span>
@@ -78,7 +81,7 @@
                 </label>
                 <label class="block text-sm">
                   <span class="text-neutral-500">SKU *</span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2 font-mono text-xs">
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2 font-mono text-xs">
                     TC-SP-0001
                   </span>
                   <span class="mt-1 block text-[11px] text-neutral-400">
@@ -88,14 +91,14 @@
                 </label>
                 <label class="block text-sm">
                   <span class="text-neutral-500">Brand *</span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2">Brand A ▾</span>
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">Brand A ▾</span>
                   <span class="mt-1 block text-[11px] text-neutral-400">
                     Required on every product · FR-CAT-029
                   </span>
                 </label>
                 <label class="block text-sm">
                   <span class="text-neutral-500">Category *</span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2">
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">
                     Electronics › Smartphones ▾
                   </span>
                   <span class="mt-1 block text-[11px] text-neutral-400">
@@ -105,23 +108,23 @@
                 </label>
                 <label class="block text-sm">
                   <span class="text-neutral-500">Featured</span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2">☐ isFeatured</span>
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">☐ isFeatured</span>
                 </label>
                 <label class="block text-sm sm:col-span-2">
                   <span class="text-neutral-500">Description *</span>
-                  <span class="mt-1 block h-24 border border-neutral-400 px-3 py-2"></span>
+                  <span class="mt-1 block h-24 rounded-md border border-neutral-300 px-3 py-2"></span>
                 </label>
               </div>
             </section>
 
             <!-- Media -->
-            <section class="border border-neutral-400 p-4">
+            <section class="rounded-lg border border-neutral-200 bg-white p-4">
               <h2 class="mb-1 text-xs font-medium tracking-wide uppercase">Images</h2>
               <p class="mb-4 text-[11px] text-neutral-400">
                 4 of 8 · at least 1 required · JPEG, PNG, or WebP only · FR-CAT-078, 083
               </p>
               <div class="grid gap-3 sm:grid-cols-4">
-                <div class="border-2 border-neutral-600 p-2">
+                <div class="rounded-md border-2 border-green-600 p-2">
                   <div
                     class="mb-2 flex aspect-square items-center justify-center bg-neutral-100 text-[10px] text-neutral-400"
                   >
@@ -132,7 +135,7 @@
                     alt text…
                   </p>
                 </div>
-                <div class="border border-neutral-400 p-2">
+                <div class="rounded-md border border-neutral-300 p-2">
                   <div
                     class="mb-2 flex aspect-square items-center justify-center bg-neutral-100 text-[10px] text-neutral-400"
                   >
@@ -143,7 +146,7 @@
                     alt text…
                   </p>
                 </div>
-                <div class="border border-neutral-400 p-2">
+                <div class="rounded-md border border-neutral-300 p-2">
                   <div
                     class="mb-2 flex aspect-square items-center justify-center bg-neutral-100 text-[10px] text-neutral-400"
                   >
@@ -155,7 +158,7 @@
                   </p>
                 </div>
                 <div
-                  class="flex aspect-square items-center justify-center border border-dashed border-neutral-400 text-center text-xs text-neutral-500"
+                  class="flex aspect-square items-center justify-center rounded-md border border-dashed border-neutral-300 text-center text-xs text-neutral-500"
                 >
                   + Upload
                 </div>
@@ -168,16 +171,16 @@
             </section>
 
             <!-- Pricing and inventory -->
-            <section class="border border-neutral-400 p-4">
+            <section class="rounded-lg border border-neutral-200 bg-white p-4">
               <h2 class="mb-4 text-xs font-medium tracking-wide uppercase">Pricing &amp; stock</h2>
               <div class="grid gap-4 sm:grid-cols-4">
                 <label class="block text-sm">
                   <span class="text-neutral-500">MRP (₹) *</span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2">49,900</span>
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">49,900</span>
                 </label>
                 <label class="block text-sm">
                   <span class="text-neutral-500">Discount %</span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2">10</span>
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">10</span>
                 </label>
                 <label class="block text-sm">
                   <span class="text-neutral-500">Selling price</span>
@@ -189,11 +192,11 @@
                 </label>
                 <label class="block text-sm">
                   <span class="text-neutral-500">Stock *</span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2">128</span>
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">128</span>
                 </label>
                 <label class="block text-sm">
                   <span class="text-neutral-500">Low-stock threshold</span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2">10</span>
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">10</span>
                 </label>
               </div>
               <p class="mt-3 text-[11px] text-neutral-400">
@@ -203,8 +206,8 @@
               </p>
 
               <!-- Validation example, mirroring the backend Zod schema client-side -->
-              <div class="mt-4 border border-neutral-600 bg-neutral-50 p-3">
-                <p class="text-sm">Stock must be a whole number of 0 or more.</p>
+              <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-3">
+                <p class="text-sm text-red-700">Stock must be a whole number of 0 or more.</p>
                 <p class="mt-1 text-[11px] text-neutral-500">
                   Client-side validation mirrors the backend Zod schema — <code>admin-app</code>'s
                   own separate validation, not shared code, per the root CLAUDE.md “no shared
@@ -215,7 +218,7 @@
             </section>
 
             <!-- Specifications rendered from the selected category's schema — FR-CAT-033 -->
-            <section class="border border-neutral-400 p-4">
+            <section class="rounded-lg border border-neutral-200 bg-white p-4">
               <h2 class="mb-1 text-xs font-medium tracking-wide uppercase">Specifications</h2>
               <p class="mb-4 text-[11px] text-neutral-400">
                 These inputs are rendered from <strong>Smartphones</strong>' schema, not a fixed
@@ -226,11 +229,11 @@
               <div class="mb-4 grid gap-3 sm:grid-cols-2">
                 <label class="block text-sm">
                   <span class="text-neutral-500">Screen Size * <em>(number, in)</em></span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2">6.1</span>
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">6.1</span>
                 </label>
                 <label class="block text-sm">
                   <span class="text-neutral-500">Resolution <em>(text)</em></span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2">2556 × 1179</span>
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">2556 × 1179</span>
                 </label>
               </div>
 
@@ -238,11 +241,11 @@
               <div class="mb-4 grid gap-3 sm:grid-cols-2">
                 <label class="block text-sm">
                   <span class="text-neutral-500">RAM * <em>(enum)</em></span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2">8GB ▾</span>
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">8GB ▾</span>
                 </label>
                 <label class="block text-sm">
                   <span class="text-neutral-500">Processor <em>(text)</em></span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2">A17 Pro</span>
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">A17 Pro</span>
                 </label>
               </div>
 
@@ -250,7 +253,7 @@
               <div class="grid gap-3 sm:grid-cols-2">
                 <label class="block text-sm">
                   <span class="text-neutral-500">5G <em>(boolean)</em></span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2">☑ Yes</span>
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">☑ Yes</span>
                 </label>
               </div>
 
@@ -261,7 +264,7 @@
             </section>
 
             <!-- Variant editor driven by the category's variant axes — FR-CAT-038 -->
-            <section class="border border-neutral-400 p-4">
+            <section class="rounded-lg border border-neutral-200 bg-white p-4">
               <h2 class="mb-1 text-xs font-medium tracking-wide uppercase">Variants</h2>
               <p class="mb-4 text-[11px] text-neutral-400">
                 One control per axis, chosen by the axis <code>type</code> defined for this category
@@ -269,7 +272,7 @@
                 <code>number</code>, text where no definition exists · FR-CAT-038
               </p>
 
-              <div class="mb-4 border border-neutral-300 p-3">
+              <div class="mb-4 rounded-lg border border-neutral-200 p-3">
                 <div class="grid gap-3 sm:grid-cols-5">
                   <label class="block text-sm">
                     <span class="text-neutral-500">Colour <em>(color)</em></span>
@@ -281,39 +284,39 @@
                   </label>
                   <label class="block text-sm">
                     <span class="text-neutral-500">Storage <em>(select)</em></span>
-                    <span class="mt-1 block border border-neutral-400 px-3 py-2">128GB ▾</span>
+                    <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">128GB ▾</span>
                   </label>
                   <label class="block text-sm">
                     <span class="text-neutral-500">SKU *</span>
-                    <span class="mt-1 block border border-neutral-400 px-2 py-2 font-mono text-xs">
+                    <span class="mt-1 block rounded-md border border-neutral-300 px-2 py-2 font-mono text-xs">
                       TC-SP-0001-BLK-128
                     </span>
                   </label>
                   <label class="block text-sm">
                     <span class="text-neutral-500">MRP (₹) *</span>
-                    <span class="mt-1 block border border-neutral-400 px-3 py-2">49,900</span>
+                    <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">49,900</span>
                   </label>
                   <label class="block text-sm">
                     <span class="text-neutral-500">Stock *</span>
-                    <span class="mt-1 block border border-neutral-400 px-3 py-2">64</span>
+                    <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">64</span>
                   </label>
                 </div>
                 <div class="mt-3 flex flex-wrap items-center gap-4 text-xs text-neutral-500">
                   <span>☑ Active</span>
                   <span>Weight (optional)</span>
                   <span>Images 0–2 (falls back to the product's)</span>
-                  <span class="border border-neutral-400 px-2 py-1">Deactivate</span>
+                  <span class="rounded-md border border-neutral-300 px-2 py-1 text-neutral-700 hover:bg-neutral-50">Deactivate</span>
                 </div>
               </div>
 
-              <div class="mb-4 border border-neutral-300 p-3 text-sm text-neutral-500">
+              <div class="mb-4 rounded-lg border border-neutral-200 p-3 text-sm text-neutral-500">
                 Colour=Black · Storage=256GB — ₹56,900 · stock 40 · active
               </div>
 
-              <span class="border border-neutral-400 px-3 py-1.5 text-sm">+ Add variant</span>
+              <span class="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50">+ Add variant</span>
 
-              <div class="mt-4 border border-neutral-600 bg-neutral-50 p-3">
-                <p class="text-sm">
+              <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-3">
+                <p class="text-sm text-red-700">
                   A variant with Colour=Black and Storage=128GB already exists on this product.
                 </p>
                 <p class="mt-1 text-[11px] text-neutral-500">
@@ -324,18 +327,18 @@
             </section>
 
             <!-- SEO -->
-            <section class="border border-neutral-400 p-4">
+            <section class="rounded-lg border border-neutral-200 bg-white p-4">
               <h2 class="mb-4 text-xs font-medium tracking-wide uppercase">SEO</h2>
               <div class="grid gap-4 sm:grid-cols-2">
                 <label class="block text-sm">
                   <span class="text-neutral-500">Meta title</span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2 text-neutral-400">
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2 text-neutral-400">
                     Defaults to the product name
                   </span>
                 </label>
                 <label class="block text-sm">
                   <span class="text-neutral-500">Meta description</span>
-                  <span class="mt-1 block border border-neutral-400 px-3 py-2 text-neutral-400">
+                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2 text-neutral-400">
                     Defaults to a truncation of the description
                   </span>
                 </label>
