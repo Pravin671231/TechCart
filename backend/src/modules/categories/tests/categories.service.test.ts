@@ -10,6 +10,8 @@ vi.mock("../categories.repository", () => ({
   deleteById: vi.fn(),
   list: vi.fn(),
   listActive: vi.fn(),
+  findActiveBySlug: vi.fn(),
+  listActiveChildIds: vi.fn(),
   countByParent: vi.fn(),
 }));
 
@@ -44,6 +46,8 @@ import {
   listCategoriesForPublic,
   deleteCategory,
   updateCategoryStatus,
+  getActiveCategoryBySlug,
+  listActiveSubcategoryIds,
 } from "../categories.service";
 
 const idA = new Types.ObjectId();
@@ -401,6 +405,46 @@ describe("listCategoriesForPublic", () => {
     const result = await listCategoriesForPublic();
 
     expect(result[0]?.metaDescription).toBe("Electronics");
+  });
+
+  it("passes the search term through to the repository", async () => {
+    vi.mocked(categoriesRepository.listActive).mockResolvedValue([categoryA]);
+
+    await listCategoriesForPublic("elec");
+
+    expect(categoriesRepository.listActive).toHaveBeenCalledWith("elec");
+  });
+});
+
+describe("getActiveCategoryBySlug", () => {
+  it("returns the category when it resolves to an active category", async () => {
+    vi.mocked(categoriesRepository.findActiveBySlug).mockResolvedValue(categoryA);
+
+    const result = await getActiveCategoryBySlug("electronics");
+
+    expect(result).toEqual(categoryA);
+    expect(categoriesRepository.findActiveBySlug).toHaveBeenCalledWith("electronics");
+  });
+
+  it("throws CATEGORY_NOT_FOUND when the slug doesn't resolve to an active category", async () => {
+    vi.mocked(categoriesRepository.findActiveBySlug).mockResolvedValue(null);
+
+    await expect(getActiveCategoryBySlug("missing")).rejects.toMatchObject({
+      statusCode: 404,
+      code: "CATEGORY_NOT_FOUND",
+    });
+  });
+});
+
+describe("listActiveSubcategoryIds", () => {
+  it("delegates to the repository's active-children lookup", async () => {
+    const childId = new Types.ObjectId();
+    vi.mocked(categoriesRepository.listActiveChildIds).mockResolvedValue([childId]);
+
+    const result = await listActiveSubcategoryIds(idA);
+
+    expect(result).toEqual([childId]);
+    expect(categoriesRepository.listActiveChildIds).toHaveBeenCalledWith(idA);
   });
 });
 

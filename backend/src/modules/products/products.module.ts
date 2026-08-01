@@ -1,10 +1,18 @@
 import productsAdminRoutes from "./products.admin.routes";
+import productsPublicRoutes from "./products.public.routes";
 
-// Admin-only for now, same naming shape as brands'/categories' admin module
-// (a products.public.routes.ts + productsPublicModule land in #35, buyer
-// browsing — GET /api/products / GET /api/products/:slug aren't this
-// issue's scope).
 export const productsAdminModule = {
   path: "/products",
   router: productsAdminRoutes,
+};
+
+// Same two-mount-point shape as brands/categories: admin CRUD needs the
+// adminAuth guard (mounted under adminRouter), the public list/detail must
+// not have it (mounted directly on the root router). GET /api/categories/:slug/products
+// (FR-CAT-055) is the one buyer route that does NOT live under this module's
+// own path prefix — see categories.public.routes.ts's import of
+// listProductsByCategorySlugHandler for why.
+export const productsPublicModule = {
+  path: "/api/products",
+  router: productsPublicRoutes,
 };

@@ -3,6 +3,7 @@ import { isValidObjectId, Types } from "mongoose";
 import { z } from "zod";
 import { successResponse } from "@/utils/apiResponse";
 import { parseObjectId } from "@/utils/objectId";
+import { parseSlugParam } from "@/utils/routeParams";
 import {
   createProduct,
   updateProduct,
@@ -13,6 +14,9 @@ import {
   updateProductStatus,
   addVariant,
   updateVariant,
+  listPublicProducts,
+  listPublicProductsByCategorySlug,
+  getPublicProductBySlug,
 } from "./products.service";
 import { PRODUCT_STATUSES } from "./products.model";
 import type { ProductSortField } from "./products.repository";
@@ -240,4 +244,63 @@ export async function updateVariantHandler(req: Request, res: Response): Promise
   const input = updateVariantSchema.parse(req.body);
   const product = await updateVariant(productId, variantId, input);
   res.status(200).json(successResponse(product));
+}
+
+// ---------------------------------------------------------------------------
+// Buyer browsing (#35 / M2.11)
+// ---------------------------------------------------------------------------
+
+// FR-CAT-057: fixed default, server-enforced max, an oversized request is
+// clamped rather than rejected — the opposite of the admin list's
+// `.max(100)` (VALIDATION_ERROR on overage). No `.max()` in either schema
+// below; clampLimit does the clamping after parsing instead.
+const PUBLIC_PAGE_SIZE_DEFAULT = 24;
+const PUBLIC_PAGE_SIZE_MAX = 48;
+
+const publicListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).optional().default(PUBLIC_PAGE_SIZE_DEFAULT),
+  q: z.string().min(1).optional(),
+});
+
+const publicCategoryProductsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).optional().default(PUBLIC_PAGE_SIZE_DEFAULT),
+});
+
+function clampLimit(limit: number): number {
+  return Math.min(limit, PUBLIC_PAGE_SIZE_MAX);
+}
+
+export async function listPublicProductsHandler(req: Request, res: Response): Promise<void> {
+  const query = publicListQuerySchema.parse(req.query);
+  const { items, pagination } = await listPublicProducts({
+    page: query.page,
+    limit: clampLimit(query.limit),
+    q: query.q,
+  });
+  res.status(200).json(successResponse(items, pagination));
+}
+
+export async function getPublicProductHandler(req: Request, res: Response): Promise<void> {
+  const slug = parseSlugParam(req.params.slug);
+  const product = await getPublicProductBySlug(slug);
+  res.status(200).json(successResponse(product));
+}
+
+// Mounted from categories.public.routes.ts at
+// GET /api/categories/:slug/products (FR-CAT-055) — the handler lives here,
+// alongside the products data it returns, rather than in
+// categories.controller.ts; only the route *wiring* crosses modules.
+export async function listProductsByCategorySlugHandler(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const slug = parseSlugParam(req.params.slug);
+  const query = publicCategoryProductsQuerySchema.parse(req.query);
+  const { items, pagination } = await listPublicProductsByCategorySlug(slug, {
+    page: query.page,
+    limit: clampLimit(query.limit),
+  });
+  res.status(200).json(successResponse(items, pagination));
 }

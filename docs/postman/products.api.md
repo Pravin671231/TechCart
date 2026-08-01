@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the Product core CRUD, pricing, and variant endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #31 (M2.7 — Product core CRUD and pricing, `FR-CAT-001`–`013`, `FR-CAT-085`–`087`), Issue #32 (M2.8 — Product variants, `FR-CAT-039`–`044`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-045`, `048`–`049` for this entity), and Issue #34 (M2.10 — Admin search, `FR-CAT-050`, `053` for this entity): the five product-level admin CRUD endpoints under `/api/admin/products`, the stock-only and status-transition paths, the two embedded-variant endpoints, and `search`/`status` filtering on the admin list. There is still **no buyer-facing endpoint at all** yet (`GET /api/products`, `GET /api/products/:slug`, `#35`). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup; see [`brands.api.md`](./brands.api.md) and [`categories.api.md`](./categories.api.md) for the two entities every product references; see [`categorySpecifications.api.md`](./categorySpecifications.api.md) for the schema a product's `specifications` are validated against. This doc assumes collection setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #31 (M2.7 — Product core CRUD and pricing, `FR-CAT-001`–`013`, `FR-CAT-085`–`087`), Issue #32 (M2.8 — Product variants, `FR-CAT-039`–`044`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-045`, `048`–`049` for this entity), Issue #34 (M2.10 — Admin search, `FR-CAT-050`, `053` for this entity), and Issue #35 (M2.11 — Buyer browsing, search & inventory visibility, `FR-CAT-054`–`067`, `095`–`096`): the five product-level admin CRUD endpoints under `/api/admin/products`, the stock-only and status-transition paths, the two embedded-variant endpoints, `search`/`status` filtering on the admin list, and the first two buyer-facing endpoints — `GET /api/products` (paginated, `published`-only, optional Atlas Search `?q=`) and `GET /api/products/:slug` (detail). `GET /api/products?q=` depends on a MongoDB Atlas Search index this repo cannot provision for you — see [`../../backend/atlas-search/README.md`](../../backend/atlas-search/README.md) before testing that query param specifically; every other endpoint in this doc needs no Atlas cluster at all. See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup; see [`brands.api.md`](./brands.api.md) and [`categories.api.md`](./categories.api.md) for the two entities every product references (including categories.api.md's own `GET /api/categories/:slug/products`, which lists *this* module's data); see [`categorySpecifications.api.md`](./categorySpecifications.api.md) for the schema a product's `specifications` are validated against. This doc assumes collection setup is already done and reuses the same collection.
 
 ---
 
@@ -717,31 +717,156 @@ Content-Type: application/json
 
 ---
 
+## `GET /api/products`
+
+Lists **published-only** products, paginated (`FR-CAT-054`). The first buyer-facing endpoint in this API — no `X-Admin-Key` header, and every response strips `stock`/`lowStockThreshold`/`status`/`createdBy`/`updatedBy` in favor of a derived `availability` field (`FR-CAT-095`–`096`).
+
+| Field  | Value                       |
+| ------ | --------------------------- |
+| Method | `GET`                       |
+| URL    | `{{base_url}}/api/products` |
+| Name   | `List Products (Buyer)`     |
+
+No headers required, no body.
+
+**Query params (all optional):**
+
+| Param   | Values                                                                                                                                                                                 | Default |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `page`  | integer ≥ 1                                                                                                                                                                            | `1`     |
+| `limit` | integer ≥ 1 — a value over `48` is **clamped** to `48`, not rejected                                                                                                                   | `24`    |
+| `q`     | keyword search over `name`/`description` via MongoDB Atlas Search, fuzzy-matched (`FR-CAT-065`) — **requires the `products_search` index to be provisioned**, see the scope note above | omitted |
+
+**Click Send. Expected response — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "66a1f0c9e4b0a1a2b3c4d5e6",
+      "name": "Nova Phone X1",
+      "slug": "nova-phone-x1",
+      "brand": { "_id": "66a1f0c9e4b0a1a2b3c4d5e1", "name": "Nova", "slug": "nova" },
+      "primaryImage": { "url": "https://cdn.example.com/product-image/a.webp" },
+      "mrp": 99900,
+      "discount": 10,
+      "sellingPrice": 89910,
+      "availability": "in_stock",
+      "isFeatured": false
+    }
+  ],
+  "pagination": { "page": 1, "limit": 24, "total": 1, "totalPages": 1, "hasNextPage": false }
+}
+```
+
+- **`availability`** replaces raw `stock` entirely — `out_of_stock` / `low_stock` / `in_stock`, derived server-side (`FR-CAT-096`). A product with `stock: 0` still appears in this list, just reported `out_of_stock` (`FR-CAT-059`) — it is never filtered out.
+- **When a product has variants, `availability` is the best state across its *active* variants** — one badge per card, not per variant. A product with one active variant `out_of_stock` and another `in_stock` reports `in_stock` here.
+- **No `cardSpecifications`** — the first-four-filterable-specs augmentation (`FR-CAT-092`) is `#36`'s scope, not this issue's. `mrp`/`discount`/`sellingPrice` here are always the *product's own* stored values, not adjusted for any particular variant (unlike the detail page below).
+- **An oversized `limit` is clamped, not rejected** — `?limit=1000` silently becomes `48`, the opposite of the admin list's `VALIDATION_ERROR` behavior (`FR-CAT-057`).
+- **An empty result set is still a `200` with `data: []`**, never a `404` or an error (`FR-CAT-058`).
+- `?q=phone` switches the query to Atlas Search — until the index in `backend/atlas-search/` is provisioned against a real Atlas cluster, this specific query param will error at the database level (see the scope note at the top of this doc). Every other query on this endpoint works against a plain local MongoDB with no Atlas cluster at all.
+
+---
+
+## `GET /api/products/:slug`
+
+Fetches a single **published** product's detail by slug, not id — the buyer-facing key (`FR-CAT-056`), since catalog pages are ISR-rendered and the slug is both the cache key and the SEO-visible URL. A `draft`/`archived` product's slug 404s exactly like a slug that was never assigned (`FR-CAT-060`) — this endpoint never reveals that a non-published product exists.
+
+| Field  | Value                                     |
+| ------ | ----------------------------------------- |
+| Method | `GET`                                     |
+| URL    | `{{base_url}}/api/products/nova-phone-x1` |
+| Name   | `Get Product (Buyer)`                     |
+
+No headers required, no body.
+
+**Click Send. Expected response — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "66a1f0c9e4b0a1a2b3c4d5e6",
+    "name": "Nova Phone X1",
+    "slug": "nova-phone-x1",
+    "sku": "NOVA-X1-001",
+    "description": "A flagship phone with a 6.1-inch display.",
+    "brand": { "_id": "66a1f0c9e4b0a1a2b3c4d5e1", "name": "Nova", "slug": "nova" },
+    "category": { "_id": "66a1f0c9e4b0a1a2b3c4d5e2", "name": "Electronics", "slug": "electronics" },
+    "images": [{ "url": "https://cdn.example.com/product-image/a.webp", "isPrimary": true }],
+    "mrp": 99900,
+    "discount": 10,
+    "sellingPrice": 89910,
+    "availability": "in_stock",
+    "isFeatured": false,
+    "specifications": [],
+    "hasVariants": false,
+    "variants": [],
+    "metaTitle": "Nova Phone X1",
+    "metaDescription": "A flagship phone with a 6.1-inch display."
+  }
+}
+```
+
+- **`hasVariants`/`variants`/`defaultVariantId` (FR-CAT-064)**: when the product has at least one *active* variant, `hasVariants` is `true`, `variants` lists only the active ones (inactive variants never appear here), and `defaultVariantId` is the id of the lowest-`sellingPrice` active variant — that variant's own `mrp`/`discount`/`sellingPrice`/`availability` become this response's top-level values too, not the parent product's own stored fields. With no active variant, `defaultVariantId` is omitted entirely (not `null`) and the top-level fields are the product's own.
+- **A variant with no images of its own inherits the parent's `images`** — resolved here, not left to the client.
+- **`specifications` lists every stored group/value, filterable or not** (`FR-CAT-063`) — unlike a category card (`#36`), the detail page draws no distinction.
+- **`metaTitle`/`metaDescription` fall back to `name`/a truncated `description`** when unset (`FR-CAT-012`) — the same formula categories' own public list already uses.
+
+### Error cases
+
+**Malformed/empty slug segment:**
+
+```
+400 Bad Request
+```
+
+```json
+{ "success": false, "code": "INVALID_SLUG", "message": "\"\" is not a valid slug." }
+```
+
+**Slug doesn't match any published product** (never existed, or exists but is `draft`/`archived`):
+
+```
+404 Not Found
+```
+
+```json
+{
+  "success": false,
+  "code": "PRODUCT_NOT_FOUND",
+  "message": "Product \"not-a-real-slug\" was not found."
+}
+```
+
+---
+
 ## Error Code Reference
 
 Product-specific codes, in addition to the ones already documented in [`uploads.api.md`](./uploads.api.md#error-code-reference) (`UNAUTHORIZED`, `VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR`, `OBJECT_KEY_NOT_ISSUED`, `IMAGE_COUNT_OUT_OF_BOUNDS`), [`brands.api.md`](./brands.api.md#error-code-reference) (`INVALID_ID`, `BRAND_NOT_FOUND`), [`categories.api.md`](./categories.api.md#error-code-reference) (`CATEGORY_NOT_FOUND`), and [`categorySpecifications.api.md`](./categorySpecifications.api.md#error-code-reference):
 
 | Code                              | Status | Where it comes from                                                                                                                                  | Reachable via an existing endpoint?                 |
 | --------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `PRODUCT_NOT_FOUND`               | 404    | `products.service.ts` — `:id` doesn't match any product                                                                                              | Yes                                                 |
+| `PRODUCT_NOT_FOUND`               | 404    | `products.service.ts` — `:id`/`:slug` doesn't match any product (buyer: only a *published* product counts a match)                                   | Yes                                                 |
 | `VARIANT_NOT_FOUND`               | 404    | `products.service.ts`'s `updateVariant()` — `:variantId` doesn't match any variant on that product                                                   | Yes                                                 |
 | `DUPLICATE_SKU`                   | 400    | `products.service.ts` — `sku` collides with another product's own `sku`, or any variant's `sku` anywhere (including a sibling on the same product)   | Yes                                                 |
 | `DUPLICATE_VARIANT_ATTRIBUTES`    | 400    | `products.service.ts`'s `addVariant()`/`updateVariant()` — the attribute-pair set duplicates another variant's on the same product                   | Yes                                                 |
 | `SPECIFICATION_VALIDATION_FAILED` | 400    | `categorySpecifications.service.ts`'s `validateProductSpecifications()`, called from `products.service.ts` on create and on category-changing update | Yes — requires a specification schema defined first |
+| `INVALID_SLUG`                    | 400    | `src/utils/routeParams.ts`'s `parseSlugParam()` — the `:slug` segment is empty/malformed                                                             | Yes                                                 |
 
 ---
 
 ## Understanding Validation Errors
 
-Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For products, the fields that can appear as keys include `name`, `description`, `sku`, `brand`, `category`, `images`, `specifications`, `mrp`, `discount`, `stock`, `lowStockThreshold`, `isFeatured`, `metaTitle`, `metaDescription`, and — on the list endpoint — `page`, `limit`, `sort`, `lowStock`, `search`, `status`. For the two variant endpoints: `sku`, `attributes`, `images`, `mrp`, `discount`, `stock`, `weight`. For the status endpoint: `status`.
+Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For products, the fields that can appear as keys include `name`, `description`, `sku`, `brand`, `category`, `images`, `specifications`, `mrp`, `discount`, `stock`, `lowStockThreshold`, `isFeatured`, `metaTitle`, `metaDescription`, and — on the admin list endpoint — `page`, `limit`, `sort`, `lowStock`, `search`, `status`. For the two variant endpoints: `sku`, `attributes`, `images`, `mrp`, `discount`, `stock`, `weight`. For the status endpoint: `status`. For the buyer list endpoint (`GET /api/products`): `page`, `limit`, `q`.
 
 ---
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issues #31, #32, #33 (status endpoint), and #34 (`search`/`status` filtering, folded into this same doc) — not the full Product Catalog API. Not yet implemented, each its own future issue:
+This document is a snapshot of Issues #31, #32, #33 (status endpoint), #34 (`search`/`status` filtering), and #35 (buyer browsing, folded into this same doc) — not the full Product Catalog API. Not yet implemented, each its own future issue:
 
-- Buyer browsing/search/inventory visibility, including `GET /api/products` and `GET /api/products/:slug` (`#35`)
-- Buyer filtering, sorting, and card content (`#36`)
+- Buyer filtering (price/brand/category/variant-attribute/specification/in-stock/on-sale), sort options, and card content (`cardSpecifications`) (`#36`)
 
 No real authentication exists yet either (v0.3) — the `X-Admin-Key` header is explicitly a temporary placeholder, not a long-term design.

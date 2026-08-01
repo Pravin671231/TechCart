@@ -41,6 +41,110 @@ export async function findById(id: Types.ObjectId): Promise<ProductRecord | null
   return Product.findById(id).lean();
 }
 
+// Buyer-facing detail/list responses need the brand's/category's own name
+// and slug, not just the raw ref id — the first use of Mongoose `.populate()`
+// in this codebase (every admin read so far has been happy with the raw ref).
+// Selecting just "name slug" keeps the join minimal; `_id` comes along by
+// default.
+export type PopulatedRef = { _id: Types.ObjectId; name: string; slug: string };
+export type PublicProductDoc = Omit<ProductRecord, "brand" | "category"> & {
+  brand: PopulatedRef;
+  category: PopulatedRef;
+};
+
+// FR-CAT-056/060: status:"published" is baked into the query itself, not
+// checked after the fact — a draft/archived product's slug returns exactly
+// the same "not found" as a slug that was never assigned, never a 200 with
+// a status the buyer shouldn't see.
+export async function findPublishedBySlug(slug: string): Promise<PublicProductDoc | null> {
+  return Product.findOne({ slug, status: "published" })
+    .populate<{ brand: PopulatedRef }>("brand", "name slug")
+    .populate<{ category: PopulatedRef }>("category", "name slug")
+    .lean();
+}
+
+export type PublicProductFilter = { categoryIds?: Types.ObjectId[] };
+
+// Plain listing — FR-CAT-054 (flat) and FR-CAT-055 (category-scoped, via
+// categoryIds) share this one function; the ?q= keyword-search case below is
+// a genuinely different query shape ($search must lead an aggregation
+// pipeline, incompatible with a plain .find()), not a variant of this.
+export async function listPublicPaginated(
+  filter: PublicProductFilter,
+  page: ProductListPage,
+): Promise<{ items: PublicProductDoc[]; total: number }> {
+  const query: QueryFilter<ProductDocument> = { status: "published" };
+  if (filter.categoryIds) query.category = { $in: filter.categoryIds };
+
+  const skip = (page.page - 1) * page.limit;
+  const [items, total] = await Promise.all([
+    Product.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(page.limit)
+      .populate<{ brand: PopulatedRef }>("brand", "name slug")
+      .populate<{ category: PopulatedRef }>("category", "name slug")
+      .lean(),
+    Product.countDocuments(query),
+  ]);
+
+  return { items, total };
+}
+
+// FR-CAT-065: MongoDB Atlas Search keyword search over name/description,
+// fuzzy-matched — see backend/atlas-search/README.md for the index this
+// depends on (named "products_search", provisioned against the `products`
+// collection; a real Atlas-cluster setup step, not something this code can
+// create). $search must be the pipeline's first stage; $match narrows to
+// published (and, when scoped, to categoryIds) after scoring, and $facet
+// runs the paginated slice and the total count in one round trip.
+export async function searchPublicPaginated(
+  q: string,
+  filter: PublicProductFilter,
+  page: ProductListPage,
+): Promise<{ items: PublicProductDoc[]; total: number }> {
+  const matchStage: QueryFilter<ProductDocument> = { status: "published" };
+  if (filter.categoryIds) matchStage.category = { $in: filter.categoryIds };
+
+  const skip = (page.page - 1) * page.limit;
+  const [result] = await Product.aggregate<{
+    items: ProductRecord[];
+    totalCount: { count: number }[];
+  }>([
+    {
+      $search: {
+        index: "products_search",
+        text: { query: q, path: ["name", "description"], fuzzy: {} },
+      },
+    },
+    { $match: matchStage },
+    {
+      // No explicit $sort here — $search already returns documents in
+      // relevance order, and neither $match nor $skip/$limit reorders
+      // within a $facet sub-pipeline, so omitting it keeps relevance order
+      // while sidestepping Mongoose's PipelineStage type not (yet)
+      // recognizing $meta: "searchScore" as a valid sort key.
+      $facet: {
+        items: [{ $skip: skip }, { $limit: page.limit }],
+        totalCount: [{ $count: "count" }],
+      },
+    },
+  ]);
+
+  const items = result?.items ?? [];
+  const total = result?.totalCount[0]?.count ?? 0;
+
+  const populated = await Product.populate<{ brand: PopulatedRef; category: PopulatedRef }>(
+    items,
+    [
+      { path: "brand", select: "name slug" },
+      { path: "category", select: "name slug" },
+    ],
+  );
+
+  return { items: populated as unknown as PublicProductDoc[], total };
+}
+
 export async function slugExists(slug: string): Promise<boolean> {
   const existing = await Product.exists({ slug });
   return existing !== null;

@@ -1,0 +1,11 @@
+{
+  "name": "products_search",
+  "collectionName": "products",
+  "mappings": {
+    "dynamic": false,
+    "fields": {
+      "name": { "type": "string" },
+      "description": { "type": "string" }
+    }
+  }
+}

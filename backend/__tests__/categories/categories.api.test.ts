@@ -10,6 +10,8 @@ vi.mock("@/modules/categories/categories.repository", () => ({
   deleteById: vi.fn(),
   list: vi.fn(),
   listActive: vi.fn(),
+  findActiveBySlug: vi.fn(),
+  listActiveChildIds: vi.fn(),
   countByParent: vi.fn(),
 }));
 
@@ -18,6 +20,7 @@ vi.mock("@/modules/products/products.repository", () => ({
   countByBrandIds: vi.fn(),
   countByCategory: vi.fn(),
   countByCategoryIds: vi.fn(),
+  listPublicPaginated: vi.fn(),
 }));
 
 vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
@@ -388,5 +391,131 @@ describe("GET /api/categories", () => {
     ]);
     expect(res.body.data[0]).not.toHaveProperty("status");
     expect(res.body.data[0]).not.toHaveProperty("createdBy");
+  });
+});
+
+describe("GET /api/categories/search", () => {
+  it("requires no admin key and passes q through as the search term", async () => {
+    vi.mocked(categoriesRepository.listActive).mockResolvedValue([]);
+
+    const res = await request(app).get("/api/categories/search?q=elec");
+
+    expect(res.status).toBe(200);
+    expect(categoriesRepository.listActive).toHaveBeenCalledWith("elec");
+  });
+
+  it("rejects a missing q", async () => {
+    const res = await request(app).get("/api/categories/search");
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+});
+
+describe("GET /api/categories/:slug/products", () => {
+  it("requires no admin key and scopes the listing to the category and its active subcategories", async () => {
+    const categoryId = new Types.ObjectId();
+    const subcategoryId = new Types.ObjectId();
+    const productId = new Types.ObjectId();
+    const brandId = new Types.ObjectId();
+
+    vi.mocked(categoriesRepository.findActiveBySlug).mockResolvedValue({
+      _id: categoryId,
+      name: "Electronics",
+      slug: "electronics",
+      parentCategory: null,
+      sortOrder: 0,
+      status: true,
+      createdBy: null,
+      updatedBy: null,
+    });
+    vi.mocked(categoriesRepository.listActiveChildIds).mockResolvedValue([subcategoryId]);
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
+      items: [
+        {
+          _id: productId,
+          name: "Phone",
+          slug: "phone",
+          sku: "SKU-1",
+          description: "A phone",
+          brand: { _id: brandId, name: "Nova", slug: "nova" },
+          category: { _id: categoryId, name: "Electronics", slug: "electronics" },
+          images: [{ url: "https://cdn.test.example/a.png", isPrimary: true }],
+          specifications: [],
+          variants: [],
+          mrp: 50000,
+          discount: 0,
+          sellingPrice: 50000,
+          stock: 10,
+          lowStockThreshold: 0,
+          isFeatured: false,
+          status: "published",
+          createdBy: null,
+          updatedBy: null,
+        },
+      ],
+      total: 1,
+    });
+
+    const res = await request(app).get("/api/categories/electronics/products");
+
+    expect(res.status).toBe(200);
+    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
+      { categoryIds: [categoryId, subcategoryId] },
+      { page: 1, limit: 24 },
+    );
+    expect(res.body.data).toEqual([
+      {
+        _id: productId.toString(),
+        name: "Phone",
+        slug: "phone",
+        brand: { _id: brandId.toString(), name: "Nova", slug: "nova" },
+        primaryImage: { url: "https://cdn.test.example/a.png" },
+        mrp: 50000,
+        discount: 0,
+        sellingPrice: 50000,
+        availability: "in_stock",
+        isFeatured: false,
+      },
+    ]);
+    expect(res.body.pagination).toEqual({
+      page: 1,
+      limit: 24,
+      total: 1,
+      totalPages: 1,
+      hasNextPage: false,
+    });
+  });
+
+  it("returns CATEGORY_NOT_FOUND for a slug that doesn't resolve to an active category", async () => {
+    vi.mocked(categoriesRepository.findActiveBySlug).mockResolvedValue(null);
+
+    const res = await request(app).get("/api/categories/missing/products");
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("CATEGORY_NOT_FOUND");
+  });
+
+  it("clamps an oversized limit rather than rejecting it", async () => {
+    vi.mocked(categoriesRepository.findActiveBySlug).mockResolvedValue({
+      _id: new Types.ObjectId(),
+      name: "Electronics",
+      slug: "electronics",
+      parentCategory: null,
+      sortOrder: 0,
+      status: true,
+      createdBy: null,
+      updatedBy: null,
+    });
+    vi.mocked(categoriesRepository.listActiveChildIds).mockResolvedValue([]);
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    const res = await request(app).get("/api/categories/electronics/products?limit=1000");
+
+    expect(res.status).toBe(200);
+    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
+      expect.anything(),
+      { page: 1, limit: 48 },
+    );
   });
 });

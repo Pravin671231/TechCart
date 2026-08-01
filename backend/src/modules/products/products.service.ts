@@ -1,7 +1,9 @@
 import { Types } from "mongoose";
 import { AppError } from "@/utils/AppError";
 import { generateUniqueSlug } from "@/utils/slug";
+import { truncate } from "@/utils/text";
 import { computeSellingPrice } from "@/utils/pricing";
+import { deriveAvailability, bestAvailability, type Availability } from "@/utils/availability";
 import type { Pagination } from "@/utils/apiResponse";
 import {
   consumeImageKeys,
@@ -10,7 +12,11 @@ import {
   buildPublicUrl,
 } from "@/modules/uploads/uploads.service";
 import { getBrandById } from "@/modules/brands/brands.service";
-import { getCategoryById } from "@/modules/categories/categories.service";
+import {
+  getCategoryById,
+  getActiveCategoryBySlug,
+  listActiveSubcategoryIds,
+} from "@/modules/categories/categories.service";
 import { validateProductSpecifications } from "@/modules/categorySpecifications/categorySpecifications.service";
 import type {
   ProductImage,
@@ -27,10 +33,15 @@ import {
   updateById,
   replaceVariants,
   listPaginated,
+  findPublishedBySlug,
+  listPublicPaginated,
+  searchPublicPaginated,
   type ProductRecord,
   type CreateProductDoc,
   type UpdateProductDoc,
   type ProductSortField,
+  type PublicProductDoc,
+  type PopulatedRef,
 } from "./products.repository";
 
 // Optional fields spell out `| undefined` explicitly (not just `?:`), same
@@ -116,6 +127,15 @@ export type UpdateVariantInput = {
 
 function notFound(id: Types.ObjectId): AppError {
   return new AppError(404, "PRODUCT_NOT_FOUND", `Product ${id.toString()} was not found.`);
+}
+
+// FR-CAT-060: deliberately identical shape/code to notFound(id) above — a
+// slug that resolves to a draft/archived product must 404 exactly like a
+// slug that was never assigned, never leaking that the product exists at
+// all under a status the buyer shouldn't see (findPublishedBySlug already
+// bakes status:"published" into the query itself, not a check afterward).
+function notFoundBySlug(slug: string): AppError {
+  return new AppError(404, "PRODUCT_NOT_FOUND", `Product "${slug}" was not found.`);
 }
 
 function variantNotFound(variantId: Types.ObjectId): AppError {
@@ -429,4 +449,259 @@ export async function updateVariant(
   const updated = await replaceVariants(productId, updatedVariants);
   if (!updated) throw notFound(productId);
   return updated;
+}
+
+// ---------------------------------------------------------------------------
+// Buyer browsing (#35 / M2.11, FR-CAT-054–067, FR-CAT-095–096)
+// ---------------------------------------------------------------------------
+
+export type PublicImage = { url: string; alt?: string };
+export type PublicRef = { _id: Types.ObjectId; name: string; slug: string };
+
+// FR-CAT-091's card contract (image, name, sellingPrice, no specifications)
+// plus brand and availability, following the SRS's own worked listing-item
+// example — minus `cardSpecifications` (the first-four-filterable-specs
+// augmentation), which is FR-CAT-092 and explicitly #36's scope, not #35's.
+export type PublicProductListItem = {
+  _id: Types.ObjectId;
+  name: string;
+  slug: string;
+  brand: PublicRef;
+  primaryImage?: PublicImage;
+  mrp: number;
+  discount: number;
+  sellingPrice: number;
+  availability: Availability;
+  isFeatured: boolean;
+};
+
+export type PublicProductVariant = {
+  _id: Types.ObjectId;
+  sku: string;
+  attributes: ProductVariantAttribute[];
+  images: PublicImage[];
+  mrp: number;
+  discount: number;
+  sellingPrice: number;
+  availability: Availability;
+  weight?: number;
+};
+
+export type PublicProductDetail = {
+  _id: Types.ObjectId;
+  name: string;
+  slug: string;
+  sku: string;
+  description: string;
+  brand: PublicRef;
+  category: PublicRef;
+  images: PublicImage[];
+  mrp: number;
+  discount: number;
+  sellingPrice: number;
+  availability: Availability;
+  isFeatured: boolean;
+  specifications: ProductSpecificationGroup[];
+  hasVariants: boolean;
+  defaultVariantId?: Types.ObjectId;
+  variants: PublicProductVariant[];
+  metaTitle: string;
+  metaDescription: string;
+};
+
+export type PublicProductListParams = { page: number; limit: number; q?: string | undefined };
+export type PublicCategoryProductListParams = { page: number; limit: number };
+
+function toPublicRef(ref: PopulatedRef): PublicRef {
+  return { _id: ref._id, name: ref.name, slug: ref.slug };
+}
+
+function toPublicImage(image: ProductImage): PublicImage {
+  const publicImage: PublicImage = { url: image.url };
+  if (image.alt !== undefined) publicImage.alt = image.alt;
+  return publicImage;
+}
+
+// normalizeImages() (FR-CAT-084) already guarantees exactly one isPrimary on
+// every stored product, so .find() only ever misses on a product with zero
+// images — which create/update's own 1-8 bound (FR-CAT-083) never allows to
+// exist. The ?? images[0] fallback is defensive, not a case this codebase
+// can actually produce.
+function getPrimaryImage(images: ProductImage[]): ProductImage | undefined {
+  return images.find((image) => image.isPrimary) ?? images[0];
+}
+
+// FR-CAT-012: buyer-facing pages fall back to name/a truncated description
+// when metaTitle/metaDescription are unset — identical formula to
+// categories.service.ts's listCategoriesForPublic, but this is products'
+// first buyer-facing read path, so it's applied here for the first time
+// rather than at create/update time. A product's description is always
+// required (unlike categories', which is optional), so there's no further
+// name fallback needed on the description side.
+function resolveMeta(product: PublicProductDoc): { metaTitle: string; metaDescription: string } {
+  return {
+    metaTitle: product.metaTitle ?? product.name,
+    metaDescription: product.metaDescription ?? truncate(product.description),
+  };
+}
+
+// FR-CAT-064: the lowest-sellingPrice *active* variant. Inactive variants
+// are never selectable/purchasable, so they're excluded here and from the
+// buyer-facing variants[] array entirely — a deliberate interpretive call,
+// since FR-CAT-040 never states whether an inactive variant is buyer-visible
+// at all, and there's no reason to surface one the buyer can't select.
+function selectDefaultVariant(variants: ProductVariant[]): ProductVariant | undefined {
+  const active = variants.filter((variant) => variant.active);
+  if (active.length === 0) return undefined;
+  return active.reduce((lowest, variant) =>
+    variant.sellingPrice < lowest.sellingPrice ? variant : lowest,
+  );
+}
+
+function toPublicVariant(variant: ProductVariant, product: PublicProductDoc): PublicProductVariant {
+  // FR-CAT-064's last sentence: a variant with no images of its own falls
+  // back to the parent's images — resolved here so buyer-app consumers never
+  // have to duplicate this fallback themselves.
+  const images = variant.images.length > 0 ? variant.images : product.images;
+
+  const publicVariant: PublicProductVariant = {
+    _id: variant._id,
+    sku: variant.sku,
+    attributes: variant.attributes,
+    images: images.map(toPublicImage),
+    mrp: variant.mrp,
+    discount: variant.discount,
+    sellingPrice: variant.sellingPrice,
+    // Variants carry no lowStockThreshold of their own — every per-unit
+    // availability calculation in this module reuses the *parent product's*
+    // single threshold, since the schema has nowhere else to store one.
+    availability: deriveAvailability(variant.stock, product.lowStockThreshold),
+  };
+  if (variant.weight !== undefined) publicVariant.weight = variant.weight;
+  return publicVariant;
+}
+
+// FR-CAT-096: "product-level availability, when variants exist, is the best
+// state across active variants" — this is the *listing/card* reading of
+// that rule (one availability badge per product). The *detail page's*
+// initially-displayed availability is a different, narrower thing: per
+// FR-CAT-064, it's whichever single unit is currently selected (the default
+// variant, or the product's own stock when there's no active variant) — see
+// toPublicDetail below, which deliberately does NOT use this function.
+function listAvailability(product: PublicProductDoc): Availability {
+  if (product.variants.length === 0) {
+    return deriveAvailability(product.stock, product.lowStockThreshold);
+  }
+  const activeStates = product.variants
+    .filter((variant) => variant.active)
+    .map((variant) => deriveAvailability(variant.stock, product.lowStockThreshold));
+  return bestAvailability(activeStates);
+}
+
+function toPublicListItem(product: PublicProductDoc): PublicProductListItem {
+  const primaryImage = getPrimaryImage(product.images);
+
+  const item: PublicProductListItem = {
+    _id: product._id,
+    name: product.name,
+    slug: product.slug,
+    brand: toPublicRef(product.brand),
+    mrp: product.mrp,
+    discount: product.discount,
+    sellingPrice: product.sellingPrice,
+    availability: listAvailability(product),
+    isFeatured: product.isFeatured,
+  };
+  if (primaryImage) item.primaryImage = toPublicImage(primaryImage);
+  return item;
+}
+
+function toPublicDetail(product: PublicProductDoc): PublicProductDetail {
+  const defaultVariant = selectDefaultVariant(product.variants);
+  const activeVariants = product.variants.filter((variant) => variant.active);
+  const { metaTitle, metaDescription } = resolveMeta(product);
+
+  const detail: PublicProductDetail = {
+    _id: product._id,
+    name: product.name,
+    slug: product.slug,
+    sku: product.sku,
+    description: product.description,
+    brand: toPublicRef(product.brand),
+    category: toPublicRef(product.category),
+    images: product.images.map(toPublicImage),
+    // FR-CAT-064: the detail page's initially-displayed price/availability
+    // come from the default variant, not the parent product's own stored
+    // fields, whenever a purchasable (active) variant exists.
+    mrp: defaultVariant ? defaultVariant.mrp : product.mrp,
+    discount: defaultVariant ? defaultVariant.discount : product.discount,
+    sellingPrice: defaultVariant ? defaultVariant.sellingPrice : product.sellingPrice,
+    availability: defaultVariant
+      ? deriveAvailability(defaultVariant.stock, product.lowStockThreshold)
+      : deriveAvailability(product.stock, product.lowStockThreshold),
+    isFeatured: product.isFeatured,
+    // FR-CAT-063: every specification pair, grouped, regardless of
+    // filterable — unlike list items, the detail page draws no distinction.
+    specifications: product.specifications,
+    hasVariants: activeVariants.length > 0,
+    variants: activeVariants.map((variant) => toPublicVariant(variant, product)),
+    metaTitle,
+    metaDescription,
+  };
+  if (defaultVariant) detail.defaultVariantId = defaultVariant._id;
+  return detail;
+}
+
+function buildPagination(page: number, limit: number, total: number): Pagination {
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  return { page, limit, total, totalPages, hasNextPage: page < totalPages };
+}
+
+// FR-CAT-054/065: a flat, published-only listing; ?q= switches the query
+// shape entirely to Atlas Search (searchPublicPaginated), since $search must
+// lead an aggregation pipeline and can't be layered onto the plain .find()
+// path listPublicPaginated uses. FR-CAT-058: an empty result is a normal
+// empty page, not an error — neither branch below ever throws for "no
+// matches."
+export async function listPublicProducts(
+  params: PublicProductListParams,
+): Promise<{ items: PublicProductListItem[]; pagination: Pagination }> {
+  const page = { page: params.page, limit: params.limit };
+  const { items, total } = params.q
+    ? await searchPublicPaginated(params.q, {}, page)
+    : await listPublicPaginated({}, page);
+
+  return {
+    items: items.map(toPublicListItem),
+    pagination: buildPagination(params.page, params.limit, total),
+  };
+}
+
+// FR-CAT-055: resolves the category slug to itself plus its direct active
+// subcategories (at most two levels deep, so "direct children" already
+// covers the whole subtree) before delegating to the same listPublicPaginated
+// the flat listing uses, scoped via categoryIds.
+export async function listPublicProductsByCategorySlug(
+  categorySlug: string,
+  params: PublicCategoryProductListParams,
+): Promise<{ items: PublicProductListItem[]; pagination: Pagination }> {
+  const category = await getActiveCategoryBySlug(categorySlug);
+  const subcategoryIds = await listActiveSubcategoryIds(category._id);
+  const categoryIds = [category._id, ...subcategoryIds];
+
+  const { items, total } = await listPublicPaginated(
+    { categoryIds },
+    { page: params.page, limit: params.limit },
+  );
+
+  return {
+    items: items.map(toPublicListItem),
+    pagination: buildPagination(params.page, params.limit, total),
+  };
+}
+
+export async function getPublicProductBySlug(slug: string): Promise<PublicProductDetail> {
+  const product = await findPublishedBySlug(slug);
+  if (!product) throw notFoundBySlug(slug);
+  return toPublicDetail(product);
 }
