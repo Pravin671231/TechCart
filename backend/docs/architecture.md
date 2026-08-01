@@ -43,8 +43,19 @@ backend/
 │   │   └── health.api.test.ts    # Supertest, full app, GET /health + 404 path
 │   ├── admin-auth/
 │   │   └── admin-auth.api.test.ts  # Supertest, missing/wrong/correct X-Admin-Key against /api/admin
-│   └── uploads/
-│       └── uploads.api.test.ts     # Supertest, POST /api/admin/uploads/{presign,direct}, r2.ts mocked
+│   ├── uploads/
+│   │   └── uploads.api.test.ts     # Supertest, POST /api/admin/uploads/{presign,direct}, r2.ts mocked
+│   └── product-catalog/            # mirrors src/modules/product-catalog/features/ — one Supertest file per catalog entity module
+│       ├── brands/
+│       │   └── brands.api.test.ts
+│       ├── categories/
+│       │   └── categories.api.test.ts
+│       ├── categorySpecifications/
+│       │   └── categorySpecifications.api.test.ts
+│       ├── categoryVariants/
+│       │   └── categoryVariants.api.test.ts
+│       └── products/
+│           └── products.api.test.ts
 │
 └── src/
     ├── index.ts                    # exports startServer(); require.main-guarded self-invocation
@@ -85,15 +96,70 @@ backend/
         │   └── tests/
         │       └── health.service.test.ts
         │
-        └── uploads/
-            ├── uploads.module.ts          # { path: "/uploads", router }
-            ├── uploads.routes.ts          # POST /presign; POST /direct (multer memoryStorage, limits.fileSize = MAX_DIRECT_UPLOAD_BYTES)
-            ├── uploads.controller.ts      # zod-validates { purpose, contentType } or { purpose } + req.file, calls the service
-            ├── uploads.service.ts         # issuePresignedUpload + issueDirectUpload + consumeImageKeys/validateImageCount/normalizeImages
-            ├── uploads.repository.ts       # createPendingUpload / consumeByKey (findOneAndDelete)
-            ├── uploads.model.ts            # presignedUploads collection, TTL index on expiresAt
-            └── tests/
-                └── uploads.service.test.ts
+        ├── uploads/
+        │   ├── uploads.module.ts          # { path: "/uploads", router }
+        │   ├── uploads.routes.ts          # POST /presign; POST /direct (multer memoryStorage, limits.fileSize = MAX_DIRECT_UPLOAD_BYTES)
+        │   ├── uploads.controller.ts      # zod-validates { purpose, contentType } or { purpose } + req.file, calls the service
+        │   ├── uploads.service.ts         # issuePresignedUpload + issueDirectUpload + consumeImageKeys/validateImageCount/normalizeImages
+        │   ├── uploads.repository.ts       # createPendingUpload / consumeByKey (findOneAndDelete)
+        │   ├── uploads.model.ts            # presignedUploads collection, TTL index on expiresAt
+        │   └── tests/
+        │       └── uploads.service.test.ts
+        │
+        └── product-catalog/               # groups every catalog-domain entity module; uploads/health stay flat above since they're cross-cutting infra, not catalog entities
+            └── features/
+                ├── brands/                     # Issue #27/M2.3 — see Brands in CLAUDE.md
+                │   ├── brands.module.ts             # { brandsAdminModule, brandsPublicModule }
+                │   ├── brands.admin.routes.ts
+                │   ├── brands.public.routes.ts
+                │   ├── brands.controller.ts
+                │   ├── brands.service.ts
+                │   ├── brands.repository.ts
+                │   ├── brands.model.ts
+                │   └── tests/
+                │       └── brands.service.test.ts
+                │
+                ├── categories/                  # Issue #28/M2.4 — see Categories in CLAUDE.md
+                │   ├── categories.module.ts         # { categoriesAdminModule, categoriesPublicModule }
+                │   ├── categories.admin.routes.ts
+                │   ├── categories.public.routes.ts
+                │   ├── categories.controller.ts
+                │   ├── categories.service.ts
+                │   ├── categories.repository.ts
+                │   ├── categories.model.ts
+                │   └── tests/
+                │       └── categories.service.test.ts
+                │
+                ├── categorySpecifications/      # Issue #29/M2.5 — admin-only (GET/PUT/PATCH), mounted mergeParams:true under /categories/:id/specifications
+                │   ├── categorySpecifications.module.ts
+                │   ├── categorySpecifications.routes.ts
+                │   ├── categorySpecifications.controller.ts
+                │   ├── categorySpecifications.service.ts
+                │   ├── categorySpecifications.repository.ts
+                │   ├── categorySpecifications.model.ts
+                │   └── tests/
+                │       └── categorySpecifications.service.test.ts
+                │
+                ├── categoryVariants/            # Issue #30/M2.6 — admin-only (GET/PUT/PATCH), same mergeParams:true shape as categorySpecifications
+                │   ├── categoryVariants.module.ts
+                │   ├── categoryVariants.routes.ts
+                │   ├── categoryVariants.controller.ts
+                │   ├── categoryVariants.service.ts
+                │   ├── categoryVariants.repository.ts
+                │   ├── categoryVariants.model.ts
+                │   └── tests/
+                │       └── categoryVariants.service.test.ts
+                │
+                └── products/                    # Issues #31–#36/M2.7-M2.12 — see Products/Product Variants/Status Updates/Admin Search/Buyer Browsing/Buyer Filtering in CLAUDE.md
+                    ├── products.module.ts           # { productsAdminModule, productsPublicModule }
+                    ├── products.admin.routes.ts
+                    ├── products.public.routes.ts
+                    ├── products.controller.ts
+                    ├── products.service.ts
+                    ├── products.repository.ts
+                    ├── products.model.ts
+                    └── tests/
+                        └── products.service.test.ts
 ```
 
 ## Config
