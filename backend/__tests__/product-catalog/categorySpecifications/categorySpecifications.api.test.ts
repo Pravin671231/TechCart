@@ -2,26 +2,26 @@ import { Types } from "mongoose";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 
-vi.mock("@/modules/categorySpecifications/categorySpecifications.repository", () => ({
+vi.mock("@/modules/product-catalog/features/categorySpecifications/categorySpecifications.repository", () => ({
   findByCategory: vi.fn(),
   replaceGroups: vi.fn(),
   deleteByCategory: vi.fn(),
 }));
 
-vi.mock("@/modules/categories/categories.repository", () => ({
+vi.mock("@/modules/product-catalog/features/categories/categories.repository", () => ({
   findById: vi.fn(),
 }));
 
-vi.mock("@/modules/products/products.repository", () => ({
+vi.mock("@/modules/product-catalog/features/products/products.repository", () => ({
   countBySpecificationField: vi.fn(),
 }));
 
 import app from "@/app";
 import { env } from "@/config/env";
-import * as categorySpecificationsRepository from "@/modules/categorySpecifications/categorySpecifications.repository";
-import * as categoriesRepository from "@/modules/categories/categories.repository";
-import * as productsRepository from "@/modules/products/products.repository";
-import type { SpecificationGroup } from "@/modules/categorySpecifications/categorySpecifications.model";
+import * as categorySpecificationsRepository from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.repository";
+import * as categoriesRepository from "@/modules/product-catalog/features/categories/categories.repository";
+import * as productsRepository from "@/modules/product-catalog/features/products/products.repository";
+import type { SpecificationGroup } from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.model";
 
 const categoryId = new Types.ObjectId();
 const url = `/api/admin/categories/${categoryId.toString()}/specifications`;

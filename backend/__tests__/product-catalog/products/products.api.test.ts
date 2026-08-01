@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 
-vi.mock("@/modules/products/products.repository", () => ({
+vi.mock("@/modules/product-catalog/features/products/products.repository", () => ({
   create: vi.fn(),
   findById: vi.fn(),
   slugExists: vi.fn(),
@@ -15,17 +15,17 @@ vi.mock("@/modules/products/products.repository", () => ({
   searchPublicPaginated: vi.fn(),
 }));
 
-vi.mock("@/modules/brands/brands.service", () => ({
+vi.mock("@/modules/product-catalog/features/brands/brands.service", () => ({
   getBrandById: vi.fn(),
 }));
 
-vi.mock("@/modules/categories/categories.service", () => ({
+vi.mock("@/modules/product-catalog/features/categories/categories.service", () => ({
   getCategoryById: vi.fn(),
   getActiveCategoryBySlug: vi.fn(),
   listActiveSubcategoryIds: vi.fn(),
 }));
 
-vi.mock("@/modules/categorySpecifications/categorySpecifications.service", () => ({
+vi.mock("@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service", () => ({
   validateProductSpecifications: vi.fn(),
   getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
   getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
@@ -51,11 +51,11 @@ vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
 import app from "@/app";
 import { env } from "@/config/env";
 import { AppError } from "@/utils/AppError";
-import type { ProductRecord, PublicProductDoc } from "@/modules/products/products.repository";
-import * as productsRepository from "@/modules/products/products.repository";
-import * as brandsService from "@/modules/brands/brands.service";
-import * as categoriesService from "@/modules/categories/categories.service";
-import * as categorySpecificationsService from "@/modules/categorySpecifications/categorySpecifications.service";
+import type { ProductRecord, PublicProductDoc } from "@/modules/product-catalog/features/products/products.repository";
+import * as productsRepository from "@/modules/product-catalog/features/products/products.repository";
+import * as brandsService from "@/modules/product-catalog/features/brands/brands.service";
+import * as categoriesService from "@/modules/product-catalog/features/categories/categories.service";
+import * as categorySpecificationsService from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service";
 
 const productId = new Types.ObjectId();
 const brandId = new Types.ObjectId();

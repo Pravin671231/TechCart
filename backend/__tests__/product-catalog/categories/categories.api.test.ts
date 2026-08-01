@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 
-vi.mock("@/modules/categories/categories.repository", () => ({
+vi.mock("@/modules/product-catalog/features/categories/categories.repository", () => ({
   create: vi.fn(),
   findById: vi.fn(),
   slugExists: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock("@/modules/categories/categories.repository", () => ({
   countByParent: vi.fn(),
 }));
 
-vi.mock("@/modules/products/products.repository", () => ({
+vi.mock("@/modules/product-catalog/features/products/products.repository", () => ({
   countByBrand: vi.fn(),
   countByBrandIds: vi.fn(),
   countByCategory: vi.fn(),
@@ -32,20 +32,20 @@ vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
   };
 });
 
-vi.mock("@/modules/categorySpecifications/categorySpecifications.service", () => ({
+vi.mock("@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service", () => ({
   deleteForCategory: vi.fn(),
   getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
   getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
 }));
 
-vi.mock("@/modules/categoryVariants/categoryVariants.service", () => ({
+vi.mock("@/modules/product-catalog/features/categoryVariants/categoryVariants.service", () => ({
   deleteForCategory: vi.fn(),
 }));
 
 import app from "@/app";
 import { env } from "@/config/env";
-import * as categoriesRepository from "@/modules/categories/categories.repository";
-import * as productsRepository from "@/modules/products/products.repository";
+import * as categoriesRepository from "@/modules/product-catalog/features/categories/categories.repository";
+import * as productsRepository from "@/modules/product-catalog/features/products/products.repository";
 
 afterEach(() => {
   vi.clearAllMocks();

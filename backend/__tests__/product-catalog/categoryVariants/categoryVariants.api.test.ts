@@ -2,21 +2,21 @@ import { Types } from "mongoose";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 
-vi.mock("@/modules/categoryVariants/categoryVariants.repository", () => ({
+vi.mock("@/modules/product-catalog/features/categoryVariants/categoryVariants.repository", () => ({
   findByCategory: vi.fn(),
   replaceAxes: vi.fn(),
   deleteByCategory: vi.fn(),
 }));
 
-vi.mock("@/modules/categories/categories.repository", () => ({
+vi.mock("@/modules/product-catalog/features/categories/categories.repository", () => ({
   findById: vi.fn(),
 }));
 
 import app from "@/app";
 import { env } from "@/config/env";
-import * as categoryVariantsRepository from "@/modules/categoryVariants/categoryVariants.repository";
-import * as categoriesRepository from "@/modules/categories/categories.repository";
-import type { VariantAxis } from "@/modules/categoryVariants/categoryVariants.model";
+import * as categoryVariantsRepository from "@/modules/product-catalog/features/categoryVariants/categoryVariants.repository";
+import * as categoriesRepository from "@/modules/product-catalog/features/categories/categories.repository";
+import type { VariantAxis } from "@/modules/product-catalog/features/categoryVariants/categoryVariants.model";
 
 const categoryId = new Types.ObjectId();
 const url = `/api/admin/categories/${categoryId.toString()}/variant-types`;

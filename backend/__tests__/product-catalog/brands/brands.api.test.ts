@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 
-vi.mock("@/modules/brands/brands.repository", () => ({
+vi.mock("@/modules/product-catalog/features/brands/brands.repository", () => ({
   create: vi.fn(),
   findById: vi.fn(),
   slugExists: vi.fn(),
@@ -12,7 +12,7 @@ vi.mock("@/modules/brands/brands.repository", () => ({
   listActive: vi.fn(),
 }));
 
-vi.mock("@/modules/products/products.repository", () => ({
+vi.mock("@/modules/product-catalog/features/products/products.repository", () => ({
   countByBrand: vi.fn(),
   countByBrandIds: vi.fn(),
 }));
@@ -28,8 +28,8 @@ vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
 
 import app from "@/app";
 import { env } from "@/config/env";
-import * as brandsRepository from "@/modules/brands/brands.repository";
-import * as productsRepository from "@/modules/products/products.repository";
+import * as brandsRepository from "@/modules/product-catalog/features/brands/brands.repository";
+import * as productsRepository from "@/modules/product-catalog/features/products/products.repository";
 
 afterEach(() => {
   vi.clearAllMocks();
