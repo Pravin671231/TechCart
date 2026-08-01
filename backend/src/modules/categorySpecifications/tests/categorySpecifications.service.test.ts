@@ -6,6 +6,7 @@ import type { SpecificationGroup } from "../categorySpecifications.model";
 
 vi.mock("../categorySpecifications.repository", () => ({
   findByCategory: vi.fn(),
+  findByCategoryIds: vi.fn(),
   replaceGroups: vi.fn(),
   deleteByCategory: vi.fn(),
 }));
@@ -27,6 +28,8 @@ import {
   updateSpecifications,
   deleteForCategory,
   validateProductSpecifications,
+  getCardFieldsByCategoryIds,
+  getFilterableFieldsByCategory,
 } from "../categorySpecifications.service";
 
 const categoryId = new Types.ObjectId();
@@ -531,5 +534,94 @@ describe("validateProductSpecifications", () => {
     ).rejects.toMatchObject({
       message: expect.stringMatching(/Screen Size.*Unknown|Unknown.*Screen Size/s),
     });
+  });
+});
+
+describe("getCardFieldsByCategoryIds", () => {
+  it("returns only filterable fields, in schema declaration order", async () => {
+    vi.mocked(categorySpecificationsRepository.findByCategoryIds).mockResolvedValue(
+      new Map([[categoryId.toString(), [groupA, groupB]]]),
+    );
+
+    const result = await getCardFieldsByCategoryIds([categoryId]);
+
+    expect(result.get(categoryId.toString())).toEqual([
+      { name: "Screen Size", unit: "inches" },
+      { name: "Capacity", unit: "mAh" },
+    ]);
+  });
+
+  it("caps the result at the first four filterable fields, in declaration order", async () => {
+    const sixFilterableFields: SpecificationGroup = {
+      groupName: "Specs",
+      specifications: [
+        { name: "A", type: "boolean", required: false, filterable: true },
+        { name: "B", type: "boolean", required: false, filterable: true },
+        { name: "C", type: "boolean", required: false, filterable: true },
+        { name: "D", type: "boolean", required: false, filterable: true },
+        { name: "E", type: "boolean", required: false, filterable: true },
+        { name: "F", type: "boolean", required: false, filterable: true },
+      ],
+    };
+    vi.mocked(categorySpecificationsRepository.findByCategoryIds).mockResolvedValue(
+      new Map([[categoryId.toString(), [sixFilterableFields]]]),
+    );
+
+    const result = await getCardFieldsByCategoryIds([categoryId]);
+
+    expect(result.get(categoryId.toString())?.map((f) => f.name)).toEqual(["A", "B", "C", "D"]);
+  });
+
+  it("omits non-filterable fields entirely", async () => {
+    vi.mocked(categorySpecificationsRepository.findByCategoryIds).mockResolvedValue(
+      new Map([[categoryId.toString(), [groupA]]]),
+    );
+
+    const result = await getCardFieldsByCategoryIds([categoryId]);
+
+    expect(result.get(categoryId.toString())?.map((f) => f.name)).not.toContain("Resolution");
+  });
+
+  it("defaults a category with no specification document to an empty list", async () => {
+    vi.mocked(categorySpecificationsRepository.findByCategoryIds).mockResolvedValue(new Map());
+
+    const result = await getCardFieldsByCategoryIds([categoryId]);
+
+    expect(result.get(categoryId.toString())).toBeUndefined();
+  });
+
+  it("omits unit when the field has none", async () => {
+    const noUnitField: SpecificationGroup = {
+      groupName: "Options",
+      specifications: [{ name: "Color", type: "enum", options: ["Red"], required: false, filterable: true }],
+    };
+    vi.mocked(categorySpecificationsRepository.findByCategoryIds).mockResolvedValue(
+      new Map([[categoryId.toString(), [noUnitField]]]),
+    );
+
+    const result = await getCardFieldsByCategoryIds([categoryId]);
+
+    expect(result.get(categoryId.toString())?.[0]).not.toHaveProperty("unit");
+  });
+});
+
+describe("getFilterableFieldsByCategory", () => {
+  it("returns a map of only the filterable fields, keyed by name", async () => {
+    vi.mocked(categorySpecificationsRepository.findByCategory).mockResolvedValue(
+      storedDoc([groupA, groupB]),
+    );
+
+    const result = await getFilterableFieldsByCategory(categoryId);
+
+    expect([...result.keys()]).toEqual(["Screen Size", "Capacity"]);
+    expect(result.get("Resolution")).toBeUndefined();
+  });
+
+  it("returns an empty map when no schema has been defined yet", async () => {
+    vi.mocked(categorySpecificationsRepository.findByCategory).mockResolvedValue(null);
+
+    const result = await getFilterableFieldsByCategory(categoryId);
+
+    expect(result.size).toBe(0);
   });
 });

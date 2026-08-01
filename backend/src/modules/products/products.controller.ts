@@ -19,7 +19,7 @@ import {
   getPublicProductBySlug,
 } from "./products.service";
 import { PRODUCT_STATUSES } from "./products.model";
-import type { ProductSortField } from "./products.repository";
+import type { ProductSortField, SpecFilter } from "./products.repository";
 
 const objectIdString = z.string().refine(isValidObjectId, { message: "Must be a valid id." });
 
@@ -257,19 +257,122 @@ export async function updateVariantHandler(req: Request, res: Response): Promise
 const PUBLIC_PAGE_SIZE_DEFAULT = 24;
 const PUBLIC_PAGE_SIZE_MAX = 48;
 
-const publicListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).optional().default(PUBLIC_PAGE_SIZE_DEFAULT),
-  q: z.string().min(1).optional(),
+// FR-CAT-069: accepts either a repeated query key (?brand=a&brand=b) or a
+// single comma-joined value (?brand=a,b) — both are common conventions for
+// a multi-select filter, and there's no reason to force the client into
+// exactly one. Validated as a flat list of ids, not raw strings, so an
+// invalid id anywhere in the list surfaces as the same VALIDATION_ERROR
+// shape every other :id-style field in this codebase uses.
+const brandFilterSchema = z
+  .union([z.string(), z.array(z.string())])
+  .transform((raw) =>
+    (Array.isArray(raw) ? raw : [raw])
+      .flatMap((value) => value.split(","))
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0),
+  )
+  .refine((ids) => ids.every((id) => isValidObjectId(id)), {
+    message: "Must be a list of valid ids.",
+  })
+  .optional();
+
+// FR-CAT-072: enum/boolean specs submit a plain string value
+// (?spec[RAM]=8GB); number specs submit a range object via qs's bracket
+// notation (?spec[ScreenSize][min]=6&spec[ScreenSize][max]=6.5). Which shape
+// is legal for a given field name is a category-schema question this
+// controller can't answer — products.service.ts's resolveSpecFilters
+// rejects a shape/type mismatch once it knows the category.
+const specFilterRangeSchema = z
+  .object({ min: z.string().optional(), max: z.string().optional() })
+  .refine((range) => range.min !== undefined || range.max !== undefined, {
+    message: "At least one of min/max is required.",
+  });
+const specFilterQuerySchema = z.record(z.string(), z.union([z.string(), specFilterRangeSchema])).optional();
+
+const publicFilterFieldsSchema = z.object({
+  brand: brandFilterSchema,
+  minPrice: z.coerce.number().int().min(0).optional(),
+  maxPrice: z.coerce.number().int().min(0).optional(),
+  inStock: z.enum(["true"]).optional(),
+  onSale: z.enum(["true"]).optional(),
+  // FR-CAT-071: a single name/value pair (the SRS's own wording is
+  // singular, "a variant attribute name and value") — both or neither, not
+  // one alone, enforced by the .refine() below rather than making one
+  // optional and silently ignoring a half-submitted filter.
+  attributeName: z.string().min(1).optional(),
+  attributeValue: z.string().min(1).optional(),
+  spec: specFilterQuerySchema,
+  sort: z.enum(["relevance", "price_asc", "price_desc", "newest"]).optional(),
 });
 
-const publicCategoryProductsQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).optional().default(PUBLIC_PAGE_SIZE_DEFAULT),
-});
+const publicListQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).optional().default(PUBLIC_PAGE_SIZE_DEFAULT),
+    q: z.string().min(1).optional(),
+    // FR-CAT-070: category filter on the *flat* listing, by slug — distinct
+    // from the dedicated GET /api/categories/:slug/products route, which
+    // pre-fixes the category via the URL instead.
+    category: z.string().min(1).optional(),
+  })
+  .extend(publicFilterFieldsSchema.shape)
+  .refine((query) => (query.attributeName === undefined) === (query.attributeValue === undefined), {
+    message: "attributeName and attributeValue must be submitted together.",
+    path: ["attributeValue"],
+  });
+
+const publicCategoryProductsQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).optional().default(PUBLIC_PAGE_SIZE_DEFAULT),
+  })
+  .extend(publicFilterFieldsSchema.shape)
+  .refine((query) => (query.attributeName === undefined) === (query.attributeValue === undefined), {
+    message: "attributeName and attributeValue must be submitted together.",
+    path: ["attributeValue"],
+  });
 
 function clampLimit(limit: number): number {
   return Math.min(limit, PUBLIC_PAGE_SIZE_MAX);
+}
+
+// "true"/"false" strings only — number-typed spec filters never reach this
+// path (they're always range objects, parsed separately below), so there's
+// no numeric coercion to attempt here.
+function coerceSpecValue(raw: string): string | boolean {
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  return raw;
+}
+
+function parseSpecFilters(
+  raw: Record<string, string | { min?: string | undefined; max?: string | undefined }> | undefined,
+): SpecFilter[] | undefined {
+  if (!raw) return undefined;
+
+  const filters: SpecFilter[] = [];
+  for (const [name, value] of Object.entries(raw)) {
+    if (typeof value === "string") {
+      filters.push({ name, kind: "value", value: coerceSpecValue(value) });
+      continue;
+    }
+    const range: SpecFilter = { name, kind: "range" };
+    if (value.min !== undefined) range.min = Number(value.min);
+    if (value.max !== undefined) range.max = Number(value.max);
+    filters.push(range);
+  }
+  return filters.length > 0 ? filters : undefined;
+}
+
+function parseBrandIds(ids: string[] | undefined): Types.ObjectId[] | undefined {
+  return ids && ids.length > 0 ? ids.map((id) => new Types.ObjectId(id)) : undefined;
+}
+
+function parseVariantAttribute(
+  name: string | undefined,
+  value: string | undefined,
+): { name: string; value: string } | undefined {
+  return name !== undefined && value !== undefined ? { name, value } : undefined;
 }
 
 export async function listPublicProductsHandler(req: Request, res: Response): Promise<void> {
@@ -278,6 +381,15 @@ export async function listPublicProductsHandler(req: Request, res: Response): Pr
     page: query.page,
     limit: clampLimit(query.limit),
     q: query.q,
+    categorySlug: query.category,
+    brandIds: parseBrandIds(query.brand),
+    minPrice: query.minPrice,
+    maxPrice: query.maxPrice,
+    inStockOnly: query.inStock === "true",
+    onSaleOnly: query.onSale === "true",
+    variantAttribute: parseVariantAttribute(query.attributeName, query.attributeValue),
+    specFilters: parseSpecFilters(query.spec),
+    sort: query.sort,
   });
   res.status(200).json(successResponse(items, pagination));
 }
@@ -301,6 +413,14 @@ export async function listProductsByCategorySlugHandler(
   const { items, pagination } = await listPublicProductsByCategorySlug(slug, {
     page: query.page,
     limit: clampLimit(query.limit),
+    brandIds: parseBrandIds(query.brand),
+    minPrice: query.minPrice,
+    maxPrice: query.maxPrice,
+    inStockOnly: query.inStock === "true",
+    onSaleOnly: query.onSale === "true",
+    variantAttribute: parseVariantAttribute(query.attributeName, query.attributeValue),
+    specFilters: parseSpecFilters(query.spec),
+    sort: query.sort,
   });
   res.status(200).json(successResponse(items, pagination));
 }

@@ -34,6 +34,8 @@ vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
 
 vi.mock("@/modules/categorySpecifications/categorySpecifications.service", () => ({
   deleteForCategory: vi.fn(),
+  getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
+  getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
 }));
 
 vi.mock("@/modules/categoryVariants/categoryVariants.service", () => ({
@@ -462,6 +464,7 @@ describe("GET /api/categories/:slug/products", () => {
     expect(res.status).toBe(200);
     expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
       { categoryIds: [categoryId, subcategoryId] },
+      "newest",
       { page: 1, limit: 24 },
     );
     expect(res.body.data).toEqual([
@@ -476,6 +479,7 @@ describe("GET /api/categories/:slug/products", () => {
         sellingPrice: 50000,
         availability: "in_stock",
         isFeatured: false,
+        cardSpecifications: [],
       },
     ]);
     expect(res.body.pagination).toEqual({
@@ -515,6 +519,7 @@ describe("GET /api/categories/:slug/products", () => {
     expect(res.status).toBe(200);
     expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
       expect.anything(),
+      "newest",
       { page: 1, limit: 48 },
     );
   });

@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the Category management endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #28 (M2.4 — Category management, `FR-CAT-014`–`022`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-046`, `048` for this entity), Issue #34 (M2.10 — Admin search, `FR-CAT-051` for this entity), and Issue #35 (M2.11 — Buyer browsing, `FR-CAT-055`, `066` for this entity): the five admin CRUD endpoints under `/api/admin/categories`, the status-toggle endpoint, `search` on the admin list, the public `GET /api/categories`, `GET /api/categories/search`, and `GET /api/categories/:slug/products` (this last one returns *product* data — see [`products.api.md`](./products.api.md), the module its controller actually lives in). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup (`base_url`, `admin_api_key` variables); see [`brands.api.md`](./brands.api.md) for the sibling entity this module closely mirrors. This doc assumes collection setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #28 (M2.4 — Category management, `FR-CAT-014`–`022`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-046`, `048` for this entity), Issue #34 (M2.10 — Admin search, `FR-CAT-051` for this entity), Issue #35 (M2.11 — Buyer browsing, `FR-CAT-055`, `066` for this entity), and Issue #36 (M2.12 — Buyer filtering & sorting, `FR-CAT-070`–`076`, `092` for this entity's `:slug/products` route): the five admin CRUD endpoints under `/api/admin/categories`, the status-toggle endpoint, `search` on the admin list, the public `GET /api/categories`, `GET /api/categories/search`, and `GET /api/categories/:slug/products` (this last one returns *product* data and shares the full buyer filter/sort surface — see [`products.api.md`](./products.api.md), the module its controller actually lives in). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup (`base_url`, `admin_api_key` variables); see [`brands.api.md`](./brands.api.md) for the sibling entity this module closely mirrors. This doc assumes collection setup is already done and reuses the same collection.
 
 ---
 
@@ -526,7 +526,7 @@ No headers, no body.
 
 ## `GET /api/categories/:slug/products`
 
-Lists **published-only** products within a category, including its subcategories (`FR-CAT-055`) — the response is product data, so its controller (`listProductsByCategorySlugHandler`) actually lives in `products.controller.ts`; only this route's wiring is declared here. See [`products.api.md`](./products.api.md#get-apiproducts) for the item shape, `availability`, and pagination-clamp behavior — identical to the flat `GET /api/products` listing, just scoped to this one category (and its direct subcategories; categories are at most two levels deep, so that already covers the whole subtree).
+Lists **published-only** products within a category, including its subcategories (`FR-CAT-055`) — the response is product data, so its controller (`listProductsByCategorySlugHandler`) actually lives in `products.controller.ts`; only this route's wiring is declared here. See [`products.api.md`](./products.api.md#get-apiproducts) for the item shape (including `cardSpecifications`), `availability`, and pagination-clamp behavior — identical to the flat `GET /api/products` listing, just scoped to this one category (and its direct subcategories; categories are at most two levels deep, so that already covers the whole subtree).
 
 | Field  | Value                                              |
 | ------ | -------------------------------------------------- |
@@ -534,12 +534,16 @@ Lists **published-only** products within a category, including its subcategories
 | URL    | `{{base_url}}/api/categories/electronics/products` |
 | Name   | `List Products by Category (Buyer)`                |
 
-No headers, no body. Same `page`/`limit` query params as `GET /api/products` (default `24`, clamped at `48`) — no `q` here, keyword search is flat-listing-only.
+No headers, no body. **Every filter/sort param `GET /api/products` accepts also works here** — `brand`, `minPrice`/`maxPrice`, `inStock`, `onSale`, `attributeName`/`attributeValue`, `spec[...]`, `sort` (`FR-CAT-076`) — with two differences: there's no `q` (keyword search stays flat-listing-only) and no `category` param (this route's `:slug` already fixes it).
 
-**Click Send. Expected response — `200 OK`:** identical envelope shape to `GET /api/products`, scoped to the resolved category (and its active subcategories).
+**Click Send. Try:** `{{base_url}}/api/categories/electronics/products?minPrice=20000&inStock=true&sort=price_asc`
+
+**Expected response — `200 OK`:** identical envelope shape to `GET /api/products`, scoped to the resolved category (and its active subcategories).
 
 - **Only an *active* category's slug resolves** — a deactivated category's slug 404s here exactly like a slug that never existed, mirroring the buyer-facing `GET /api/categories` list already excluding it.
 - **Subcategory expansion is direct children only** — categories are at most two levels deep, so a parent's direct active children already cover the whole subtree; querying a subcategory's own slug scopes to just that subcategory (it has no children of its own).
+- **A `spec[...]` filter is validated against *this resolved category's* schema** (`FR-CAT-072`/`035`) — a field that isn't `filterable` here, or a value/range shape mismatched to its actual type, 400s as `INVALID_SPECIFICATION_FILTER`. Unlike the flat `GET /api/products?category=` case (same validation, same code), there's no "unscoped, unvalidated" fallback on this route — a category is always resolved before any filter is evaluated.
+- **`cardSpecifications` on each item reflects that item's *own* category** — normally the same category this route scoped to, but a subcategory's products can carry a different schema than the parent's, so this isn't guaranteed uniform across the page.
 
 ### Error cases
 
@@ -552,6 +556,8 @@ No headers, no body. Same `page`/`limit` query params as `GET /api/products` (de
 ```json
 { "success": false, "code": "CATEGORY_NOT_FOUND", "message": "Category \"missing\" was not found." }
 ```
+
+**A `spec[...]` filter naming a field that isn't filterable for this category, or the wrong value/range shape for its type** — same `INVALID_SPECIFICATION_FILTER` shape as `GET /api/products`, see [`products.api.md`](./products.api.md#get-apiproducts).
 
 ---
 
@@ -572,14 +578,12 @@ Category-specific codes, in addition to the ones already documented in [`uploads
 
 ## Understanding Validation Errors
 
-Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For categories, the fields that can appear as keys are `name`, `description`, `parentCategory`, `image.objectKey`, `image.alt`, `sortOrder`, `metaTitle`, `metaDescription`, and — on the admin list endpoint — `search`. `GET /api/categories/search` requires `q`; `GET /api/categories/:slug/products` accepts `page`/`limit`.
+Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For categories, the fields that can appear as keys are `name`, `description`, `parentCategory`, `image.objectKey`, `image.alt`, `sortOrder`, `metaTitle`, `metaDescription`, and — on the admin list endpoint — `search`. `GET /api/categories/search` requires `q`; `GET /api/categories/:slug/products` accepts `page`, `limit`, and the full filter/sort field set documented in [`products.api.md`](./products.api.md#understanding-validation-errors) (`brand`, `minPrice`, `maxPrice`, `attributeValue`, ...). `INVALID_SPECIFICATION_FILTER` (also on `:slug/products`) is a separate, service-level error, not a `VALIDATION_ERROR`.
 
 ---
 
 ## What's Not Here Yet
 
-This document is a snapshot of Issue #28 (plus #33's status endpoint, #34's `search` param, and #35's `/search`+`/:slug/products` routes, folded into this same doc) — not the full Product Catalog API. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), category-governed variant types (`#30`) in [`categoryVariants.api.md`](./categoryVariants.api.md) — together they cover both halves of `DELETE`'s cascade clause — and product core CRUD plus product variants (`#31`, `#32`) in [`products.api.md`](./products.api.md), which also completes `DELETE`'s product half of the `CATEGORY_IN_USE` guard above. Not yet implemented, each its own future issue:
-
-- Buyer filtering, sorting, and card content (`#36`)
+This document is a snapshot of Issue #28 (plus #33's status endpoint, #34's `search` param, #35's `/search`+`/:slug/products` routes, and #36's filter/sort surface on `/:slug/products`, folded into this same doc) — this is the full Product Catalog API (M2) for this entity; M2 closed with #36. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), category-governed variant types (`#30`) in [`categoryVariants.api.md`](./categoryVariants.api.md) — together they cover both halves of `DELETE`'s cascade clause — and product core CRUD plus product variants (`#31`, `#32`) in [`products.api.md`](./products.api.md), which also completes `DELETE`'s product half of the `CATEGORY_IN_USE` guard above.
 
 No real authentication exists yet either (v0.3) — the `X-Admin-Key` header is explicitly a temporary placeholder, not a long-term design.

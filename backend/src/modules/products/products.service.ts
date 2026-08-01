@@ -17,7 +17,12 @@ import {
   getActiveCategoryBySlug,
   listActiveSubcategoryIds,
 } from "@/modules/categories/categories.service";
-import { validateProductSpecifications } from "@/modules/categorySpecifications/categorySpecifications.service";
+import {
+  validateProductSpecifications,
+  getCardFieldsByCategoryIds,
+  getFilterableFieldsByCategory,
+  type CardSpecificationField,
+} from "@/modules/categorySpecifications/categorySpecifications.service";
 import type {
   ProductImage,
   ProductSpecificationGroup,
@@ -42,6 +47,10 @@ import {
   type ProductSortField,
   type PublicProductDoc,
   type PopulatedRef,
+  type PublicProductFilter,
+  type PublicSort,
+  type VariantAttributeFilter,
+  type SpecFilter,
 } from "./products.repository";
 
 // Optional fields spell out `| undefined` explicitly (not just `?:`), same
@@ -458,10 +467,24 @@ export async function updateVariant(
 export type PublicImage = { url: string; alt?: string };
 export type PublicRef = { _id: Types.ObjectId; name: string; slug: string };
 
+// FR-CAT-092: unit is explicitly `null` (not omitted) when the field has
+// none — the one place this module breaks from its usual "omit an absent
+// optional field" convention, matching the SRS's own worked example
+// (`"unit": null`) precisely rather than this codebase's default.
+export type PublicCardSpecification = {
+  name: string;
+  value: string | number | boolean;
+  unit: string | null;
+};
+
 // FR-CAT-091's card contract (image, name, sellingPrice, no specifications)
-// plus brand and availability, following the SRS's own worked listing-item
-// example — minus `cardSpecifications` (the first-four-filterable-specs
-// augmentation), which is FR-CAT-092 and explicitly #36's scope, not #35's.
+// plus brand, availability, and — as of #36 — `cardSpecifications`
+// (FR-CAT-092's first-four-filterable-specs augmentation), following the
+// SRS's own worked listing-item example. `cardSpecifications` is always
+// present, even as `[]` for a home/all-products listing or a category with
+// no filterable fields — per the SRS, the home and category views share
+// this one response shape, and it's `buyer-app`'s job to ignore the field
+// on the home grid rather than the API omitting it in that context.
 export type PublicProductListItem = {
   _id: Types.ObjectId;
   name: string;
@@ -473,6 +496,7 @@ export type PublicProductListItem = {
   sellingPrice: number;
   availability: Availability;
   isFeatured: boolean;
+  cardSpecifications: PublicCardSpecification[];
 };
 
 export type PublicProductVariant = {
@@ -509,8 +533,31 @@ export type PublicProductDetail = {
   metaDescription: string;
 };
 
-export type PublicProductListParams = { page: number; limit: number; q?: string | undefined };
-export type PublicCategoryProductListParams = { page: number; limit: number };
+// #36 (FR-CAT-068–076): every filter/sort dimension the buyer listing
+// supports. `categorySlug` is only meaningful on the flat endpoint
+// (FR-CAT-070's `?category=`) — the category-scoped route already has its
+// category from the path, hence PublicCategoryProductListParams below
+// omitting both `q` (Atlas Search stays flat-listing-only, #35's original
+// scoping decision) and `categorySlug`.
+export type PublicProductListParams = {
+  page: number;
+  limit: number;
+  q?: string | undefined;
+  categorySlug?: string | undefined;
+  brandIds?: Types.ObjectId[] | undefined;
+  minPrice?: number | undefined;
+  maxPrice?: number | undefined;
+  inStockOnly?: boolean | undefined;
+  onSaleOnly?: boolean | undefined;
+  variantAttribute?: VariantAttributeFilter | undefined;
+  specFilters?: SpecFilter[] | undefined;
+  sort?: PublicSort | undefined;
+};
+
+export type PublicCategoryProductListParams = Omit<
+  PublicProductListParams,
+  "q" | "categorySlug"
+>;
 
 function toPublicRef(ref: PopulatedRef): PublicRef {
   return { _id: ref._id, name: ref.name, slug: ref.slug };
@@ -598,6 +645,11 @@ function listAvailability(product: PublicProductDoc): Availability {
   return bestAvailability(activeStates);
 }
 
+// cardSpecifications starts as [] here — attachCardSpecifications below
+// fills in the real, category-schema-derived value afterward. Splitting it
+// out this way keeps this function synchronous and per-product; the actual
+// lookup is a batched, per-page query keyed by category, not something a
+// single product's own mapper can do on its own.
 function toPublicListItem(product: PublicProductDoc): PublicProductListItem {
   const primaryImage = getPrimaryImage(product.images);
 
@@ -611,9 +663,66 @@ function toPublicListItem(product: PublicProductDoc): PublicProductListItem {
     sellingPrice: product.sellingPrice,
     availability: listAvailability(product),
     isFeatured: product.isFeatured,
+    cardSpecifications: [],
   };
   if (primaryImage) item.primaryImage = toPublicImage(primaryImage);
   return item;
+}
+
+// FR-CAT-092: a product's own value for each of its category's first-four
+// filterable fields, in that same order — a field is skipped entirely
+// (never padded with a null/placeholder entry) when the product has no
+// stored value for it, matching "a product carrying fewer than four
+// filterable specifications renders only those it has." Matched by name
+// alone across all of the product's specification groups, the same
+// simplification categorySpecifications.service.ts's card-field lookup
+// already documents.
+function findSpecificationValue(
+  groups: ProductSpecificationGroup[],
+  name: string,
+): string | number | boolean | undefined {
+  for (const group of groups) {
+    const found = group.values.find((value) => value.name === name);
+    if (found) return found.value;
+  }
+  return undefined;
+}
+
+function buildCardSpecifications(
+  fields: CardSpecificationField[],
+  specifications: ProductSpecificationGroup[],
+): PublicCardSpecification[] {
+  const result: PublicCardSpecification[] = [];
+  for (const field of fields) {
+    const value = findSpecificationValue(specifications, field.name);
+    if (value === undefined) continue;
+    result.push({ name: field.name, value, unit: field.unit ?? null });
+  }
+  return result;
+}
+
+// One batched lookup per result page (not per product) — mirrors
+// countByCategoryIds'/countByBrandIds' existing "bulk map, default to empty
+// for a missing key" shape from the admin modules. `docs` and `items` are
+// guaranteed to be the same length in the same order (items is always
+// `docs.map(toPublicListItem)`), so a plain index pairs each list item back
+// with the raw doc its category id came from.
+async function attachCardSpecifications(
+  items: PublicProductListItem[],
+  docs: PublicProductDoc[],
+): Promise<PublicProductListItem[]> {
+  const categoryIds = [...new Set(docs.map((doc) => doc.category._id.toString()))].map(
+    (id) => new Types.ObjectId(id),
+  );
+  if (categoryIds.length === 0) return items;
+
+  const cardFieldsByCategory = await getCardFieldsByCategoryIds(categoryIds);
+
+  return items.map((item, index) => {
+    const doc = docs[index]!;
+    const fields = cardFieldsByCategory.get(doc.category._id.toString()) ?? [];
+    return { ...item, cardSpecifications: buildCardSpecifications(fields, doc.specifications) };
+  });
 }
 
 function toPublicDetail(product: PublicProductDoc): PublicProductDetail {
@@ -657,47 +766,111 @@ function buildPagination(page: number, limit: number, total: number): Pagination
   return { page, limit, total, totalPages, hasNextPage: page < totalPages };
 }
 
-// FR-CAT-054/065: a flat, published-only listing; ?q= switches the query
-// shape entirely to Atlas Search (searchPublicPaginated), since $search must
-// lead an aggregation pipeline and can't be layered onto the plain .find()
-// path listPublicPaginated uses. FR-CAT-058: an empty result is a normal
-// empty page, not an error — neither branch below ever throws for "no
-// matches."
+function invalidSpecFilter(name: string): AppError {
+  return new AppError(
+    400,
+    "INVALID_SPECIFICATION_FILTER",
+    `"${name}" is not a filterable specification field for this category.`,
+  );
+}
+
+// FR-CAT-072/035: only meaningful when the listing resolves to a single
+// category (the nested route, or ?category= on the flat one) — a category's
+// `filterable` flag is schema-scoped, and an unscoped, catalog-wide listing
+// has no single schema to validate against. In that unscoped case, submitted
+// filters are matched literally rather than rejected — a deliberate
+// simplification, not a security gap: the filter can only ever narrow
+// results, never expose anything a plain query couldn't already reach.
+async function resolveSpecFilters(
+  categoryId: Types.ObjectId | undefined,
+  raw: SpecFilter[] | undefined,
+): Promise<SpecFilter[] | undefined> {
+  if (!raw || raw.length === 0) return undefined;
+  if (!categoryId) return raw;
+
+  const filterable = await getFilterableFieldsByCategory(categoryId);
+  for (const spec of raw) {
+    const field = filterable.get(spec.name);
+    if (!field) throw invalidSpecFilter(spec.name);
+    // FR-CAT-072: number fields filter by range, enum/boolean by value —
+    // reject a filter using the wrong shape for the field's actual type
+    // rather than silently matching nothing.
+    const expectedKind = field.type === "number" ? "range" : "value";
+    if (spec.kind !== expectedKind) throw invalidSpecFilter(spec.name);
+  }
+  return raw;
+}
+
+// Shared by both public list functions below — the only difference between
+// the flat listing and the category-scoped one is whether `categorySlug`
+// arrives via a query param or is already fixed by the route, so both just
+// funnel into this one implementation.
+async function listPublicProductsCore(
+  params: PublicProductListParams,
+): Promise<{ items: PublicProductListItem[]; pagination: Pagination }> {
+  const filter: PublicProductFilter = {};
+  let categoryId: Types.ObjectId | undefined;
+
+  if (params.categorySlug !== undefined) {
+    const category = await getActiveCategoryBySlug(params.categorySlug);
+    const subcategoryIds = await listActiveSubcategoryIds(category._id);
+    filter.categoryIds = [category._id, ...subcategoryIds];
+    categoryId = category._id;
+  }
+  if (params.brandIds) filter.brandIds = params.brandIds;
+  if (params.minPrice !== undefined) filter.minPrice = params.minPrice;
+  if (params.maxPrice !== undefined) filter.maxPrice = params.maxPrice;
+  if (params.inStockOnly) filter.inStockOnly = true;
+  if (params.onSaleOnly) filter.onSaleOnly = true;
+  if (params.variantAttribute) filter.variantAttribute = params.variantAttribute;
+
+  const specFilters = await resolveSpecFilters(categoryId, params.specFilters);
+  if (specFilters) filter.specFilters = specFilters;
+
+  // FR-CAT-075: an explicit sort always wins; absent one, a keyword search
+  // defaults to relevance (score order) and a plain listing defaults to
+  // newest-first — the same defaults #35 already established, just now
+  // named explicitly rather than implicit in which function got called.
+  const sort: PublicSort = params.sort ?? (params.q ? "relevance" : "newest");
+  const page = { page: params.page, limit: params.limit };
+
+  // FR-CAT-071/072: a variant-attribute or specification filter forces the
+  // Atlas Search path even with no keyword query at all, since
+  // embeddedDocument filtering has no plain-query equivalent here. FR-CAT-058:
+  // an empty result is a normal empty page either way, never an error.
+  const needsAtlasSearch = Boolean(
+    params.q || filter.variantAttribute || (filter.specFilters?.length ?? 0) > 0,
+  );
+  const { items, total } = needsAtlasSearch
+    ? await searchPublicPaginated(params.q, filter, sort, page)
+    : await listPublicPaginated(filter, sort, page);
+
+  const listItems = await attachCardSpecifications(items.map(toPublicListItem), items);
+
+  return { items: listItems, pagination: buildPagination(params.page, params.limit, total) };
+}
+
+// FR-CAT-054/065/068–076: the flat, published-only listing — every filter
+// and sort option composes here, plus ?q= Atlas Search keyword search and
+// ?category= (FR-CAT-070's category filter on the *flat* endpoint,
+// distinct from the dedicated nested route below, which pre-fixes the
+// category via the URL instead of a query param).
 export async function listPublicProducts(
   params: PublicProductListParams,
 ): Promise<{ items: PublicProductListItem[]; pagination: Pagination }> {
-  const page = { page: params.page, limit: params.limit };
-  const { items, total } = params.q
-    ? await searchPublicPaginated(params.q, {}, page)
-    : await listPublicPaginated({}, page);
-
-  return {
-    items: items.map(toPublicListItem),
-    pagination: buildPagination(params.page, params.limit, total),
-  };
+  return listPublicProductsCore(params);
 }
 
 // FR-CAT-055: resolves the category slug to itself plus its direct active
 // subcategories (at most two levels deep, so "direct children" already
-// covers the whole subtree) before delegating to the same listPublicPaginated
-// the flat listing uses, scoped via categoryIds.
+// covers the whole subtree) before delegating to the same core listing
+// logic the flat endpoint uses — every filter/sort option composes here
+// too, minus keyword search (Atlas Search stays flat-listing-only).
 export async function listPublicProductsByCategorySlug(
   categorySlug: string,
   params: PublicCategoryProductListParams,
 ): Promise<{ items: PublicProductListItem[]; pagination: Pagination }> {
-  const category = await getActiveCategoryBySlug(categorySlug);
-  const subcategoryIds = await listActiveSubcategoryIds(category._id);
-  const categoryIds = [category._id, ...subcategoryIds];
-
-  const { items, total } = await listPublicPaginated(
-    { categoryIds },
-    { page: params.page, limit: params.limit },
-  );
-
-  return {
-    items: items.map(toPublicListItem),
-    pagination: buildPagination(params.page, params.limit, total),
-  };
+  return listPublicProductsCore({ ...params, categorySlug });
 }
 
 export async function getPublicProductBySlug(slug: string): Promise<PublicProductDetail> {

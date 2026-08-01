@@ -16,12 +16,14 @@
     "express": "^5.2.1",
     "mongoose": "^9.8.1",
     "multer": "^2.2.0",
+    "qs": "^6.15.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/multer": "^2.2.0",
     "@types/node": "^24.13.3",
+    "@types/qs": "^6.15.1",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.10",
     "supertest": "^7.2.2",
