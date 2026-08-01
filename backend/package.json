@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc && tsc-alias",
     "dev": "tsx watch src/index.ts",
+    "seed": "tsx src/scripts/seed/run.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
