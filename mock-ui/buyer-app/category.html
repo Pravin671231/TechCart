@@ -42,7 +42,8 @@
       </p>
 
       <div class="flex gap-6">
-        <!-- Same rail as home — abbreviated here; see home.html for the full facet set -->
+        <!-- Same rail as home, minus the category facet — a category page's category is fixed by
+             its URL. See home.html for the colour facet and the search-categories input too. -->
         <aside class="hidden w-64 shrink-0 flex-col gap-5 lg:flex">
           <section class="border border-neutral-400 p-3">
             <h2 class="mb-2 text-xs font-medium tracking-wide uppercase">Brand</h2>
@@ -51,6 +52,7 @@
               <li>☐ Brand B</li>
               <li>☐ Brand C</li>
             </ul>
+            <p class="mt-2 text-[11px] text-neutral-400">FR-CAT-069</p>
           </section>
           <section class="border border-neutral-400 p-3">
             <h2 class="mb-2 text-xs font-medium tracking-wide uppercase">Price</h2>
@@ -59,6 +61,16 @@
               <span class="text-neutral-400">—</span>
               <span class="flex-1 border border-neutral-400 px-2 py-1 text-neutral-400">Max ₹</span>
             </div>
+            <p class="mt-2 text-[11px] text-neutral-400">FR-CAT-068</p>
+          </section>
+          <section class="border border-neutral-400 p-3">
+            <h2 class="mb-2 text-xs font-medium tracking-wide uppercase">Colour</h2>
+            <div class="flex gap-1.5">
+              <span class="h-6 w-6 border-2 border-neutral-700" style="background: #000"></span>
+              <span class="h-6 w-6 border border-neutral-400" style="background: #c0c0c0"></span>
+              <span class="h-6 w-6 border border-neutral-400" style="background: #4a4a4a"></span>
+            </div>
+            <p class="mt-2 text-[11px] text-neutral-400">Variant-attribute facet · FR-CAT-071</p>
           </section>
           <section class="border border-neutral-400 p-3">
             <h2 class="mb-2 text-xs font-medium tracking-wide uppercase">RAM</h2>
@@ -73,13 +85,17 @@
               <span class="text-neutral-400">—</span>
               <span class="flex-1 border border-neutral-400 px-2 py-1 text-neutral-400">6.5</span>
             </div>
+            <p class="mt-2 text-[11px] text-neutral-400">Specification facet · FR-CAT-072</p>
           </section>
           <section class="border border-neutral-400 p-3 text-sm text-neutral-600">
             <p>☐ In stock only</p>
             <p class="mt-1">☐ On sale only</p>
+            <p class="mt-2 text-[11px] text-neutral-400">FR-CAT-073, 074</p>
           </section>
           <p class="text-[11px] text-neutral-400">
-            Full facet set on <a class="underline" href="./home.html">home.html</a>
+            Every facet composes with every other, with sort, and with pagination · FR-CAT-076. Full
+            facet set (plus category search) on
+            <a class="underline" href="./home.html">home.html</a>.
           </p>
         </aside>
 

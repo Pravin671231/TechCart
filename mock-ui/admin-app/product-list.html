@@ -36,8 +36,8 @@
         <main class="flex-1 overflow-auto p-6">
           <p class="mb-4 text-[11px] text-neutral-400">
             admin-app · Product list —
-            <code class="text-neutral-500">FR-CAT-005, 011, 050, 053, 057</code> · TanStack Table
-            backs this grid per docs/architecture.md §4.2
+            <code class="text-neutral-500">FR-CAT-005, 008, 011, 050, 053, 057</code> · TanStack
+            Table backs this grid per docs/architecture.md §4.2
           </p>
 
           <!-- Toolbar -->
@@ -84,7 +84,18 @@
                   <td class="px-3 py-2">Brand A</td>
                   <td class="px-3 py-2">Smartphones</td>
                   <td class="px-3 py-2 text-right">₹44,910</td>
-                  <td class="px-3 py-2 text-right">128</td>
+                  <td class="px-3 py-2 text-right">
+                    <span class="inline-flex items-center gap-1">
+                      <span class="w-14 border border-neutral-600 bg-neutral-100 px-1.5 py-0.5">
+                        128
+                      </span>
+                      <span
+                        class="border border-neutral-600 bg-neutral-100 px-1.5 py-0.5 text-[10px]"
+                      >
+                        Save
+                      </span>
+                    </span>
+                  </td>
                   <td class="px-3 py-2">
                     <span class="border border-neutral-600 px-2 py-0.5 text-xs">Published</span>
                   </td>
@@ -113,7 +124,8 @@
                   </td>
                   <td class="px-3 py-2 text-xs whitespace-nowrap text-neutral-500">
                     <a class="underline" href="./product-detail.html">View</a> ·
-                    <a class="underline" href="./product-form.html">Edit</a> · Archive
+                    <a class="underline" href="./product-form.html">Edit</a> ·
+                    <a class="underline" href="#">Adjust stock</a> · Archive
                   </td>
                 </tr>
                 <tr class="bg-neutral-50">
@@ -186,6 +198,11 @@
                 FR-CAT-011
               </li>
               <li>Price column shows <code>sellingPrice</code>, rendered from integer paise</li>
+              <li>
+                Row 1's Stock cell shows the inline quick-adjust state (<code>Adjust stock</code>,
+                triggered from row 2's actions) — a dedicated stock-only endpoint, independent of
+                the full edit form's Stock field (<code>FR-CAT-004</code>) · FR-CAT-008
+              </li>
             </ul>
           </div>
         </main>

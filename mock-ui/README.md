@@ -46,18 +46,18 @@ Every screen [`docs/srs/features/0.2-product-catalog.md`](../docs/srs/features/0
 
 **`buyer-app`**
 
-| File                                                             | Screen              | Key requirements                         |
-| ---------------------------------------------------------------- | ------------------- | ---------------------------------------- |
-| [`buyer-app/home.html`](buyer-app/home.html)                     | Home / all-products | `FR-CAT-054`, `057–059`, `075`, `091`    |
-| [`buyer-app/category.html`](buyer-app/category.html)             | Category listing    | `FR-CAT-055`, `070`, `092`               |
-| [`buyer-app/search.html`](buyer-app/search.html)                 | Search results      | `FR-CAT-065`, `067`, `075`               |
-| [`buyer-app/product-detail.html`](buyer-app/product-detail.html) | Product detail      | `FR-CAT-056`, `059`, `063`, `064`, `084` |
+| File                                                             | Screen              | Key requirements                                                                             |
+| ---------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------- |
+| [`buyer-app/home.html`](buyer-app/home.html)                     | Home / all-products | `FR-CAT-054`, `057–059`, `061`, `062`, `066`, `068`, `069`, `071`, `072`, `073`–`076`, `091` |
+| [`buyer-app/category.html`](buyer-app/category.html)             | Category listing    | `FR-CAT-055`, `068`, `069`, `070`–`074`, `076`, `092`                                        |
+| [`buyer-app/search.html`](buyer-app/search.html)                 | Search results      | `FR-CAT-065`, `067`–`076`                                                                    |
+| [`buyer-app/product-detail.html`](buyer-app/product-detail.html) | Product detail      | `FR-CAT-056`, `059`, `063`, `064`, `084`                                                     |
 
 **`admin-app`**
 
 | File                                                                         | Screen                     | Key requirements                              |
 | ---------------------------------------------------------------------------- | -------------------------- | --------------------------------------------- |
-| [`admin-app/product-list.html`](admin-app/product-list.html)                 | Product list               | `FR-CAT-005`, `011`, `050`, `053`             |
+| [`admin-app/product-list.html`](admin-app/product-list.html)                 | Product list               | `FR-CAT-005`, `008`, `011`, `050`, `053`      |
 | [`admin-app/product-detail.html`](admin-app/product-detail.html)             | Product detail (read-only) | `FR-CAT-006`, `013`, `043`, `045`             |
 | [`admin-app/product-form.html`](admin-app/product-form.html)                 | Product create / edit      | `FR-CAT-001`–`004`, `033`, `038`, `083`–`087` |
 | [`admin-app/category-list.html`](admin-app/category-list.html)               | Categories list + form     | `FR-CAT-014`–`022`, `048`, `051`              |
@@ -92,6 +92,21 @@ Every bullet in [`docs/srs/features/0.2-product-catalog.md`](../docs/srs/feature
 Per-screen `FR-CAT-*` IDs are already annotated inline on each page (and summarized in the tables
 above); this table exists to answer the coarser question — "does every §6 requirement have a mock
 at all" — at a glance, per [SRS v0.2 §10](../docs/srs/features/0.2-product-catalog.md#10-open-questions).
+
+## Requirements with no visual surface
+
+Not every `FR-CAT-*` requirement has something to draw. These 14 are intentionally never cited
+in any mock, so a coverage check doesn't mistake the gap for an oversight:
+
+| Requirement(s)      | Why there's no mock                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FR-CAT-042`        | Variant price/stock validation mirrors the product's own rules — a server-side rule, not a distinct screen                                                                      |
+| `FR-CAT-060`        | A negative/absence requirement (draft/archived never returned to buyers) — nothing positive to draw either way                                                                  |
+| `FR-CAT-079`, `082` | Presigned object-key format and registration validation — internal to the upload flow, invisible at any UI layer                                                                |
+| `FR-CAT-089`, `090` | The 401-rejection mechanics and the guard's swappability — backend middleware behaviour                                                                                         |
+| `FR-CAT-093`, `094` | The `{ success, data, pagination }` response envelope shape — an API contract, not a rendered element                                                                           |
+| `FR-CAT-095`, `096` | Buyer field-visibility and `availability` derivation are server-side projection rules; their _effect_ (an availability badge) is mocked, but the rule itself isn't a UI element |
+| `FR-CAT-097`–`100`  | The direct-upload backend path — same upload widget as the presigned path in `product-form.html`, no distinct UI                                                                |
 
 ## What these are — and are not
 
