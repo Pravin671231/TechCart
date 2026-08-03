@@ -5,143 +5,160 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin — Product Create / Edit Form</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme {
+        --color-background: #F8FAFC;
+        --color-primary: #0F172A;
+        --color-accent: #D4AF37;
+        --color-accent-strong: #B8952E;
+        --color-buttons: #1E3A8A;
+        --color-buttons-strong: #172554;
+        --color-ink: #111827;
+        --color-success: #16A34A;
+        --color-success-soft: #F0FDF4;
+        --color-warning: #D97706;
+        --color-warning-soft: #FFFBEB;
+        --color-danger: #DC2626;
+        --color-danger-soft: #FEF2F2;
+      }
+    </style>
   </head>
-  <body class="h-screen bg-white text-neutral-700">
+  <body class="h-screen bg-background text-slate-700">
     <div class="flex h-screen">
-      <aside class="flex w-56 shrink-0 flex-col border-r border-neutral-800 bg-neutral-900">
-        <div class="flex h-16 shrink-0 items-center gap-2 border-b border-neutral-800 px-4">
+      <aside class="flex w-56 shrink-0 flex-col border-r border-slate-800 bg-primary">
+        <div class="flex h-16 shrink-0 items-center gap-2 border-b border-slate-800 px-4">
           <span
-            class="flex h-8 w-8 items-center justify-center rounded-lg bg-green-600 text-sm font-bold text-white"
+            class="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-sm font-bold text-primary"
           >
             T
           </span>
           <span class="text-sm font-semibold tracking-tight text-white">TechCart Admin</span>
         </div>
-        <nav class="flex flex-1 flex-col gap-1 p-2 text-sm text-neutral-300">
-          <a class="rounded-md bg-green-600 px-3 py-2 text-white" href="./product-list.html">
+        <nav class="flex flex-1 flex-col gap-1 p-2 text-sm text-slate-300">
+          <a class="rounded-md bg-accent px-3 py-2 text-primary" href="./product-list.html">
             Products
           </a>
-          <a class="rounded-md px-3 py-2 hover:bg-neutral-800 hover:text-white" href="./category-list.html">Categories</a>
-          <a class="rounded-md px-3 py-2 hover:bg-neutral-800 hover:text-white" href="./brand-list.html">Brands</a>
-          <a class="rounded-md px-3 py-2 hover:bg-neutral-800 hover:text-white" href="./specification-editor.html">Specifications</a>
-          <a class="rounded-md px-3 py-2 hover:bg-neutral-800 hover:text-white" href="./variant-type-editor.html">Variant types</a>
+          <a class="rounded-md px-3 py-2 hover:bg-slate-800 hover:text-white" href="./category-list.html">Categories</a>
+          <a class="rounded-md px-3 py-2 hover:bg-slate-800 hover:text-white" href="./brand-list.html">Brands</a>
+          <a class="rounded-md px-3 py-2 hover:bg-slate-800 hover:text-white" href="./specification-editor.html">Specifications</a>
+          <a class="rounded-md px-3 py-2 hover:bg-slate-800 hover:text-white" href="./variant-type-editor.html">Variant types</a>
         </nav>
-        <div class="flex items-center gap-2 border-t border-neutral-800 p-3 text-sm">
+        <div class="flex items-center gap-2 border-t border-slate-800 p-3 text-sm">
           <span
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-600 text-xs font-medium text-white"
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-medium text-primary"
           >
             AD
           </span>
           <div class="flex flex-col leading-tight">
-            <span class="font-medium text-neutral-100">Admin User</span>
-            <span class="text-xs text-neutral-400">Administrator</span>
+            <span class="font-medium text-white">Admin User</span>
+            <span class="text-xs text-slate-400">Administrator</span>
           </div>
         </div>
       </aside>
 
       <main class="min-w-0 flex-1 overflow-auto p-6">
-        <h1 class="mb-4 text-xl font-semibold tracking-tight text-neutral-900">
-          <a class="text-neutral-500 hover:text-green-700" href="./product-list.html">Products</a>
-          <span class="mx-1 text-neutral-400">/</span>
+        <h1 class="mb-4 text-xl font-semibold tracking-tight text-ink">
+          <a class="text-slate-500 hover:text-buttons" href="./product-list.html">Products</a>
+          <span class="mx-1 text-slate-400">/</span>
           Edit product
         </h1>
-        <p class="mb-4 text-[11px] text-neutral-400">
+        <p class="mb-4 text-[11px] text-slate-400">
           admin-app · Product create / edit form —
-          <code class="text-neutral-500">
+          <code class="text-slate-500">
             FR-CAT-001, 002, 004, 009, 010, 012, 029, 033, 038, 039, 083, 084, 085–087
           </code>
         </p>
 
           <div class="flex flex-col gap-6 xl:flex-row xl:items-start">
             <!-- Quick Navigation — real same-page anchor links, no JS -->
-            <nav class="w-full shrink-0 rounded-lg border border-neutral-200 bg-white p-4 xl:sticky xl:top-6 xl:w-64">
+            <nav class="w-full shrink-0 rounded-lg border border-slate-200 bg-white p-4 xl:sticky xl:top-6 xl:w-64">
               <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Quick Navigation</h2>
               <div class="flex flex-col gap-1">
-                <a class="rounded-md bg-green-50 px-3 py-2 text-sm font-medium text-green-700" href="#basics">
+                <a class="rounded-md bg-accent px-3 py-2 text-sm font-medium text-primary" href="#basics">
                   Basics
                 </a>
-                <a class="rounded-md px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-50" href="#images">
+                <a class="rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50" href="#images">
                   Images
                 </a>
-                <a class="rounded-md px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-50" href="#pricing">
+                <a class="rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50" href="#pricing">
                   Pricing &amp; stock
                 </a>
-                <a class="rounded-md px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-50" href="#specifications">
+                <a class="rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50" href="#specifications">
                   Specifications
                 </a>
-                <a class="rounded-md px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-50" href="#variants">
+                <a class="rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50" href="#variants">
                   Variants
                 </a>
-                <a class="rounded-md px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-50" href="#seo">
+                <a class="rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50" href="#seo">
                   SEO
                 </a>
               </div>
-              <p class="mt-3 text-[11px] text-neutral-400">
+              <p class="mt-3 text-[11px] text-slate-400">
                 Jumps to each section below — real anchor links, no JavaScript.
               </p>
             </nav>
 
             <div class="min-w-0 flex-1 space-y-6">
             <!-- Basics -->
-            <section id="basics" class="scroll-mt-6 rounded-lg border border-neutral-200 bg-white p-4">
+            <section id="basics" class="scroll-mt-6 rounded-lg border border-slate-200 bg-white p-4">
               <h2 class="mb-4 text-xs font-medium tracking-wide uppercase">Basics</h2>
               <div class="grid gap-4 sm:grid-cols-2">
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Name *</span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">Product name</span>
+                  <span class="text-slate-500">Name *</span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">Product name</span>
                 </label>
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Slug</span>
+                  <span class="text-slate-500">Slug</span>
                   <span
-                    class="mt-1 block border border-neutral-300 bg-neutral-50 px-3 py-2 font-mono text-xs text-neutral-500"
+                    class="mt-1 block border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-500"
                   >
                     product-name
                   </span>
-                  <span class="mt-1 block text-[11px] text-neutral-400">
+                  <span class="mt-1 block text-[11px] text-slate-400">
                     Auto-generated from the name; a numeric suffix is appended on collision ·
                     FR-CAT-002
                   </span>
                 </label>
                 <label class="block text-sm">
-                  <span class="text-neutral-500">SKU *</span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2 font-mono text-xs">
+                  <span class="text-slate-500">SKU *</span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2 font-mono text-xs">
                     TC-SP-0001
                   </span>
-                  <span class="mt-1 block text-[11px] text-neutral-400">
+                  <span class="mt-1 block text-[11px] text-slate-400">
                     Unique across all products <strong>and</strong> all variants — one shared
                     namespace · FR-CAT-003
                   </span>
                 </label>
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Brand *</span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">Brand A ▾</span>
-                  <span class="mt-1 block text-[11px] text-neutral-400">
+                  <span class="text-slate-500">Brand *</span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">Brand A ▾</span>
+                  <span class="mt-1 block text-[11px] text-slate-400">
                     Required on every product · FR-CAT-029
                   </span>
                 </label>
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Category *</span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">
+                  <span class="text-slate-500">Category *</span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">
                     Electronics › Smartphones ▾
                   </span>
-                  <span class="mt-1 block text-[11px] text-neutral-400">
+                  <span class="mt-1 block text-[11px] text-slate-400">
                     Changing this re-validates the specifications below against the new schema ·
                     FR-CAT-034
                   </span>
                 </label>
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Featured</span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">☐ isFeatured</span>
+                  <span class="text-slate-500">Featured</span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">☐ isFeatured</span>
                 </label>
                 <label class="block text-sm sm:col-span-2">
-                  <span class="text-neutral-500">Description *</span>
+                  <span class="text-slate-500">Description *</span>
                   <span class="mt-1 block h-24 rounded-md border border-neutral-300 px-3 py-2"></span>
                 </label>
               </div>
             </section>
 
             <!-- Media -->
-            <section id="images" class="scroll-mt-6 rounded-lg border border-neutral-200 bg-white p-4">
+            <section id="images" class="scroll-mt-6 rounded-lg border border-slate-200 bg-white p-4">
               <h2 class="mb-1 text-xs font-medium tracking-wide uppercase">Images</h2>
               <p class="mb-4 text-[11px] text-neutral-400">
                 4 of 8 · at least 1 required · JPEG, PNG, or WebP only · FR-CAT-078, 083
@@ -186,7 +203,7 @@
                   + Upload
                 </div>
               </div>
-              <p class="mt-3 text-[11px] text-neutral-400">
+              <p class="mt-3 text-[11px] text-slate-400">
                 Upload goes direct to Cloudflare R2 via a 5-minute presigned URL; the backend never
                 receives image bytes · FR-CAT-077, 080. Removing the primary promotes the first
                 remaining image automatically · FR-CAT-084
@@ -194,19 +211,19 @@
             </section>
 
             <!-- Pricing and inventory -->
-            <section id="pricing" class="scroll-mt-6 rounded-lg border border-neutral-200 bg-white p-4">
+            <section id="pricing" class="scroll-mt-6 rounded-lg border border-slate-200 bg-white p-4">
               <h2 class="mb-4 text-xs font-medium tracking-wide uppercase">Pricing &amp; stock</h2>
               <div class="grid gap-4 sm:grid-cols-4">
                 <label class="block text-sm">
-                  <span class="text-neutral-500">MRP (₹) *</span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">49,900</span>
+                  <span class="text-slate-500">MRP (₹) *</span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">49,900</span>
                 </label>
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Discount %</span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">10</span>
+                  <span class="text-slate-500">Discount %</span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">10</span>
                 </label>
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Selling price</span>
+                  <span class="text-slate-500">Selling price</span>
                   <span
                     class="mt-1 block border border-neutral-300 bg-neutral-50 px-3 py-2 text-neutral-500"
                   >
@@ -214,15 +231,15 @@
                   </span>
                 </label>
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Stock *</span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">128</span>
+                  <span class="text-slate-500">Stock *</span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">128</span>
                 </label>
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Low-stock threshold</span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">10</span>
+                  <span class="text-slate-500">Low-stock threshold</span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">10</span>
                 </label>
               </div>
-              <p class="mt-3 text-[11px] text-neutral-400">
+              <p class="mt-3 text-[11px] text-slate-400">
                 Money is stored as integer paise — ₹49,900 persists as <code>4990000</code>.
                 Discount is 0–99 (100 is excluded). Selling price is read-only here: it is always
                 recomputed server-side and a submitted value is ignored · FR-CAT-085, 086, 087
@@ -241,7 +258,7 @@
             </section>
 
             <!-- Specifications rendered from the selected category's schema — FR-CAT-033 -->
-            <section id="specifications" class="scroll-mt-6 rounded-lg border border-neutral-200 bg-white p-4">
+            <section id="specifications" class="scroll-mt-6 rounded-lg border border-slate-200 bg-white p-4">
               <h2 class="mb-1 text-xs font-medium tracking-wide uppercase">Specifications</h2>
               <p class="mb-4 text-[11px] text-neutral-400">
                 These inputs are rendered from <strong>Smartphones</strong>' schema, not a fixed
@@ -251,43 +268,43 @@
               <p class="mb-2 text-sm font-medium">Display</p>
               <div class="mb-4 grid gap-3 sm:grid-cols-2">
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Screen Size * <em>(number, in)</em></span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">6.1</span>
+                  <span class="text-slate-500">Screen Size * <em>(number, in)</em></span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">6.1</span>
                 </label>
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Resolution <em>(text)</em></span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">2556 × 1179</span>
+                  <span class="text-slate-500">Resolution <em>(text)</em></span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">2556 × 1179</span>
                 </label>
               </div>
 
               <p class="mb-2 text-sm font-medium">Performance</p>
               <div class="mb-4 grid gap-3 sm:grid-cols-2">
                 <label class="block text-sm">
-                  <span class="text-neutral-500">RAM * <em>(enum)</em></span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">8GB ▾</span>
+                  <span class="text-slate-500">RAM * <em>(enum)</em></span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">8GB ▾</span>
                 </label>
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Processor <em>(text)</em></span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">A17 Pro</span>
+                  <span class="text-slate-500">Processor <em>(text)</em></span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">A17 Pro</span>
                 </label>
               </div>
 
               <p class="mb-2 text-sm font-medium">Connectivity</p>
               <div class="grid gap-3 sm:grid-cols-2">
                 <label class="block text-sm">
-                  <span class="text-neutral-500">5G <em>(boolean)</em></span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">☑ Yes</span>
+                  <span class="text-slate-500">5G <em>(boolean)</em></span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">☑ Yes</span>
                 </label>
               </div>
 
-              <p class="mt-3 text-[11px] text-neutral-400">
+              <p class="mt-3 text-[11px] text-slate-400">
                 Required fields must be present, unknown names are rejected, values must match their
                 declared type, and enum values must come from the field's options · FR-CAT-032
               </p>
             </section>
 
             <!-- Variant editor driven by the category's variant axes — FR-CAT-038 -->
-            <section id="variants" class="scroll-mt-6 rounded-lg border border-neutral-200 bg-white p-4">
+            <section id="variants" class="scroll-mt-6 rounded-lg border border-slate-200 bg-white p-4">
               <h2 class="mb-1 text-xs font-medium tracking-wide uppercase">Variants</h2>
               <p class="mb-4 text-[11px] text-neutral-400">
                 One control per axis, chosen by the axis <code>type</code> defined for this category
@@ -298,7 +315,7 @@
               <div class="mb-4 rounded-lg border border-neutral-200 p-3">
                 <div class="grid gap-3 sm:grid-cols-5">
                   <label class="block text-sm">
-                    <span class="text-neutral-500">Colour <em>(color)</em></span>
+                    <span class="text-slate-500">Colour <em>(color)</em></span>
                     <span class="mt-1 flex gap-1">
                       <span class="h-8 w-8 border-2 border-neutral-700 bg-neutral-200"></span>
                       <span class="h-8 w-8 border border-neutral-400 bg-neutral-400"></span>
@@ -306,22 +323,22 @@
                     </span>
                   </label>
                   <label class="block text-sm">
-                    <span class="text-neutral-500">Storage <em>(select)</em></span>
-                    <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">128GB ▾</span>
+                    <span class="text-slate-500">Storage <em>(select)</em></span>
+                    <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">128GB ▾</span>
                   </label>
                   <label class="block text-sm">
-                    <span class="text-neutral-500">SKU *</span>
+                    <span class="text-slate-500">SKU *</span>
                     <span class="mt-1 block rounded-md border border-neutral-300 px-2 py-2 font-mono text-xs">
                       TC-SP-0001-BLK-128
                     </span>
                   </label>
                   <label class="block text-sm">
-                    <span class="text-neutral-500">MRP (₹) *</span>
-                    <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">49,900</span>
+                    <span class="text-slate-500">MRP (₹) *</span>
+                    <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">49,900</span>
                   </label>
                   <label class="block text-sm">
-                    <span class="text-neutral-500">Stock *</span>
-                    <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">64</span>
+                    <span class="text-slate-500">Stock *</span>
+                    <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2">64</span>
                   </label>
                 </div>
                 <div class="mt-3 flex flex-wrap items-center gap-4 text-xs text-neutral-500">
@@ -350,23 +367,23 @@
             </section>
 
             <!-- SEO -->
-            <section id="seo" class="scroll-mt-6 rounded-lg border border-neutral-200 bg-white p-4">
+            <section id="seo" class="scroll-mt-6 rounded-lg border border-slate-200 bg-white p-4">
               <h2 class="mb-4 text-xs font-medium tracking-wide uppercase">SEO</h2>
               <div class="grid gap-4 sm:grid-cols-2">
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Meta title</span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2 text-neutral-400">
+                  <span class="text-slate-500">Meta title</span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2 text-neutral-400">
                     Defaults to the product name
                   </span>
                 </label>
                 <label class="block text-sm">
-                  <span class="text-neutral-500">Meta description</span>
-                  <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2 text-neutral-400">
+                  <span class="text-slate-500">Meta description</span>
+                  <span class="mt-1 block rounded-md border border-slate-300 px-3 py-2 text-neutral-400">
                     Defaults to a truncation of the description
                   </span>
                 </label>
               </div>
-              <p class="mt-3 text-[11px] text-neutral-400">
+              <p class="mt-3 text-[11px] text-slate-400">
                 Both are optional; buyer pages fall back when either is absent · FR-CAT-012
               </p>
             </section>

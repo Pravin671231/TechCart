@@ -5,24 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TechCart Admin — Layout Mock</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme {
+        --color-background: #F8FAFC;
+        --color-primary: #0F172A;
+        --color-accent: #D4AF37;
+        --color-accent-strong: #B8952E;
+        --color-buttons: #1E3A8A;
+        --color-buttons-strong: #172554;
+        --color-ink: #111827;
+        --color-success: #16A34A;
+        --color-success-soft: #F0FDF4;
+        --color-warning: #D97706;
+        --color-warning-soft: #FFFBEB;
+        --color-danger: #DC2626;
+        --color-danger-soft: #FEF2F2;
+      }
+    </style>
   </head>
-  <body class="h-screen bg-white text-neutral-600">
+  <body class="h-screen bg-background text-slate-600">
     <div class="flex h-screen">
       <!-- Sidebar — full height, left edge, nav area + bottom profile block -->
       <aside
-        class="flex w-64 shrink-0 flex-col border-r border-neutral-800 bg-neutral-900"
+        class="flex w-64 shrink-0 flex-col border-r border-slate-800 bg-primary"
       >
         <div class="flex flex-1 items-center justify-center">
-          <span class="text-sm tracking-wide text-neutral-400">Side bar</span>
+          <span class="text-sm tracking-wide text-slate-400">Side bar</span>
         </div>
-        <div class="flex items-center justify-center border-t border-neutral-800 py-4">
-          <span class="text-sm tracking-wide text-neutral-400">Profile</span>
+        <div class="flex items-center justify-center border-t border-slate-800 py-4">
+          <span class="text-sm tracking-wide text-slate-400">Profile</span>
         </div>
       </aside>
 
       <!-- Content — no header; fills remaining space directly -->
       <main class="flex flex-1 items-center justify-center">
-        <span class="text-sm tracking-wide text-neutral-500">Content</span>
+        <span class="text-sm tracking-wide text-slate-500">Content</span>
       </main>
     </div>
   </body>
