@@ -11,13 +11,57 @@
       <header class="border-b border-neutral-400 pb-4">
         <h1 class="text-xl tracking-tight">TechCart — Layout Mocks</h1>
         <p class="mt-1 text-sm text-neutral-500">
-          Structural wireframes. Layout and information hierarchy only — not visual design.
+          Structural wireframes, plus a brand kit and a few interactive component mocks. The screen
+          mocks below are layout and information hierarchy only — not visual design;
+          <a class="underline" href="./brand-kit.html">brand-kit.html</a> and the component mocks
+          are the pages that are.
         </p>
         <p class="mt-2 text-[11px] text-neutral-400">
           Catalog screens follow SRS v0.2 §6. Each page names the
           <code>FR-CAT-*</code> requirements it renders.
         </p>
       </header>
+
+      <!-- Brand kit -->
+      <section class="mt-6">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">Brand kit</h2>
+        <a class="block border border-neutral-400 p-4 hover:bg-neutral-100" href="./brand-kit.html">
+          <p class="text-sm font-medium">Brand kit</p>
+          <p class="mt-1 text-xs text-neutral-500">
+            Colors, type scale, buttons, badges, price display, form and alert styling — the one
+            page here that isn't a grayscale structural wireframe
+          </p>
+        </a>
+      </section>
+
+      <!-- Component mocks -->
+      <section class="mt-6">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">
+          Component mocks
+        </h2>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./admin-app/table-component.html"
+          >
+            <p class="text-sm font-medium">Admin table component</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              The product table in isolation — styled, with real input fields that live-update a
+              highlighted row
+            </p>
+          </a>
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./buyer-app/card-components.html"
+          >
+            <p class="text-sm font-medium">Buyer card components</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Home Card (image, title, price) and Category-wise Card (image, details, dedicated
+              price section), each with a live input-driven preview
+            </p>
+          </a>
+        </div>
+      </section>
 
       <!-- Shells -->
       <section class="mt-6">

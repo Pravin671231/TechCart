@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin — Table Component</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme {
+        --color-primary-50: #eef2ff;
+        --color-primary-100: #e0e7ff;
+        --color-primary-200: #c7d2fe;
+        --color-primary-600: #4f46e5;
+        --color-primary-700: #4338ca;
+
+        --color-accent-100: #ffedd5;
+        --color-accent-700: #c2410c;
+
+        --font-sans:
+          "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-white p-6 text-neutral-700">
+    <div class="mx-auto max-w-5xl">
+      <header class="border-b border-neutral-400 pb-4">
+        <h1 class="text-xl tracking-tight">Admin — Table Component</h1>
+        <p class="mt-1 text-sm text-neutral-500">
+          The product table as an isolated, styled, interactive component — fill in the fields below
+          and the highlighted row updates live. This supplements, and does not replace,
+          <a class="underline" href="./product-list.html">product-list.html</a>, which stays the
+          SRS-traceable full screen (<code>FR-CAT-005, 011, 050, 053</code>).
+        </p>
+      </header>
+
+      <!-- Input panel -->
+      <section class="mt-6">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">Row data</h2>
+        <div
+          class="grid gap-3 rounded-lg border border-neutral-300 bg-neutral-50 p-4 sm:grid-cols-4"
+        >
+          <label class="block text-sm sm:col-span-2">
+            <span class="text-neutral-500">Image URL</span>
+            <input
+              id="in-image"
+              type="text"
+              placeholder="https://…"
+              class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+            />
+          </label>
+          <label class="block text-sm sm:col-span-2">
+            <span class="text-neutral-500">Name *</span>
+            <input
+              id="in-name"
+              type="text"
+              value="Product name"
+              class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+            />
+          </label>
+          <label class="block text-sm">
+            <span class="text-neutral-500">SKU</span>
+            <input
+              id="in-sku"
+              type="text"
+              value="TC-SP-0001"
+              class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 font-mono text-xs focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+            />
+          </label>
+          <label class="block text-sm">
+            <span class="text-neutral-500">Brand</span>
+            <input
+              id="in-brand"
+              type="text"
+              value="Brand A"
+              class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+            />
+          </label>
+          <label class="block text-sm">
+            <span class="text-neutral-500">Category</span>
+            <input
+              id="in-category"
+              type="text"
+              value="Smartphones"
+              class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+            />
+          </label>
+          <label class="block text-sm">
+            <span class="text-neutral-500">MRP (₹)</span>
+            <input
+              id="in-mrp"
+              type="number"
+              min="0"
+              value="49900"
+              class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm tabular-nums focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+            />
+          </label>
+          <label class="block text-sm">
+            <span class="text-neutral-500">Discount (%)</span>
+            <input
+              id="in-discount"
+              type="number"
+              min="0"
+              max="100"
+              value="10"
+              class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm tabular-nums focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+            />
+          </label>
+          <label class="block text-sm">
+            <span class="text-neutral-500">Stock</span>
+            <input
+              id="in-stock"
+              type="number"
+              min="0"
+              value="128"
+              class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm tabular-nums focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+            />
+          </label>
+          <label class="block text-sm">
+            <span class="text-neutral-500">Low-stock threshold</span>
+            <input
+              id="in-threshold"
+              type="number"
+              min="0"
+              value="10"
+              class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm tabular-nums focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+            />
+          </label>
+          <label class="block text-sm">
+            <span class="text-neutral-500">Status</span>
+            <select
+              id="in-status"
+              class="mt-1 block w-full rounded-md border border-neutral-400 bg-white px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+            >
+              <option value="draft">Draft</option>
+              <option value="published" selected>Published</option>
+              <option value="archived">Archived</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <!-- Live table -->
+      <section class="mt-6">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">Preview</h2>
+        <div class="overflow-x-auto rounded-lg border border-neutral-300">
+          <table class="w-full min-w-[860px] border-collapse text-sm">
+            <thead class="bg-neutral-100 text-left">
+              <tr class="border-b border-neutral-300">
+                <th class="px-3 py-2 font-medium">Image</th>
+                <th class="px-3 py-2 font-medium">Name</th>
+                <th class="px-3 py-2 font-medium">SKU</th>
+                <th class="px-3 py-2 font-medium">Brand</th>
+                <th class="px-3 py-2 font-medium">Category</th>
+                <th class="px-3 py-2 text-right font-medium">Price</th>
+                <th class="px-3 py-2 text-right font-medium">Stock</th>
+                <th class="px-3 py-2 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-200">
+              <!-- Live-bound row -->
+              <tr class="bg-primary-50">
+                <td class="px-3 py-2">
+                  <span
+                    id="out-image-wrap"
+                    class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-neutral-300 bg-white text-[9px] text-neutral-400"
+                  >
+                    none
+                  </span>
+                </td>
+                <td id="out-name" class="px-3 py-2 font-medium text-neutral-900">Product name</td>
+                <td id="out-sku" class="px-3 py-2 font-mono text-xs">TC-SP-0001</td>
+                <td id="out-brand" class="px-3 py-2">Brand A</td>
+                <td id="out-category" class="px-3 py-2">Smartphones</td>
+                <td class="px-3 py-2 text-right">
+                  <span id="out-price" class="font-medium tabular-nums text-neutral-900"></span>
+                </td>
+                <td class="px-3 py-2 text-right">
+                  <span id="out-stock" class="tabular-nums"></span>
+                  <span
+                    id="out-low-badge"
+                    class="ml-1 hidden rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+                  >
+                    Low
+                  </span>
+                </td>
+                <td class="px-3 py-2"><span id="out-status"></span></td>
+              </tr>
+
+              <!-- Static sample rows for table-in-context -->
+              <tr>
+                <td class="px-3 py-2">
+                  <span
+                    class="block h-10 w-10 rounded-md border border-neutral-300 bg-neutral-100"
+                  ></span>
+                </td>
+                <td class="px-3 py-2">Wireless Earbuds Pro</td>
+                <td class="px-3 py-2 font-mono text-xs">TC-AC-0031</td>
+                <td class="px-3 py-2">Brand C</td>
+                <td class="px-3 py-2">Accessories</td>
+                <td class="px-3 py-2 text-right tabular-nums">₹1,299</td>
+                <td class="px-3 py-2 text-right tabular-nums">0</td>
+                <td class="px-3 py-2">
+                  <span
+                    class="rounded-md bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-500"
+                  >
+                    Archived
+                  </span>
+                </td>
+              </tr>
+              <tr class="bg-neutral-50">
+                <td class="px-3 py-2">
+                  <span
+                    class="block h-10 w-10 rounded-md border border-neutral-300 bg-neutral-100"
+                  ></span>
+                </td>
+                <td class="px-3 py-2">UltraBook 14</td>
+                <td class="px-3 py-2 font-mono text-xs">TC-LP-0007</td>
+                <td class="px-3 py-2">Brand B</td>
+                <td class="px-3 py-2">Laptops</td>
+                <td class="px-3 py-2 text-right tabular-nums">₹89,900</td>
+                <td class="px-3 py-2 text-right tabular-nums">14</td>
+                <td class="px-3 py-2">
+                  <span
+                    class="rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600"
+                  >
+                    Draft
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div
+        class="mt-6 rounded-lg border border-dashed border-neutral-400 p-3 text-[11px] text-neutral-500"
+      >
+        <p class="mb-1 font-medium text-neutral-600">Notes</p>
+        <ul class="list-disc space-y-0.5 pl-4">
+          <li>
+            Price = <code>sellingPrice</code>, computed the same way as
+            <code>backend/src/utils/pricing.ts</code>'s <code>computeSellingPrice</code>:
+            <code>mrp - floor(mrp × discount / 100)</code>.
+          </li>
+          <li>
+            "Low" appears when <code>stock</code> is at or below its own
+            <code>lowStockThreshold</code> — never a global number, per <code>FR-CAT-011</code>.
+          </li>
+          <li>
+            Status badge colors reuse the exact convention from
+            <a class="underline" href="../brand-kit.html">brand-kit.html</a>.
+          </li>
+        </ul>
+      </div>
+
+      <footer class="mt-8 border-t border-neutral-300 pt-4 text-[11px] text-neutral-400">
+        Tailwind and Inter are both loaded from a CDN, so this page needs an internet connection to
+        render. See <a class="underline" href="../README.md">README.md</a> ·
+        <a class="underline" href="../index.html">back to all mocks</a>.
+      </footer>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const fmtINR = (n) => "₹" + Math.round(n).toLocaleString("en-IN");
+      const sellingPrice = (mrp, discount) => mrp - Math.floor((mrp * discount) / 100);
+
+      const statusBadge = {
+        draft:
+          '<span class="rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600">Draft</span>',
+        published:
+          '<span class="rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Published</span>',
+        archived:
+          '<span class="rounded-md bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-500">Archived</span>',
+      };
+
+      function render() {
+        const imageUrl = $("in-image").value.trim();
+        const name = $("in-name").value.trim() || "Product name";
+        const sku = $("in-sku").value.trim();
+        const brand = $("in-brand").value.trim();
+        const category = $("in-category").value.trim();
+        const mrp = Number($("in-mrp").value) || 0;
+        const discount = Number($("in-discount").value) || 0;
+        const stock = Number($("in-stock").value) || 0;
+        const threshold = Number($("in-threshold").value) || 0;
+        const status = $("in-status").value;
+
+        $("out-name").textContent = name;
+        $("out-sku").textContent = sku;
+        $("out-brand").textContent = brand;
+        $("out-category").textContent = category;
+        $("out-price").textContent = fmtINR(sellingPrice(mrp, discount));
+        $("out-stock").textContent = stock;
+        $("out-status").innerHTML = statusBadge[status];
+        $("out-low-badge").classList.toggle("hidden", !(stock > 0 && stock <= threshold));
+
+        const imageWrap = $("out-image-wrap");
+        imageWrap.innerHTML = imageUrl
+          ? `<img src="${imageUrl}" alt="" class="h-full w-full object-cover" onerror="this.parentElement.textContent='broken'" />`
+          : "none";
+      }
+
+      document
+        .querySelectorAll(
+          "#in-image, #in-name, #in-sku, #in-brand, #in-category, #in-mrp, #in-discount, #in-stock, #in-threshold, #in-status",
+        )
+        .forEach((el) => el.addEventListener("input", render));
+
+      render();
+    </script>
+  </body>
+</html>

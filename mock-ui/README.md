@@ -1,6 +1,33 @@
 # mock-ui
 
-Static layout wireframes for the two TechCart frontends.
+Static layout wireframes for the two TechCart frontends, plus a brand kit and a few interactive
+component mocks.
+
+## Brand kit
+
+[`brand-kit.html`](brand-kit.html) — colors (primary/accent scales + status conventions), type
+scale, buttons, badges, price display, form and alert styling. Unlike most pages here, it is
+deliberately **not** grayscale — see "What these are — and are not" below for why the rest stay
+that way. The tokens it shows are wired for real in `buyer-app/src/app/globals.css` and
+`admin-app/src/index.css`; treat those files as authoritative if this page ever drifts from them.
+
+## Component mocks
+
+Isolated, styled, interactive versions of individual UI components — not full screens. Each has
+real `<input>`/`<select>` fields wired via inline vanilla JS (no build step, no backend calls) so
+editing a field live-updates the rendered preview next to it. These **supplement, not replace**,
+the full-screen catalog mocks below — the SRS traceability table still points at the full
+screens, since these component pages re-render the same fields for a narrower purpose (reviewing
+the component in isolation).
+
+| File                                                               | Component                      | Data fields                                                                                                                           |
+| ------------------------------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| [`admin-app/table-component.html`](admin-app/table-component.html) | Admin product table            | Image, name, SKU, brand, category, MRP/discount, stock, low-stock threshold, status                                                   |
+| [`buyer-app/card-components.html`](buyer-app/card-components.html) | Home Card + Category-wise Card | Image, title, MRP/discount, stock (Home Card); + category and up to 4 detail pairs, in a dedicated price section (Category-wise Card) |
+
+Price fields compute `sellingPrice` the same way as `backend/src/utils/pricing.ts`'s
+`computeSellingPrice` (`mrp - floor(mrp × discount / 100)`), so the live preview matches real
+backend behavior rather than inventing its own rounding.
 
 ## Shell layouts
 
@@ -68,10 +95,14 @@ at all" — at a glance, per [SRS v0.2 §10](../docs/srs/features/0.2-product-ca
 
 ## What these are — and are not
 
-**Structural wireframes.** They show layout, information hierarchy, and which requirement each
-region satisfies. They are **not** visual design, not a design system, and not a component
-library — no brand colours, type scale, or spacing system is implied by them. Where the SRS
+**Structural wireframes, with three exceptions.** The catalog screens and shells show layout,
+information hierarchy, and which requirement each region satisfies. They are **not** visual
+design, not a design system, and not a component library — no brand colours, type scale, or
+spacing system is implied by them, deliberately, so a mock reads as pure structure. Where the SRS
 specifies UI _behaviour_, these mocks show _where that behaviour lives on the page_.
+[`brand-kit.html`](brand-kit.html) and the two files under "Component mocks" break this rule on
+purpose — they're the design system, and its components, that the screen mocks intentionally
+omit.
 
 Screen-level design was undecided when the SRS was first drafted; these pages are what
 [SRS v0.2 §10](../docs/srs/features/0.2-product-catalog.md#10-open-questions) now records as the
