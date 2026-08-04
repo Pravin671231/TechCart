@@ -16,6 +16,7 @@ const envSchema = z.object({
   NODE_ENV: z.string().default("development"),
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
   ADMIN_API_KEY: z.string().min(1, "ADMIN_API_KEY is required"),
+  CORS_ORIGINS: z.string().default("http://localhost:3000,http://localhost:5173"),
   R2_ACCOUNT_ID: z.string().min(1, "R2_ACCOUNT_ID is required"),
   R2_ACCESS_KEY_ID: z.string().min(1, "R2_ACCESS_KEY_ID is required"),
   R2_SECRET_ACCESS_KEY: z.string().min(1, "R2_SECRET_ACCESS_KEY is required"),
@@ -30,6 +31,7 @@ export const env = {
   NODE_ENV: rawEnv.NODE_ENV,
   MONGODB_URI: rawEnv.MONGODB_URI,
   ADMIN_API_KEY: rawEnv.ADMIN_API_KEY,
+  CORS_ORIGINS: rawEnv.CORS_ORIGINS,
   R2: {
     ACCOUNT_ID: rawEnv.R2_ACCOUNT_ID,
     ACCESS_KEY_ID: rawEnv.R2_ACCESS_KEY_ID,

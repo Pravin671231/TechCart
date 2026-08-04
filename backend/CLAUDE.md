@@ -51,6 +51,15 @@ Built as two overloads returning a conditionally-constructed object literal (nev
 - `src/routes/admin.routes.ts` — a dedicated router with `adminRouter.use(adminAuth)` applied once, mounted at `/api/admin` in `src/routes/index.ts`. Every M2 admin feature module (brands, categories, products, ...) mounts under this router as it lands (`adminRouter.use(<feature>Module.path, <feature>Module.router)`) — the guard never needs touching per-route, and the whole thing is swapped out in one place when v0.3 replaces it with real session/RBAC auth.
 - Buyer-facing (non-admin) routes mount directly on the root aggregator router in `src/routes/index.ts`, same as `health` does today.
 
+## CORS
+
+`src/middleware/cors.ts` wraps the `cors` package and is mounted first in `src/app.ts`, ahead of the query-parser/`express.json()`/routes — pulled forward from the SRS v0.8 security-baseline bundle (`docs/architecture.md` §6 lists it alongside helmet/rate-limiting/session cookies, which stay deferred) since `buyer-app`/`admin-app` now deploy to different origins than `backend` and can't reach it at all without this.
+
+- **Origins are env-driven, never hardcoded**: `env.CORS_ORIGINS` (`src/config/env.ts`) is a comma-separated string, split/trimmed into an array in `cors.ts`. Defaults to `http://localhost:3000,http://localhost:5173` (buyer-app/admin-app's local dev ports) so local dev needs no `.env` changes; Render's `render.yaml` declares the var `sync: false` (same pattern as `MONGODB_URI`/`ADMIN_API_KEY`/the R2 vars) — the real deployed Vercel URLs are typed into Render's dashboard by hand, not committed.
+- **`credentials: true`** — anticipates the `httpOnly`/`secure`/`sameSite` session cookies `docs/architecture.md` already plans for v0.3 Authentication; harmless ahead of that since nothing currently sends cookies.
+- **`methods`/`allowedHeaders` are the actual surface, not a wildcard**: `GET/POST/PUT/PATCH/DELETE` (every HTTP method any route in this codebase uses) and `Content-Type`/`X-Admin-Key` (the latter needed since `adminAuth.ts` reads it on every `/api/admin/*` request — omitting it would fail the browser's preflight for every admin call).
+- Test: `__tests__/cors/cors.api.test.ts` — flat, cross-cutting-infra layout matching `__tests__/admin-auth/`, not nested under `product-catalog/`.
+
 ## R2 uploads
 
 - `src/externalService/r2.ts` — the first client under `externalService/`. Wraps `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`: constructs an `S3Client` pointed at `https://{env.R2.ACCOUNT_ID}.r2.cloudflarestorage.com`, exports `createPresignedPutUrl(key, contentType)` returning a 5-minute presigned PUT URL, and `uploadObject(key, body, contentType)` — a plain `PutObjectCommand` sent via `client.send()`, used by the direct-upload path below. Presigning is a local signature computation — no network call — so it's fully unit-testable with dummy credentials; only actually uploading (through the presigned URL, or via `uploadObject`) touches the network.
