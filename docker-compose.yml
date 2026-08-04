@@ -1,0 +1,42 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    env_file:
+      - backend/.env
+    environment:
+      # backend/.env's MONGODB_URI points at "localhost", which inside a
+      # container means the container itself, not the host machine actually
+      # running MongoDB — rewritten here to reach the host instead. Update
+      # the db name below if backend/.env's MONGODB_URI ever uses a
+      # different one.
+      MONGODB_URI: mongodb://host.docker.internal:27017/techcart-local
+    extra_hosts:
+      # host.docker.internal resolves natively on Docker Desktop
+      # (Windows/Mac); this entry makes it resolve on native Linux Docker
+      # Engine too (Docker 20.10+).
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+
+  buyer-app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.buyer-app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  admin-app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.admin-app
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

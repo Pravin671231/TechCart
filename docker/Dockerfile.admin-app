@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1
+#
+# Build from the repo root: docker build -f docker/Dockerfile.admin-app .
+#
+# admin-app is a Vite SPA with no built-in production server, so the runner
+# stage is nginx (current stable practice for serving a Vite build) rather
+# than Node + the "serve" package.
+
+FROM node:24-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY backend/package.json backend/package.json
+COPY buyer-app/package.json buyer-app/package.json
+COPY admin-app/package.json admin-app/package.json
+RUN --mount=type=cache,target=/root/.npm npm ci
+
+FROM deps AS build
+COPY tsconfig.base.json ./
+COPY admin-app admin-app
+RUN npm run build --workspace admin-app
+
+FROM nginx:1.27-alpine AS runner
+COPY docker/admin-app.nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/admin-app/dist /usr/share/nginx/html
+EXPOSE 80

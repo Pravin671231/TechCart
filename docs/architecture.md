@@ -14,7 +14,7 @@ TechCart is two client applications sharing one backend and one database — the
 - **`admin-app`** — React + Vite console: catalog management, order management, dashboards.
 - **`backend`** — Node/Express service both apps call; owns all business logic, validation, and data access.
 
-Target market is India-first (Razorpay), initial scale is small-to-medium, hosting is managed platforms only (Vercel, Render/Railway, MongoDB Atlas, Upstash) — no Docker, no self-managed infrastructure.
+Target market is India-first (Razorpay), initial scale is small-to-medium, hosting is managed platforms only (Vercel, Render/Railway, MongoDB Atlas, Upstash) — `backend`/`admin-app` deploy from a Dockerfile (Render/Railway's Docker-based deploy), `buyer-app` stays Vercel-native; no self-managed infrastructure either way. See `docker/` at the repo root.
 
 ---
 
@@ -154,6 +154,8 @@ Three separate environments, each with its own MongoDB Atlas cluster and Razorpa
 | Development | local          | local                       | local          | Atlas dev cluster        |
 | Staging     | Vercel preview | Render/Railway preview      | Render/Railway | Atlas staging cluster    |
 | Production  | Vercel         | Static host (Vercel/Render) | Render/Railway | Atlas production cluster |
+
+`backend` and `admin-app` build from `docker/Dockerfile.backend`/`docker/Dockerfile.admin-app` wherever they land on Render/Railway; `buyer-app` never builds from a Dockerfile in any real environment — its own Dockerfile exists solely for `docker-compose` local-dev parity with the other two (root `docker-compose.yml`).
 
 ---
 

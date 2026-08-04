@@ -1,0 +1,48 @@
+# syntax=docker/dockerfile:1
+#
+# Build from the repo root: docker build -f docker/Dockerfile.backend .
+#
+# This is a plain npm-workspaces monorepo with one shared root
+# package-lock.json (no turborepo/nx prune tooling), so `npm ci` needs every
+# workspace's package.json present even though only `backend` gets compiled
+# here — the tradeoff is that the final image's node_modules also carries
+# buyer-app's/admin-app's *production* dependencies (next, react, ...),
+# since a plain `npm ci --omit=dev` at the root installs every workspace's
+# prod deps, not just backend's. Acceptable for this repo's small-to-medium
+# scale; revisit with pnpm/turborepo prune if image size becomes a problem.
+
+FROM node:24-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY backend/package.json backend/package.json
+COPY buyer-app/package.json buyer-app/package.json
+COPY admin-app/package.json admin-app/package.json
+RUN --mount=type=cache,target=/root/.npm npm ci
+
+FROM deps AS build
+COPY tsconfig.base.json ./
+COPY backend backend
+RUN npm run build --workspace backend
+
+FROM node:24-alpine AS production-deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY backend/package.json backend/package.json
+COPY buyer-app/package.json buyer-app/package.json
+COPY admin-app/package.json admin-app/package.json
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
+
+FROM node:24-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
+COPY --from=production-deps /app/node_modules ./node_modules
+# backend/tsconfig.json's rootDir:"." + include:["src","__tests__"] means tsc
+# emits to dist/src/**  and dist/__tests__/** , not a flat dist/ — flatten
+# dist/src/ into ./dist here so the image doesn't ship compiled test output,
+# and so CMD below can reference a plain dist/index.js.
+COPY --from=build /app/backend/dist/src ./dist
+COPY backend/package.json ./package.json
+USER nodejs
+EXPOSE 4000
+CMD ["node", "dist/index.js"]
