@@ -11,10 +11,10 @@
       <header class="border-b border-neutral-400 pb-4">
         <h1 class="text-xl tracking-tight">TechCart — Layout Mocks</h1>
         <p class="mt-1 text-sm text-neutral-500">
-          Structural wireframes, plus a brand kit and a few interactive component mocks. The screen
-          mocks below are layout and information hierarchy only — not visual design;
-          <a class="underline" href="./brand-kit.html">brand-kit.html</a> and the component mocks
-          are the pages that are.
+          Structural wireframes for <code>admin-app</code>, plus a brand kit and a few interactive
+          component mocks. <code>buyer-app</code>'s shell and screens are fully styled with the
+          brand kit's tokens — everything else below is layout and information hierarchy only, not
+          visual design.
         </p>
         <p class="mt-2 text-[11px] text-neutral-400">
           Catalog screens follow SRS v0.2 §6. Each page names the
@@ -81,7 +81,9 @@
             href="./buyer-app/index.html"
           >
             <p class="text-sm font-medium">buyer-app shell</p>
-            <p class="mt-1 text-xs text-neutral-500">Header (sticky) + Content + Footer</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Header (sticky) + Content + Footer — styled, not grayscale
+            </p>
           </a>
         </div>
       </section>
@@ -98,11 +100,11 @@
           >
             <p class="text-sm font-medium">Home / all-products listing</p>
             <p class="mt-1 text-xs text-neutral-500">
-              The full facet rail (category search, brand, price, colour, specifications,
-              in-stock/on-sale), sort, pagination, and the skeleton / empty / error states
+              Filter-free grid, sort, pagination, and the skeleton / empty / error states —
+              filtering lives on the category page instead
             </p>
             <code class="mt-2 block text-[11px] text-neutral-400">
-              FR-CAT-054, 057–059, 061, 062, 066, 068–076, 091
+              FR-CAT-054, 057–059, 075, 091
             </code>
           </a>
           <a
@@ -111,8 +113,8 @@
           >
             <p class="text-sm font-medium">Category listing</p>
             <p class="mt-1 text-xs text-neutral-500">
-              Breadcrumb, the facet rail minus category, and cards carrying up to four filterable
-              specification pairs
+              Breadcrumb, the full facet rail (brand, price, colour, specifications,
+              in-stock/on-sale), and cards carrying up to four filterable specification pairs
             </p>
             <code class="mt-2 block text-[11px] text-neutral-400">
               FR-CAT-055, 068–074, 076, 092
@@ -124,10 +126,9 @@
           >
             <p class="text-sm font-medium">Search results</p>
             <p class="mt-1 text-xs text-neutral-500">
-              Keyword shown, every §2.11 filter, relevance sort, and the search-empty state distinct
-              from filter-empty
+              Keyword shown, relevance sort, and the search-empty state distinct from filter-empty
             </p>
-            <code class="mt-2 block text-[11px] text-neutral-400">FR-CAT-065, 067–076</code>
+            <code class="mt-2 block text-[11px] text-neutral-400">FR-CAT-065, 067, 075</code>
           </a>
           <a
             class="block border border-neutral-400 p-4 hover:bg-neutral-100"
