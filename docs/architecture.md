@@ -141,7 +141,7 @@ High-level collection map (field-level detail belongs in each feature's SRS, not
 - **Error contract** — every backend error responds with a consistent shape: `{ "success": false, "code": "string", "message": "string" }`, so both frontends handle errors uniformly.
 - **Logging** — Pino structured JSON logs from `backend`, shipped to Better Stack/Axiom; no `console.log` in request-handling paths.
 - **Error/exception tracking** — Sentry, one project per app (buyer-app, admin-app, backend).
-- **Security baseline** — enforced at the backend layer regardless of feature: `helmet`, CORS allowlist (buyer-app + admin-app origins only), Redis-backed rate limiting on auth/checkout/webhook routes, `httpOnly`/`secure`/`sameSite` session cookies. Full detail in SRS v0.8 (Backend NFRs).
+- **Security baseline** — enforced at the backend layer regardless of feature: `helmet`, CORS allowlist (buyer-app + admin-app origins only), Redis-backed rate limiting on auth/checkout/webhook routes, `httpOnly`/`secure`/`sameSite` session cookies. Full detail in SRS v0.8 (Backend NFRs). The CORS allowlist piece was implemented ahead of the rest of this bundle (`backend/src/middleware/cors.ts`, env-driven via `CORS_ORIGINS` — see `backend/CLAUDE.md`), once `buyer-app`/`admin-app` started deploying to origins separate from `backend`; `helmet`, rate limiting, and session cookies remain deferred to v0.8.
 
 ---
 

@@ -1,9 +1,12 @@
 import express from "express";
 import routes from "./routes";
+import { corsMiddleware } from "./middleware/cors";
 import { notFoundHandler } from "./middleware/notFound";
 import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
+
+app.use(corsMiddleware);
 
 // Express 5's default ("simple") query parser has no support for bracket
 // notation (?spec[RAM]=8GB), which the buyer product listing's dynamic
