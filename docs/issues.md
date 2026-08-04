@@ -1,11 +1,11 @@
 # Issue Drafts
 
 **Project:** TechCart
-**Status:** M0 (Foundation), M1 (CI Pipeline), and M2 (Product Catalog, backend only) are all opened as real GitHub Issues — #1–#10, and #25–#36 under [Milestone #3](https://github.com/Pravin671231/TechCart/milestone/3) respectively — so all three milestones' draft text has been removed from this file; see `docs/milestone.md` and `docs/srs/SRS.md` §6 for their roadmap-level and traceability records. The **Backlog** below is currently empty, ready for the next milestone once its SRS doc is written.
+**Status:** M0 (Foundation), M1 (CI Pipeline), and M2 (Product Catalog, backend only) are all opened as real GitHub Issues — #1–#10, and #25–#36 under [Milestone #3](https://github.com/Pravin671231/TechCart/milestone/3) respectively — so all three milestones' draft text has been removed from this file; see `docs/milestone.md` and `docs/srs/SRS.md` §6 for their roadmap-level and traceability records. The **Backlog** below currently holds an M2 addendum: `M2.13` (mock-ui verification, already opened as Issue #41) plus a newly drafted `M2.14`–`M2.25` — the frontend build-out of every `mock-ui/` screen into real `buyer-app`/`admin-app` code, not yet opened as GitHub Issues.
 
 This is where issues get drafted — full context, a build-order task checklist, and test criteria — before they're opened as real GitHub Issues. It sits between [docs/milestone.md](milestone.md) (which milestone/goal) and GitHub itself (which is the actual tracker once an issue is opened): draft it here, then `gh issue create` it, then work it via the branch/PR flow in [docs/srs/SRS.md](srs/SRS.md) §5. Once a milestone's issues are opened on GitHub, its draft section is removed from here — this happened for M2 as of Issues #25–#36.
 
-**Scope of this file right now:** empty. M3 (Authentication onward) needs its functional requirements from that feature's SRS doc (`docs/srs/features/<version>-<feature>.md`) before its issues can be drafted with real content — that doesn't exist yet. This file gains a new Backlog subsection one milestone at a time, as each feature's SRS doc is written, and loses it again once that milestone's issues are opened for real.
+**Scope of this file right now:** an M2 addendum drafting the frontend implementation of SRS v0.2 §6 (UI/UX Requirements) — `mock-ui/`'s 11 already-designed, SRS-traced screens (4 `buyer-app`, 7 `admin-app`) have no real `buyer-app`/`admin-app` code behind them yet. No new SRS doc was needed for this batch since v0.2 §6 already specifies it; M3 (Authentication onward) still needs its own SRS doc (`docs/srs/features/<version>-<feature>.md`) before *its* issues can be drafted. This file gains a new Backlog subsection one milestone at a time, as each feature's SRS doc is written, and loses a subsection once that milestone's issues are opened for real.
 
 **Numbering:** within a drafted-but-unopened milestone, `M<x>.1`, `M<x>.2`, etc. are draft sequence numbers, not GitHub issue numbers. When an issue is actually opened (`gh issue create`), use the real assigned number for its branch: `feature/<real-issue-number>-<scope>`.
 
@@ -64,3 +64,298 @@ Milestones in this section are fully drafted — issues with real Context/Tasks/
 - SRS v0.2 §10 no longer lists screen-level design as unresolved
 - `buyer-app/CLAUDE.md` and `admin-app/CLAUDE.md` each reference `mock-ui/`
 - No `mock-ui/*.html` file is orphaned from `mock-ui/index.html`; no internal link 404s
+
+#### M2.14 — buyer-app: Redux Toolkit store & RTK Query API setup
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/<issue-number>-buyer-redux-setup
+**Labels:** frontend, buyer-app, catalog
+
+**Context**
+`buyer-app` has no state-management or HTTP layer yet. Every screen issue below (`M2.15`–`M2.18`) needs one consistent way to call `backend` and handle its `{success,data[,pagination]}` / `{success:false,code,message}` contract. Per root `CLAUDE.md`'s "no shared validation package" simplification, `buyer-app` owns this itself rather than importing anything from `backend`. Chosen approach: **Redux Toolkit + RTK Query** (`@reduxjs/toolkit`, `react-redux`) — `createApi`'s cache tags give the filtered/paginated listing screens (`M2.16`/`M2.17`) automatic refetch-on-arg-change with no manual `useEffect` wiring. `backend`'s CORS allowlist already defaults to `http://localhost:3000` for local dev, so no backend change is needed to unblock this.
+
+**Tasks**
+
+- [ ] Add `@reduxjs/toolkit` + `react-redux` to `buyer-app`
+- [ ] Add `NEXT_PUBLIC_API_URL` to a new `buyer-app/.env.example` (documented, no real value committed; defaults to `http://localhost:4000` in dev)
+- [ ] `src/store/api.ts`: `createApi` with `fetchBaseQuery({ baseUrl: NEXT_PUBLIC_API_URL })`; a `transformResponse` unwrapping `{success:true,data}` to `data`, and a `transformErrorResponse`/custom `baseQuery` surfacing `{success:false,code,message}` as the query's `error` in a consistent shape
+- [ ] `src/store/store.ts`: `configureStore` wiring the api slice's reducer + middleware; a `Provider` mounted in `src/app/layout.tsx` (or a client-component wrapper, per Next App Router's server/client split)
+- [ ] Define `tagTypes` (`Product`, `Category`) on the api slice for later issues' cache invalidation
+- [ ] Unit test the `transformResponse`/error-transform logic
+
+**Test Criteria**
+
+- A mocked `{success:true,data}` response resolves as the query's `data`; a mocked `{success:false,code,message}` response surfaces as the query's `error` with `code`/`message` intact
+- A missing `NEXT_PUBLIC_API_URL` fails loudly at startup, not silently
+- `npm run build|test|lint --workspace buyer-app` all pass
+
+#### M2.15 — buyer-app: Home / all-products listing
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/<issue-number>-buyer-home
+**Labels:** frontend, buyer-app, catalog
+
+**Context**
+Builds `mock-ui/buyer-app/home.html` (`FR-CAT-054`, `057`–`059`, `075`, `091`) into `src/features/home/`, replacing `HomePlaceholder.tsx`, wired to `GET /api/products` via a new `useGetProductsQuery` endpoint on `M2.14`'s api slice. First real screen — also produces the shared `ProductCard`/`ProductGrid` components `M2.16`/`M2.17` reuse.
+
+**Tasks**
+
+- [ ] Replace `HomePlaceholder` with a real feature reading `mock-ui/buyer-app/home.html`'s structure/utility classes
+- [ ] Add a `getProducts` query endpoint (`providesTags: ["Product"]`) to the api slice; call it via `useGetProductsQuery({page, sort})`
+- [ ] Sort control (`FR-CAT-075`) and pagination controls, driven by the hook's query args — RTK Query refetches automatically on arg change, no manual `useEffect`
+- [ ] Skeleton (`isLoading`), empty (`data.length === 0`), and error (`isError`) states per the mock, using the hook's own status flags
+- [ ] Extract a shared `ProductCard` (card content per `FR-CAT-091`: image, name, `sellingPrice`, etc.) and `ProductGrid` for reuse by `M2.16`/`M2.17`
+- [ ] RTK Query's built-in mock-friendly testing (MSW handlers behind the real `fetch` `createApi` uses) + RTL tests: happy-path render, empty state, error state, sort-change refetch
+
+**Test Criteria**
+
+- `/` renders products from a mocked `GET /api/products` response, matching `mock-ui/buyer-app/home.html`'s structure
+- Changing sort re-fetches with the new `?sort=` value with no manual refetch call (RTK Query arg-change behavior)
+- Empty/error API responses render their mocked states, not a crash
+- `npm run build|test|lint --workspace buyer-app` all pass
+
+#### M2.16 — buyer-app: Category listing page
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/<issue-number>-buyer-category
+**Labels:** frontend, buyer-app, catalog
+
+**Context**
+Builds `mock-ui/buyer-app/category.html` (`FR-CAT-055`, `068`–`074`, `076`, `092`): breadcrumb, pre-filtered grid via `GET /api/categories/:slug/products`, the full filter rail (price/brand/variant-attribute/filterable-spec/in-stock/on-sale), and `cardSpecifications` (first four filterable fields, `FR-CAT-092`). Reuses `M2.15`'s `ProductGrid`/`ProductCard`; filter state changes are just new args to a `useGetCategoryProductsQuery` hook, which RTK Query refetches automatically.
+
+**Tasks**
+
+- [ ] New route + `src/features/category/` feature
+- [ ] Add a `getCategoryProducts` query endpoint (`providesTags: ["Product"]`) to the api slice; call via `useGetCategoryProductsQuery({slug, filters, page, sort})`, reusing `ProductGrid`/`ProductCard`
+- [ ] Breadcrumb from the resolved category data
+- [ ] Filter rail: price range, brand, variant-attribute, filterable-spec (dynamic, driven by the category's own filterable spec list), in-stock, on-sale — each filter change updates the hook's query args
+- [ ] Render `cardSpecifications` on each card when present — a product with fewer than 4 renders only the ones it has, no placeholder padding
+- [ ] Handle `CATEGORY_NOT_FOUND` (404) with a not-found state via `isError`/`error.code`
+- [ ] MSW handlers + RTL tests: filtered render, filter-change refetch with correct (bracket-notation) query params, not-found state
+
+**Test Criteria**
+
+- `/category/:slug` renders the category's products and breadcrumb from a mocked response
+- Applying a filter re-fetches with the corresponding query param(s) correctly composed, via the RTK Query arg-change refetch
+- A product with fewer than 4 filterable specs renders only what it has
+- `npm run build|test|lint --workspace buyer-app` all pass
+
+#### M2.17 — buyer-app: Search results page
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/<issue-number>-buyer-search
+**Labels:** frontend, buyer-app, catalog
+
+**Context**
+Builds `mock-ui/buyer-app/search.html` (`FR-CAT-065`, `067`, `075`): active keyword shown, relevance-default sort, and two distinct empty states (search-empty vs. filter-empty, `FR-CAT-067`). Wired to `GET /api/products?q=` via a `useSearchProductsQuery` endpoint, reusing `M2.15`'s grid/card.
+
+**Tasks**
+
+- [ ] New route + `src/features/search/` feature
+- [ ] Add a `searchProducts` query endpoint (`providesTags: ["Product"]`); call via `useSearchProductsQuery({q, filters})`, default sort `relevance`
+- [ ] Display the active keyword prominently, per the mock
+- [ ] Implement the two distinct empty states (`FR-CAT-067`) with visibly different copy, driven off whether `q` or a filter is the differentiator
+- [ ] MSW handlers + RTL tests covering both empty states and a populated render
+
+**Test Criteria**
+
+- The search route renders results and the active keyword from a mocked response
+- Zero-results-from-keyword and zero-results-from-filters render distinct copy, matching `mock-ui/buyer-app/search.html`
+- `npm run build|test|lint --workspace buyer-app` all pass
+
+#### M2.18 — buyer-app: Product detail page
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/<issue-number>-buyer-product-detail
+**Labels:** frontend, buyer-app, catalog
+
+**Context**
+Builds `mock-ui/buyer-app/product-detail.html` (`FR-CAT-056`, `059`, `063`, `064`, `084`): gallery, variant selector, grouped specifications, availability badge. Wired via a `useGetProductBySlugQuery` endpoint; selecting a variant updates price/availability/images from local component state derived from the already-cached RTK Query response's `variants[]` array — no refetch (`FR-CAT-064`).
+
+**Tasks**
+
+- [ ] New dynamic route + `src/features/productDetail/` feature
+- [ ] Add a `getProductBySlug` query endpoint (`providesTags: ["Product"]`); handle `PRODUCT_NOT_FOUND` (404) vs. `INVALID_SLUG` (400) distinctly via `error.code`
+- [ ] Image gallery, falling back to the parent's images when a variant has none (`FR-CAT-064`)
+- [ ] Variant selector updates displayed `mrp`/`discount`/`sellingPrice`/`availability`/images from local `useState` derived from the cached query data, no network call
+- [ ] Grouped specifications rendered verbatim (`FR-CAT-063`); availability badge
+- [ ] Default to `defaultVariantId` when present in the response
+- [ ] MSW handlers + RTL tests: default render, variant-switch update, 404 state
+
+**Test Criteria**
+
+- The detail route pre-selects the default variant's price/availability/images when `defaultVariantId` is present
+- Selecting a different variant updates the display with no additional network request (verified via the MSW handler call count)
+- A `PRODUCT_NOT_FOUND` response renders a not-found state
+- `npm run build|test|lint --workspace buyer-app` all pass
+
+#### M2.19 — admin-app: Redux Toolkit store, RTK Query API setup & X-Admin-Key auth
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/<issue-number>-admin-redux-setup
+**Labels:** frontend, admin-app, catalog
+
+**Context**
+Mirrors `M2.14` for `admin-app` (same `@reduxjs/toolkit`/`react-redux`/`createApi` setup), plus every `/api/admin/*` call needs the `X-Admin-Key` header (`backend/src/middleware/adminAuth.ts`) — a temporary guard ahead of v0.3 Authentication (root `CLAUDE.md`). Since the key can't be committed or hardcoded, this issue adds a minimal, explicitly throwaway key-entry prompt (persisted to `sessionStorage` only, mirrored into a small `authSlice` so `prepareHeaders` can read it) rather than any real auth UI — real sessions replace this outright in M3.
+
+**Tasks**
+
+- [ ] Add `@reduxjs/toolkit` + `react-redux` to `admin-app`
+- [ ] Add `VITE_API_URL` to a new `admin-app/.env.example` (defaults to `http://localhost:4000` in dev)
+- [ ] `src/store/authSlice.ts`: holds `adminKey: string | null`, initialized by reading `sessionStorage` on load; a `setAdminKey`/`clearAdminKey` action pair that also syncs `sessionStorage`
+- [ ] `src/store/api.ts`: `createApi` with `fetchBaseQuery({ baseUrl: VITE_API_URL, prepareHeaders: (headers, {getState}) => headers.set("X-Admin-Key", getState().auth.adminKey) })`; same envelope `transformResponse`/error-transform as `M2.14`; a `baseQuery` wrapper that dispatches `clearAdminKey` on a `401` response
+- [ ] `src/store/store.ts` + `Provider` wiring in `src/app/App.tsx` (or its entry point)
+- [ ] Minimal `src/features/adminKey/` prompt: block routes behind a single "enter admin key" field until `state.auth.adminKey` is set
+- [ ] Unit tests for header attachment and 401-triggered re-prompt
+
+**Test Criteria**
+
+- No `admin-app` request reaches the backend without `X-Admin-Key` once a key has been entered
+- A 401 response clears the stored key (Redux state + `sessionStorage`) and returns to the prompt
+- `npm run build|test|lint --workspace admin-app` all pass
+
+#### M2.20 — admin-app: Brand management (list + form)
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/<issue-number>-admin-brands
+**Labels:** frontend, admin-app, catalog
+
+**Context**
+Builds `mock-ui/admin-app/brand-list.html` (`FR-CAT-023`–`028`, `048`, `052`): list with logo/product-count, create/edit form, inline `BRAND_IN_USE` delete-guard rejection, search. Brands has no hierarchy or nested schema, making it the simplest catalog entity — a template for `M2.21`. First issue to add RTK Query *mutation* endpoints (create/update/delete/status), each invalidating the `Brand` list tag on success.
+
+**Tasks**
+
+- [ ] `src/features/brands/` — add `getBrands` query (`providesTags: ["Brand"]`, `?search=`) and `createBrand`/`updateBrand`/`deleteBrand`/`updateBrandStatus` mutations (each `invalidatesTags: ["Brand"]`) to the api slice
+- [ ] List view via `useGetBrandsQuery`; create/edit form via `useCreateBrandMutation`/`useUpdateBrandMutation`, including logo upload via the presigned-upload flow (`POST /api/admin/uploads/presign` then a direct `PUT` to R2, `FR-CAT-077`–`081`)
+- [ ] Status toggle via `useUpdateBrandStatusMutation`
+- [ ] Delete via `useDeleteBrandMutation`, rendering the inline `BRAND_IN_USE` rejection (with blocking product count) on 409
+- [ ] MSW handlers + RTL tests: list render, create/edit, delete-guard rejection, search
+
+**Test Criteria**
+
+- Create → edit → blocked-delete (referenced by a product) → status-toggle all work against mocked responses, with the list auto-refetching after each mutation via tag invalidation
+- A guarded delete's 409 renders the blocking product count inline, not a generic error
+- `npm run build|test|lint --workspace admin-app` all pass
+
+#### M2.21 — admin-app: Category management (list + form)
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/<issue-number>-admin-categories
+**Labels:** frontend, admin-app, catalog
+
+**Context**
+Builds `mock-ui/admin-app/category-list.html` (`FR-CAT-014`–`022`, `048`, `051`): two-level hierarchy tree, combined product+subcategory delete guard. Reuses `M2.20`'s query/mutation-with-tag-invalidation pattern, adding the parent-category picker and the four hierarchy-validation error states (`INVALID_PARENT_CATEGORY`, `PARENT_CATEGORY_NOT_FOUND`, `PARENT_CATEGORY_TOO_DEEP`, `CATEGORY_HAS_SUBCATEGORIES`).
+
+**Tasks**
+
+- [ ] `getCategories`/`createCategory`/`updateCategory`/`deleteCategory`/`updateCategoryStatus` endpoints on the api slice (`Category` tag, same invalidation pattern as `M2.20`)
+- [ ] Tree/list via `useGetCategoriesQuery` (+ `?search=`)
+- [ ] Create/edit form with a parent-category picker (tri-state: none/root, or an existing category — one that already has children can't be assigned a parent)
+- [ ] Wire all four hierarchy-validation error codes (from the mutation's `error`) to field-level errors, not generic toasts
+- [ ] Delete rendering the combined "N product(s)/N subcategory(ies)" message
+- [ ] MSW handlers + RTL tests covering the tree render, each hierarchy error, and the combined guard
+
+**Test Criteria**
+
+- All four hierarchy-validation error codes render distinct, correctly-worded inline errors
+- A delete blocked by both products and subcategories shows both counts in one message
+- `npm run build|test|lint --workspace admin-app` all pass
+
+#### M2.22 — admin-app: Category specification editor
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/<issue-number>-admin-category-specs
+**Labels:** frontend, admin-app, catalog
+
+**Context**
+Builds `mock-ui/admin-app/specification-editor.html` (`FR-CAT-030`, `031`, `035`, `092`): nested groups/fields, type-dependent inputs (`options` required for `enum`, forbidden for `text`), inline `SPECIFICATION_FIELD_IN_USE` guard, reorder. Mounted against `GET`/`PUT`/`PATCH /api/admin/categories/:id/specifications` — no `POST`/`DELETE`, matching backend's deliberate shape.
+
+**Tasks**
+
+- [ ] `getCategorySpecifications` query + `replaceCategorySpecifications` (full `PUT`) and `patchCategorySpecifications` (the `PATCH` discriminated-union op) mutations, `CategorySpecification` tag
+- [ ] Handles the synthetic empty `{category,specificationGroups:[]}` response before any `PUT` — RTK Query's normal "no data yet" state, not an error
+- [ ] Full-replace `PUT` flow for adding/reordering groups and fields
+- [ ] `PATCH`-based `renameGroup`/`deleteGroup`/`updateField`/`deleteField`, matching backend's discriminated-union shape exactly
+- [ ] Type-dependent field inputs (options editor shown only for `enum`) — client-side mirror of backend's Zod refine, for UX only
+- [ ] Inline in-use guard rendering, naming every blocking field
+- [ ] MSW handlers + RTL tests: full-replace, each `PATCH` op, the in-use guard render
+
+**Test Criteria**
+
+- `GET` before any `PUT` renders the synthetic empty state, not an error
+- Deleting a field/group in use names every blocking field/count from the guard response
+- `npm run build|test|lint --workspace admin-app` all pass
+
+#### M2.23 — admin-app: Category variant-type editor
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/<issue-number>-admin-category-variants
+**Labels:** frontend, admin-app, catalog
+
+**Context**
+Builds `mock-ui/admin-app/variant-type-editor.html` (`FR-CAT-036`–`038`): flat list of variant axes. Near-identical shape to `M2.22` but flat (no groups) and — the one deliberate divergence — **no in-use guard on delete at all**, since this definition drives admin form rendering only (`FR-CAT-037`). Should reuse `M2.22`'s query/mutation scaffolding where shapes overlap.
+
+**Tasks**
+
+- [ ] `getCategoryVariants` query + `replaceCategoryVariants`/`patchCategoryVariants` (`updateAxis`/`deleteAxis`) mutations, `CategoryVariant` tag
+- [ ] Same synthetic-empty-`GET`/full-replace-`PUT`/`PATCH` pattern as `M2.22`, flat instead of grouped
+- [ ] Type-dependent options editor (required for `select`/`color`, forbidden for `text`/`number`)
+- [ ] No delete-guard UI for `deleteAxis` — deletion always succeeds immediately, matching backend
+- [ ] MSW handlers + RTL tests
+
+**Test Criteria**
+
+- `GET` before any `PUT` renders the synthetic empty state
+- `deleteAxis` succeeds with no in-use check, matching backend
+- `npm run build|test|lint --workspace admin-app` all pass
+
+#### M2.24 — admin-app: Product list + read-only detail
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/<issue-number>-admin-product-list
+**Labels:** frontend, admin-app, catalog
+
+**Context**
+Builds `mock-ui/admin-app/product-list.html` + `product-detail.html` (`FR-CAT-005`, `006`, `008`, `011`, `013`, `043`, `045`, `050`, `053`): the admin grid (all statuses, keyword/status/low-stock filters, pagination) and its read-only drill-down. Bundled as one issue since detail is a read-only projection of data the list already fetches, not an independent write surface (that's `M2.25`).
+
+**Tasks**
+
+- [ ] `getProducts` (admin, `Product` tag) query + `updateProductStatus`/`updateProductStock` mutations (`invalidatesTags: ["Product"]`) on the api slice
+- [ ] List via `useGetAdminProductsQuery({page, sort, search, status, lowStock})` — filter/status/low-stock changes are just new args, refetched automatically
+- [ ] Status filter and low-stock toggle, composing independently with search
+- [ ] Read-only detail (route or drawer) via `useGetAdminProductByIdQuery`, rendering every field including embedded variants and per-unit purchasability (`FR-CAT-043`)
+- [ ] Status-change via `useUpdateProductStatusMutation`; stock-only quick-edit via `useUpdateProductStockMutation`
+- [ ] MSW handlers + RTL tests: filtered/paginated list, detail render, status change
+
+**Test Criteria**
+
+- List composes `search`/`status`/`lowStock` filters correctly and independently in the request
+- Detail view renders every stored field, including all variants regardless of `active`
+- `npm run build|test|lint --workspace admin-app` all pass
+
+#### M2.25 — admin-app: Product create/edit form (with embedded variant editor)
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/<issue-number>-admin-product-form
+**Labels:** frontend, admin-app, catalog
+
+**Context**
+Builds `mock-ui/admin-app/product-form.html` (`FR-CAT-001`–`004`, `033`, `038`, `083`–`087`) — the most complex admin screen: 1–8 image widget via presigned upload, category-scoped specification inputs, and an embedded variant editor. Depends on `M2.20`/`21`/`22`/`23`'s query endpoints to populate its pickers and dynamic inputs.
+
+**Tasks**
+
+- [ ] `createProduct`/`updateProduct` mutations (`invalidatesTags: ["Product"]`) and `addVariant`/`updateVariant` mutations on the api slice
+- [ ] `src/features/products/productForm/` — create via `useCreateProductMutation`, edit via `useUpdateProductMutation` (`sku` field disabled on edit, not just validated — it's immutable per `FR-CAT-004`)
+- [ ] Image widget: presigned upload generalized to 1–8 images with primary-image selection
+- [ ] Category picker (via `M2.22`'s `useGetCategorySpecificationsQuery`) drives dynamic specification inputs from that category's schema, mirroring `FR-CAT-033`'s required/type/enum-membership checks client-side for UX only
+- [ ] Embedded variant editor: add/edit rows inline (attributes from `M2.23`'s category variant axes, per-variant images/pricing/stock/`active`), via `useAddVariantMutation`/`useUpdateVariantMutation`
+- [ ] Live-computed `sellingPrice` as `mrp`/`discount` are edited (mirrors `backend/src/utils/pricing.ts`'s formula for immediate feedback; still trusts the server value on save)
+- [ ] Surface `SPECIFICATION_VALIDATION_FAILED`, `DUPLICATE_SKU`, and duplicate-attribute-set errors inline (from the mutation's `error`), naming every offending field
+- [ ] MSW handlers + RTL tests: create, edit (sku disabled), variant add/edit, each validation error case
+
+**Test Criteria**
+
+- The `sku` field is disabled when editing an existing product
+- Changing category re-fetches (via RTK Query arg change) and re-renders that category's specification/variant-axis inputs
+- A `SPECIFICATION_VALIDATION_FAILED` response highlights every named offending field, not just the first
+- `npm run build|test|lint --workspace admin-app` all pass
