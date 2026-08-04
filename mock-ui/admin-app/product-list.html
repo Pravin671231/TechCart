@@ -4,54 +4,163 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin — Product List</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme {
+        --color-primary-50: #eef2ff;
+        --color-primary-100: #e0e7ff;
+        --color-primary-200: #c7d2fe;
+        --color-primary-300: #a5b4fc;
+        --color-primary-400: #818cf8;
+        --color-primary-500: #6366f1;
+        --color-primary-600: #4f46e5;
+        --color-primary-700: #4338ca;
+        --color-primary-800: #3730a3;
+        --color-primary-900: #312e81;
+
+        --color-accent-50: #fff7ed;
+        --color-accent-100: #ffedd5;
+        --color-accent-200: #fed7aa;
+        --color-accent-300: #fdba74;
+        --color-accent-400: #fb923c;
+        --color-accent-500: #f97316;
+        --color-accent-600: #ea580c;
+        --color-accent-700: #c2410c;
+        --color-accent-800: #9a3412;
+        --color-accent-900: #7c2d12;
+
+        --font-sans:
+          "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+      }
+    </style>
   </head>
-  <body class="h-screen bg-white text-neutral-700">
+  <body class="h-screen bg-white text-neutral-600">
     <div class="flex h-screen">
-      <aside class="flex w-56 shrink-0 flex-col border-r border-neutral-400 bg-neutral-100">
-        <div
-          class="flex h-16 shrink-0 items-center border-b border-neutral-400 px-4 text-sm font-medium"
+      <aside class="flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white">
+        <a
+          href="./index.html"
+          class="flex h-16 shrink-0 items-center gap-2 border-b border-neutral-200 px-4"
         >
-          TechCart Admin
-        </div>
-        <nav class="flex flex-col p-2 text-sm text-neutral-600">
-          <a class="border border-neutral-500 bg-white px-3 py-2" href="./product-list.html">
+          <svg
+            class="h-5 w-5 text-accent-600"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
+          </svg>
+          <div class="flex flex-col leading-tight">
+            <span class="text-sm font-extrabold tracking-tight text-neutral-900">
+              Tech<span class="text-primary-600">Cart</span>
+            </span>
+            <span class="text-[10px] font-medium tracking-wide text-neutral-400 uppercase">
+              Admin
+            </span>
+          </div>
+        </a>
+
+        <nav class="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2 text-sm">
+          <a href="#" class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100">
+            Dashboard
+          </a>
+          <a
+            href="./product-list.html"
+            class="rounded-md bg-primary-50 px-3 py-2 font-medium text-primary-700"
+          >
             Products
           </a>
-          <a class="px-3 py-2" href="./category-list.html">Categories</a>
-          <a class="px-3 py-2" href="./brand-list.html">Brands</a>
-          <a class="px-3 py-2" href="./specification-editor.html">Specifications</a>
-          <a class="px-3 py-2" href="./variant-type-editor.html">Variant types</a>
+          <a
+            href="./category-list.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Categories
+          </a>
+          <a
+            href="./brand-list.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Brands
+          </a>
+          <a
+            href="./specification-editor.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Specifications
+          </a>
+          <a
+            href="./variant-type-editor.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Variant types
+          </a>
+          <a href="#" class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100">Orders</a>
         </nav>
+
+        <div class="mt-auto border-t border-neutral-200 p-3">
+          <div class="flex items-center gap-2 rounded-md p-2">
+            <span
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700"
+            >
+              A
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-neutral-900">Admin User</p>
+              <p class="truncate text-xs text-neutral-500">Catalog Manager</p>
+            </div>
+          </div>
+          <a
+            href="#"
+            class="mt-2 flex items-center justify-center rounded-md border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50"
+          >
+            Logout
+          </a>
+        </div>
       </aside>
 
       <div class="flex min-w-0 flex-1 flex-col">
-        <header
-          class="flex h-16 shrink-0 items-center justify-between border-b border-neutral-400 bg-neutral-100 px-6"
-        >
-          <h1 class="text-sm font-medium">Products</h1>
-          <span class="text-xs text-neutral-500">Shared-secret guarded · FR-CAT-088</span>
-        </header>
-
         <main class="flex-1 overflow-auto p-6">
+          <div class="mb-2 flex items-center justify-between">
+            <h1 class="text-xl font-semibold tracking-tight text-neutral-900">Products</h1>
+            <button
+              class="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+            >
+              + New product
+            </button>
+          </div>
           <p class="mb-4 text-[11px] text-neutral-400">
             admin-app · Product list —
             <code class="text-neutral-500">FR-CAT-005, 008, 011, 050, 053, 057</code> · TanStack
-            Table backs this grid per docs/architecture.md §4.2
+            Table backs this grid per docs/architecture.md §4.2 · Shared-secret guarded · FR-CAT-088
           </p>
 
           <!-- Toolbar -->
           <div class="mb-4 flex flex-wrap items-center gap-3">
+            <input
+              type="text"
+              placeholder="Search name or SKU…"
+              class="h-9 w-72 rounded-md border border-neutral-300 px-3 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+            />
             <span
-              class="flex h-9 w-72 items-center border border-neutral-400 px-3 text-sm text-neutral-400"
+              class="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-600"
             >
-              Search name or SKU…
+              Status: All ▾
             </span>
-            <span class="border border-neutral-400 px-3 py-1.5 text-sm">Status: All ▾</span>
-            <span class="border border-neutral-400 px-3 py-1.5 text-sm">☐ Low stock only</span>
-            <span class="ml-auto border border-neutral-600 bg-neutral-100 px-3 py-1.5 text-sm">
-              + New product
-            </span>
+            <label class="flex items-center gap-2 text-sm text-neutral-600">
+              <span class="h-4 w-4 rounded border border-neutral-300"></span>
+              Low stock only
+            </label>
           </div>
           <p class="mb-4 text-[11px] text-neutral-400">
             Name match is case-insensitive partial; SKU match is exact or prefix, so pasting a full
@@ -59,110 +168,158 @@
             filter narrows further · FR-CAT-053
           </p>
 
-          <div class="overflow-x-auto border border-neutral-400">
+          <div class="overflow-x-auto rounded-lg border border-neutral-200">
             <table class="w-full min-w-[900px] border-collapse text-sm">
-              <thead class="bg-neutral-100 text-left">
-                <tr class="border-b border-neutral-400">
-                  <th class="px-3 py-2 font-medium">Image</th>
-                  <th class="px-3 py-2 font-medium">Name</th>
-                  <th class="px-3 py-2 font-medium">SKU</th>
-                  <th class="px-3 py-2 font-medium">Brand</th>
-                  <th class="px-3 py-2 font-medium">Category</th>
-                  <th class="px-3 py-2 text-right font-medium">Price</th>
-                  <th class="px-3 py-2 text-right font-medium">Stock</th>
-                  <th class="px-3 py-2 font-medium">Status</th>
-                  <th class="px-3 py-2 font-medium">Actions</th>
+              <thead class="bg-neutral-50 text-left">
+                <tr class="border-b border-neutral-200">
+                  <th class="px-3 py-2 font-medium text-neutral-500">Image</th>
+                  <th class="px-3 py-2 font-medium text-neutral-500">Name</th>
+                  <th class="px-3 py-2 font-medium text-neutral-500">SKU</th>
+                  <th class="px-3 py-2 font-medium text-neutral-500">Brand</th>
+                  <th class="px-3 py-2 font-medium text-neutral-500">Category</th>
+                  <th class="px-3 py-2 text-right font-medium text-neutral-500">Price</th>
+                  <th class="px-3 py-2 text-right font-medium text-neutral-500">Stock</th>
+                  <th class="px-3 py-2 font-medium text-neutral-500">Status</th>
+                  <th class="px-3 py-2 font-medium text-neutral-500">Actions</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-neutral-200">
-                <tr>
+              <tbody class="divide-y divide-neutral-100">
+                <tr class="bg-primary-50/40">
                   <td class="px-3 py-2">
-                    <span class="block h-10 w-10 border border-neutral-400 bg-neutral-100"></span>
+                    <span
+                      class="block h-10 w-10 rounded-md border border-neutral-200 bg-neutral-50"
+                    ></span>
                   </td>
-                  <td class="px-3 py-2">Product name</td>
-                  <td class="px-3 py-2 font-mono text-xs">TC-SP-0001</td>
+                  <td class="px-3 py-2 font-medium text-neutral-900">Product name</td>
+                  <td class="px-3 py-2 font-mono text-xs text-neutral-500">TC-SP-0001</td>
                   <td class="px-3 py-2">Brand A</td>
                   <td class="px-3 py-2">Smartphones</td>
-                  <td class="px-3 py-2 text-right">₹44,910</td>
+                  <td class="px-3 py-2 text-right tabular-nums">₹44,910</td>
                   <td class="px-3 py-2 text-right">
                     <span class="inline-flex items-center gap-1">
-                      <span class="w-14 border border-neutral-600 bg-neutral-100 px-1.5 py-0.5">
-                        128
-                      </span>
+                      <input
+                        type="text"
+                        value="128"
+                        class="w-14 rounded-md border border-primary-300 px-1.5 py-0.5 text-right text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+                      />
                       <span
-                        class="border border-neutral-600 bg-neutral-100 px-1.5 py-0.5 text-[10px]"
+                        class="rounded-md bg-primary-600 px-1.5 py-0.5 text-[10px] font-medium text-white"
                       >
                         Save
                       </span>
                     </span>
                   </td>
                   <td class="px-3 py-2">
-                    <span class="border border-neutral-600 px-2 py-0.5 text-xs">Published</span>
+                    <span
+                      class="rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
+                    >
+                      Published
+                    </span>
                   </td>
                   <td class="px-3 py-2 text-xs whitespace-nowrap text-neutral-500">
-                    <a class="underline" href="./product-detail.html">View</a> ·
-                    <a class="underline" href="./product-form.html">Edit</a> · Archive
+                    <a class="text-primary-600 hover:underline" href="./product-detail.html">
+                      View
+                    </a>
+                    ·
+                    <a class="text-primary-600 hover:underline" href="./product-form.html">
+                      Edit
+                    </a>
+                    · Archive
                   </td>
                 </tr>
                 <tr>
                   <td class="px-3 py-2">
-                    <span class="block h-10 w-10 border border-neutral-400 bg-neutral-100"></span>
+                    <span
+                      class="block h-10 w-10 rounded-md border border-neutral-200 bg-neutral-50"
+                    ></span>
                   </td>
-                  <td class="px-3 py-2">Product name</td>
-                  <td class="px-3 py-2 font-mono text-xs">TC-SP-0002</td>
+                  <td class="px-3 py-2 font-medium text-neutral-900">Product name</td>
+                  <td class="px-3 py-2 font-mono text-xs text-neutral-500">TC-SP-0002</td>
                   <td class="px-3 py-2">Brand B</td>
                   <td class="px-3 py-2">Smartphones</td>
-                  <td class="px-3 py-2 text-right">₹31,999</td>
-                  <td class="px-3 py-2 text-right">
+                  <td class="px-3 py-2 text-right tabular-nums">₹31,999</td>
+                  <td class="px-3 py-2 text-right tabular-nums">
                     2
-                    <span class="ml-1 border border-neutral-500 px-1 text-[10px] text-neutral-600">
-                      low
+                    <span
+                      class="ml-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+                    >
+                      Low
                     </span>
                   </td>
                   <td class="px-3 py-2">
-                    <span class="border border-neutral-600 px-2 py-0.5 text-xs">Published</span>
+                    <span
+                      class="rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
+                    >
+                      Published
+                    </span>
                   </td>
                   <td class="px-3 py-2 text-xs whitespace-nowrap text-neutral-500">
-                    <a class="underline" href="./product-detail.html">View</a> ·
-                    <a class="underline" href="./product-form.html">Edit</a> ·
-                    <a class="underline" href="#">Adjust stock</a> · Archive
+                    <a class="text-primary-600 hover:underline" href="./product-detail.html">
+                      View
+                    </a>
+                    ·
+                    <a class="text-primary-600 hover:underline" href="./product-form.html">
+                      Edit
+                    </a>
+                    ·
+                    <a class="text-primary-600 hover:underline" href="#">Adjust stock</a>
+                    · Archive
                   </td>
                 </tr>
-                <tr class="bg-neutral-50">
+                <tr>
                   <td class="px-3 py-2">
-                    <span class="block h-10 w-10 border border-neutral-400 bg-neutral-100"></span>
+                    <span
+                      class="block h-10 w-10 rounded-md border border-neutral-200 bg-neutral-50"
+                    ></span>
                   </td>
-                  <td class="px-3 py-2">Product name</td>
-                  <td class="px-3 py-2 font-mono text-xs">TC-LP-0007</td>
+                  <td class="px-3 py-2 font-medium text-neutral-900">Product name</td>
+                  <td class="px-3 py-2 font-mono text-xs text-neutral-500">TC-LP-0007</td>
                   <td class="px-3 py-2">Brand C</td>
                   <td class="px-3 py-2">Laptops</td>
-                  <td class="px-3 py-2 text-right">₹89,900</td>
-                  <td class="px-3 py-2 text-right">14</td>
+                  <td class="px-3 py-2 text-right tabular-nums">₹89,900</td>
+                  <td class="px-3 py-2 text-right tabular-nums">14</td>
                   <td class="px-3 py-2">
-                    <span class="border border-dashed border-neutral-500 px-2 py-0.5 text-xs">
+                    <span
+                      class="rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600"
+                    >
                       Draft
                     </span>
                   </td>
                   <td class="px-3 py-2 text-xs whitespace-nowrap text-neutral-500">
-                    <a class="underline" href="./product-detail.html">View</a> ·
-                    <a class="underline" href="./product-form.html">Edit</a> · Archive
+                    <a class="text-primary-600 hover:underline" href="./product-detail.html">
+                      View
+                    </a>
+                    ·
+                    <a class="text-primary-600 hover:underline" href="./product-form.html">
+                      Edit
+                    </a>
+                    · Archive
                   </td>
                 </tr>
-                <tr class="bg-neutral-50 text-neutral-400">
+                <tr class="text-neutral-400">
                   <td class="px-3 py-2">
-                    <span class="block h-10 w-10 border border-neutral-300 bg-neutral-100"></span>
+                    <span
+                      class="block h-10 w-10 rounded-md border border-neutral-200 bg-neutral-50"
+                    ></span>
                   </td>
                   <td class="px-3 py-2">Product name</td>
                   <td class="px-3 py-2 font-mono text-xs">TC-AC-0031</td>
                   <td class="px-3 py-2">Brand A</td>
                   <td class="px-3 py-2">Accessories</td>
-                  <td class="px-3 py-2 text-right">₹1,299</td>
-                  <td class="px-3 py-2 text-right">0</td>
+                  <td class="px-3 py-2 text-right tabular-nums">₹1,299</td>
+                  <td class="px-3 py-2 text-right tabular-nums">0</td>
                   <td class="px-3 py-2">
-                    <span class="border border-neutral-300 px-2 py-0.5 text-xs">Archived</span>
+                    <span
+                      class="rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-500"
+                    >
+                      Archived
+                    </span>
                   </td>
                   <td class="px-3 py-2 text-xs whitespace-nowrap">
-                    <a class="underline" href="./product-detail.html">View</a> · Restore
+                    <a class="text-primary-600 hover:underline" href="./product-detail.html">
+                      View
+                    </a>
+                    · Restore
                   </td>
                 </tr>
               </tbody>
@@ -172,15 +329,21 @@
           <div class="mt-4 flex items-center justify-between text-sm">
             <p class="text-neutral-500">Showing 1–4 of 248</p>
             <nav class="flex gap-2">
-              <span class="border border-neutral-300 px-3 py-1 text-neutral-400">‹ Prev</span>
-              <span class="border border-neutral-600 bg-neutral-100 px-3 py-1">1</span>
-              <span class="border border-neutral-400 px-3 py-1">2</span>
-              <span class="border border-neutral-400 px-3 py-1">Next ›</span>
+              <span class="rounded-md border border-neutral-200 px-3 py-1 text-neutral-300">
+                ‹ Prev
+              </span>
+              <span class="rounded-md bg-primary-600 px-3 py-1 font-medium text-white">1</span>
+              <span class="rounded-md border border-neutral-300 px-3 py-1 hover:bg-neutral-50">
+                2
+              </span>
+              <span class="rounded-md border border-neutral-300 px-3 py-1 hover:bg-neutral-50">
+                Next ›
+              </span>
             </nav>
           </div>
 
           <div
-            class="mt-6 border border-dashed border-neutral-400 p-3 text-[11px] text-neutral-500"
+            class="mt-6 rounded-lg border border-dashed border-neutral-300 p-3 text-[11px] text-neutral-500"
           >
             <p class="mb-1 font-medium text-neutral-600">Admin grid rules</p>
             <ul class="list-disc space-y-0.5 pl-4">
@@ -189,7 +352,7 @@
                 and <code>archived</code> · FR-CAT-005
               </li>
               <li>
-                “Archive” is a soft delete (<code>status → archived</code>), never a hard document
+                "Archive" is a soft delete (<code>status → archived</code>), never a hard document
                 removal, because Orders (v0.5) will hold product references · FR-CAT-007
               </li>
               <li>

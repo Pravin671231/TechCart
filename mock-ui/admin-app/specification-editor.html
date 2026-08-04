@@ -4,42 +4,150 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin — Category Specification Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme {
+        --color-primary-50: #eef2ff;
+        --color-primary-100: #e0e7ff;
+        --color-primary-200: #c7d2fe;
+        --color-primary-300: #a5b4fc;
+        --color-primary-400: #818cf8;
+        --color-primary-500: #6366f1;
+        --color-primary-600: #4f46e5;
+        --color-primary-700: #4338ca;
+        --color-primary-800: #3730a3;
+        --color-primary-900: #312e81;
+
+        --color-accent-50: #fff7ed;
+        --color-accent-100: #ffedd5;
+        --color-accent-200: #fed7aa;
+        --color-accent-300: #fdba74;
+        --color-accent-400: #fb923c;
+        --color-accent-500: #f97316;
+        --color-accent-600: #ea580c;
+        --color-accent-700: #c2410c;
+        --color-accent-800: #9a3412;
+        --color-accent-900: #7c2d12;
+
+        --font-sans:
+          "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+      }
+    </style>
   </head>
-  <body class="h-screen bg-white text-neutral-700">
+  <body class="h-screen bg-white text-neutral-600">
     <div class="flex h-screen">
-      <aside class="flex w-56 shrink-0 flex-col border-r border-neutral-400 bg-neutral-100">
-        <div
-          class="flex h-16 shrink-0 items-center border-b border-neutral-400 px-4 text-sm font-medium"
+      <aside class="flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white">
+        <a
+          href="./index.html"
+          class="flex h-16 shrink-0 items-center gap-2 border-b border-neutral-200 px-4"
         >
-          TechCart Admin
-        </div>
-        <nav class="flex flex-col p-2 text-sm text-neutral-600">
-          <a class="px-3 py-2" href="./product-list.html">Products</a>
-          <a class="px-3 py-2" href="./category-list.html">Categories</a>
-          <a class="px-3 py-2" href="./brand-list.html">Brands</a>
+          <svg
+            class="h-5 w-5 text-accent-600"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
+          </svg>
+          <div class="flex flex-col leading-tight">
+            <span class="text-sm font-extrabold tracking-tight text-neutral-900">
+              Tech<span class="text-primary-600">Cart</span>
+            </span>
+            <span class="text-[10px] font-medium tracking-wide text-neutral-400 uppercase">
+              Admin
+            </span>
+          </div>
+        </a>
+
+        <nav class="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2 text-sm">
+          <a href="#" class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100">
+            Dashboard
+          </a>
           <a
-            class="border border-neutral-500 bg-white px-3 py-2"
+            href="./product-list.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Products
+          </a>
+          <a
+            href="./category-list.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Categories
+          </a>
+          <a
+            href="./brand-list.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Brands
+          </a>
+          <a
             href="./specification-editor.html"
+            class="rounded-md bg-primary-50 px-3 py-2 font-medium text-primary-700"
           >
             Specifications
           </a>
-          <a class="px-3 py-2" href="./variant-type-editor.html">Variant types</a>
+          <a
+            href="./variant-type-editor.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Variant types
+          </a>
+          <a href="#" class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100">Orders</a>
         </nav>
+
+        <div class="mt-auto border-t border-neutral-200 p-3">
+          <div class="flex items-center gap-2 rounded-md p-2">
+            <span
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700"
+            >
+              A
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-neutral-900">Admin User</p>
+              <p class="truncate text-xs text-neutral-500">Catalog Manager</p>
+            </div>
+          </div>
+          <a
+            href="#"
+            class="mt-2 flex items-center justify-center rounded-md border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50"
+          >
+            Logout
+          </a>
+        </div>
       </aside>
 
       <div class="flex min-w-0 flex-1 flex-col">
-        <header
-          class="flex h-16 shrink-0 items-center justify-between border-b border-neutral-400 bg-neutral-100 px-6"
-        >
-          <h1 class="text-sm font-medium">Specification schema</h1>
-          <div class="flex items-center gap-2 text-sm">
-            <span class="border border-neutral-400 px-3 py-1.5">Category: Smartphones ▾</span>
-            <span class="border border-neutral-600 bg-white px-3 py-1.5">Save schema</span>
-          </div>
-        </header>
-
         <main class="flex-1 overflow-auto p-6">
+          <div class="mb-2 flex items-center justify-between">
+            <h1 class="text-xl font-semibold tracking-tight text-neutral-900">
+              Specification schema
+            </h1>
+            <div class="flex items-center gap-2 text-sm">
+              <span
+                class="rounded-md border border-neutral-300 bg-white px-3 py-1.5 font-medium text-neutral-600"
+              >
+                Category: Smartphones ▾
+              </span>
+              <span
+                class="rounded-md bg-primary-600 px-3 py-1.5 font-medium text-white hover:bg-primary-700"
+              >
+                Save schema
+              </span>
+            </div>
+          </div>
           <p class="mb-4 text-[11px] text-neutral-400">
             admin-app · Category specification editor —
             <code class="text-neutral-500">FR-CAT-030, 031, 032, 035, 092</code> · One specification
@@ -47,16 +155,18 @@
           </p>
 
           <!-- The dual effect of `filterable`, stated in the editor per §6 -->
-          <div class="mb-6 border border-neutral-600 bg-neutral-50 p-3 text-sm">
-            <p class="font-medium">Marking a field <code>filterable</code> does two things</p>
-            <ol class="mt-1 list-decimal space-y-0.5 pl-5 text-neutral-600">
+          <div class="mb-6 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm">
+            <p class="font-medium text-blue-900">
+              Marking a field <code>filterable</code> does two things
+            </p>
+            <ol class="mt-1 list-decimal space-y-0.5 pl-5 text-blue-800">
               <li>It becomes a buyer-facing filter facet · FR-CAT-072</li>
               <li>
                 It becomes eligible for display on category product cards — first four in the order
                 below · FR-CAT-092
               </li>
             </ol>
-            <p class="mt-2 text-[11px] text-neutral-500">
+            <p class="mt-2 text-[11px] text-blue-700">
               Allowed on <code>enum</code>, <code>boolean</code>, and <code>number</code> fields.
               Rejected on <code>text</code> — free text is unbounded and yields neither a usable
               facet nor a scannable card value · FR-CAT-035
@@ -66,17 +176,20 @@
           <div class="flex flex-col gap-6 xl:flex-row">
             <section class="min-w-0 flex-1 space-y-6">
               <!-- Group 1 -->
-              <div class="border border-neutral-400">
+              <div class="overflow-hidden rounded-lg border border-neutral-200">
                 <div
-                  class="flex items-center justify-between border-b border-neutral-400 bg-neutral-100 px-3 py-2"
+                  class="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-3 py-2"
                 >
-                  <p class="text-sm font-medium">Group: Display</p>
-                  <span class="text-xs text-neutral-500">Rename · Delete group</span>
+                  <p class="text-sm font-medium text-neutral-900">Group: Display</p>
+                  <span class="text-xs text-neutral-500">
+                    <a class="text-primary-600 hover:underline" href="#">Rename</a> ·
+                    <a class="text-primary-600 hover:underline" href="#">Delete group</a>
+                  </span>
                 </div>
                 <div class="overflow-x-auto">
                   <table class="w-full min-w-[720px] border-collapse text-sm">
                     <thead class="text-left text-xs text-neutral-500">
-                      <tr class="border-b border-neutral-300">
+                      <tr class="border-b border-neutral-200">
                         <th class="px-3 py-2 font-medium">⇅</th>
                         <th class="px-3 py-2 font-medium">Field name</th>
                         <th class="px-3 py-2 font-medium">Type</th>
@@ -87,132 +200,162 @@
                         <th class="px-3 py-2 font-medium"></th>
                       </tr>
                     </thead>
-                    <tbody class="divide-y divide-neutral-200">
+                    <tbody class="divide-y divide-neutral-100">
                       <tr>
                         <td class="cursor-grab px-3 py-2 text-neutral-400">⣿</td>
-                        <td class="px-3 py-2">Screen Size</td>
+                        <td class="px-3 py-2 text-neutral-900">Screen Size</td>
                         <td class="px-3 py-2">number ▾</td>
                         <td class="px-3 py-2">in</td>
                         <td class="px-3 py-2 text-neutral-400">—</td>
                         <td class="px-3 py-2">☑</td>
                         <td class="px-3 py-2">
-                          ☑ <span class="text-[11px] text-neutral-500">range facet</span>
+                          <span
+                            class="rounded-md bg-green-100 px-1.5 py-0.5 text-[11px] font-medium text-green-700"
+                          >
+                            range facet
+                          </span>
                         </td>
-                        <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                        <td class="px-3 py-2 text-xs text-red-600">Delete</td>
                       </tr>
                       <tr>
                         <td class="cursor-grab px-3 py-2 text-neutral-400">⣿</td>
-                        <td class="px-3 py-2">Resolution</td>
+                        <td class="px-3 py-2 text-neutral-900">Resolution</td>
                         <td class="px-3 py-2">text ▾</td>
                         <td class="px-3 py-2 text-neutral-400">—</td>
                         <td class="px-3 py-2 text-neutral-400">—</td>
                         <td class="px-3 py-2">☐</td>
-                        <td class="px-3 py-2 text-neutral-300">☐ n/a for text</td>
-                        <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                        <td class="px-3 py-2 text-neutral-300">n/a for text</td>
+                        <td class="px-3 py-2 text-xs text-red-600">Delete</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
-                <p class="border-t border-neutral-200 px-3 py-2 text-xs text-neutral-500">
+                <p
+                  class="border-t border-neutral-100 px-3 py-2 text-xs font-medium text-primary-600 hover:bg-primary-50"
+                >
                   + Add field
                 </p>
               </div>
 
               <!-- Group 2 -->
-              <div class="border border-neutral-400">
+              <div class="overflow-hidden rounded-lg border border-neutral-200">
                 <div
-                  class="flex items-center justify-between border-b border-neutral-400 bg-neutral-100 px-3 py-2"
+                  class="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-3 py-2"
                 >
-                  <p class="text-sm font-medium">Group: Performance</p>
-                  <span class="text-xs text-neutral-500">Rename · Delete group</span>
+                  <p class="text-sm font-medium text-neutral-900">Group: Performance</p>
+                  <span class="text-xs text-neutral-500">
+                    <a class="text-primary-600 hover:underline" href="#">Rename</a> ·
+                    <a class="text-primary-600 hover:underline" href="#">Delete group</a>
+                  </span>
                 </div>
                 <div class="overflow-x-auto">
                   <table class="w-full min-w-[720px] border-collapse text-sm">
-                    <tbody class="divide-y divide-neutral-200">
+                    <tbody class="divide-y divide-neutral-100">
                       <tr>
                         <td class="w-10 cursor-grab px-3 py-2 text-neutral-400">⣿</td>
-                        <td class="px-3 py-2">RAM</td>
+                        <td class="px-3 py-2 text-neutral-900">RAM</td>
                         <td class="px-3 py-2">enum ▾</td>
                         <td class="px-3 py-2 text-neutral-400">—</td>
                         <td class="px-3 py-2 text-xs">6GB, 8GB, 12GB</td>
                         <td class="px-3 py-2">☑</td>
                         <td class="px-3 py-2">
-                          ☑ <span class="text-[11px] text-neutral-500">value list</span>
+                          <span
+                            class="rounded-md bg-green-100 px-1.5 py-0.5 text-[11px] font-medium text-green-700"
+                          >
+                            value list
+                          </span>
                         </td>
-                        <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                        <td class="px-3 py-2 text-xs text-red-600">Delete</td>
                       </tr>
                       <tr>
                         <td class="w-10 cursor-grab px-3 py-2 text-neutral-400">⣿</td>
-                        <td class="px-3 py-2">Processor</td>
+                        <td class="px-3 py-2 text-neutral-900">Processor</td>
                         <td class="px-3 py-2">text ▾</td>
                         <td class="px-3 py-2 text-neutral-400">—</td>
                         <td class="px-3 py-2 text-neutral-400">—</td>
                         <td class="px-3 py-2">☐</td>
-                        <td class="px-3 py-2 text-neutral-300">☐ n/a for text</td>
-                        <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                        <td class="px-3 py-2 text-neutral-300">n/a for text</td>
+                        <td class="px-3 py-2 text-xs text-red-600">Delete</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
-                <p class="border-t border-neutral-200 px-3 py-2 text-xs text-neutral-500">
+                <p
+                  class="border-t border-neutral-100 px-3 py-2 text-xs font-medium text-primary-600 hover:bg-primary-50"
+                >
                   + Add field
                 </p>
               </div>
 
               <!-- Group 3 -->
-              <div class="border border-neutral-400">
+              <div class="overflow-hidden rounded-lg border border-neutral-200">
                 <div
-                  class="flex items-center justify-between border-b border-neutral-400 bg-neutral-100 px-3 py-2"
+                  class="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-3 py-2"
                 >
-                  <p class="text-sm font-medium">Group: Connectivity</p>
-                  <span class="text-xs text-neutral-500">Rename · Delete group</span>
+                  <p class="text-sm font-medium text-neutral-900">Group: Connectivity</p>
+                  <span class="text-xs text-neutral-500">
+                    <a class="text-primary-600 hover:underline" href="#">Rename</a> ·
+                    <a class="text-primary-600 hover:underline" href="#">Delete group</a>
+                  </span>
                 </div>
                 <div class="overflow-x-auto">
                   <table class="w-full min-w-[720px] border-collapse text-sm">
-                    <tbody class="divide-y divide-neutral-200">
+                    <tbody class="divide-y divide-neutral-100">
                       <tr>
                         <td class="w-10 cursor-grab px-3 py-2 text-neutral-400">⣿</td>
-                        <td class="px-3 py-2">5G</td>
+                        <td class="px-3 py-2 text-neutral-900">5G</td>
                         <td class="px-3 py-2">boolean ▾</td>
                         <td class="px-3 py-2 text-neutral-400">—</td>
                         <td class="px-3 py-2 text-neutral-400">—</td>
                         <td class="px-3 py-2">☐</td>
                         <td class="px-3 py-2">
-                          ☑ <span class="text-[11px] text-neutral-500">value list</span>
+                          <span
+                            class="rounded-md bg-green-100 px-1.5 py-0.5 text-[11px] font-medium text-green-700"
+                          >
+                            value list
+                          </span>
                         </td>
-                        <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                        <td class="px-3 py-2 text-xs text-red-600">Delete</td>
                       </tr>
                       <tr>
                         <td class="w-10 cursor-grab px-3 py-2 text-neutral-400">⣿</td>
-                        <td class="px-3 py-2">Battery Capacity</td>
+                        <td class="px-3 py-2 text-neutral-900">Battery Capacity</td>
                         <td class="px-3 py-2">number ▾</td>
                         <td class="px-3 py-2">mAh</td>
                         <td class="px-3 py-2 text-neutral-400">—</td>
                         <td class="px-3 py-2">☐</td>
                         <td class="px-3 py-2">
-                          ☑ <span class="text-[11px] text-neutral-500">range facet</span>
+                          <span
+                            class="rounded-md bg-green-100 px-1.5 py-0.5 text-[11px] font-medium text-green-700"
+                          >
+                            range facet
+                          </span>
                         </td>
-                        <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                        <td class="px-3 py-2 text-xs text-red-600">Delete</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
-                <p class="border-t border-neutral-200 px-3 py-2 text-xs text-neutral-500">
+                <p
+                  class="border-t border-neutral-100 px-3 py-2 text-xs font-medium text-primary-600 hover:bg-primary-50"
+                >
                   + Add field
                 </p>
               </div>
 
-              <span class="inline-block border border-neutral-400 px-3 py-1.5 text-sm">
+              <span
+                class="inline-block rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-50"
+              >
                 + Add group
               </span>
 
               <!-- In-use guard, with the blocking count rather than a generic error -->
-              <div class="border border-neutral-600 bg-neutral-50 p-3">
-                <p class="text-sm">
+              <div class="rounded-md border border-red-200 bg-red-50 p-3">
+                <p class="text-sm text-red-800">
                   Cannot delete <strong>Performance › RAM</strong> — 36 products currently use this
                   field.
                 </p>
-                <p class="mt-1 text-[11px] text-neutral-500">
+                <p class="mt-1 text-[11px] text-red-700/80">
                   Matched on <code>groupName</code> + field <code>name</code>. The blocking product
                   count is shown rather than a generic conflict · FR-CAT-031
                 </p>
@@ -221,22 +364,22 @@
 
             <!-- Card preview — which four fields actually reach a category card -->
             <section class="w-full shrink-0 xl:w-80">
-              <div class="border border-neutral-400 p-4">
-                <h2 class="mb-1 text-xs font-medium tracking-wide uppercase">
+              <div class="rounded-lg border border-neutral-200 p-4">
+                <h2 class="mb-1 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
                   Category card preview
                 </h2>
                 <p class="mb-3 text-[11px] text-neutral-400">
                   5 fields are filterable; the first four in declaration order reach the card
                 </p>
 
-                <article class="border border-neutral-400">
+                <article class="overflow-hidden rounded-lg border border-neutral-200 shadow-sm">
                   <div
-                    class="flex aspect-square items-center justify-center bg-neutral-100 text-xs text-neutral-400"
+                    class="flex aspect-square items-center justify-center bg-neutral-50 text-xs text-neutral-400"
                   >
                     Primary image
                   </div>
                   <div class="flex flex-col gap-2 p-3">
-                    <p class="text-sm">Product name</p>
+                    <p class="text-sm text-neutral-900">Product name</p>
                     <dl class="space-y-0.5 text-[11px] text-neutral-500">
                       <div class="flex justify-between gap-2">
                         <dt>Screen Size</dt>
@@ -255,12 +398,12 @@
                         <dd class="text-neutral-600">4500 mAh</dd>
                       </div>
                     </dl>
-                    <p class="text-sm font-medium">₹49,900</p>
+                    <p class="text-sm font-semibold text-neutral-900">₹49,900</p>
                   </div>
                 </article>
 
                 <div
-                  class="mt-3 border border-dashed border-neutral-400 p-2 text-[11px] text-neutral-500"
+                  class="mt-3 rounded-lg border border-dashed border-neutral-300 p-2 text-[11px] text-neutral-500"
                 >
                   <p class="mb-1 font-medium text-neutral-600">Not on the card</p>
                   <p>

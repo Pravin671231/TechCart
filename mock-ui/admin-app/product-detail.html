@@ -4,45 +4,155 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin — Product Detail (read-only)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme {
+        --color-primary-50: #eef2ff;
+        --color-primary-100: #e0e7ff;
+        --color-primary-200: #c7d2fe;
+        --color-primary-300: #a5b4fc;
+        --color-primary-400: #818cf8;
+        --color-primary-500: #6366f1;
+        --color-primary-600: #4f46e5;
+        --color-primary-700: #4338ca;
+        --color-primary-800: #3730a3;
+        --color-primary-900: #312e81;
+
+        --color-accent-50: #fff7ed;
+        --color-accent-100: #ffedd5;
+        --color-accent-200: #fed7aa;
+        --color-accent-300: #fdba74;
+        --color-accent-400: #fb923c;
+        --color-accent-500: #f97316;
+        --color-accent-600: #ea580c;
+        --color-accent-700: #c2410c;
+        --color-accent-800: #9a3412;
+        --color-accent-900: #7c2d12;
+
+        --font-sans:
+          "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+      }
+    </style>
   </head>
-  <body class="h-screen bg-white text-neutral-700">
+  <body class="h-screen bg-white text-neutral-600">
     <div class="flex h-screen">
-      <aside class="flex w-56 shrink-0 flex-col border-r border-neutral-400 bg-neutral-100">
-        <div
-          class="flex h-16 shrink-0 items-center border-b border-neutral-400 px-4 text-sm font-medium"
+      <aside class="flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white">
+        <a
+          href="./index.html"
+          class="flex h-16 shrink-0 items-center gap-2 border-b border-neutral-200 px-4"
         >
-          TechCart Admin
-        </div>
-        <nav class="flex flex-col p-2 text-sm text-neutral-600">
-          <a class="border border-neutral-500 bg-white px-3 py-2" href="./product-list.html">
+          <svg
+            class="h-5 w-5 text-accent-600"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
+          </svg>
+          <div class="flex flex-col leading-tight">
+            <span class="text-sm font-extrabold tracking-tight text-neutral-900">
+              Tech<span class="text-primary-600">Cart</span>
+            </span>
+            <span class="text-[10px] font-medium tracking-wide text-neutral-400 uppercase">
+              Admin
+            </span>
+          </div>
+        </a>
+
+        <nav class="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2 text-sm">
+          <a href="#" class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100">
+            Dashboard
+          </a>
+          <a
+            href="./product-list.html"
+            class="rounded-md bg-primary-50 px-3 py-2 font-medium text-primary-700"
+          >
             Products
           </a>
-          <a class="px-3 py-2" href="./category-list.html">Categories</a>
-          <a class="px-3 py-2" href="./brand-list.html">Brands</a>
-          <a class="px-3 py-2" href="./specification-editor.html">Specifications</a>
-          <a class="px-3 py-2" href="./variant-type-editor.html">Variant types</a>
+          <a
+            href="./category-list.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Categories
+          </a>
+          <a
+            href="./brand-list.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Brands
+          </a>
+          <a
+            href="./specification-editor.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Specifications
+          </a>
+          <a
+            href="./variant-type-editor.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Variant types
+          </a>
+          <a href="#" class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100">Orders</a>
         </nav>
+
+        <div class="mt-auto border-t border-neutral-200 p-3">
+          <div class="flex items-center gap-2 rounded-md p-2">
+            <span
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700"
+            >
+              A
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-neutral-900">Admin User</p>
+              <p class="truncate text-xs text-neutral-500">Catalog Manager</p>
+            </div>
+          </div>
+          <a
+            href="#"
+            class="mt-2 flex items-center justify-center rounded-md border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50"
+          >
+            Logout
+          </a>
+        </div>
       </aside>
 
       <div class="flex min-w-0 flex-1 flex-col">
-        <header
-          class="flex h-16 shrink-0 items-center justify-between border-b border-neutral-400 bg-neutral-100 px-6"
-        >
-          <h1 class="text-sm font-medium">
-            <a class="text-neutral-500" href="./product-list.html">Products</a>
-            <span class="mx-1 text-neutral-400">/</span>
-            Product name
-          </h1>
-          <div class="flex items-center gap-2 text-sm">
-            <span class="border border-neutral-400 px-3 py-1.5">Change status ▾</span>
-            <a class="border border-neutral-600 bg-white px-3 py-1.5" href="./product-form.html">
-              Edit
-            </a>
-          </div>
-        </header>
-
         <main class="flex-1 overflow-auto p-6">
+          <div class="mb-2 flex items-center justify-between">
+            <h1 class="text-xl font-semibold tracking-tight text-neutral-900">
+              <a class="text-neutral-400 hover:text-primary-600" href="./product-list.html">
+                Products
+              </a>
+              <span class="mx-1 text-neutral-300">/</span>
+              Product name
+            </h1>
+            <div class="flex items-center gap-2 text-sm">
+              <span
+                class="rounded-md border border-neutral-300 bg-white px-3 py-1.5 font-medium text-neutral-600"
+              >
+                Change status ▾
+              </span>
+              <a
+                class="rounded-md bg-primary-600 px-3 py-1.5 font-medium text-white hover:bg-primary-700"
+                href="./product-form.html"
+              >
+                Edit
+              </a>
+            </div>
+          </div>
           <p class="mb-4 text-[11px] text-neutral-400">
             admin-app · Product detail, read-only —
             <code class="text-neutral-500">FR-CAT-006, 013, 045</code> · A separate view from the
@@ -50,7 +160,11 @@
           </p>
 
           <div class="mb-6 flex flex-wrap items-center gap-3">
-            <span class="border border-dashed border-neutral-500 px-2 py-0.5 text-xs">Draft</span>
+            <span
+              class="rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600"
+            >
+              Draft
+            </span>
             <span class="text-[11px] text-neutral-400">
               This view renders identically for <code>draft</code>, <code>published</code>, and
               <code>archived</code> · FR-CAT-006
@@ -59,17 +173,19 @@
 
           <div class="grid gap-6 lg:grid-cols-3">
             <!-- Images -->
-            <section class="border border-neutral-400 p-4">
-              <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Images</h2>
+            <section class="rounded-lg border border-neutral-200 p-4">
+              <h2 class="mb-3 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                Images
+              </h2>
               <div class="grid grid-cols-3 gap-2">
                 <div
-                  class="flex aspect-square items-center justify-center border-2 border-neutral-600 bg-neutral-100 text-[10px] text-neutral-500"
+                  class="flex aspect-square items-center justify-center rounded-md border-2 border-primary-600 bg-neutral-50 text-[10px] text-neutral-500"
                 >
                   Primary
                 </div>
-                <div class="aspect-square border border-neutral-400 bg-neutral-100"></div>
-                <div class="aspect-square border border-neutral-400 bg-neutral-100"></div>
-                <div class="aspect-square border border-neutral-400 bg-neutral-100"></div>
+                <div class="aspect-square rounded-md border border-neutral-200 bg-neutral-50"></div>
+                <div class="aspect-square rounded-md border border-neutral-200 bg-neutral-50"></div>
+                <div class="aspect-square rounded-md border border-neutral-200 bg-neutral-50"></div>
               </div>
               <p class="mt-2 text-[11px] text-neutral-400">
                 4 of 8 max · each carries <code>alt</code> text · FR-CAT-083, 084
@@ -77,52 +193,59 @@
             </section>
 
             <!-- Core fields -->
-            <section class="border border-neutral-400 p-4 lg:col-span-2">
-              <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Details</h2>
+            <section class="rounded-lg border border-neutral-200 p-4 lg:col-span-2">
+              <h2 class="mb-3 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                Details
+              </h2>
               <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                 <div class="flex gap-2">
                   <dt class="w-36 shrink-0 text-neutral-500">Name</dt>
-                  <dd>Product name</dd>
+                  <dd class="text-neutral-900">Product name</dd>
                 </div>
                 <div class="flex gap-2">
                   <dt class="w-36 shrink-0 text-neutral-500">Slug</dt>
-                  <dd class="font-mono text-xs">product-name</dd>
+                  <dd class="font-mono text-xs text-neutral-800">product-name</dd>
                 </div>
                 <div class="flex gap-2">
                   <dt class="w-36 shrink-0 text-neutral-500">SKU</dt>
-                  <dd class="font-mono text-xs">TC-SP-0001</dd>
+                  <dd class="font-mono text-xs text-neutral-800">TC-SP-0001</dd>
                 </div>
                 <div class="flex gap-2">
                   <dt class="w-36 shrink-0 text-neutral-500">Brand</dt>
-                  <dd>Brand A</dd>
+                  <dd class="text-neutral-900">Brand A</dd>
                 </div>
                 <div class="flex gap-2">
                   <dt class="w-36 shrink-0 text-neutral-500">Category</dt>
-                  <dd>Electronics › Smartphones</dd>
+                  <dd class="text-neutral-900">Electronics › Smartphones</dd>
                 </div>
                 <div class="flex gap-2">
                   <dt class="w-36 shrink-0 text-neutral-500">Featured</dt>
-                  <dd>No</dd>
+                  <dd class="text-neutral-900">No</dd>
                 </div>
                 <div class="flex gap-2">
                   <dt class="w-36 shrink-0 text-neutral-500">MRP</dt>
-                  <dd>₹49,900 <span class="text-[11px] text-neutral-400">(4990000 paise)</span></dd>
+                  <dd class="text-neutral-900">
+                    ₹49,900 <span class="text-[11px] text-neutral-400">(4990000 paise)</span>
+                  </dd>
                 </div>
                 <div class="flex gap-2">
                   <dt class="w-36 shrink-0 text-neutral-500">Discount</dt>
-                  <dd>10%</dd>
+                  <dd class="text-neutral-900">10%</dd>
                 </div>
                 <div class="flex gap-2">
                   <dt class="w-36 shrink-0 text-neutral-500">Selling price</dt>
-                  <dd>₹44,910 <span class="text-[11px] text-neutral-400">server-computed</span></dd>
+                  <dd class="font-medium text-neutral-900">
+                    ₹44,910
+                    <span class="text-[11px] font-normal text-neutral-400">server-computed</span>
+                  </dd>
                 </div>
                 <div class="flex gap-2">
                   <dt class="w-36 shrink-0 text-neutral-500">Stock</dt>
-                  <dd>128</dd>
+                  <dd class="text-neutral-900">128</dd>
                 </div>
                 <div class="flex gap-2">
                   <dt class="w-36 shrink-0 text-neutral-500">Low-stock threshold</dt>
-                  <dd>10</dd>
+                  <dd class="text-neutral-900">10</dd>
                 </div>
                 <div class="flex gap-2">
                   <dt class="w-36 shrink-0 text-neutral-500">Meta title</dt>
@@ -145,41 +268,43 @@
           </div>
 
           <!-- Specifications -->
-          <section class="mt-6 border border-neutral-400 p-4">
-            <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Specifications</h2>
+          <section class="mt-6 rounded-lg border border-neutral-200 p-4">
+            <h2 class="mb-3 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+              Specifications
+            </h2>
             <div class="grid gap-4 sm:grid-cols-3">
               <div>
-                <p class="mb-1 text-sm font-medium">Display</p>
+                <p class="mb-1 text-sm font-medium text-neutral-900">Display</p>
                 <dl class="text-sm text-neutral-600">
-                  <div class="flex justify-between border-b border-neutral-200 py-1">
+                  <div class="flex justify-between border-b border-neutral-100 py-1">
                     <dt>Screen Size</dt>
-                    <dd>6.1 in</dd>
+                    <dd class="text-neutral-800">6.1 in</dd>
                   </div>
-                  <div class="flex justify-between border-b border-neutral-200 py-1">
+                  <div class="flex justify-between border-b border-neutral-100 py-1">
                     <dt>Resolution</dt>
-                    <dd>2556 × 1179</dd>
+                    <dd class="text-neutral-800">2556 × 1179</dd>
                   </div>
                 </dl>
               </div>
               <div>
-                <p class="mb-1 text-sm font-medium">Performance</p>
+                <p class="mb-1 text-sm font-medium text-neutral-900">Performance</p>
                 <dl class="text-sm text-neutral-600">
-                  <div class="flex justify-between border-b border-neutral-200 py-1">
+                  <div class="flex justify-between border-b border-neutral-100 py-1">
                     <dt>RAM</dt>
-                    <dd>8GB</dd>
+                    <dd class="text-neutral-800">8GB</dd>
                   </div>
-                  <div class="flex justify-between border-b border-neutral-200 py-1">
+                  <div class="flex justify-between border-b border-neutral-100 py-1">
                     <dt>Processor</dt>
-                    <dd>A17 Pro</dd>
+                    <dd class="text-neutral-800">A17 Pro</dd>
                   </div>
                 </dl>
               </div>
               <div>
-                <p class="mb-1 text-sm font-medium">Connectivity</p>
+                <p class="mb-1 text-sm font-medium text-neutral-900">Connectivity</p>
                 <dl class="text-sm text-neutral-600">
-                  <div class="flex justify-between border-b border-neutral-200 py-1">
+                  <div class="flex justify-between border-b border-neutral-100 py-1">
                     <dt>5G</dt>
-                    <dd>Yes</dd>
+                    <dd class="text-neutral-800">Yes</dd>
                   </div>
                 </dl>
               </div>
@@ -187,48 +312,72 @@
           </section>
 
           <!-- Variants -->
-          <section class="mt-6 border border-neutral-400 p-4">
-            <h2 class="mb-3 text-xs font-medium tracking-wide uppercase">Variants</h2>
+          <section class="mt-6 rounded-lg border border-neutral-200 p-4">
+            <h2 class="mb-3 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+              Variants
+            </h2>
             <div class="overflow-x-auto">
               <table class="w-full min-w-[700px] border-collapse text-sm">
-                <thead class="bg-neutral-100 text-left">
-                  <tr class="border-b border-neutral-400">
-                    <th class="px-3 py-2 font-medium">SKU</th>
-                    <th class="px-3 py-2 font-medium">Attributes</th>
-                    <th class="px-3 py-2 text-right font-medium">MRP</th>
-                    <th class="px-3 py-2 text-right font-medium">Disc.</th>
-                    <th class="px-3 py-2 text-right font-medium">Selling</th>
-                    <th class="px-3 py-2 text-right font-medium">Stock</th>
-                    <th class="px-3 py-2 font-medium">Active</th>
+                <thead class="bg-neutral-50 text-left">
+                  <tr class="border-b border-neutral-200">
+                    <th class="px-3 py-2 font-medium text-neutral-500">SKU</th>
+                    <th class="px-3 py-2 font-medium text-neutral-500">Attributes</th>
+                    <th class="px-3 py-2 text-right font-medium text-neutral-500">MRP</th>
+                    <th class="px-3 py-2 text-right font-medium text-neutral-500">Disc.</th>
+                    <th class="px-3 py-2 text-right font-medium text-neutral-500">Selling</th>
+                    <th class="px-3 py-2 text-right font-medium text-neutral-500">Stock</th>
+                    <th class="px-3 py-2 font-medium text-neutral-500">Active</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-neutral-200">
+                <tbody class="divide-y divide-neutral-100">
                   <tr>
-                    <td class="px-3 py-2 font-mono text-xs">TC-SP-0001-BLK-128</td>
+                    <td class="px-3 py-2 font-mono text-xs text-neutral-500">TC-SP-0001-BLK-128</td>
                     <td class="px-3 py-2">Colour=Black · Storage=128GB</td>
-                    <td class="px-3 py-2 text-right">₹49,900</td>
-                    <td class="px-3 py-2 text-right">10%</td>
-                    <td class="px-3 py-2 text-right">₹44,910</td>
-                    <td class="px-3 py-2 text-right">64</td>
-                    <td class="px-3 py-2">Yes</td>
+                    <td class="px-3 py-2 text-right tabular-nums">₹49,900</td>
+                    <td class="px-3 py-2 text-right tabular-nums">10%</td>
+                    <td class="px-3 py-2 text-right font-medium tabular-nums text-neutral-900">
+                      ₹44,910
+                    </td>
+                    <td class="px-3 py-2 text-right tabular-nums">64</td>
+                    <td class="px-3 py-2">
+                      <span
+                        class="rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
+                      >
+                        Yes
+                      </span>
+                    </td>
                   </tr>
                   <tr>
-                    <td class="px-3 py-2 font-mono text-xs">TC-SP-0001-BLK-256</td>
+                    <td class="px-3 py-2 font-mono text-xs text-neutral-500">TC-SP-0001-BLK-256</td>
                     <td class="px-3 py-2">Colour=Black · Storage=256GB</td>
-                    <td class="px-3 py-2 text-right">₹56,900</td>
-                    <td class="px-3 py-2 text-right">0%</td>
-                    <td class="px-3 py-2 text-right">₹56,900</td>
-                    <td class="px-3 py-2 text-right">40</td>
-                    <td class="px-3 py-2">Yes</td>
+                    <td class="px-3 py-2 text-right tabular-nums">₹56,900</td>
+                    <td class="px-3 py-2 text-right tabular-nums">0%</td>
+                    <td class="px-3 py-2 text-right font-medium tabular-nums text-neutral-900">
+                      ₹56,900
+                    </td>
+                    <td class="px-3 py-2 text-right tabular-nums">40</td>
+                    <td class="px-3 py-2">
+                      <span
+                        class="rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
+                      >
+                        Yes
+                      </span>
+                    </td>
                   </tr>
                   <tr class="text-neutral-400">
                     <td class="px-3 py-2 font-mono text-xs">TC-SP-0001-WHT-128</td>
                     <td class="px-3 py-2">Colour=White · Storage=128GB</td>
-                    <td class="px-3 py-2 text-right">₹49,900</td>
-                    <td class="px-3 py-2 text-right">0%</td>
-                    <td class="px-3 py-2 text-right">₹49,900</td>
-                    <td class="px-3 py-2 text-right">0</td>
-                    <td class="px-3 py-2">No</td>
+                    <td class="px-3 py-2 text-right tabular-nums">₹49,900</td>
+                    <td class="px-3 py-2 text-right tabular-nums">0%</td>
+                    <td class="px-3 py-2 text-right tabular-nums">₹49,900</td>
+                    <td class="px-3 py-2 text-right tabular-nums">0</td>
+                    <td class="px-3 py-2">
+                      <span
+                        class="rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-500"
+                      >
+                        No
+                      </span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -236,7 +385,7 @@
             <p class="mt-2 text-[11px] text-neutral-400">
               Deactivated variants stay embedded on the document — never hard-removed · FR-CAT-040.
               With active variants present, the variant is the purchasable unit and the parent's own
-              price becomes a “starting from” value · FR-CAT-043
+              price becomes a "starting from" value · FR-CAT-043
             </p>
           </section>
         </main>

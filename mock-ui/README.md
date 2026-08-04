@@ -31,14 +31,15 @@ backend behavior rather than inventing its own rounding.
 
 ## Shell layouts
 
-The outer page chrome each app's real routes mount inside. `admin-app`'s shell is a grayscale box
-with literal labels, like the rest of `admin-app`. `buyer-app`'s shell is fully styled with
-brand-kit tokens, like the rest of `buyer-app` — see "What these are — and are not" below.
+The outer page chrome each app's real routes mount inside. Both shells are fully styled with
+brand-kit tokens — see "What these are — and are not" below. `admin-app`'s shell has no header
+band; the sidebar (logo/brand, nav, user profile + logout) and the content area are the whole
+layout.
 
-| File                                           | Layout                                    |
-| ---------------------------------------------- | ----------------------------------------- |
-| [`admin-app/index.html`](admin-app/index.html) | Side bar (full height) + Header + Content |
-| [`buyer-app/index.html`](buyer-app/index.html) | Header (sticky) + Content + Footer        |
+| File                                           | Layout                             |
+| ---------------------------------------------- | ---------------------------------- |
+| [`admin-app/index.html`](admin-app/index.html) | Side bar (full height) + Content   |
+| [`buyer-app/index.html`](buyer-app/index.html) | Header (sticky) + Content + Footer |
 
 ## Catalog screens — SRS v0.2
 
@@ -112,19 +113,19 @@ in any mock, so a coverage check doesn't mistake the gap for an oversight:
 
 ## What these are — and are not
 
-**Two different treatments, by design.** `admin-app`'s screens and shell stay **structural
-wireframes** — layout, information hierarchy, and which requirement each region satisfies, with
-no brand colours, type scale, or spacing system implied, so a mock reads as pure structure. Where
-the SRS specifies UI _behaviour_, these mocks show _where that behaviour lives on the page_.
+**All 15 screens plus both shells are fully styled.** Every `buyer-app` and `admin-app` file
+uses the real design system from [`brand-kit.html`](brand-kit.html) — the same tokens and
+component vocabulary (buttons, badges, price displays, form inputs, status colours) also used in
+the two "Component mocks" files. Structure and information hierarchy are unchanged from the
+original grayscale wireframes; only the visual treatment changed, screen by screen, across two
+sessions (`buyer-app` first, `admin-app` after). Where the SRS specifies UI _behaviour_, these
+mocks still show _where that behaviour lives on the page_ — styling never redefines what a
+screen contains.
 
-`buyer-app`'s five files (`index.html` shell, `home.html`, `category.html`, `search.html`,
-`product-detail.html`) are **fully styled** with the real design system from
-[`brand-kit.html`](brand-kit.html) — the same tokens and component vocabulary (buttons, badges,
-price displays, form inputs) already used in the two "Component mocks" files. Structure and
-information hierarchy are unchanged from the wireframe version; only the visual treatment is a
-finished-looking storefront rather than gray boxes. `admin-app` intentionally stays grayscale —
-there's no requirement driving that choice yet, just scope: this pass was buyer-facing chrome
-(header/footer) and the screens it touches.
+The distinction that still holds is **screen vs. isolated component**, not grayscale vs. styled:
+`brand-kit.html` and the two "Component mocks" files show individual tokens/controls out of
+context for quick reference, while every other file is a full screen assembled from that same
+vocabulary.
 
 Screen-level design was undecided when the SRS was first drafted; these pages are what
 [SRS v0.2 §10](../docs/srs/features/0.2-product-catalog.md#10-open-questions) now records as the
