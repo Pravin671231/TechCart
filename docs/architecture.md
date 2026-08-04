@@ -14,7 +14,7 @@ TechCart is two client applications sharing one backend and one database — the
 - **`admin-app`** — React + Vite console: catalog management, order management, dashboards.
 - **`backend`** — Node/Express service both apps call; owns all business logic, validation, and data access.
 
-Target market is India-first (Razorpay), initial scale is small-to-medium, hosting is managed platforms only (Vercel, Render/Railway, MongoDB Atlas, Upstash) — `backend`/`admin-app` deploy from a Dockerfile (Render/Railway's Docker-based deploy), `buyer-app` stays Vercel-native; no self-managed infrastructure either way. See `docker/` at the repo root.
+Target market is India-first (Razorpay), initial scale is small-to-medium, hosting is managed platforms only (Vercel, Render, MongoDB Atlas, Upstash) — `backend` deploys from a Dockerfile on Render, `buyer-app` and `admin-app` are both Vercel-native; no self-managed infrastructure either way. See `docker/` at the repo root.
 
 ---
 
@@ -149,13 +149,13 @@ High-level collection map (field-level detail belongs in each feature's SRS, not
 
 Three separate environments, each with its own MongoDB Atlas cluster and Razorpay key pair (test for dev/staging, live for prod only) — never a shared database across environments.
 
-| Environment | buyer-app      | admin-app                   | backend        | Database                 |
-| ----------- | -------------- | --------------------------- | -------------- | ------------------------ |
-| Development | local          | local                       | local          | Atlas dev cluster        |
-| Staging     | Vercel preview | Render/Railway preview      | Render/Railway | Atlas staging cluster    |
-| Production  | Vercel         | Static host (Vercel/Render) | Render/Railway | Atlas production cluster |
+| Environment | buyer-app      | admin-app      | backend | Database                 |
+| ----------- | -------------- | -------------- | ------- | ------------------------ |
+| Development | local          | local          | local   | Atlas dev cluster        |
+| Staging     | Vercel preview | Vercel preview | Render  | Atlas staging cluster    |
+| Production  | Vercel         | Vercel         | Render  | Atlas production cluster |
 
-`backend` and `admin-app` build from `docker/Dockerfile.backend`/`docker/Dockerfile.admin-app` wherever they land on Render/Railway; `buyer-app` never builds from a Dockerfile in any real environment — its own Dockerfile exists solely for `docker-compose` local-dev parity with the other two (root `docker-compose.yml`).
+`backend` builds from `docker/Dockerfile.backend` wherever it lands on Render (see root `render.yaml`); `buyer-app` and `admin-app` are both Vercel-native and never build from a Dockerfile in any real environment — their own Dockerfiles exist solely for `docker-compose` local-dev parity with `backend` (root `docker-compose.yml`).
 
 ---
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-TechCart is a production e-commerce platform: a Next.js buyer storefront and a React/Vite admin console sharing one Node/Express API and one MongoDB database. Target market is India-first (Razorpay), initial scale is small-to-medium, hosting is managed platforms only (Vercel, Render/Railway, MongoDB Atlas, Upstash Redis). Full stack rationale and version pins live in the "E-Commerce Platform — Technology Blueprint," referenced from `docs/srs/SRS.md` §1.5.
+TechCart is a production e-commerce platform: a Next.js buyer storefront and a React/Vite admin console sharing one Node/Express API and one MongoDB database. Target market is India-first (Razorpay), initial scale is small-to-medium, hosting is managed platforms only (Vercel, Render, MongoDB Atlas, Upstash Redis). Full stack rationale and version pins live in the "E-Commerce Platform — Technology Blueprint," referenced from `docs/srs/SRS.md` §1.5.
 
 ## Current status
 

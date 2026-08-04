@@ -1,6 +1,6 @@
 # TechCart
 
-Production e-commerce platform: a Buyer storefront (Next.js) and an Admin console (React), sharing one Node/Express API and MongoDB. India-first (Razorpay), deployed on managed infrastructure (Vercel, Render/Railway, MongoDB Atlas, Upstash Redis).
+Production e-commerce platform: a Buyer storefront (Next.js) and an Admin console (React), sharing one Node/Express API and MongoDB. India-first (Razorpay), deployed on managed infrastructure (Vercel, Render, MongoDB Atlas, Upstash Redis).
 
 ## Development process
 
