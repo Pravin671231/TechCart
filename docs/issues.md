@@ -1,7 +1,7 @@
 # Issue Drafts
 
 **Project:** TechCart
-**Status:** M0 (Foundation), M1 (CI Pipeline), and M2 (Product Catalog, backend only) are all opened as real GitHub Issues — #1–#10, and #25–#36 under [Milestone #3](https://github.com/Pravin671231/TechCart/milestone/3) respectively — so all three milestones' draft text has been removed from this file; see `docs/milestone.md` and `docs/srs/SRS.md` §6 for their roadmap-level and traceability records. The **Backlog** below currently holds an M2 addendum: `M2.13` (mock-ui verification, already opened as Issue #41) plus a newly drafted `M2.14`–`M2.25` — the frontend build-out of every `mock-ui/` screen into real `buyer-app`/`admin-app` code, not yet opened as GitHub Issues.
+**Status:** M0 (Foundation), M1 (CI Pipeline), and M2 (Product Catalog, backend only) are all opened as real GitHub Issues — #1–#10, and #25–#36 under [Milestone #3](https://github.com/Pravin671231/TechCart/milestone/3) respectively — so all three milestones' draft text has been removed from this file; see `docs/milestone.md` and `docs/srs/SRS.md` §6 for their roadmap-level and traceability records. The **Backlog** below holds the M2 addendum: `M2.13` (mock-ui verification, opened as Issue #41) and `M2.14`–`M2.25` (the frontend build-out of every `mock-ui/` screen into real `buyer-app`/`admin-app` code, opened as Issues #71–#82, also under Milestone #3) — draft text kept here for reference rather than removed, following `M2.13`'s own precedent.
 
 This is where issues get drafted — full context, a build-order task checklist, and test criteria — before they're opened as real GitHub Issues. It sits between [docs/milestone.md](milestone.md) (which milestone/goal) and GitHub itself (which is the actual tracker once an issue is opened): draft it here, then `gh issue create` it, then work it via the branch/PR flow in [docs/srs/SRS.md](srs/SRS.md) §5. Once a milestone's issues are opened on GitHub, its draft section is removed from here — this happened for M2 as of Issues #25–#36.
 
@@ -68,7 +68,7 @@ Milestones in this section are fully drafted — issues with real Context/Tasks/
 #### M2.14 — buyer-app: Redux Toolkit store & RTK Query API setup
 
 **Milestone:** M2 – Product Catalog
-**Suggested branch:** feature/<issue-number>-buyer-redux-setup
+**Suggested branch:** feature/71-buyer-redux-setup
 **Labels:** frontend, buyer-app, catalog
 
 **Context**
@@ -92,7 +92,7 @@ Milestones in this section are fully drafted — issues with real Context/Tasks/
 #### M2.15 — buyer-app: Home / all-products listing
 
 **Milestone:** M2 – Product Catalog
-**Suggested branch:** feature/<issue-number>-buyer-home
+**Suggested branch:** feature/72-buyer-home
 **Labels:** frontend, buyer-app, catalog
 
 **Context**
@@ -117,7 +117,7 @@ Builds `mock-ui/buyer-app/home.html` (`FR-CAT-054`, `057`–`059`, `075`, `091`)
 #### M2.16 — buyer-app: Category listing page
 
 **Milestone:** M2 – Product Catalog
-**Suggested branch:** feature/<issue-number>-buyer-category
+**Suggested branch:** feature/73-buyer-category
 **Labels:** frontend, buyer-app, catalog
 
 **Context**
@@ -143,7 +143,7 @@ Builds `mock-ui/buyer-app/category.html` (`FR-CAT-055`, `068`–`074`, `076`, `0
 #### M2.17 — buyer-app: Search results page
 
 **Milestone:** M2 – Product Catalog
-**Suggested branch:** feature/<issue-number>-buyer-search
+**Suggested branch:** feature/74-buyer-search
 **Labels:** frontend, buyer-app, catalog
 
 **Context**
@@ -166,7 +166,7 @@ Builds `mock-ui/buyer-app/search.html` (`FR-CAT-065`, `067`, `075`): active keyw
 #### M2.18 — buyer-app: Product detail page
 
 **Milestone:** M2 – Product Catalog
-**Suggested branch:** feature/<issue-number>-buyer-product-detail
+**Suggested branch:** feature/75-buyer-product-detail
 **Labels:** frontend, buyer-app, catalog
 
 **Context**
@@ -192,7 +192,7 @@ Builds `mock-ui/buyer-app/product-detail.html` (`FR-CAT-056`, `059`, `063`, `064
 #### M2.19 — admin-app: Redux Toolkit store, RTK Query API setup & X-Admin-Key auth
 
 **Milestone:** M2 – Product Catalog
-**Suggested branch:** feature/<issue-number>-admin-redux-setup
+**Suggested branch:** feature/76-admin-redux-setup
 **Labels:** frontend, admin-app, catalog
 
 **Context**
@@ -217,7 +217,7 @@ Mirrors `M2.14` for `admin-app` (same `@reduxjs/toolkit`/`react-redux`/`createAp
 #### M2.20 — admin-app: Brand management (list + form)
 
 **Milestone:** M2 – Product Catalog
-**Suggested branch:** feature/<issue-number>-admin-brands
+**Suggested branch:** feature/77-admin-brands
 **Labels:** frontend, admin-app, catalog
 
 **Context**
@@ -240,7 +240,7 @@ Builds `mock-ui/admin-app/brand-list.html` (`FR-CAT-023`–`028`, `048`, `052`):
 #### M2.21 — admin-app: Category management (list + form)
 
 **Milestone:** M2 – Product Catalog
-**Suggested branch:** feature/<issue-number>-admin-categories
+**Suggested branch:** feature/78-admin-categories
 **Labels:** frontend, admin-app, catalog
 
 **Context**
@@ -264,7 +264,7 @@ Builds `mock-ui/admin-app/category-list.html` (`FR-CAT-014`–`022`, `048`, `051
 #### M2.22 — admin-app: Category specification editor
 
 **Milestone:** M2 – Product Catalog
-**Suggested branch:** feature/<issue-number>-admin-category-specs
+**Suggested branch:** feature/79-admin-category-specs
 **Labels:** frontend, admin-app, catalog
 
 **Context**
@@ -289,7 +289,7 @@ Builds `mock-ui/admin-app/specification-editor.html` (`FR-CAT-030`, `031`, `035`
 #### M2.23 — admin-app: Category variant-type editor
 
 **Milestone:** M2 – Product Catalog
-**Suggested branch:** feature/<issue-number>-admin-category-variants
+**Suggested branch:** feature/80-admin-category-variants
 **Labels:** frontend, admin-app, catalog
 
 **Context**
@@ -312,7 +312,7 @@ Builds `mock-ui/admin-app/variant-type-editor.html` (`FR-CAT-036`–`038`): flat
 #### M2.24 — admin-app: Product list + read-only detail
 
 **Milestone:** M2 – Product Catalog
-**Suggested branch:** feature/<issue-number>-admin-product-list
+**Suggested branch:** feature/81-admin-product-list
 **Labels:** frontend, admin-app, catalog
 
 **Context**
@@ -336,7 +336,7 @@ Builds `mock-ui/admin-app/product-list.html` + `product-detail.html` (`FR-CAT-00
 #### M2.25 — admin-app: Product create/edit form (with embedded variant editor)
 
 **Milestone:** M2 – Product Catalog
-**Suggested branch:** feature/<issue-number>-admin-product-form
+**Suggested branch:** feature/82-admin-product-form
 **Labels:** frontend, admin-app, catalog
 
 **Context**
