@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1
+#
+# Build from the repo root: docker build -f docker/Dockerfile.buyer-app .
+#
+# Only used for local docker-compose parity — buyer-app deploys to Vercel
+# natively in every real environment (see docs/architecture.md §7), never
+# from this image. Relies on next.config.ts's output:"standalone", which
+# trace-bundles just the dependencies this app actually needs into
+# .next/standalone, so (unlike Dockerfile.backend) this runner stage does
+# NOT need the shared root node_modules at all.
+
+FROM node:24-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY backend/package.json backend/package.json
+COPY buyer-app/package.json buyer-app/package.json
+COPY admin-app/package.json admin-app/package.json
+RUN --mount=type=cache,target=/root/.npm npm ci
+
+FROM deps AS build
+COPY tsconfig.base.json ./
+COPY buyer-app buyer-app
+RUN npm run build --workspace buyer-app
+
+FROM node:24-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
+# Next's standalone tracer nests output under buyer-app/ because it detects
+# the monorepo root (where package-lock.json lives) as the tracing root.
+COPY --from=build /app/buyer-app/.next/standalone ./
+COPY --from=build /app/buyer-app/.next/static ./buyer-app/.next/static
+COPY --from=build /app/buyer-app/public ./buyer-app/public
+USER nodejs
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+CMD ["node", "buyer-app/server.js"]

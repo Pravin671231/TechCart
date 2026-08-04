@@ -1,8 +1,107 @@
-# TechCart
+# 🛒 TechCart — Full Stack E-Commerce Platform
 
-Production e-commerce platform: a Buyer storefront (Next.js) and an Admin console (React), sharing one Node/Express API and MongoDB. India-first (Razorpay), deployed on managed infrastructure (Vercel, Render/Railway, MongoDB Atlas, Upstash Redis).
+TechCart is a production e-commerce platform: a Next.js buyer storefront and a React/Vite admin console, sharing one Node/Express API and one MongoDB database. India-first (Razorpay), built feature-by-feature against a versioned SRS, deployed on managed infrastructure (Vercel, Render, MongoDB Atlas, Upstash Redis).
 
-## Development process
+---
+
+## ✨ Features
+
+- 🔍 **Product Discovery** — buyer-facing search, category browsing, and price/brand/category/variant/specification filtering with sorting
+- 🗂️ **Catalog Management** — admin CRUD for brands, hierarchical categories, category-governed specifications & variant types, and products with embedded sellable variants
+- 🖼️ **Image Uploads** — direct-to-storage presigned uploads to Cloudflare R2, plus a backend-proxied fallback path
+- 🔎 **Admin Search & Status Control** — search across all three admin list views, dedicated status-update endpoints for products/categories/brands
+- 🧪 **Tested** — Vitest + React Testing Library + MSW on both frontends, Vitest + Supertest on the backend
+- 🐳 **Containerized** — a `Dockerfile` per app plus a root `docker-compose.yml` for one-command local startup
+- ⚙️ **CI/CD** — GitHub Actions runs lint + tests on every PR; `backend` auto-deploys to Render, `buyer-app`/`admin-app` auto-deploy to Vercel, on every merge to `main`
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| **Buyer Storefront** | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4 |
+| **Admin Console** | Vite 7, React 19, TypeScript, Tailwind CSS 4, React Router 7 |
+| **Backend API** | Node.js 24, Express 5, TypeScript, Zod |
+| **Database** | MongoDB (Mongoose, MongoDB Atlas) |
+| **File Storage** | Cloudflare R2 |
+| **Testing** | Vitest, React Testing Library, MSW, Supertest |
+| **DevOps** | Docker, GitHub Actions, Render, Vercel |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js **24** (pinned in `.nvmrc`/`.node-version` — `nvm use` if you have nvm installed)
+- npm
+- A MongoDB connection string (local `mongod`, or a MongoDB Atlas cluster)
+
+### Installation & Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Pravin671231/TechCart.git
+   cd TechCart
+   ```
+
+2. **Install dependencies** (single install covers all three npm workspaces):
+   ```bash
+   npm install
+   ```
+
+3. **Set up backend environment variables:**
+   ```bash
+   cp backend/.env.example backend/.env
+   ```
+   Fill in `MONGODB_URI`, `ADMIN_API_KEY`, and the five `R2_*` (Cloudflare R2) variables. `buyer-app` and `admin-app` need no environment setup — neither currently declares any env vars.
+
+4. **Run each app in dev mode** (three separate terminals):
+   ```bash
+   npm run dev --workspace backend    # http://localhost:4000
+   npm run dev --workspace buyer-app  # http://localhost:3000
+   npm run dev --workspace admin-app  # http://localhost:5173
+   ```
+
+   **Or, with Docker** — bring all three up together in one command:
+   ```bash
+   docker compose up --build
+   ```
+   Same three ports. See `docker-compose.yml` and `docker/` for the per-app Dockerfiles.
+
+---
+
+## 📜 Available Scripts
+
+Run from the repo root:
+
+| Command | What it does |
+| --- | --- |
+| `npm run build` | Builds all three workspaces |
+| `npm run lint` | Lints the whole repo |
+| `npm test` | Runs all three workspaces' test suites |
+| `npm run test:backend` | Runs just `backend`'s tests |
+| `npm run test:buyer-app` | Runs just `buyer-app`'s tests |
+| `npm run test:admin-app` | Runs just `admin-app`'s tests |
+
+---
+
+## 📚 Documentation
+
+- **[docs/srs/SRS.md](docs/srs/SRS.md)** — the versioned Software Requirements Specification: scope, feature index, per-feature detail docs.
+- **[docs/architecture.md](docs/architecture.md)** — system diagram, per-app architecture, data model, environments, and conventions. **§10 is the current source of truth for what's implemented so far.**
+- Each workspace also has its own `CLAUDE.md` (`backend/CLAUDE.md`, `buyer-app/CLAUDE.md`, `admin-app/CLAUDE.md`) with implementation detail specific to that app.
+
+---
+
+## ☁️ Deployment
+
+`backend` deploys to [Render](https://render.com) as a Docker service, built from `docker/Dockerfile.backend` via the repo-root `render.yaml` Blueprint. `buyer-app` and `admin-app` both deploy natively to [Vercel](https://vercel.com) as separate projects from this same repo. See [docs/architecture.md §7](docs/architecture.md) for the full environment breakdown.
+
+---
+
+## 🧭 Development Process
 
 This project is built feature-by-feature against a version-tracked Software Requirements Specification:
 
@@ -12,7 +111,3 @@ Feature → Update SRS → Add to Milestone → Add to Issue → Implement Code
 
 - **SRS:** [docs/srs/SRS.md](docs/srs/SRS.md) — scope, feature index, per-feature template, and workflow.
 - **Tech stack & architecture:** see the "E-Commerce Platform — Technology Blueprint" referenced in the SRS.
-
-## Status
-
-**Foundation phase (M0) is complete.** SRS v0.1 (initial scope and feature listing) is complete. Root workspace tooling is scaffolded (Issue #1 / M0.1, merged) — npm workspaces, shared TypeScript/ESLint/Prettier config, Node 24 pinning. `backend/` is scaffolded (Issue #2 / M0.2, merged) — Express 5 + TypeScript, module-based structure, a working `health` endpoint, Vitest+Supertest tests. Coverage reporting is wired (Issue #3 / M0.3, merged). `buyer-app/` is scaffolded (Issue #4 / M0.4, merged) — Next.js 16 App Router, Tailwind CSS 4, feature-based structure, a placeholder home route, with a Vitest + React Testing Library + MSW test suite wired (Issue #5 / M0.5, merged). `admin-app/` is scaffolded (Issue #6 / M0.6, merged) — Vite + React 19 + TypeScript, React Router, Tailwind CSS 4, a placeholder landing route, with a Vitest + React Testing Library + MSW test suite wired (Issue #7 / M0.7, merged). Root fan-out scripts (`npm run build`, `npm run lint`, `npm test`) are wired and verified against a genuinely clean clone (Issue #8 / M0.8, merged). M1 (CI Pipeline) is complete: `.github/workflows/ci.yml` runs lint + a per-workspace test matrix on every PR into `main` (Issue #9 / M1.1, merged); branch protection on `main` is configured (Issue #10 / M1.2, merged) — PR + passing CI required, squash-merge only. SRS v0.2 (Product Catalog) is spec-drafted (`docs/srs/features/0.2-product-catalog.md`, `FR-CAT-001`–`096`, since amended to `FR-CAT-100`, PR #23 merged), with its backend implementation broken into 12 issues, opened as GitHub Issues #25–#36 (PR #37). M2 implementation is underway: Issue #25 / M2.1 (core plumbing — live Mongo connection, response envelope, temporary admin guard, merged), Issue #26 / M2.2 (Cloudflare R2 image uploads — presigned and backend-proxied upload paths, merged), Issue #27 / M2.3 (brand management — admin CRUD, guarded delete, public brand list, merged), Issue #28 / M2.4 (category management — two-level hierarchy, combined delete guard, public list with SEO fallback, merged), Issue #29 / M2.5 (category-governed specifications — nested schema, field-level guarded delete, merged), and Issue #30 / M2.6 (category-governed variant types — flat axis list, no in-use delete guard, merged), Issue #31 / M2.7 (product core CRUD and pricing — server-computed `sellingPrice`, first paginated admin list, merged), Issue #32 / M2.8 (product variants — embedded, sellable, attribute-combination and SKU cross-checks, merged), Issue #33 / M2.9 (status update APIs — dedicated `PATCH .../status` for products/categories/brands, merged), Issue #34 / M2.10 (admin search — `search` on all three admin lists, plus a `status` filter on the product grid, merged), Issue #35 / M2.11 (buyer browsing — `GET /api/products`, `GET /api/products/:slug`, `GET /api/categories/:slug/products`, `GET /api/categories/search`, merged), and Issue #36 / M2.12 (buyer filtering, sorting & card content — price/brand/category/variant-attribute/specification/in-stock/on-sale filters, sort, `cardSpecifications`, merged) are all done — **M2 (Product Catalog) is complete**; see `backend/CLAUDE.md`/`backend/AGENTS.md` for detail.
