@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TechCart — Brand Kit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme {
+        --color-primary-50: #eef2ff;
+        --color-primary-100: #e0e7ff;
+        --color-primary-200: #c7d2fe;
+        --color-primary-300: #a5b4fc;
+        --color-primary-400: #818cf8;
+        --color-primary-500: #6366f1;
+        --color-primary-600: #4f46e5;
+        --color-primary-700: #4338ca;
+        --color-primary-800: #3730a3;
+        --color-primary-900: #312e81;
+
+        --color-accent-50: #fff7ed;
+        --color-accent-100: #ffedd5;
+        --color-accent-200: #fed7aa;
+        --color-accent-300: #fdba74;
+        --color-accent-400: #fb923c;
+        --color-accent-500: #f97316;
+        --color-accent-600: #ea580c;
+        --color-accent-700: #c2410c;
+        --color-accent-800: #9a3412;
+        --color-accent-900: #7c2d12;
+
+        --font-sans:
+          "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+        --font-display:
+          "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-white p-6 text-neutral-700">
+    <div class="mx-auto max-w-6xl">
+      <header class="border-b border-neutral-400 pb-4">
+        <h1 class="text-xl tracking-tight">TechCart — Brand Kit</h1>
+        <p class="mt-1 text-sm text-neutral-500">
+          Visual identity: color, type, and component styling. The one page in
+          <code class="text-neutral-500">mock-ui/</code> that is deliberately
+          <strong>not</strong> grayscale — every other screen stays a structural wireframe on
+          purpose (see <a class="underline" href="./README.md">README.md</a>), and this page is the
+          bridge from that structure to real styling.
+        </p>
+        <p class="mt-2 text-[11px] text-neutral-400">
+          Tokens here are wired for real in
+          <code>buyer-app/src/app/globals.css</code> and <code>admin-app/src/index.css</code> — this
+          page is the reference, those files are the source of truth once they diverge.
+        </p>
+      </header>
+
+      <!-- Logo -->
+      <section class="mt-8">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">Logo</h2>
+        <div class="flex flex-wrap items-end gap-8 border border-neutral-300 bg-neutral-50 p-6">
+          <div class="flex items-center gap-2">
+            <svg
+              class="h-8 w-8 text-accent-600"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
+              <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
+              <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
+            </svg>
+            <span class="text-2xl font-extrabold tracking-tight text-neutral-900">
+              Tech<span class="text-primary-600">Cart</span>
+            </span>
+          </div>
+          <div class="flex items-center gap-2 opacity-70">
+            <svg
+              class="h-5 w-5 text-accent-600"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
+              <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
+              <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
+            </svg>
+            <span class="text-base font-extrabold tracking-tight text-neutral-900">
+              Tech<span class="text-primary-600">Cart</span>
+            </span>
+          </div>
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-600 text-white"
+          >
+            <svg
+              class="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
+              <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
+              <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
+            </svg>
+          </div>
+        </div>
+        <ul class="mt-2 list-disc space-y-0.5 pl-4 text-[11px] text-neutral-400">
+          <li>
+            Wordmark: "Tech" in neutral-900, "Cart" in primary-600 — always both words, never
+            recolored beyond this pair.
+          </li>
+          <li>
+            Cart mark renders in accent-600 next to the wordmark, or alone (white on primary-600) as
+            a favicon / app-icon-sized mark.
+          </li>
+          <li>
+            Minimum clear space: the height of the "T" on all sides. Do not stretch, rotate, or
+            place on a busy photo background.
+          </li>
+        </ul>
+      </section>
+
+      <!-- Color -->
+      <section class="mt-10">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">Color</h2>
+
+        <p class="mb-3 text-sm text-neutral-600">
+          <strong>Primary</strong> (Tailwind Indigo, renamed semantically) — navigation, links,
+          primary admin actions, focus rings.
+        </p>
+        <div class="grid grid-cols-5 gap-2 sm:grid-cols-10">
+          <div class="text-center">
+            <div class="h-12 rounded bg-primary-50 ring-1 ring-neutral-200"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">50</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-primary-100 ring-1 ring-neutral-200"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">100</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-primary-200"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">200</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-primary-300"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">300</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-primary-400"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">400</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-primary-500"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">500</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-primary-600 ring-2 ring-primary-700"></div>
+            <p class="mt-1 text-[10px] font-medium text-neutral-600">600 · base</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-primary-700"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">700 · hover</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-primary-800"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">800</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-primary-900"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">900</p>
+          </div>
+        </div>
+        <p class="mt-1 text-[11px] text-neutral-400">
+          <code>primary-600</code> (<code>#4f46e5</code>) on white text passes WCAG AA (4.5:1+) for
+          body-size text. Use <code>primary-700</code> for hover/active states.
+        </p>
+
+        <p class="mt-6 mb-3 text-sm text-neutral-600">
+          <strong>Accent</strong> (Tailwind Orange, renamed semantically) — buyer-facing CTAs ("Add
+          to cart", "Buy now"), sale/discount badges. Never used for navigation or status.
+        </p>
+        <div class="grid grid-cols-5 gap-2 sm:grid-cols-10">
+          <div class="text-center">
+            <div class="h-12 rounded bg-accent-50 ring-1 ring-neutral-200"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">50</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-accent-100 ring-1 ring-neutral-200"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">100</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-accent-200"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">200</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-accent-300"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">300</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-accent-400"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">400</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-accent-500"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">500</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-accent-600 ring-2 ring-accent-700"></div>
+            <p class="mt-1 text-[10px] font-medium text-neutral-600">600 · base</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-accent-700"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">700 · hover</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-accent-800"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">800</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-accent-900"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">900</p>
+          </div>
+        </div>
+        <p class="mt-1 text-[11px] text-neutral-400">
+          <code>accent-600</code> (<code>#ea580c</code>) on white text is AA-safe for bold/large
+          text and icon-only buttons. For small body-size white text, use
+          <code>accent-700</code> instead.
+        </p>
+
+        <p class="mt-6 mb-3 text-sm text-neutral-600">
+          <strong>Neutral</strong> — Tailwind's stock neutral scale, unchanged (already used
+          throughout the structural wireframes). Not overridden by this brand kit.
+        </p>
+        <div class="grid grid-cols-5 gap-2 sm:grid-cols-6">
+          <div class="text-center">
+            <div class="h-12 rounded bg-neutral-100 ring-1 ring-neutral-200"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">100 · surface</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-neutral-300"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">300 · border</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-neutral-400"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">400 · border strong</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-neutral-500"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">500 · muted text</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-neutral-700"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">700 · body text</p>
+          </div>
+          <div class="text-center">
+            <div class="h-12 rounded bg-neutral-900"></div>
+            <p class="mt-1 text-[10px] text-neutral-400">900 · headings</p>
+          </div>
+        </div>
+
+        <p class="mt-6 mb-3 text-sm text-neutral-600">
+          <strong>Status</strong> — plain Tailwind colors used as a fixed convention, not custom
+          tokens (deliberately: keeps this palette small and avoids a hue clash with the orange
+          accent).
+        </p>
+        <div class="flex flex-wrap gap-4">
+          <div class="flex items-center gap-2 text-sm">
+            <span class="h-4 w-4 rounded bg-green-600"></span> Success ·
+            <code class="text-neutral-400">green-600</code>
+          </div>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="h-4 w-4 rounded bg-red-600"></span> Danger ·
+            <code class="text-neutral-400">red-600</code>
+          </div>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="h-4 w-4 rounded bg-amber-500"></span> Warning ·
+            <code class="text-neutral-400">amber-500</code>
+          </div>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="h-4 w-4 rounded bg-blue-600"></span> Info ·
+            <code class="text-neutral-400">blue-600</code>
+          </div>
+        </div>
+      </section>
+
+      <!-- Typography -->
+      <section class="mt-10">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">
+          Typography
+        </h2>
+        <p class="mb-3 text-sm text-neutral-600">
+          <strong>Inter</strong> is the shared UI/body font for both apps, loaded via Google Fonts
+          (same CDN-required pattern as the rest of <code>mock-ui/</code>), falling back to the
+          system sans stack. <strong>admin-app is Inter-only, deliberately</strong> — a dense
+          internal tool where consistency beats personality. <strong>buyer-app</strong> pairs it
+          with <strong>Plus Jakarta Sans</strong> as <code>font-display</code>, used only for hero
+          headings and marketing sections — never in admin-app, never in buyer-app body/UI text.
+        </p>
+        <div class="divide-y divide-neutral-200 border border-neutral-300">
+          <div class="flex items-baseline gap-4 p-3">
+            <span class="w-40 shrink-0 text-[11px] text-neutral-400"
+              >font-display · buyer-app hero only</span
+            >
+            <span class="font-display text-4xl font-extrabold tracking-tight text-neutral-900">
+              Shop smarter this festive season
+            </span>
+          </div>
+          <div class="flex items-baseline gap-4 p-3">
+            <span class="w-40 shrink-0 text-[11px] text-neutral-400"
+              >text-4xl / font-extrabold</span
+            >
+            <span class="text-4xl font-extrabold tracking-tight text-neutral-900">Page title</span>
+          </div>
+          <div class="flex items-baseline gap-4 p-3">
+            <span class="w-40 shrink-0 text-[11px] text-neutral-400">text-2xl / font-bold</span>
+            <span class="text-2xl font-bold tracking-tight text-neutral-900">Section heading</span>
+          </div>
+          <div class="flex items-baseline gap-4 p-3">
+            <span class="w-40 shrink-0 text-[11px] text-neutral-400"
+              >text-base / font-semibold</span
+            >
+            <span class="text-base font-semibold text-neutral-900">Card / product title</span>
+          </div>
+          <div class="flex items-baseline gap-4 p-3">
+            <span class="w-40 shrink-0 text-[11px] text-neutral-400">text-sm / font-normal</span>
+            <span class="text-sm text-neutral-700"
+              >Body copy — descriptions, table cells, form values</span
+            >
+          </div>
+          <div class="flex items-baseline gap-4 p-3">
+            <span class="w-40 shrink-0 text-[11px] text-neutral-400"
+              >text-xs / uppercase / tracking-wide</span
+            >
+            <span class="text-xs font-medium tracking-wide text-neutral-500 uppercase"
+              >Eyebrow / section label</span
+            >
+          </div>
+          <div class="flex items-baseline gap-4 p-3">
+            <span class="w-40 shrink-0 text-[11px] text-neutral-400">text-[11px]</span>
+            <span class="text-[11px] text-neutral-400"
+              >Caption / helper text / requirement IDs</span
+            >
+          </div>
+          <div class="flex items-baseline gap-4 p-3">
+            <span class="w-40 shrink-0 text-[11px] text-neutral-400"
+              >text-xl / font-bold (tabular-nums)</span
+            >
+            <span class="text-xl font-bold tabular-nums text-neutral-900">₹2,499</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Spacing / radius / elevation -->
+      <section class="mt-10">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">
+          Spacing, radius &amp; elevation
+        </h2>
+        <p class="text-sm text-neutral-600">
+          No custom tokens — use Tailwind's default scales directly:
+        </p>
+        <ul class="mt-2 list-disc space-y-1 pl-4 text-sm text-neutral-600">
+          <li><code>rounded-lg</code> for cards, modals, image containers</li>
+          <li><code>rounded-md</code> for buttons, inputs, badges/pills</li>
+          <li>
+            <code>shadow-sm</code> for resting cards; <code>shadow-md</code> on hover/dropdowns only
+            — avoid heavier shadows
+          </li>
+          <li>
+            <code>p-4</code> / <code>gap-4</code> as the default component padding/gutter;
+            <code>p-6</code> for page-level containers
+          </li>
+        </ul>
+      </section>
+
+      <!-- Components -->
+      <section class="mt-10">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">
+          Components
+        </h2>
+
+        <p class="mb-2 text-sm text-neutral-600">Buttons</p>
+        <div class="mb-6 flex flex-wrap items-center gap-3">
+          <button
+            class="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+          >
+            Primary action
+          </button>
+          <button
+            class="rounded-md bg-accent-600 px-4 py-2 text-sm font-medium text-white hover:bg-accent-700"
+          >
+            Add to cart
+          </button>
+          <button
+            class="rounded-md border border-neutral-400 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+          >
+            Secondary
+          </button>
+          <button
+            class="rounded-md px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50"
+          >
+            Ghost
+          </button>
+          <button
+            class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+          >
+            Delete
+          </button>
+          <button
+            disabled
+            class="cursor-not-allowed rounded-md bg-neutral-200 px-4 py-2 text-sm font-medium text-neutral-400"
+          >
+            Disabled
+          </button>
+        </div>
+
+        <p class="mb-2 text-sm text-neutral-600">Status badges</p>
+        <div class="mb-6 flex flex-wrap items-center gap-2">
+          <span class="rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600"
+            >Draft</span
+          >
+          <span class="rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
+            >Published</span
+          >
+          <span class="rounded-md bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-500"
+            >Archived</span
+          >
+          <span class="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700"
+            >Low stock</span
+          >
+          <span class="rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700"
+            >Out of stock</span
+          >
+          <span class="rounded-md bg-accent-100 px-2 py-0.5 text-xs font-medium text-accent-700"
+            >20% off</span
+          >
+        </div>
+
+        <p class="mb-2 text-sm text-neutral-600">Price display</p>
+        <div class="mb-6 flex items-center gap-2">
+          <span class="text-xl font-bold tabular-nums text-neutral-900">₹2,499</span>
+          <span class="text-sm tabular-nums text-neutral-400 line-through">₹3,199</span>
+          <span class="rounded-md bg-accent-100 px-2 py-0.5 text-xs font-medium text-accent-700"
+            >25% off</span
+          >
+        </div>
+
+        <div class="grid gap-6 sm:grid-cols-2">
+          <div>
+            <p class="mb-2 text-sm text-neutral-600">Form input</p>
+            <label class="mb-3 block text-sm">
+              <span class="text-neutral-500">Name *</span>
+              <input
+                class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+                placeholder="Brand name"
+              />
+            </label>
+            <label class="block text-sm">
+              <span class="text-red-600">Slug *</span>
+              <input
+                class="mt-1 block w-full rounded-md border border-red-500 px-3 py-2 text-sm focus:ring-1 focus:ring-red-500 focus:outline-none"
+                value="taken-slug"
+              />
+              <span class="mt-1 block text-[11px] text-red-600">This slug is already in use.</span>
+            </label>
+          </div>
+          <div>
+            <p class="mb-2 text-sm text-neutral-600">Alerts</p>
+            <div class="space-y-2">
+              <div
+                class="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800"
+              >
+                Atlas Search reindexing runs nightly.
+              </div>
+              <div
+                class="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800"
+              >
+                Product published successfully.
+              </div>
+              <div
+                class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+              >
+                Cannot delete — 42 products reference this brand.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="mt-10 border-t border-neutral-300 pt-4 text-[11px] text-neutral-400">
+        Tailwind and Inter are both loaded from a CDN, so this page needs an internet connection to
+        render. Colors and font here are wired for real via
+        <code>@theme</code> in <code>buyer-app/src/app/globals.css</code> and
+        <code>admin-app/src/index.css</code> — treat those files as authoritative if this page ever
+        drifts. See <a class="underline" href="./README.md">README.md</a> ·
+        <a class="underline" href="./index.html">back to all mocks</a>.
+      </footer>
+    </div>
+  </body>
+</html>

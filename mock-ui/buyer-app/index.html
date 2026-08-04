@@ -4,31 +4,118 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TechCart Storefront — Layout Mock</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme {
+        --color-primary-50: #eef2ff;
+        --color-primary-100: #e0e7ff;
+        --color-primary-200: #c7d2fe;
+        --color-primary-300: #a5b4fc;
+        --color-primary-400: #818cf8;
+        --color-primary-500: #6366f1;
+        --color-primary-600: #4f46e5;
+        --color-primary-700: #4338ca;
+        --color-primary-800: #3730a3;
+        --color-primary-900: #312e81;
+
+        --color-accent-50: #fff7ed;
+        --color-accent-100: #ffedd5;
+        --color-accent-200: #fed7aa;
+        --color-accent-300: #fdba74;
+        --color-accent-400: #fb923c;
+        --color-accent-500: #f97316;
+        --color-accent-600: #ea580c;
+        --color-accent-700: #c2410c;
+        --color-accent-800: #9a3412;
+        --color-accent-900: #7c2d12;
+
+        --font-sans:
+          "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+      }
+    </style>
   </head>
   <body class="flex min-h-screen flex-col bg-white text-neutral-600">
-    <!-- Header — sticks to the top on scroll -->
-    <header
-      class="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-center border-b border-neutral-400 bg-neutral-100"
-    >
-      <span class="text-sm tracking-wide text-neutral-500">Header (sticky)</span>
+    <!-- Header — sticky top-0 z-20 border-b border-neutral-200 bg-white/95 backdrop-blur -->
+    <header class="sticky top-0 z-20 border-b border-neutral-200 bg-white/95 backdrop-blur">
+      <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
+        <a href="./home.html" class="flex shrink-0 items-center gap-2">
+          <svg
+            class="h-5 w-5 text-accent-600"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
+          </svg>
+          <span class="text-base font-extrabold tracking-tight text-neutral-900">
+            Tech<span class="text-primary-600">Cart</span>
+          </span>
+        </a>
+
+        <div
+          class="flex h-10 flex-1 items-stretch overflow-hidden rounded-md border border-neutral-300 bg-white focus-within:border-primary-600 focus-within:ring-1 focus-within:ring-primary-600"
+        >
+          <a
+            href="./category.html"
+            class="flex items-center gap-1 border-r border-neutral-300 bg-neutral-50 px-3 text-xs font-medium text-neutral-600 hover:bg-neutral-100"
+          >
+            All Categories <span class="text-neutral-400">▾</span>
+          </a>
+          <a
+            href="./search.html"
+            class="flex flex-1 items-center px-3 text-sm text-neutral-400 hover:text-neutral-500"
+          >
+            Search products…
+          </a>
+        </div>
+
+        <a
+          href="#"
+          class="relative flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+        >
+          Cart
+          <span
+            class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent-600 text-[10px] font-medium text-white"
+          >
+            3
+          </span>
+        </a>
+      </div>
     </header>
 
     <!-- Content — centred, tall enough that the sticky header is demonstrable -->
     <main class="flex flex-1 justify-center px-6 py-10">
       <section
-        class="flex min-h-[130vh] w-full max-w-6xl flex-col gap-6 border border-neutral-400 p-6"
+        class="flex min-h-[130vh] w-full max-w-6xl flex-col gap-6 rounded-lg border border-neutral-200 p-6"
       >
         <span class="text-center text-sm tracking-wide text-neutral-500">Content</span>
 
         <div class="grid flex-1 gap-4 sm:grid-cols-3">
-          <div class="flex min-h-40 items-center justify-center border border-neutral-400">
+          <div
+            class="flex min-h-40 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50"
+          >
             <span class="text-sm tracking-wide text-neutral-500">Product Grid</span>
           </div>
-          <div class="flex min-h-40 items-center justify-center border border-neutral-400">
+          <div
+            class="flex min-h-40 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50"
+          >
             <span class="text-sm tracking-wide text-neutral-500">Details</span>
           </div>
-          <div class="flex min-h-40 items-center justify-center border border-neutral-400">
+          <div
+            class="flex min-h-40 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50"
+          >
             <span class="text-sm tracking-wide text-neutral-500">Checkout</span>
           </div>
         </div>
@@ -36,10 +123,116 @@
     </main>
 
     <!-- Footer — full width, bottom of the flow -->
-    <footer
-      class="flex h-24 shrink-0 items-center justify-center border-t border-neutral-400 bg-neutral-100"
-    >
-      <span class="text-sm tracking-wide text-neutral-500">Footer</span>
+    <footer class="bg-neutral-900 text-neutral-300">
+      <div class="mx-auto max-w-7xl px-4 py-12">
+        <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
+          <div>
+            <div class="flex items-center gap-2">
+              <svg
+                class="h-5 w-5 text-accent-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
+                <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
+                <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
+              </svg>
+              <span class="text-base font-extrabold tracking-tight text-white">
+                Tech<span class="text-primary-400">Cart</span>
+              </span>
+            </div>
+            <p class="mt-3 text-sm text-neutral-400">
+              India-first electronics and accessories, at prices that make sense.
+            </p>
+          </div>
+
+          <div>
+            <h3 class="mb-3 text-xs font-semibold tracking-wide text-white uppercase">
+              Quick Links
+            </h3>
+            <ul class="space-y-2 text-sm">
+              <li><a class="hover:text-primary-400" href="./home.html">Home</a></li>
+              <li><a class="hover:text-primary-400" href="./home.html">Products</a></li>
+              <li><a class="hover:text-primary-400" href="./category.html">Categories</a></li>
+              <li><a class="hover:text-primary-400" href="#">Offers</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="mb-3 text-xs font-semibold tracking-wide text-white uppercase">
+              Customer Service
+            </h3>
+            <ul class="space-y-2 text-sm">
+              <li><a class="hover:text-primary-400" href="#">Contact Us</a></li>
+              <li><a class="hover:text-primary-400" href="#">FAQ</a></li>
+              <li><a class="hover:text-primary-400" href="#">Shipping Information</a></li>
+              <li><a class="hover:text-primary-400" href="#">Returns &amp; Refunds</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="mb-3 text-xs font-semibold tracking-wide text-white uppercase">Follow Us</h3>
+            <div class="flex gap-2">
+              <a
+                href="#"
+                class="flex h-8 w-8 items-center justify-center rounded-md bg-neutral-800 text-[11px] font-medium hover:bg-primary-600 hover:text-white"
+              >
+                FB
+              </a>
+              <a
+                href="#"
+                class="flex h-8 w-8 items-center justify-center rounded-md bg-neutral-800 text-[11px] font-medium hover:bg-primary-600 hover:text-white"
+              >
+                IG
+              </a>
+              <a
+                href="#"
+                class="flex h-8 w-8 items-center justify-center rounded-md bg-neutral-800 text-[11px] font-medium hover:bg-primary-600 hover:text-white"
+              >
+                X
+              </a>
+              <a
+                href="#"
+                class="flex h-8 w-8 items-center justify-center rounded-md bg-neutral-800 text-[11px] font-medium hover:bg-primary-600 hover:text-white"
+              >
+                YT
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="mb-3 text-xs font-semibold tracking-wide text-white uppercase">We Accept</h3>
+            <div class="flex flex-wrap gap-2">
+              <span class="rounded-md bg-neutral-800 px-2.5 py-1 text-[11px] font-medium">
+                Visa
+              </span>
+              <span class="rounded-md bg-neutral-800 px-2.5 py-1 text-[11px] font-medium">
+                MasterCard
+              </span>
+              <span class="rounded-md bg-neutral-800 px-2.5 py-1 text-[11px] font-medium">
+                PayPal
+              </span>
+              <span class="rounded-md bg-neutral-800 px-2.5 py-1 text-[11px] font-medium">
+                UPI
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="mt-10 flex flex-col items-center justify-between gap-3 border-t border-neutral-800 pt-6 text-xs text-neutral-500 sm:flex-row"
+        >
+          <p>© 2026 TechCart. All rights reserved.</p>
+          <div class="flex gap-4">
+            <a class="hover:text-primary-400" href="#">Privacy Policy</a>
+            <a class="hover:text-primary-400" href="#">Terms &amp; Conditions</a>
+          </div>
+        </div>
+      </div>
     </footer>
   </body>
 </html>

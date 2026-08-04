@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Buyer — Card Components</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme {
+        --color-primary-600: #4f46e5;
+
+        --color-accent-50: #fff7ed;
+        --color-accent-100: #ffedd5;
+        --color-accent-600: #ea580c;
+        --color-accent-700: #c2410c;
+
+        --font-sans:
+          "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-white p-6 text-neutral-700">
+    <div class="mx-auto max-w-5xl">
+      <header class="border-b border-neutral-400 pb-4">
+        <h1 class="text-xl tracking-tight">Buyer — Card Components</h1>
+        <p class="mt-1 text-sm text-neutral-500">
+          The two product-card variants as isolated, styled, interactive components. These
+          supplement, and do not replace, the SRS-traceable full screens —
+          <a class="underline" href="./home.html">home.html</a> (<code>FR-CAT-091</code>) and
+          <a class="underline" href="./category.html">category.html</a> (<code>FR-CAT-092</code>).
+        </p>
+      </header>
+
+      <!-- Home Card -->
+      <section class="mt-8">
+        <h2 class="mb-1 text-xs font-medium tracking-wide uppercase text-neutral-500">Home Card</h2>
+        <p class="mb-3 text-sm text-neutral-600">
+          Image, title, and price only — no specification pairs, even for categories that define
+          filterable fields (a mixed-category grid has no shared schema) · <code>FR-CAT-091</code>.
+        </p>
+        <div class="grid gap-6 lg:grid-cols-[1fr_260px]">
+          <div
+            class="grid gap-3 rounded-lg border border-neutral-300 bg-neutral-50 p-4 sm:grid-cols-2"
+          >
+            <label class="block text-sm sm:col-span-2">
+              <span class="text-neutral-500">Image URL</span>
+              <input
+                id="home-image"
+                type="text"
+                placeholder="https://…"
+                class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+              />
+            </label>
+            <label class="block text-sm sm:col-span-2">
+              <span class="text-neutral-500">Title *</span>
+              <input
+                id="home-title"
+                type="text"
+                value="Wireless Earbuds Pro"
+                class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+              />
+            </label>
+            <label class="block text-sm">
+              <span class="text-neutral-500">MRP (₹)</span>
+              <input
+                id="home-mrp"
+                type="number"
+                min="0"
+                value="2999"
+                class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm tabular-nums focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+              />
+            </label>
+            <label class="block text-sm">
+              <span class="text-neutral-500">Discount (%)</span>
+              <input
+                id="home-discount"
+                type="number"
+                min="0"
+                max="100"
+                value="15"
+                class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm tabular-nums focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+              />
+            </label>
+            <label class="block text-sm sm:col-span-2">
+              <span class="text-neutral-500">Stock</span>
+              <input
+                id="home-stock"
+                type="number"
+                min="0"
+                value="24"
+                class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm tabular-nums focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+              />
+              <span class="mt-1 block text-[11px] text-neutral-400">
+                Set to 0 to preview the out-of-stock badge · FR-CAT-059
+              </span>
+            </label>
+          </div>
+
+          <!-- Live preview -->
+          <article
+            class="flex w-full max-w-[260px] flex-col overflow-hidden rounded-lg border border-neutral-300 shadow-sm justify-self-center"
+          >
+            <div class="relative flex aspect-square items-center justify-center bg-neutral-100">
+              <img id="home-out-img" class="hidden h-full w-full object-cover" alt="" />
+              <span id="home-out-img-empty" class="text-xs text-neutral-400">Primary image</span>
+              <span
+                id="home-out-oos"
+                class="absolute top-2 left-2 hidden rounded-md bg-white px-2 py-0.5 text-[11px] font-medium text-neutral-600 shadow-sm"
+              >
+                Out of stock
+              </span>
+            </div>
+            <div class="flex flex-col gap-1 p-3">
+              <p id="home-out-title" class="text-sm text-neutral-700"></p>
+              <p class="flex items-baseline gap-1.5">
+                <span id="home-out-price" class="text-sm font-semibold text-neutral-900"></span>
+                <span id="home-out-mrp" class="hidden text-xs text-neutral-400 line-through"></span>
+                <span
+                  id="home-out-off"
+                  class="hidden rounded-md bg-accent-100 px-1.5 py-0.5 text-[10px] font-medium text-accent-700"
+                ></span>
+              </p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Category-wise Card -->
+      <section class="mt-10">
+        <h2 class="mb-1 text-xs font-medium tracking-wide uppercase text-neutral-500">
+          Category-wise Card
+        </h2>
+        <p class="mb-3 text-sm text-neutral-600">
+          Image, major product details (up to the first four <code>filterable</code> specification
+          pairs, in schema order), and a dedicated price section, set apart from the details column
+          · <code>FR-CAT-092</code>.
+        </p>
+        <div class="grid gap-6 lg:grid-cols-[1fr_420px]">
+          <div
+            class="grid gap-3 rounded-lg border border-neutral-300 bg-neutral-50 p-4 sm:grid-cols-2"
+          >
+            <label class="block text-sm sm:col-span-2">
+              <span class="text-neutral-500">Image URL</span>
+              <input
+                id="cat-image"
+                type="text"
+                placeholder="https://…"
+                class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+              />
+            </label>
+            <label class="block text-sm">
+              <span class="text-neutral-500">Title *</span>
+              <input
+                id="cat-title"
+                type="text"
+                value="Galaxy Flip 6"
+                class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+              />
+            </label>
+            <label class="block text-sm">
+              <span class="text-neutral-500">Category</span>
+              <input
+                id="cat-category"
+                type="text"
+                value="Smartphones"
+                class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+              />
+            </label>
+
+            <fieldset class="sm:col-span-2">
+              <legend class="text-sm text-neutral-500">
+                Product details (up to 4 filterable pairs)
+              </legend>
+              <div class="mt-1 grid gap-2 sm:grid-cols-2">
+                <div class="flex gap-2">
+                  <input
+                    id="cat-d1-name"
+                    type="text"
+                    value="RAM"
+                    placeholder="Name"
+                    class="w-1/2 rounded-md border border-neutral-400 px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    id="cat-d1-value"
+                    type="text"
+                    value="8GB"
+                    placeholder="Value"
+                    class="w-1/2 rounded-md border border-neutral-400 px-2 py-1.5 text-sm"
+                  />
+                </div>
+                <div class="flex gap-2">
+                  <input
+                    id="cat-d2-name"
+                    type="text"
+                    value="Storage"
+                    placeholder="Name"
+                    class="w-1/2 rounded-md border border-neutral-400 px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    id="cat-d2-value"
+                    type="text"
+                    value="256GB"
+                    placeholder="Value"
+                    class="w-1/2 rounded-md border border-neutral-400 px-2 py-1.5 text-sm"
+                  />
+                </div>
+                <div class="flex gap-2">
+                  <input
+                    id="cat-d3-name"
+                    type="text"
+                    value="Screen Size"
+                    placeholder="Name"
+                    class="w-1/2 rounded-md border border-neutral-400 px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    id="cat-d3-value"
+                    type="text"
+                    value="6.7 in"
+                    placeholder="Value"
+                    class="w-1/2 rounded-md border border-neutral-400 px-2 py-1.5 text-sm"
+                  />
+                </div>
+                <div class="flex gap-2">
+                  <input
+                    id="cat-d4-name"
+                    type="text"
+                    value=""
+                    placeholder="Name (optional)"
+                    class="w-1/2 rounded-md border border-neutral-400 px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    id="cat-d4-value"
+                    type="text"
+                    value=""
+                    placeholder="Value (optional)"
+                    class="w-1/2 rounded-md border border-neutral-400 px-2 py-1.5 text-sm"
+                  />
+                </div>
+              </div>
+              <p class="mt-1 text-[11px] text-neutral-400">
+                Blank pairs are dropped, not shown empty — fewer than four filterable fields renders
+                only what it has.
+              </p>
+            </fieldset>
+
+            <label class="block text-sm">
+              <span class="text-neutral-500">MRP (₹)</span>
+              <input
+                id="cat-mrp"
+                type="number"
+                min="0"
+                value="109999"
+                class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm tabular-nums focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+              />
+            </label>
+            <label class="block text-sm">
+              <span class="text-neutral-500">Discount (%)</span>
+              <input
+                id="cat-discount"
+                type="number"
+                min="0"
+                max="100"
+                value="8"
+                class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm tabular-nums focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+              />
+            </label>
+          </div>
+
+          <!-- Live preview -->
+          <article class="flex gap-6 rounded-lg border border-neutral-300 p-4 shadow-sm">
+            <div
+              class="relative flex aspect-[4/5] w-36 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neutral-100 sm:w-44"
+            >
+              <img id="cat-out-img" class="hidden h-full w-full object-cover" alt="" />
+              <span id="cat-out-img-empty" class="text-xs text-neutral-400">Primary image</span>
+            </div>
+            <div class="flex flex-1 flex-col gap-2">
+              <p id="cat-out-title" class="text-base font-medium text-neutral-900"></p>
+              <p id="cat-out-category" class="text-xs text-neutral-400"></p>
+              <ul id="cat-out-details" class="mt-1 space-y-1 text-xs text-neutral-600"></ul>
+            </div>
+            <!-- Dedicated price section -->
+            <div
+              class="flex w-32 shrink-0 flex-col items-start gap-1 self-start rounded-lg border border-neutral-200 bg-neutral-50 p-3 sm:w-36"
+            >
+              <span class="text-[10px] tracking-wide text-neutral-400 uppercase">Price</span>
+              <span
+                id="cat-out-price"
+                class="text-lg font-bold tabular-nums text-neutral-900"
+              ></span>
+              <span
+                id="cat-out-mrp"
+                class="hidden text-xs tabular-nums text-neutral-400 line-through"
+              ></span>
+              <span
+                id="cat-out-off"
+                class="hidden rounded-md bg-accent-100 px-1.5 py-0.5 text-[10px] font-medium text-accent-700"
+              ></span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <footer class="mt-10 border-t border-neutral-300 pt-4 text-[11px] text-neutral-400">
+        Tailwind and Inter are both loaded from a CDN, so this page needs an internet connection to
+        render. See <a class="underline" href="../README.md">README.md</a> ·
+        <a class="underline" href="../index.html">back to all mocks</a>.
+      </footer>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const fmtINR = (n) => "₹" + Math.round(n).toLocaleString("en-IN");
+      const sellingPrice = (mrp, discount) => mrp - Math.floor((mrp * discount) / 100);
+
+      function setImage(urlInputId, imgId, emptyId) {
+        const url = $(urlInputId).value.trim();
+        const img = $(imgId);
+        const empty = $(emptyId);
+        if (url) {
+          img.src = url;
+          img.classList.remove("hidden");
+          empty.classList.add("hidden");
+          img.onerror = () => {
+            img.classList.add("hidden");
+            empty.textContent = "broken image";
+            empty.classList.remove("hidden");
+          };
+        } else {
+          img.classList.add("hidden");
+          empty.textContent = "Primary image";
+          empty.classList.remove("hidden");
+        }
+      }
+
+      function renderPrice(mrp, discount, priceEl, mrpEl, offEl) {
+        const selling = sellingPrice(mrp, discount);
+        priceEl.textContent = fmtINR(selling);
+        if (discount > 0) {
+          mrpEl.textContent = fmtINR(mrp);
+          mrpEl.classList.remove("hidden");
+          offEl.textContent = `${discount}% off`;
+          offEl.classList.remove("hidden");
+        } else {
+          mrpEl.classList.add("hidden");
+          offEl.classList.add("hidden");
+        }
+      }
+
+      function renderHome() {
+        setImage("home-image", "home-out-img", "home-out-img-empty");
+        $("home-out-title").textContent = $("home-title").value.trim() || "Product name";
+        const mrp = Number($("home-mrp").value) || 0;
+        const discount = Number($("home-discount").value) || 0;
+        renderPrice(mrp, discount, $("home-out-price"), $("home-out-mrp"), $("home-out-off"));
+        $("home-out-oos").classList.toggle("hidden", (Number($("home-stock").value) || 0) > 0);
+      }
+
+      function renderCategory() {
+        setImage("cat-image", "cat-out-img", "cat-out-img-empty");
+        $("cat-out-title").textContent = $("cat-title").value.trim() || "Product name";
+        $("cat-out-category").textContent = $("cat-category").value.trim();
+
+        const list = $("cat-out-details");
+        list.innerHTML = "";
+        for (const i of [1, 2, 3, 4]) {
+          const name = $(`cat-d${i}-name`).value.trim();
+          const value = $(`cat-d${i}-value`).value.trim();
+          if (name && value) {
+            const li = document.createElement("li");
+            li.textContent = `${name}: ${value}`;
+            list.appendChild(li);
+          }
+        }
+
+        const mrp = Number($("cat-mrp").value) || 0;
+        const discount = Number($("cat-discount").value) || 0;
+        renderPrice(mrp, discount, $("cat-out-price"), $("cat-out-mrp"), $("cat-out-off"));
+      }
+
+      document
+        .querySelectorAll("#home-image, #home-title, #home-mrp, #home-discount, #home-stock")
+        .forEach((el) => el.addEventListener("input", renderHome));
+
+      document
+        .querySelectorAll(
+          "#cat-image, #cat-title, #cat-category, #cat-d1-name, #cat-d1-value, #cat-d2-name, #cat-d2-value, #cat-d3-name, #cat-d3-value, #cat-d4-name, #cat-d4-value, #cat-mrp, #cat-discount",
+        )
+        .forEach((el) => el.addEventListener("input", renderCategory));
+
+      renderHome();
+      renderCategory();
+    </script>
+  </body>
+</html>

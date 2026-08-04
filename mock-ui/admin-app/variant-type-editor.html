@@ -4,47 +4,156 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin — Category Variant-Type Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme {
+        --color-primary-50: #eef2ff;
+        --color-primary-100: #e0e7ff;
+        --color-primary-200: #c7d2fe;
+        --color-primary-300: #a5b4fc;
+        --color-primary-400: #818cf8;
+        --color-primary-500: #6366f1;
+        --color-primary-600: #4f46e5;
+        --color-primary-700: #4338ca;
+        --color-primary-800: #3730a3;
+        --color-primary-900: #312e81;
+
+        --color-accent-50: #fff7ed;
+        --color-accent-100: #ffedd5;
+        --color-accent-200: #fed7aa;
+        --color-accent-300: #fdba74;
+        --color-accent-400: #fb923c;
+        --color-accent-500: #f97316;
+        --color-accent-600: #ea580c;
+        --color-accent-700: #c2410c;
+        --color-accent-800: #9a3412;
+        --color-accent-900: #7c2d12;
+
+        --font-sans:
+          "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+      }
+    </style>
   </head>
-  <body class="h-screen bg-white text-neutral-700">
+  <body class="h-screen bg-white text-neutral-600">
     <div class="flex h-screen">
-      <aside class="flex w-56 shrink-0 flex-col border-r border-neutral-400 bg-neutral-100">
-        <div
-          class="flex h-16 shrink-0 items-center border-b border-neutral-400 px-4 text-sm font-medium"
+      <aside class="flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white">
+        <a
+          href="./index.html"
+          class="flex h-16 shrink-0 items-center gap-2 border-b border-neutral-200 px-4"
         >
-          TechCart Admin
-        </div>
-        <nav class="flex flex-col p-2 text-sm text-neutral-600">
-          <a class="px-3 py-2" href="./product-list.html">Products</a>
-          <a class="px-3 py-2" href="./category-list.html">Categories</a>
-          <a class="px-3 py-2" href="./brand-list.html">Brands</a>
-          <a class="px-3 py-2" href="./specification-editor.html">Specifications</a>
-          <a class="border border-neutral-500 bg-white px-3 py-2" href="./variant-type-editor.html">
+          <svg
+            class="h-5 w-5 text-accent-600"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
+          </svg>
+          <div class="flex flex-col leading-tight">
+            <span class="text-sm font-extrabold tracking-tight text-neutral-900">
+              Tech<span class="text-primary-600">Cart</span>
+            </span>
+            <span class="text-[10px] font-medium tracking-wide text-neutral-400 uppercase">
+              Admin
+            </span>
+          </div>
+        </a>
+
+        <nav class="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2 text-sm">
+          <a href="#" class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100">
+            Dashboard
+          </a>
+          <a
+            href="./product-list.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Products
+          </a>
+          <a
+            href="./category-list.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Categories
+          </a>
+          <a
+            href="./brand-list.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Brands
+          </a>
+          <a
+            href="./specification-editor.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Specifications
+          </a>
+          <a
+            href="./variant-type-editor.html"
+            class="rounded-md bg-primary-50 px-3 py-2 font-medium text-primary-700"
+          >
             Variant types
           </a>
+          <a href="#" class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100">Orders</a>
         </nav>
+
+        <div class="mt-auto border-t border-neutral-200 p-3">
+          <div class="flex items-center gap-2 rounded-md p-2">
+            <span
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700"
+            >
+              A
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-neutral-900">Admin User</p>
+              <p class="truncate text-xs text-neutral-500">Catalog Manager</p>
+            </div>
+          </div>
+          <a
+            href="#"
+            class="mt-2 flex items-center justify-center rounded-md border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50"
+          >
+            Logout
+          </a>
+        </div>
       </aside>
 
       <div class="flex min-w-0 flex-1 flex-col">
-        <header
-          class="flex h-16 shrink-0 items-center justify-between border-b border-neutral-400 bg-neutral-100 px-6"
-        >
-          <h1 class="text-sm font-medium">Variant axes</h1>
-          <div class="flex items-center gap-2 text-sm">
-            <span class="border border-neutral-400 px-3 py-1.5">Category: Smartphones ▾</span>
-            <span class="border border-neutral-600 bg-white px-3 py-1.5">Save axes</span>
-          </div>
-        </header>
-
         <main class="flex-1 overflow-auto p-6">
+          <div class="mb-2 flex items-center justify-between">
+            <h1 class="text-xl font-semibold tracking-tight text-neutral-900">Variant axes</h1>
+            <div class="flex items-center gap-2 text-sm">
+              <span
+                class="rounded-md border border-neutral-300 bg-white px-3 py-1.5 font-medium text-neutral-600"
+              >
+                Category: Smartphones ▾
+              </span>
+              <span
+                class="rounded-md bg-primary-600 px-3 py-1.5 font-medium text-white hover:bg-primary-700"
+              >
+                Save axes
+              </span>
+            </div>
+          </div>
           <p class="mb-4 text-[11px] text-neutral-400">
             admin-app · Category variant-type editor —
             <code class="text-neutral-500">FR-CAT-036, 037, 038</code> · One variant-type document
             per category
           </p>
 
-          <div class="mb-6 border border-dashed border-neutral-400 p-3 text-sm">
-            <p class="font-medium text-neutral-600">These definitions drive form rendering only</p>
+          <div class="mb-6 rounded-lg border border-dashed border-neutral-300 p-3 text-sm">
+            <p class="font-medium text-neutral-700">These definitions drive form rendering only</p>
             <p class="mt-1 text-[11px] text-neutral-500">
               They are never enforced against stored variant attributes server-side. That is why
               deleting an axis is <strong>unguarded</strong> — unlike the specification field guard
@@ -55,52 +164,54 @@
 
           <div class="flex flex-col gap-6 xl:flex-row">
             <section class="min-w-0 flex-1">
-              <div class="overflow-x-auto border border-neutral-400">
+              <div class="overflow-x-auto rounded-lg border border-neutral-200">
                 <table class="w-full min-w-[760px] border-collapse text-sm">
-                  <thead class="bg-neutral-100 text-left">
-                    <tr class="border-b border-neutral-400">
-                      <th class="px-3 py-2 font-medium">Axis name</th>
-                      <th class="px-3 py-2 font-medium">Code</th>
-                      <th class="px-3 py-2 font-medium">Type</th>
-                      <th class="px-3 py-2 font-medium">Required</th>
-                      <th class="px-3 py-2 font-medium">Options (label / value)</th>
-                      <th class="px-3 py-2 font-medium"></th>
+                  <thead class="bg-neutral-50 text-left">
+                    <tr class="border-b border-neutral-200">
+                      <th class="px-3 py-2 font-medium text-neutral-500">Axis name</th>
+                      <th class="px-3 py-2 font-medium text-neutral-500">Code</th>
+                      <th class="px-3 py-2 font-medium text-neutral-500">Type</th>
+                      <th class="px-3 py-2 font-medium text-neutral-500">Required</th>
+                      <th class="px-3 py-2 font-medium text-neutral-500">
+                        Options (label / value)
+                      </th>
+                      <th class="px-3 py-2 font-medium text-neutral-500"></th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-neutral-200">
+                  <tbody class="divide-y divide-neutral-100">
                     <tr>
-                      <td class="px-3 py-2">Colour</td>
-                      <td class="px-3 py-2 font-mono text-xs">color</td>
+                      <td class="px-3 py-2 text-neutral-900">Colour</td>
+                      <td class="px-3 py-2 font-mono text-xs text-neutral-500">color</td>
                       <td class="px-3 py-2">color ▾</td>
                       <td class="px-3 py-2">☑</td>
                       <td class="px-3 py-2 text-xs">
                         Black / #000 · Silver / #c0c0c0 · Graphite / #4a4a4a
                       </td>
-                      <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                      <td class="px-3 py-2 text-xs text-red-600">Delete</td>
                     </tr>
                     <tr>
-                      <td class="px-3 py-2">Storage</td>
-                      <td class="px-3 py-2 font-mono text-xs">storage</td>
+                      <td class="px-3 py-2 text-neutral-900">Storage</td>
+                      <td class="px-3 py-2 font-mono text-xs text-neutral-500">storage</td>
                       <td class="px-3 py-2">select ▾</td>
                       <td class="px-3 py-2">☑</td>
                       <td class="px-3 py-2 text-xs">128GB / 128 · 256GB / 256 · 512GB / 512</td>
-                      <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                      <td class="px-3 py-2 text-xs text-red-600">Delete</td>
                     </tr>
                     <tr>
-                      <td class="px-3 py-2">Bundle Size</td>
-                      <td class="px-3 py-2 font-mono text-xs">bundle</td>
+                      <td class="px-3 py-2 text-neutral-900">Bundle Size</td>
+                      <td class="px-3 py-2 font-mono text-xs text-neutral-500">bundle</td>
                       <td class="px-3 py-2">number ▾</td>
                       <td class="px-3 py-2">☐</td>
                       <td class="px-3 py-2 text-neutral-400">— not used for number</td>
-                      <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                      <td class="px-3 py-2 text-xs text-red-600">Delete</td>
                     </tr>
                     <tr>
-                      <td class="px-3 py-2">Engraving</td>
-                      <td class="px-3 py-2 font-mono text-xs">engraving</td>
+                      <td class="px-3 py-2 text-neutral-900">Engraving</td>
+                      <td class="px-3 py-2 font-mono text-xs text-neutral-500">engraving</td>
                       <td class="px-3 py-2">text ▾</td>
                       <td class="px-3 py-2">☐</td>
                       <td class="px-3 py-2 text-neutral-400">— not used for text</td>
-                      <td class="px-3 py-2 text-xs text-neutral-500">Delete</td>
+                      <td class="px-3 py-2 text-xs text-red-600">Delete</td>
                     </tr>
                   </tbody>
                 </table>
@@ -112,51 +223,68 @@
                 <code>select</code> and <code>color</code> only · FR-CAT-036
               </p>
 
-              <span class="mt-4 inline-block border border-neutral-400 px-3 py-1.5 text-sm">
+              <span
+                class="mt-4 inline-block rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-50"
+              >
                 + Add axis
               </span>
             </section>
 
             <!-- How these axes render in the product form -->
             <section class="w-full shrink-0 xl:w-96">
-              <div class="border border-neutral-400 p-4">
-                <h2 class="mb-1 text-xs font-medium tracking-wide uppercase">
+              <div class="rounded-lg border border-neutral-200 p-4">
+                <h2 class="mb-1 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
                   Resulting variant editor
                 </h2>
                 <p class="mb-4 text-[11px] text-neutral-400">
                   What the product form renders from the axes on the left · FR-CAT-038 · see
-                  <a class="underline" href="./product-form.html">product-form.html</a>
+                  <a class="text-primary-600 hover:underline" href="./product-form.html">
+                    product-form.html
+                  </a>
                 </p>
 
                 <div class="space-y-3">
                   <label class="block text-sm">
                     <span class="text-neutral-500">Colour <em>(color → swatch picker)</em></span>
                     <span class="mt-1 flex gap-1">
-                      <span class="h-8 w-8 border-2 border-neutral-700 bg-neutral-200"></span>
-                      <span class="h-8 w-8 border border-neutral-400 bg-neutral-400"></span>
-                      <span class="h-8 w-8 border border-neutral-400 bg-neutral-600"></span>
+                      <span
+                        class="h-8 w-8 rounded-full ring-2 ring-primary-600 ring-offset-2"
+                        style="background: #000"
+                      ></span>
+                      <span
+                        class="h-8 w-8 rounded-full border border-neutral-300"
+                        style="background: #c0c0c0"
+                      ></span>
+                      <span
+                        class="h-8 w-8 rounded-full border border-neutral-300"
+                        style="background: #4a4a4a"
+                      ></span>
                     </span>
                   </label>
                   <label class="block text-sm">
                     <span class="text-neutral-500">Storage <em>(select → dropdown)</em></span>
-                    <span class="mt-1 block border border-neutral-400 px-3 py-2">128GB ▾</span>
+                    <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">
+                      128GB ▾
+                    </span>
                   </label>
                   <label class="block text-sm">
                     <span class="text-neutral-500"
                       >Bundle Size <em>(number → numeric input)</em></span
                     >
-                    <span class="mt-1 block border border-neutral-400 px-3 py-2">1</span>
+                    <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2">
+                      1
+                    </span>
                   </label>
                   <label class="block text-sm">
                     <span class="text-neutral-500">Engraving <em>(text → text input)</em></span>
-                    <span class="mt-1 block border border-neutral-400 px-3 py-2"></span>
+                    <span class="mt-1 block rounded-md border border-neutral-300 px-3 py-2"></span>
                   </label>
                   <label class="block text-sm">
                     <span class="text-neutral-500">
                       Finish <em class="text-neutral-400">(no axis defined → text fallback)</em>
                     </span>
                     <span
-                      class="mt-1 block border border-dashed border-neutral-400 px-3 py-2"
+                      class="mt-1 block rounded-md border border-dashed border-neutral-300 px-3 py-2"
                     ></span>
                   </label>
                 </div>

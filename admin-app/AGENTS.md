@@ -8,6 +8,7 @@ This is the `admin-app` workspace of a monorepo. Root-level decisions (monorepo 
 - `src/features/<feature>/` holds the actual UI/logic for that feature. `src/features/landing/LandingPlaceholder.tsx` is the current worked example, rendered at `/` by `src/app/App.tsx`.
 - This mirrors `backend/src/modules/<feature>/` and `buyer-app/src/features/<feature>/`'s feature-based organization (see `backend/AGENTS.md`, `buyer-app/AGENTS.md`), adapted for React Router instead of a file-system router.
 - Screen-level design reference: [`mock-ui/`](../mock-ui/) — static wireframes per feature's SRS doc, not a workspace of its own. Consult it before building a feature's UI.
+- Brand tokens (`primary`/`accent` color scales, `Inter` as `font-sans`) are wired into `src/index.css` via a Tailwind `@theme` block. [`mock-ui/brand-kit.html`](../mock-ui/brand-kit.html) is the visual reference; `index.css` is the source of truth if they ever drift.
 
 ## Testing
 

@@ -11,13 +11,56 @@
       <header class="border-b border-neutral-400 pb-4">
         <h1 class="text-xl tracking-tight">TechCart — Layout Mocks</h1>
         <p class="mt-1 text-sm text-neutral-500">
-          Structural wireframes. Layout and information hierarchy only — not visual design.
+          Every <code>buyer-app</code> and <code>admin-app</code> screen below is fully styled with
+          the brand kit's tokens, plus a couple of interactive component mocks that show the same
+          tokens in isolation.
         </p>
         <p class="mt-2 text-[11px] text-neutral-400">
           Catalog screens follow SRS v0.2 §6. Each page names the
           <code>FR-CAT-*</code> requirements it renders.
         </p>
       </header>
+
+      <!-- Brand kit -->
+      <section class="mt-6">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">Brand kit</h2>
+        <a class="block border border-neutral-400 p-4 hover:bg-neutral-100" href="./brand-kit.html">
+          <p class="text-sm font-medium">Brand kit</p>
+          <p class="mt-1 text-xs text-neutral-500">
+            Colors, type scale, buttons, badges, price display, form and alert styling — the one
+            page here that isn't a grayscale structural wireframe
+          </p>
+        </a>
+      </section>
+
+      <!-- Component mocks -->
+      <section class="mt-6">
+        <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">
+          Component mocks
+        </h2>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./admin-app/table-component.html"
+          >
+            <p class="text-sm font-medium">Admin table component</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              The product table in isolation — styled, with real input fields that live-update a
+              highlighted row
+            </p>
+          </a>
+          <a
+            class="block border border-neutral-400 p-4 hover:bg-neutral-100"
+            href="./buyer-app/card-components.html"
+          >
+            <p class="text-sm font-medium">Buyer card components</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Home Card (image, title, price) and Category-wise Card (image, details, dedicated
+              price section), each with a live input-driven preview
+            </p>
+          </a>
+        </div>
+      </section>
 
       <!-- Shells -->
       <section class="mt-6">
@@ -30,14 +73,18 @@
             href="./admin-app/index.html"
           >
             <p class="text-sm font-medium">admin-app shell</p>
-            <p class="mt-1 text-xs text-neutral-500">Side bar + Header + Content</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Side bar (logo, nav, user profile + logout) + Content — no header band
+            </p>
           </a>
           <a
             class="block border border-neutral-400 p-4 hover:bg-neutral-100"
             href="./buyer-app/index.html"
           >
             <p class="text-sm font-medium">buyer-app shell</p>
-            <p class="mt-1 text-xs text-neutral-500">Header (sticky) + Content + Footer</p>
+            <p class="mt-1 text-xs text-neutral-500">
+              Header (sticky) + Content + Footer — styled, not grayscale
+            </p>
           </a>
         </div>
       </section>
@@ -54,7 +101,8 @@
           >
             <p class="text-sm font-medium">Home / all-products listing</p>
             <p class="mt-1 text-xs text-neutral-500">
-              Sort, pagination, image-name-price cards, and the skeleton / empty / error states
+              Filter-free grid, sort, pagination, and the skeleton / empty / error states —
+              filtering lives on the category page instead
             </p>
             <code class="mt-2 block text-[11px] text-neutral-400">
               FR-CAT-054, 057–059, 075, 091
@@ -66,9 +114,12 @@
           >
             <p class="text-sm font-medium">Category listing</p>
             <p class="mt-1 text-xs text-neutral-500">
-              Breadcrumb, and cards carrying up to four filterable specification pairs
+              Breadcrumb, the full facet rail (brand, price, colour, specifications,
+              in-stock/on-sale), and cards carrying up to four filterable specification pairs
             </p>
-            <code class="mt-2 block text-[11px] text-neutral-400">FR-CAT-055, 070, 092</code>
+            <code class="mt-2 block text-[11px] text-neutral-400">
+              FR-CAT-055, 068–074, 076, 092
+            </code>
           </a>
           <a
             class="block border border-neutral-400 p-4 hover:bg-neutral-100"
@@ -108,9 +159,12 @@
           >
             <p class="text-sm font-medium">Product list</p>
             <p class="mt-1 text-xs text-neutral-500">
-              All statuses, keyword + status + low-stock filters, pagination
+              All statuses, keyword + status + low-stock filters, inline stock quick-adjust,
+              pagination
             </p>
-            <code class="mt-2 block text-[11px] text-neutral-400">FR-CAT-005, 011, 050, 053</code>
+            <code class="mt-2 block text-[11px] text-neutral-400">
+              FR-CAT-005, 008, 011, 050, 053
+            </code>
           </a>
           <a
             class="block border border-neutral-400 p-4 hover:bg-neutral-100"
