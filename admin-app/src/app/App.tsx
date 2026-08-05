@@ -3,6 +3,7 @@ import { Provider } from "react-redux";
 import { store } from "@/store/store";
 import { AdminKeyGate } from "@/features/adminKey/AdminKeyGate";
 import { LandingPlaceholder } from "@/features/landing/LandingPlaceholder";
+import { BrandsPage } from "@/features/brands/BrandsPage";
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
         <AdminKeyGate>
           <Routes>
             <Route path="/" element={<LandingPlaceholder />} />
+            <Route path="/brands" element={<BrandsPage />} />
           </Routes>
         </AdminKeyGate>
       </BrowserRouter>
