@@ -12,7 +12,7 @@ This is the `buyer-app` workspace of a monorepo. Root-level decisions (monorepo 
 ## Feature-based structure
 
 - `src/app/` is routing only — thin files that import and render from `src/features/<feature>/`. Next's file-system router requires `app/` for routes; that's the only thing that belongs there.
-- `src/features/<feature>/` holds the actual UI/logic for that feature. `src/features/home/HomePlaceholder.tsx` is the current worked example, rendered by `src/app/page.tsx`.
+- `src/features/<feature>/` holds the actual UI/logic for that feature. `src/features/home/HomeContent.tsx` is the current worked example, rendered by `src/app/page.tsx`.
 - This mirrors `backend/src/modules/<feature>/`'s feature-based organization (see `backend/AGENTS.md`), adapted for Next's routing constraints — named `features` here rather than `modules`, since this is a different framework with its own conventions.
 - Screen-level design reference: [`mock-ui/`](../mock-ui/) — static wireframes per feature's SRS doc, not a workspace of its own. Consult it before building a feature's UI.
 - Brand tokens (`primary`/`accent` color scales, `Inter` as `font-sans`) are wired into `src/app/globals.css` via a Tailwind `@theme` block. [`mock-ui/brand-kit.html`](../mock-ui/brand-kit.html) is the visual reference; `globals.css` is the source of truth if they ever drift.
@@ -20,8 +20,9 @@ This is the `buyer-app` workspace of a monorepo. Root-level decisions (monorepo 
 ## State management (`src/store/`)
 
 - `src/store/` (Issue #71 / M2.14) is a third top-level `src/` directory, peer to `app/` and `features/` — Redux Toolkit + RTK Query infrastructure shared by every feature, not a feature itself. See `docs/architecture.md`'s "State management / data fetching" section for full detail on the envelope-unwrap/error-normalization design and the env fail-loud mechanics.
-- `src/store/api.ts` defines **no endpoints of its own** (`endpoints: () => ({})`) and only `tagTypes: ["Product", "Category"]`. Add new endpoints via `api.injectEndpoints({...})` inside the owning feature's own `src/features/<feature>/api.ts` — never by editing `src/store/api.ts` directly.
+- `src/store/api.ts` defines **no endpoints of its own** (`endpoints: () => ({})`) and only `tagTypes: ["Product", "Category"]`. Add new endpoints via `api.injectEndpoints({...})` inside the owning feature's own `src/features/<feature>/api.ts` — never by editing `src/store/api.ts` directly, except to extend its own `baseQuery`/`meta` machinery (e.g. Issue #72 / M2.15 threaded `pagination` through via `meta` once a real list endpoint needed it).
 - `NEXT_PUBLIC_API_URL` (`src/store/env.ts`) fails the build/dev-server loudly if unset — copy `.env.example` to `.env.local` and fill it in before running `dev`/`build`/`test` locally that need a real backend.
+- `src/features/products/` (Issue #72 / M2.15) is the shared, cross-screen product-listing feature — `ProductCard`, `ProductGrid`, `Pagination`, `SortSelect`, and the loading/empty/error state components all live here, plus `api.ts` (the `getProducts` endpoint) and `types.ts` (matching `backend`'s `PublicProductListItem` exactly). `src/features/home/` only composes these into the home screen's toolbar/grid/pagination layout — later listing screens (category, search) are expected to reuse this feature's components/hooks rather than duplicating them.
 
 ## Testing
 

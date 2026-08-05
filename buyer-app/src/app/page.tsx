@@ -1,5 +1,5 @@
-import { HomePlaceholder } from "@/features/home/HomePlaceholder";
+import { HomeContent } from "@/features/home/HomeContent";
 
 export default function Home() {
-  return <HomePlaceholder />;
+  return <HomeContent />;
 }
