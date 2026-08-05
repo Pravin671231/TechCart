@@ -4,6 +4,16 @@ import { NEXT_PUBLIC_API_URL } from "./env";
 
 export type NormalizedApiError = { code: string; message: string };
 
+export type Pagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+};
+
+type EnvelopeMeta = { pagination?: Pagination };
+
 type BackendErrorBody =
   | { success: false; code: string; message: string }
   | { success: false; code: string; errors: Record<string, string> };
@@ -37,21 +47,24 @@ function normalizeError(error: FetchBaseQueryError): NormalizedApiError {
 
 const rawBaseQuery = fetchBaseQuery({ baseUrl: NEXT_PUBLIC_API_URL });
 
-const baseQueryWithEnvelope: BaseQueryFn<string | FetchArgs, unknown, NormalizedApiError> = async (
-  args,
-  api,
-  extraOptions,
-) => {
+const baseQueryWithEnvelope: BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  NormalizedApiError,
+  object,
+  EnvelopeMeta
+> = async (args, api, extraOptions) => {
   const result = await rawBaseQuery(args, api, extraOptions);
 
   if (result.error) {
     return { error: normalizeError(result.error) };
   }
 
-  // TODO(M2.16/M2.17): thread `pagination` through via RTK Query's `meta`
-  // once a list endpoint exists to consume it — no endpoint needs it yet.
-  const body = result.data as { success: true; data: unknown };
-  return { data: body.data };
+  const body = result.data as { success: true; data: unknown; pagination?: Pagination };
+  return {
+    data: body.data,
+    meta: body.pagination ? { pagination: body.pagination } : {},
+  };
 };
 
 export const api = createApi({
