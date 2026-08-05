@@ -4,26 +4,37 @@ Implementation-level detail for `admin-app/`. This is the concrete companion to 
 
 ## Structure
 
-`src/app/` is routing only (explicit `react-router` route declarations, since there's no file-system router here). Actual UI/logic lives in `src/features/<feature>/`:
+`src/app/` is routing only (explicit `react-router` route declarations, since there's no file-system router here) plus top-level provider composition. Actual UI/logic lives in `src/features/<feature>/`:
 
 ```
 src/
 ├── app/
-│   └── App.tsx              # BrowserRouter + Routes — imports and renders LandingPlaceholder at "/"
+│   └── App.tsx              # Provider(store) > BrowserRouter > AdminKeyGate > Routes — renders LandingPlaceholder at "/"
+├── config/
+│   └── env.ts                  # API_URL / ADMIN_API_BASE_URL, read from VITE_API_URL (falls back to http://localhost:4000)
+├── store/
+│   ├── authSlice.ts               # adminKey state, sessionStorage-backed
+│   ├── api.ts                      # RTK Query createApi + X-Admin-Key header + 401 guard — see AGENTS.md
+│   └── store.ts                     # configureStore + createStore() factory (for isolated test stores)
 ├── features/
+│   ├── adminKey/
+│   │   ├── AdminKeyGate.tsx        # blocks all routes until an admin key is set
+│   │   └── AdminKeyPrompt.tsx        # the key-entry form itself
 │   └── landing/
 │       └── LandingPlaceholder.tsx  # first feature — static placeholder content
 ├── main.tsx                    # Vite entry — mounts <App /> into #root
+├── vite-env.d.ts                 # /// <reference types="vite/client" /> — needed for import.meta.env typing
 └── index.css                     # @import "tailwindcss";
 ```
 
-See `AGENTS.md` for the full `app/` vs `features/` convention.
+See `AGENTS.md` for the full `app/` vs `features/` convention, and its Redux/RTK Query section for the `src/store/` and `src/features/adminKey/` internals.
 
 ## Current file tree
 
 ```
 admin-app/
 ├── package.json          # name "admin-app"; scripts: dev, build, lint, preview, test
+├── .env.example             # VITE_API_URL=http://localhost:4000
 ├── tsconfig.json           # solution file — references tsconfig.app.json + tsconfig.node.json
 ├── tsconfig.app.json          # app + test code: bundler resolution, DOM lib, @/* → ./src/* — includes src, __tests__, vitest.setup.ts
 ├── tsconfig.node.json           # covers vite.config.ts
@@ -36,13 +47,19 @@ admin-app/
 ├── CLAUDE.md                           # @AGENTS.md (Claude Code import syntax)
 ├── docs/architecture.md                  # this file
 ├── __tests__/
-│   ├── app.test.tsx                        # renders src/app/App.tsx, asserts placeholder content
-│   └── mocks/{handlers.ts,server.ts}          # shared MSW server, extended by later feature tests
+│   ├── app.test.tsx                        # renders src/app/App.tsx, seeds an admin key first, asserts placeholder content
+│   ├── mocks/{handlers.ts,server.ts}          # shared MSW server, extended by later feature tests
+│   ├── utils/renderWithStore.tsx              # Provider-wrapped render helper using an isolated createStore()
+│   ├── store/{authSlice.test.ts,api.test.ts}    # authSlice reducers + sessionStorage sync; X-Admin-Key header + 401 guard
+│   └── features/adminKey/AdminKeyGate.test.tsx    # prompt-vs-children gating, key-submission round trip
 └── src/
     ├── main.tsx
     ├── index.css
+    ├── vite-env.d.ts
+    ├── config/env.ts
+    ├── store/{authSlice.ts,api.ts,store.ts}
     ├── app/App.tsx
-    └── features/landing/LandingPlaceholder.tsx
+    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},landing/LandingPlaceholder.tsx}
 ```
 
 ## Config
@@ -66,3 +83,4 @@ admin-app/
 - `npm run lint --workspace admin-app` — `eslint .` (uses this workspace's own flat config)
 - `npm run preview --workspace admin-app` — `vite preview`, serves the production build locally
 - `npm run test --workspace admin-app` — `vitest run`
+- Copy `.env.example` to `.env` before running locally (`VITE_API_URL`) — `src/config/env.ts` falls back to `http://localhost:4000` if unset, so this step is optional for local dev against the default backend port, unlike `backend`'s `env.ts`, which throws on a missing required var.
