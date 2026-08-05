@@ -20,8 +20,17 @@ src/
 │   ├── adminKey/
 │   │   ├── AdminKeyGate.tsx        # blocks all routes until an admin key is set
 │   │   └── AdminKeyPrompt.tsx        # the key-entry form itself
+│   ├── uploads/
+│   │   └── uploadsApi.ts            # presignUpload mutation + putFileToPresignedUrl (direct-to-R2 PUT), shared across features
+│   ├── brands/
+│   │   ├── brandsApi.ts               # injectEndpoints: getBrands/createBrand/updateBrand/updateBrandStatus/deleteBrand
+│   │   ├── types.ts                     # Brand / BrandListItem / Create·UpdateBrandInput
+│   │   ├── BrandsPage.tsx                 # routed at /brands — owns list-vs-form selection state
+│   │   ├── BrandList.tsx                    # table + search + inline delete-guard + status toggle
+│   │   ├── BrandForm.tsx                      # create/edit form (no status field — see AGENTS.md)
+│   │   └── LogoUploader.tsx                     # presign → PUT-to-R2 → preview
 │   └── landing/
-│       └── LandingPlaceholder.tsx  # first feature — static placeholder content
+│       └── LandingPlaceholder.tsx  # first feature — static placeholder content, now links to /brands
 ├── main.tsx                    # Vite entry — mounts <App /> into #root
 ├── vite-env.d.ts                 # /// <reference types="vite/client" /> — needed for import.meta.env typing
 └── index.css                     # @import "tailwindcss";
@@ -51,7 +60,9 @@ admin-app/
 │   ├── mocks/{handlers.ts,server.ts}          # shared MSW server, extended by later feature tests
 │   ├── utils/renderWithStore.tsx              # Provider-wrapped render helper using an isolated createStore()
 │   ├── store/{authSlice.test.ts,api.test.ts}    # authSlice reducers + sessionStorage sync; X-Admin-Key header + 401 guard
-│   └── features/adminKey/AdminKeyGate.test.tsx    # prompt-vs-children gating, key-submission round trip
+│   └── features/
+│       ├── adminKey/AdminKeyGate.test.tsx         # prompt-vs-children gating, key-submission round trip
+│       └── brands/BrandsPage.test.tsx               # list/create/edit/delete-guard/status-toggle/search/logo-upload
 └── src/
     ├── main.tsx
     ├── index.css
@@ -59,7 +70,7 @@ admin-app/
     ├── config/env.ts
     ├── store/{authSlice.ts,api.ts,store.ts}
     ├── app/App.tsx
-    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},landing/LandingPlaceholder.tsx}
+    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/uploadsApi.ts,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx,LogoUploader.tsx},landing/LandingPlaceholder.tsx}
 ```
 
 ## Config

@@ -23,6 +23,16 @@ export function unwrapList<T>(response: ApiSuccessListEnvelope<T>): { items: T[]
   return { items: response.data, pagination: response.pagination };
 }
 
+export function getApiErrorEnvelope(error: unknown): ApiErrorEnvelope | undefined {
+  if (error && typeof error === "object" && "data" in error) {
+    const data = (error as { data?: unknown }).data;
+    if (data && typeof data === "object" && "code" in data) {
+      return data as ApiErrorEnvelope;
+    }
+  }
+  return undefined;
+}
+
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: ADMIN_API_BASE_URL,
   prepareHeaders: (headers, { getState }) => {
@@ -49,5 +59,6 @@ const baseQueryWithAdminKeyGuard: BaseQueryFn<string | FetchArgs, unknown, Fetch
 export const api = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithAdminKeyGuard,
+  tagTypes: ["Brand"],
   endpoints: () => ({}),
 });
