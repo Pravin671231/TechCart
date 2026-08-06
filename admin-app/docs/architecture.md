@@ -29,8 +29,15 @@ src/
 │   │   ├── BrandList.tsx                    # table + search + inline delete-guard + status toggle
 │   │   ├── BrandForm.tsx                      # create/edit form (no status field — see AGENTS.md)
 │   │   └── LogoUploader.tsx                     # presign → PUT-to-R2 → preview
+│   ├── categories/
+│   │   ├── categoriesApi.ts                       # injectEndpoints: getCategories/createCategory/updateCategory/updateCategoryStatus/deleteCategory
+│   │   ├── types.ts                                 # Category / CategoryListItem / Create·UpdateCategoryInput
+│   │   ├── CategoriesPage.tsx                         # routed at /categories — also fetches the unfiltered list for the parent picker
+│   │   ├── CategoryList.tsx                             # flat indented tree (↳ + Parent column) + inline combined delete-guard + status toggle
+│   │   ├── CategoryForm.tsx                               # create/edit form incl. parent <select>, sortOrder, meta fields
+│   │   └── ImageUploader.tsx                                # presign → PUT-to-R2 → preview (purpose: "category-image")
 │   └── landing/
-│       └── LandingPlaceholder.tsx  # first feature — static placeholder content, now links to /brands
+│       └── LandingPlaceholder.tsx  # first feature — static placeholder content, now links to /brands and /categories
 ├── main.tsx                    # Vite entry — mounts <App /> into #root
 ├── vite-env.d.ts                 # /// <reference types="vite/client" /> — needed for import.meta.env typing
 └── index.css                     # @import "tailwindcss";
@@ -62,7 +69,8 @@ admin-app/
 │   ├── store/{authSlice.test.ts,api.test.ts}    # authSlice reducers + sessionStorage sync; X-Admin-Key header + 401 guard
 │   └── features/
 │       ├── adminKey/AdminKeyGate.test.tsx         # prompt-vs-children gating, key-submission round trip
-│       └── brands/BrandsPage.test.tsx               # list/create/edit/delete-guard/status-toggle/search/logo-upload
+│       ├── brands/BrandsPage.test.tsx               # list/create/edit/delete-guard/status-toggle/search/logo-upload
+│       └── categories/CategoriesPage.test.tsx         # tree render, all 4 hierarchy errors, combined delete-guard, status/search
 └── src/
     ├── main.tsx
     ├── index.css
@@ -70,7 +78,7 @@ admin-app/
     ├── config/env.ts
     ├── store/{authSlice.ts,api.ts,store.ts}
     ├── app/App.tsx
-    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/uploadsApi.ts,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx,LogoUploader.tsx},landing/LandingPlaceholder.tsx}
+    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/uploadsApi.ts,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx,LogoUploader.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx,ImageUploader.tsx},landing/LandingPlaceholder.tsx}
 ```
 
 ## Config

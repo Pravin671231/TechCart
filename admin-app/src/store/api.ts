@@ -59,6 +59,6 @@ const baseQueryWithAdminKeyGuard: BaseQueryFn<string | FetchArgs, unknown, Fetch
 export const api = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithAdminKeyGuard,
-  tagTypes: ["Brand"],
+  tagTypes: ["Brand", "Category"],
   endpoints: () => ({}),
 });

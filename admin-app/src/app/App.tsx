@@ -4,6 +4,7 @@ import { store } from "@/store/store";
 import { AdminKeyGate } from "@/features/adminKey/AdminKeyGate";
 import { LandingPlaceholder } from "@/features/landing/LandingPlaceholder";
 import { BrandsPage } from "@/features/brands/BrandsPage";
+import { CategoriesPage } from "@/features/categories/CategoriesPage";
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<LandingPlaceholder />} />
             <Route path="/brands" element={<BrandsPage />} />
+            <Route path="/categories" element={<CategoriesPage />} />
           </Routes>
         </AdminKeyGate>
       </BrowserRouter>
