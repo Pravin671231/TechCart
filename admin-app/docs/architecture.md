@@ -36,6 +36,12 @@ src/
 │   │   ├── CategoryList.tsx                             # flat indented tree (↳ + Parent column) + inline combined delete-guard + status toggle
 │   │   ├── CategoryForm.tsx                               # create/edit form incl. parent <select>, sortOrder, meta fields
 │   │   └── ImageUploader.tsx                                # presign → PUT-to-R2 → preview (purpose: "category-image")
+│   ├── categorySpecifications/
+│   │   ├── categorySpecificationsApi.ts                   # injectEndpoints: getCategorySpecifications/replaceCategorySpecifications (PUT)/patchCategorySpecifications (PATCH)
+│   │   ├── types.ts                                         # SpecificationField/Group, CategorySpecificationsView, SpecPatchOperation (mirrors backend's union)
+│   │   ├── CategorySpecificationsPage.tsx                     # routed at /specifications — in-page category <select>, mounts the editor with key={categoryId}
+│   │   ├── CategorySpecificationEditor.tsx                      # draft groups[] state, Save schema (PUT), persisted-vs-local dispatch for rename/delete/filterable-toggle
+│   │   └── SpecificationGroupCard.tsx                              # one group's field table — type-dependent inputs, move up/down, delete
 │   └── landing/
 │       └── LandingPlaceholder.tsx  # first feature — static placeholder content, now links to /brands and /categories
 ├── main.tsx                    # Vite entry — mounts <App /> into #root
@@ -70,7 +76,8 @@ admin-app/
 │   └── features/
 │       ├── adminKey/AdminKeyGate.test.tsx         # prompt-vs-children gating, key-submission round trip
 │       ├── brands/BrandsPage.test.tsx               # list/create/edit/delete-guard/status-toggle/search/logo-upload
-│       └── categories/CategoriesPage.test.tsx         # tree render, all 4 hierarchy errors, combined delete-guard, status/search
+│       ├── categories/CategoriesPage.test.tsx         # tree render, all 4 hierarchy errors, combined delete-guard, status/search
+│       └── categorySpecifications/CategorySpecificationsPage.test.tsx  # synthetic-empty render, full-replace PUT, each PATCH op, in-use guard (field + group)
 └── src/
     ├── main.tsx
     ├── index.css
@@ -78,7 +85,7 @@ admin-app/
     ├── config/env.ts
     ├── store/{authSlice.ts,api.ts,store.ts}
     ├── app/App.tsx
-    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/uploadsApi.ts,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx,LogoUploader.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx,ImageUploader.tsx},landing/LandingPlaceholder.tsx}
+    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/uploadsApi.ts,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx,LogoUploader.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx,ImageUploader.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},landing/LandingPlaceholder.tsx}
 ```
 
 ## Config
