@@ -23,23 +23,28 @@ src/
 │   │   ├── CategoryFilterRail.tsx     # price/brand/in-stock/on-sale controls
 │   │   ├── CategoryBreadcrumb.tsx      # + resolveBreadcrumb(), resolves parent name via categories/ list
 │   │   └── CategoryNotFound.tsx         # distinct from products/ProductListError — a 404 isn't retriable
+│   ├── search/
+│   │   ├── SearchContent.tsx        # search screen: active-keyword heading+filter rail+grid+pagination, page/sort/filters state
+│   │   ├── SearchFilterRail.tsx      # category (single-select, two-level)+price+brand+in-stock/on-sale controls
+│   │   ├── SearchSortSelect.tsx       # relevance (default)+price/newest — relevance only makes sense with a keyword
+│   │   └── SearchEmpty.tsx             # two distinct empty states (FR-CAT-067): keyword-empty vs. filter-empty copy
 │   ├── products/
 │   │   ├── types.ts                # PublicProductListItem etc. — matches backend exactly
-│   │   ├── api.ts                   # productsApi.injectEndpoints — getProducts, getCategoryProducts
+│   │   ├── api.ts                   # productsApi.injectEndpoints — getProducts, getCategoryProducts, searchProducts
 │   │   ├── money.ts                  # formatPrice() — Intl.NumberFormat("en-IN", {style:"currency",currency:"INR"})
-│   │   ├── ProductCard.tsx            # home's grid-tile card: image+name+price only (FR-CAT-091)
-│   │   ├── ProductGrid.tsx             # grid layout — used by home only (category uses its own row list)
+│   │   ├── ProductCard.tsx            # home/search's grid-tile card: image+name+price only (FR-CAT-091)
+│   │   ├── ProductGrid.tsx             # grid layout — used by home and search (category uses its own row list)
 │   │   ├── ProductListSkeleton.tsx      # grid-shaped loading state
-│   │   ├── ProductListEmpty.tsx          # shared empty state — reused as-is by category (no grid coupling)
-│   │   ├── ProductListError.tsx           # shared error state + retry — reused as-is by category
+│   │   ├── ProductListEmpty.tsx          # shared empty state — reused as-is by category (search has its own, two-state version)
+│   │   ├── ProductListError.tsx           # shared error state + retry — reused as-is by category and search
 │   │   ├── Pagination.tsx                  # shared pagination controls + describeRange() — reused as-is
-│   │   └── SortSelect.tsx                   # shared sort control — reused as-is
+│   │   └── SortSelect.tsx                   # shared sort control (no relevance option) — reused as-is by home
 │   ├── categories/
 │   │   ├── types.ts                # PublicCategory
 │   │   └── api.ts                   # getCategories — full public active-category list
 │   └── brands/
 │       ├── types.ts                # PublicBrand
-│       └── api.ts                   # getBrands — full public brand list, backs the category filter rail
+│       └── api.ts                   # getBrands — full public brand list, backs the category/search filter rails
 └── store/
     ├── env.ts                    # validates NEXT_PUBLIC_API_URL at import time, throws if missing
     ├── api.ts                    # RTK Query api slice — envelope unwrap/error normalization, tagTypes, no endpoints
@@ -61,6 +66,8 @@ See `AGENTS.md` for the full app/ vs features/ vs store/ convention.
 - `src/features/products/` (Issue #72 / M2.15) is the first `injectEndpoints`-owning feature, resource-named (not screen-named) so any screen needing product data can reuse it. What later screens actually reused turned out narrower than originally anticipated: Issue #73 / M2.16 (category listing) confirmed by reading `mock-ui/buyer-app/search.html` directly that its cards use home's own `aspect-square` grid shape, **not** category's row layout — so `ProductCard`/`ProductGrid` are home-specific after all, while `Pagination`, `SortSelect`, `ProductListEmpty`, and `ProductListError` (no grid-specific coupling in either) were genuinely reusable as-is. Category's row-shaped equivalents (`CategoryProductCard`, `CategoryProductList`, `CategoryListSkeleton`) live in `src/features/category/` instead. `src/features/products/api.ts` itself remained the right home for `getCategoryProducts` (added by #73) despite the UI split — it's the same `PublicProductListItem` resource, just a different query.
 - `src/features/categories/` and `src/features/brands/` (both new in Issue #73 / M2.16) are resource-named features holding one `GET`-only endpoint each (`getCategories`, `getBrands` — full, unpaginated public lists), consumed by `category/`'s breadcrumb and filter rail respectively.
 - `src/app/category/[slug]/page.tsx` (Issue #73 / M2.16) is the first dynamic route in the entire monorepo (`admin-app` is a Vite/react-router SPA, not Next — no prior App Router precedent existed). This Next version passes `params` as a `Promise<{slug}>`; the route file stays a thin `async` Server Component (`const {slug} = await params`) per the "app/ is routing only" convention, passing `slug` down to `CategoryContent` as a plain prop.
+- `src/features/search/` (Issue #74 / M2.17, `FR-CAT-065`/`067`/`075`) is the third screen-composition feature — confirmed by reading `mock-ui/buyer-app/search.html` directly that its cards use home's `aspect-square` grid shape (not category's row layout), so it reuses `products/`'s `ProductGrid`/`ProductCard`/`Pagination`/`ProductListSkeleton`/`ProductListError` as-is, the same reuse category already established. Two pieces are search-specific rather than shared: `SearchSortSelect` (a `relevance` option — the default — that's only meaningful alongside a keyword, so it isn't merged into `products/SortSelect`, which home also uses with no keyword ever present) and `SearchEmpty` (`FR-CAT-067`'s two distinct empty states — copy differs depending on whether the empty result traces to the keyword itself or to a filter narrowing it further, decided client-side by checking whether any filter is currently set). `productsApi.searchProducts` (`src/features/products/api.ts`) hits the same `GET /api/products` endpoint `getProducts` does, adding `q` plus the full `FR-CAT-068`–`076` filter surface (`category`, `brand`, price range, in-stock, on-sale) — no new backend endpoint was needed since `#36` already built this into the flat listing route.
+- `src/app/search/page.tsx` (Issue #74 / M2.17) is the second dynamic-ish route (technically static path, dynamic query) — `searchParams` is a `Promise<{q?: string}>` in this Next version, `await`ed the same way `category/[slug]/page.tsx` awaits `params`; the route stays a thin async Server Component per the "app/ is routing only" convention.
 - **Known limitation**: variant-attribute and filterable-spec-field filter _controls_ (e.g. "Colour", "RAM") shown in `mock-ui/buyer-app/category.html` are **not implemented**. `cardSpecifications` still renders correctly on each category row card (that data legitimately arrives per-product on every list response) — only the filter _controls_ for these two facets are cut. Verified directly: `categorySpecifications`/`categoryVariants` backend modules are genuinely admin-only (mounted only under the `X-Admin-Key`-gated `adminRouter`), so no buyer endpoint exposes a category's filterable field types, option lists, numeric bounds, or variant-axis/color-hex data. A real fix needs a new buyer-facing backend endpoint (e.g. `GET /api/categories/:slug/filters`) — tracked as a deliberate follow-up, not a silent gap.
 
 ## Current file tree
@@ -81,12 +88,14 @@ buyer-app/
 ├── __tests__/
 │   ├── home.test.tsx               # renders HomeContent via a real store: happy/empty/error/sort-refetch
 │   ├── category.test.tsx             # renders CategoryContent: breadcrumb, cardSpecifications, filter-refetch, not-found
+│   ├── search.test.tsx                # renders SearchContent: active keyword, both FR-CAT-067 empty states, ?q=/sort params
 │   ├── store/api.test.ts             # api slice: envelope unwrap, error normalization, fail-loud env check
 │   └── mocks/{handlers.ts,server.ts}  # shared MSW server, extended by later feature tests
 └── src/
-    ├── app/{layout.tsx,page.tsx,globals.css,category/[slug]/page.tsx}
+    ├── app/{layout.tsx,page.tsx,globals.css,category/[slug]/page.tsx,search/page.tsx}
     ├── features/home/HomeContent.tsx
     ├── features/category/{CategoryContent,CategoryProductCard,CategoryProductList,CategoryListSkeleton,CategoryFilterRail,CategoryBreadcrumb,CategoryNotFound}.tsx
+    ├── features/search/{SearchContent,SearchFilterRail,SearchSortSelect,SearchEmpty}.tsx
     ├── features/products/{types,api,money,ProductCard,ProductGrid,ProductListSkeleton,ProductListEmpty,ProductListError,Pagination,SortSelect}.ts(x)
     ├── features/categories/{types,api}.ts
     ├── features/brands/{types,api}.ts
@@ -102,7 +111,7 @@ buyer-app/
 ## Testing
 
 - Vitest (`environment: "jsdom"`) + React Testing Library + MSW, per root `docs/architecture.md` §8. `vitest.config.ts` uses the `vite-tsconfig-paths` plugin for `@/*` resolution plus `@vitejs/plugin-react` for JSX transform — neither is needed by `backend`'s Node-only config. Note: `backend/vitest.config.ts`'s `resolve: { tsconfigPaths: true }` is **not** a real Vite/Vitest option (verified by reproducing its `@/app` resolution failure); `backend/CLAUDE.md`'s claim that this works natively is inaccurate and worth a follow-up fix there.
-- Test files live in workspace-root `__tests__/`, not colocated in `src/` — `__tests__/store/api.test.ts` (Issue #71 / M2.14) exercises the RTK Query `baseQuery` end-to-end via a throwaway `api.injectEndpoints({...})` test endpoint dispatched through a real `makeStore()`. `__tests__/home.test.tsx` (rewritten for Issue #72 / M2.15) is the first test rendering a real feature component (`HomeContent`, manually wrapped in `<Provider store={makeStore()}>`) against MSW-mocked `GET /api/products` responses — covers happy path, empty state, error state, and a sort-change triggering a real refetch with the new `?sort=` value, using `@testing-library/user-event` for the interaction. `__tests__/category.test.tsx` (Issue #73 / M2.16) follows the identical pattern against `CategoryContent`, mocking `GET /api/categories/:slug/products`, `GET /api/categories`, and `GET /api/brands` together — covers breadcrumb resolution, `cardSpecifications` rendering exactly what a product has (no placeholder padding), a brand-filter change refetching with the corresponding param and resetting to page 1, sort-change refetch, and the `CATEGORY_NOT_FOUND` not-found state.
+- Test files live in workspace-root `__tests__/`, not colocated in `src/` — `__tests__/store/api.test.ts` (Issue #71 / M2.14) exercises the RTK Query `baseQuery` end-to-end via a throwaway `api.injectEndpoints({...})` test endpoint dispatched through a real `makeStore()`. `__tests__/home.test.tsx` (rewritten for Issue #72 / M2.15) is the first test rendering a real feature component (`HomeContent`, manually wrapped in `<Provider store={makeStore()}>`) against MSW-mocked `GET /api/products` responses — covers happy path, empty state, error state, and a sort-change triggering a real refetch with the new `?sort=` value, using `@testing-library/user-event` for the interaction. `__tests__/category.test.tsx` (Issue #73 / M2.16) follows the identical pattern against `CategoryContent`, mocking `GET /api/categories/:slug/products`, `GET /api/categories`, and `GET /api/brands` together — covers breadcrumb resolution, `cardSpecifications` rendering exactly what a product has (no placeholder padding), a brand-filter change refetching with the corresponding param and resetting to page 1, sort-change refetch, and the `CATEGORY_NOT_FOUND` not-found state. `__tests__/search.test.tsx` (Issue #74 / M2.17) follows the same pattern against `SearchContent`, mocking `GET /api/products` (this screen has no dedicated backend route — `searchProducts` hits the same flat listing endpoint `getProducts` does, with `q` added) — covers the active keyword rendering prominently, `?q=`/default-`relevance`-`?sort=` reaching the request, and both `FR-CAT-067` empty states rendering distinct copy (keyword-empty vs. an "In stock" filter toggle producing the filter-empty copy instead).
 - `__tests__/mocks/server.ts` + `handlers.ts` hold one shared MSW server, started/stopped once in `vitest.setup.ts`; later feature tests extend `handlers.ts` or call `server.use(...)` per-test rather than re-wiring MSW from scratch.
 - Because `src/store/env.ts` throws at import time, `api.test.ts` uses `vi.stubEnv` + `vi.resetModules()` + dynamic `import()` per test to get an isolated module graph with a controlled env value each time — the same technique any future test needing a different `NEXT_PUBLIC_API_URL` state should reuse.
 - Components using RTK Query hooks (`useXQuery`, etc.) need a manual `<Provider store={makeStore()}>` wrapper in any test that renders them directly with RTL — `vitest.setup.ts`/`layout.tsx`'s `StoreProvider` isn't in the tree for a component rendered in isolation.
