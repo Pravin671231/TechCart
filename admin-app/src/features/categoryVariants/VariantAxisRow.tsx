@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/Checkbox";
 import type { VariantAxis, VariantAxisType } from "./types";
 
 const AXIS_TYPES: VariantAxisType[] = ["text", "select", "color", "number"];
@@ -73,12 +74,11 @@ export function VariantAxisRow({
         </select>
       </td>
       <td className="px-3 py-2">
-        <input
-          type="checkbox"
+        <Checkbox
+          label={`Required: ${axis.name}`}
+          visuallyHiddenLabel
           checked={axis.required}
-          aria-label={`Required: ${axis.name}`}
           onChange={() => onToggleRequired({ ...axis, required: !axis.required })}
-          className="h-4 w-4 rounded border-neutral-300"
         />
       </td>
       <td className="px-3 py-2">

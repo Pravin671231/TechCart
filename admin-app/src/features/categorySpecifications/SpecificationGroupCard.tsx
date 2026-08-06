@@ -1,3 +1,5 @@
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Table } from "@/components/ui/Table";
 import type { SpecificationField, SpecificationFieldType, SpecificationGroup } from "./types";
 
 const FIELD_TYPES: SpecificationFieldType[] = ["text", "number", "boolean", "enum"];
@@ -47,140 +49,141 @@ export function SpecificationGroupCard({
             className="rounded-md border border-neutral-300 px-2 py-1 text-sm"
           />
         </label>
-        <button type="button" onClick={onDeleteGroup} className="text-xs text-red-600 hover:underline">
+        <button
+          type="button"
+          onClick={onDeleteGroup}
+          className="text-xs text-red-600 hover:underline"
+        >
           Delete group
         </button>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] border-collapse text-sm">
-          <thead className="text-left text-xs text-neutral-500">
-            <tr className="border-b border-neutral-200">
-              <th className="px-3 py-2 font-medium">Order</th>
-              <th className="px-3 py-2 font-medium">Field name</th>
-              <th className="px-3 py-2 font-medium">Type</th>
-              <th className="px-3 py-2 font-medium">Unit</th>
-              <th className="px-3 py-2 font-medium">Options</th>
-              <th className="px-3 py-2 font-medium">Required</th>
-              <th className="px-3 py-2 font-medium">Filterable</th>
-              <th className="px-3 py-2 font-medium"></th>
+      <Table minWidthClassName="min-w-[720px]" bordered={false}>
+        <thead className="text-left text-xs text-neutral-500">
+          <tr className="border-b border-neutral-200">
+            <th className="px-3 py-2 font-medium">Order</th>
+            <th className="px-3 py-2 font-medium">Field name</th>
+            <th className="px-3 py-2 font-medium">Type</th>
+            <th className="px-3 py-2 font-medium">Unit</th>
+            <th className="px-3 py-2 font-medium">Options</th>
+            <th className="px-3 py-2 font-medium">Required</th>
+            <th className="px-3 py-2 font-medium">Filterable</th>
+            <th className="px-3 py-2 font-medium"></th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-neutral-100">
+          {group.specifications.map((field, index) => (
+            <tr key={field.name + index}>
+              <td className="px-3 py-2 whitespace-nowrap text-neutral-400">
+                <button
+                  type="button"
+                  onClick={() => onMoveField(index, -1)}
+                  disabled={index === 0}
+                  aria-label={`Move ${field.name} up`}
+                  className="disabled:opacity-30"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onMoveField(index, 1)}
+                  disabled={index === group.specifications.length - 1}
+                  aria-label={`Move ${field.name} down`}
+                  className="ml-1 disabled:opacity-30"
+                >
+                  ↓
+                </button>
+              </td>
+              <td className="px-3 py-2">
+                <input
+                  type="text"
+                  value={field.name}
+                  aria-label="Field name"
+                  onChange={(event) => updateField(index, { name: event.target.value })}
+                  className="w-32 rounded-md border border-neutral-300 px-2 py-1"
+                />
+              </td>
+              <td className="px-3 py-2">
+                <select
+                  value={field.type}
+                  aria-label={`Type for ${field.name}`}
+                  onChange={(event) =>
+                    updateField(index, { type: event.target.value as SpecificationFieldType })
+                  }
+                  className="rounded-md border border-neutral-300 px-2 py-1"
+                >
+                  {FIELD_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </td>
+              <td className="px-3 py-2">
+                <input
+                  type="text"
+                  value={field.unit ?? ""}
+                  aria-label={`Unit for ${field.name}`}
+                  onChange={(event) =>
+                    updateField(index, { unit: event.target.value || undefined })
+                  }
+                  className="w-16 rounded-md border border-neutral-300 px-2 py-1"
+                />
+              </td>
+              <td className="px-3 py-2">
+                {field.type === "enum" ? (
+                  <input
+                    type="text"
+                    value={(field.options ?? []).join(", ")}
+                    aria-label={`Options for ${field.name}`}
+                    placeholder="e.g. 6GB, 8GB, 12GB"
+                    onChange={(event) =>
+                      updateField(index, {
+                        options: event.target.value
+                          .split(",")
+                          .map((option) => option.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                    className="w-40 rounded-md border border-neutral-300 px-2 py-1"
+                  />
+                ) : (
+                  <span className="text-neutral-400">—</span>
+                )}
+              </td>
+              <td className="px-3 py-2">
+                <Checkbox
+                  label={`Required: ${field.name}`}
+                  visuallyHiddenLabel
+                  checked={field.required}
+                  onChange={(event) => updateField(index, { required: event.target.checked })}
+                />
+              </td>
+              <td className="px-3 py-2">
+                <Checkbox
+                  label={`Filterable: ${field.name}`}
+                  visuallyHiddenLabel
+                  checked={field.filterable}
+                  disabled={field.type === "text"}
+                  className="disabled:opacity-30"
+                  onChange={(event) =>
+                    onToggleFilterable(index, { ...field, filterable: event.target.checked })
+                  }
+                />
+              </td>
+              <td className="px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => onDeleteField(index)}
+                  className="text-xs text-red-600 hover:underline"
+                >
+                  Delete
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100">
-            {group.specifications.map((field, index) => (
-              <tr key={field.name + index}>
-                <td className="px-3 py-2 whitespace-nowrap text-neutral-400">
-                  <button
-                    type="button"
-                    onClick={() => onMoveField(index, -1)}
-                    disabled={index === 0}
-                    aria-label={`Move ${field.name} up`}
-                    className="disabled:opacity-30"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onMoveField(index, 1)}
-                    disabled={index === group.specifications.length - 1}
-                    aria-label={`Move ${field.name} down`}
-                    className="ml-1 disabled:opacity-30"
-                  >
-                    ↓
-                  </button>
-                </td>
-                <td className="px-3 py-2">
-                  <input
-                    type="text"
-                    value={field.name}
-                    aria-label="Field name"
-                    onChange={(event) => updateField(index, { name: event.target.value })}
-                    className="w-32 rounded-md border border-neutral-300 px-2 py-1"
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <select
-                    value={field.type}
-                    aria-label={`Type for ${field.name}`}
-                    onChange={(event) =>
-                      updateField(index, { type: event.target.value as SpecificationFieldType })
-                    }
-                    className="rounded-md border border-neutral-300 px-2 py-1"
-                  >
-                    {FIELD_TYPES.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td className="px-3 py-2">
-                  <input
-                    type="text"
-                    value={field.unit ?? ""}
-                    aria-label={`Unit for ${field.name}`}
-                    onChange={(event) =>
-                      updateField(index, { unit: event.target.value || undefined })
-                    }
-                    className="w-16 rounded-md border border-neutral-300 px-2 py-1"
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  {field.type === "enum" ? (
-                    <input
-                      type="text"
-                      value={(field.options ?? []).join(", ")}
-                      aria-label={`Options for ${field.name}`}
-                      placeholder="e.g. 6GB, 8GB, 12GB"
-                      onChange={(event) =>
-                        updateField(index, {
-                          options: event.target.value
-                            .split(",")
-                            .map((option) => option.trim())
-                            .filter(Boolean),
-                        })
-                      }
-                      className="w-40 rounded-md border border-neutral-300 px-2 py-1"
-                    />
-                  ) : (
-                    <span className="text-neutral-400">—</span>
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={field.required}
-                    aria-label={`Required: ${field.name}`}
-                    onChange={(event) => updateField(index, { required: event.target.checked })}
-                    className="h-4 w-4 rounded border-neutral-300"
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={field.filterable}
-                    disabled={field.type === "text"}
-                    aria-label={`Filterable: ${field.name}`}
-                    onChange={(event) =>
-                      onToggleFilterable(index, { ...field, filterable: event.target.checked })
-                    }
-                    className="h-4 w-4 rounded border-neutral-300 disabled:opacity-30"
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <button
-                    type="button"
-                    onClick={() => onDeleteField(index)}
-                    className="text-xs text-red-600 hover:underline"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </Table>
       <button
         type="button"
         onClick={onAddField}

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { BrandForm } from "./BrandForm";
 import { BrandList } from "./BrandList";
 import type { BrandListItem } from "./types";
@@ -17,19 +19,19 @@ export function BrandsPage() {
 
   return (
     <main className="p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Brands</h1>
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedBrand(null);
-            setIsCreating(true);
-          }}
-          className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-        >
-          + New brand
-        </button>
-      </div>
+      <PageHeader
+        title="Brands"
+        actions={
+          <Button
+            onClick={() => {
+              setSelectedBrand(null);
+              setIsCreating(true);
+            }}
+          >
+            + New brand
+          </Button>
+        }
+      />
 
       <div className="flex flex-col gap-6 xl:flex-row">
         <BrandList

@@ -1,5 +1,10 @@
 import { Fragment, useState } from "react";
 import { getApiErrorEnvelope } from "@/store/api";
+import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { InlineAlert } from "@/components/ui/InlineAlert";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { SearchInput } from "@/components/ui/SearchInput";
 import {
   useDeleteCategoryMutation,
   useGetCategoriesQuery,
@@ -61,33 +66,27 @@ export function CategoryList({ search, onSearchChange, onEdit }: CategoryListPro
 
   return (
     <section className="min-w-0 flex-1">
-      <label htmlFor="category-search" className="sr-only">
-        Search categories
-      </label>
-      <input
+      <SearchInput
         id="category-search"
-        type="text"
+        label="Search categories"
         placeholder="Search by name…"
         value={search}
-        onChange={(event) => onSearchChange(event.target.value)}
-        className="h-9 w-64 rounded-md border border-neutral-300 px-3 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+        onChange={onSearchChange}
       />
 
       {isLoading ? (
-        <p className="mt-4 text-sm text-neutral-500">Loading…</p>
+        <LoadingState />
       ) : (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-neutral-200">
-          <table className="w-full min-w-[640px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-neutral-200 text-left text-xs font-semibold uppercase text-neutral-500">
-                <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Parent</th>
-                <th className="px-3 py-2 text-right">Products</th>
-                <th className="px-3 py-2 text-right">Sort</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">Actions</th>
-              </tr>
-            </thead>
+        <div className="mt-4">
+          <Table minWidthClassName="min-w-[640px]">
+            <TableHeadRow>
+              <th className="px-3 py-2">Name</th>
+              <th className="px-3 py-2">Parent</th>
+              <th className="px-3 py-2 text-right">Products</th>
+              <th className="px-3 py-2 text-right">Sort</th>
+              <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2">Actions</th>
+            </TableHeadRow>
             <tbody>
               {orderedCategories.map((category) => {
                 const isChild = Boolean(category.parentCategory);
@@ -102,17 +101,13 @@ export function CategoryList({ search, onSearchChange, onEdit }: CategoryListPro
                       <td className="px-3 py-2 text-right tabular-nums">{category.productCount}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{category.sortOrder}</td>
                       <td className="px-3 py-2">
-                        <button
-                          type="button"
+                        <StatusBadge
+                          tone={category.status ? "success" : "neutral"}
+                          shape="pill"
                           onClick={() => void handleToggleStatus(category)}
-                          className={
-                            category.status
-                              ? "rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
-                              : "rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-500"
-                          }
                         >
                           {category.status ? "Active" : "Inactive"}
-                        </button>
+                        </StatusBadge>
                       </td>
                       <td className="px-3 py-2">
                         <button
@@ -134,27 +129,16 @@ export function CategoryList({ search, onSearchChange, onEdit }: CategoryListPro
                     {deleteGuard?.id === category._id && (
                       <tr>
                         <td colSpan={6} className="px-3 py-2">
-                          <div
-                            role="alert"
-                            className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800"
-                          >
-                            {deleteGuard.message}
-                          </div>
+                          <InlineAlert>{deleteGuard.message}</InlineAlert>
                         </td>
                       </tr>
                     )}
                   </Fragment>
                 );
               })}
-              {orderedCategories.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-3 py-4 text-center text-neutral-500">
-                    No categories found.
-                  </td>
-                </tr>
-              )}
+              {orderedCategories.length === 0 && <EmptyRow colSpan={6} message="No categories found." />}
             </tbody>
-          </table>
+          </Table>
         </div>
       )}
     </section>

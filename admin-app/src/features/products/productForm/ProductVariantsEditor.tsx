@@ -2,6 +2,9 @@ import { useState, type FormEvent } from "react";
 import { getApiErrorEnvelope } from "@/store/api";
 import { useGetCategoryVariantsQuery } from "@/features/categoryVariants/categoryVariantsApi";
 import type { VariantAxis } from "@/features/categoryVariants/types";
+import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { TextField } from "@/components/ui/FormField";
 import { formatPrice } from "../money";
 import { useAddVariantMutation, useUpdateVariantMutation } from "../productsApi";
 import type { ProductVariant } from "../types";
@@ -127,13 +130,23 @@ function VariantForm({
       stock: Number(stock),
       ...(weight !== "" ? { weight: Number(weight) } : {}),
       ...(images.length > 0
-        ? { images: images.map((image) => ({ objectKey: image.objectKey, alt: image.alt || undefined, isPrimary: image.isPrimary })) }
+        ? {
+            images: images.map((image) => ({
+              objectKey: image.objectKey,
+              alt: image.alt || undefined,
+              isPrimary: image.isPrimary,
+            })),
+          }
         : {}),
     };
 
     try {
       if (variant) {
-        await updateVariant({ productId, variantId: variant._id, patch: { ...body, active } }).unwrap();
+        await updateVariant({
+          productId,
+          variantId: variant._id,
+          patch: { ...body, active },
+        }).unwrap();
       } else {
         await addVariant({ productId, body }).unwrap();
       }
@@ -161,45 +174,41 @@ function VariantForm({
             />
           </label>
         ))}
-        <label className="block text-sm">
-          <span className="text-neutral-500">SKU *</span>
-          <input
-            type="text"
-            required
-            value={sku}
-            onChange={(event) => setSku(event.target.value)}
-            className="mt-1 block w-full rounded-md border border-neutral-300 bg-white px-2 py-2 font-mono text-xs"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-neutral-500">MRP (₹) *</span>
-          <input
-            type="number"
-            required
-            value={mrp}
-            onChange={(event) => setMrp(event.target.value)}
-            className="mt-1 block w-full rounded-md border border-neutral-300 bg-white px-3 py-2 tabular-nums"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-neutral-500">Discount %</span>
-          <input
-            type="number"
-            value={discount}
-            onChange={(event) => setDiscount(event.target.value)}
-            className="mt-1 block w-full rounded-md border border-neutral-300 bg-white px-3 py-2 tabular-nums"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-neutral-500">Stock *</span>
-          <input
-            type="number"
-            required
-            value={stock}
-            onChange={(event) => setStock(event.target.value)}
-            className="mt-1 block w-full rounded-md border border-neutral-300 bg-white px-3 py-2 tabular-nums"
-          />
-        </label>
+        <TextField
+          id={`variant-sku-${variant?._id ?? "new"}`}
+          label="SKU *"
+          type="text"
+          required
+          value={sku}
+          onChange={(event) => setSku(event.target.value)}
+          className="bg-white font-mono text-xs"
+        />
+        <TextField
+          id={`variant-mrp-${variant?._id ?? "new"}`}
+          label="MRP (₹) *"
+          type="number"
+          required
+          value={mrp}
+          onChange={(event) => setMrp(event.target.value)}
+          className="bg-white tabular-nums"
+        />
+        <TextField
+          id={`variant-discount-${variant?._id ?? "new"}`}
+          label="Discount %"
+          type="number"
+          value={discount}
+          onChange={(event) => setDiscount(event.target.value)}
+          className="bg-white tabular-nums"
+        />
+        <TextField
+          id={`variant-stock-${variant?._id ?? "new"}`}
+          label="Stock *"
+          type="number"
+          required
+          value={stock}
+          onChange={(event) => setStock(event.target.value)}
+          className="bg-white tabular-nums"
+        />
       </div>
 
       <p className="mt-2 text-xs text-neutral-500">
@@ -208,15 +217,12 @@ function VariantForm({
       </p>
 
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-neutral-500">
-        <label className="flex items-center gap-1.5">
-          <input
-            type="checkbox"
-            checked={active}
-            onChange={(event) => setActive(event.target.checked)}
-            className="h-4 w-4 rounded border-neutral-300"
-          />
-          Active
-        </label>
+        <Checkbox
+          label="Active"
+          labelClassName="gap-1.5"
+          checked={active}
+          onChange={(event) => setActive(event.target.checked)}
+        />
         <label className="flex items-center gap-1.5">
           Weight (optional)
           <input
@@ -246,20 +252,12 @@ function VariantForm({
       )}
 
       <div className="mt-3 flex gap-2">
-        <button
-          type="submit"
-          disabled={isSaving}
-          className="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-        >
+        <Button type="submit" size="sm" loading={isSaving} loadingLabel="Saving…">
           {variant ? "Save variant" : "Add variant"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-        >
+        </Button>
+        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -291,8 +289,8 @@ export function ProductVariantsEditor({
   return (
     <div>
       <p className="mb-4 text-[11px] text-neutral-400">
-        One control per axis, chosen by the axis type defined for this category — swatch for
-        color, dropdown for select, numeric for number, text otherwise.
+        One control per axis, chosen by the axis type defined for this category — swatch for color,
+        dropdown for select, numeric for number, text otherwise.
       </p>
 
       {isLoading && <p className="text-sm text-neutral-500">Loading variant axes…</p>}
@@ -339,16 +337,16 @@ export function ProductVariantsEditor({
           onCancel={closeEditors}
         />
       ) : (
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => {
             setEditingVariantId(null);
             setIsAddingNew(true);
           }}
-          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-50"
         >
           + Add variant
-        </button>
+        </Button>
       )}
     </div>
   );

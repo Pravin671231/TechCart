@@ -107,7 +107,11 @@ export function ProductImagesEditor({
             <button
               type="button"
               onClick={() => makePrimary(index)}
-              className={image.isPrimary ? "text-xs font-medium text-primary-700" : "text-xs text-neutral-500"}
+              className={
+                image.isPrimary
+                  ? "text-xs font-medium text-primary-700"
+                  : "text-xs text-neutral-500"
+              }
             >
               {image.isPrimary ? "◉ Primary" : "○ Primary"}
             </button>

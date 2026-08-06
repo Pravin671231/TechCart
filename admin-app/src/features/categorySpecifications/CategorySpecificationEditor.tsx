@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { getApiErrorEnvelope } from "@/store/api";
+import { Button } from "@/components/ui/Button";
+import { InlineAlert } from "@/components/ui/InlineAlert";
+import { ErrorState, LoadingState } from "@/components/ui/LoadingState";
 import {
   useGetCategorySpecificationsQuery,
   usePatchCategorySpecificationsMutation,
@@ -187,8 +190,8 @@ export function CategorySpecificationEditor({ categoryId }: { categoryId: string
     });
   }
 
-  if (isLoading) return <p className="mt-4 text-sm text-neutral-500">Loading…</p>;
-  if (isError) return <p className="mt-4 text-sm text-red-600">Unable to load this category's specification schema.</p>;
+  if (isLoading) return <LoadingState />;
+  if (isError) return <ErrorState message="Unable to load this category's specification schema." />;
   if (!groups) return null;
 
   return (
@@ -198,14 +201,9 @@ export function CategorySpecificationEditor({ categoryId }: { categoryId: string
           Marking a field filterable makes it a buyer-facing filter and eligible for category card
           display (first four, in order).
         </p>
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={isSaving}
-          className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-        >
-          {isSaving ? "Saving…" : "Save schema"}
-        </button>
+        <Button onClick={() => void handleSave()} loading={isSaving} loadingLabel="Saving…">
+          Save schema
+        </Button>
       </div>
 
       {groups.map((group, groupIndex) => (
@@ -224,19 +222,11 @@ export function CategorySpecificationEditor({ categoryId }: { categoryId: string
         />
       ))}
 
-      <button
-        type="button"
-        onClick={handleAddGroup}
-        className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-50"
-      >
+      <Button variant="outline" size="sm" onClick={handleAddGroup}>
         + Add group
-      </button>
+      </Button>
 
-      {actionError && (
-        <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-          {actionError}
-        </div>
-      )}
+      {actionError && <InlineAlert>{actionError}</InlineAlert>}
     </section>
   );
 }

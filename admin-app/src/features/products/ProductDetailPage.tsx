@@ -1,15 +1,15 @@
 import { Link, useParams } from "react-router";
 import { useGetBrandsQuery } from "@/features/brands/brandsApi";
 import { useGetCategoriesQuery } from "@/features/categories/categoriesApi";
+import { LinkButton } from "@/components/ui/Button";
+import { Card, CardHeading } from "@/components/ui/Card";
+import { ErrorState, LoadingState } from "@/components/ui/LoadingState";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Table, TableHeadRow } from "@/components/ui/Table";
 import { formatPrice } from "./money";
+import { STATUS_LABEL, STATUS_TONE } from "./statusPresentation";
 import { useGetProductQuery, useUpdateProductStatusMutation } from "./productsApi";
 import type { ProductStatus } from "./types";
-
-const STATUS_LABEL: Record<ProductStatus, string> = {
-  draft: "Draft",
-  published: "Published",
-  archived: "Archived",
-};
 
 function formatAttributes(attributes: { name: string; value: string }[]): string {
   return attributes.map((attribute) => `${attribute.name}=${attribute.value}`).join(" · ");
@@ -22,9 +22,9 @@ export function ProductDetailPage() {
   const { data: categories = [] } = useGetCategoriesQuery(undefined);
   const [updateStatus, { isLoading: isChangingStatus }] = useUpdateProductStatusMutation();
 
-  if (isLoading) return <main className="p-6 text-sm text-neutral-500">Loading…</main>;
+  if (isLoading) return <LoadingState fullPage />;
   if (isError || !product) {
-    return <main className="p-6 text-sm text-red-600">Unable to load this product.</main>;
+    return <ErrorState fullPage message="Unable to load this product." />;
   }
 
   const brandName = brands.find((b) => b._id === product.brand)?.name ?? "—";
@@ -68,26 +68,19 @@ export function ProductDetailPage() {
               <option value="archived">Archived</option>
             </select>
           </label>
-          <Link
-            to={`/products/${product._id}/edit`}
-            className="rounded-md bg-primary-600 px-3 py-1.5 font-medium text-white hover:bg-primary-700"
-          >
+          <LinkButton to={`/products/${product._id}/edit`} size="sm">
             Edit
-          </Link>
+          </LinkButton>
         </div>
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <span className="rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
-          {STATUS_LABEL[product.status]}
-        </span>
+        <StatusBadge tone={STATUS_TONE[product.status]}>{STATUS_LABEL[product.status]}</StatusBadge>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <section className="rounded-lg border border-neutral-200 p-4">
-          <h2 className="mb-3 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
-            Images
-          </h2>
+        <Card>
+          <CardHeading>Images</CardHeading>
           {product.images.length === 0 ? (
             <p className="text-sm text-neutral-400">No images.</p>
           ) : (
@@ -106,12 +99,10 @@ export function ProductDetailPage() {
               ))}
             </div>
           )}
-        </section>
+        </Card>
 
-        <section className="rounded-lg border border-neutral-200 p-4 lg:col-span-2">
-          <h2 className="mb-3 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
-            Details
-          </h2>
+        <Card className="lg:col-span-2">
+          <CardHeading>Details</CardHeading>
           <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
             <div className="flex gap-2">
               <dt className="w-36 shrink-0 text-neutral-500">Name</dt>
@@ -168,25 +159,19 @@ export function ProductDetailPage() {
             </div>
             <div className="flex gap-2">
               <dt className="w-36 shrink-0 text-neutral-500">Created by</dt>
-              <dd className="font-mono text-xs text-neutral-400">
-                {product.createdBy ?? "null"}
-              </dd>
+              <dd className="font-mono text-xs text-neutral-400">{product.createdBy ?? "null"}</dd>
             </div>
             <div className="flex gap-2">
               <dt className="w-36 shrink-0 text-neutral-500">Updated by</dt>
-              <dd className="font-mono text-xs text-neutral-400">
-                {product.updatedBy ?? "null"}
-              </dd>
+              <dd className="font-mono text-xs text-neutral-400">{product.updatedBy ?? "null"}</dd>
             </div>
           </dl>
-        </section>
+        </Card>
       </div>
 
       {product.specifications.length > 0 && (
-        <section className="mt-6 rounded-lg border border-neutral-200 p-4">
-          <h2 className="mb-3 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
-            Specifications
-          </h2>
+        <Card className="mt-6">
+          <CardHeading>Specifications</CardHeading>
           <div className="grid gap-4 sm:grid-cols-3">
             {product.specifications.map((group) => (
               <div key={group.groupName}>
@@ -205,58 +190,46 @@ export function ProductDetailPage() {
               </div>
             ))}
           </div>
-        </section>
+        </Card>
       )}
 
       {product.variants.length > 0 && (
-        <section className="mt-6 rounded-lg border border-neutral-200 p-4">
-          <h2 className="mb-3 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
-            Variants
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px] border-collapse text-sm">
-              <thead className="bg-neutral-50 text-left">
-                <tr className="border-b border-neutral-200">
-                  <th className="px-3 py-2 font-medium text-neutral-500">SKU</th>
-                  <th className="px-3 py-2 font-medium text-neutral-500">Attributes</th>
-                  <th className="px-3 py-2 text-right font-medium text-neutral-500">MRP</th>
-                  <th className="px-3 py-2 text-right font-medium text-neutral-500">Disc.</th>
-                  <th className="px-3 py-2 text-right font-medium text-neutral-500">Selling</th>
-                  <th className="px-3 py-2 text-right font-medium text-neutral-500">Stock</th>
-                  <th className="px-3 py-2 font-medium text-neutral-500">Active</th>
+        <Card className="mt-6">
+          <CardHeading>Variants</CardHeading>
+          <Table minWidthClassName="min-w-[700px]">
+            <TableHeadRow variant="shaded">
+              <th className="px-3 py-2 font-medium text-neutral-500">SKU</th>
+              <th className="px-3 py-2 font-medium text-neutral-500">Attributes</th>
+              <th className="px-3 py-2 text-right font-medium text-neutral-500">MRP</th>
+              <th className="px-3 py-2 text-right font-medium text-neutral-500">Disc.</th>
+              <th className="px-3 py-2 text-right font-medium text-neutral-500">Selling</th>
+              <th className="px-3 py-2 text-right font-medium text-neutral-500">Stock</th>
+              <th className="px-3 py-2 font-medium text-neutral-500">Active</th>
+            </TableHeadRow>
+            <tbody className="divide-y divide-neutral-100">
+              {product.variants.map((variant) => (
+                <tr key={variant._id} className={variant.active ? undefined : "text-neutral-400"}>
+                  <td className="px-3 py-2 font-mono text-xs text-neutral-500">{variant.sku}</td>
+                  <td className="px-3 py-2">{formatAttributes(variant.attributes)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{formatPrice(variant.mrp)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{variant.discount}%</td>
+                  <td className="px-3 py-2 text-right font-medium tabular-nums text-neutral-900">
+                    {formatPrice(variant.sellingPrice)}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">{variant.stock}</td>
+                  <td className="px-3 py-2">
+                    <StatusBadge tone={variant.active ? "success" : "neutral"}>
+                      {variant.active ? "Yes" : "No"}
+                    </StatusBadge>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100">
-                {product.variants.map((variant) => (
-                  <tr key={variant._id} className={variant.active ? undefined : "text-neutral-400"}>
-                    <td className="px-3 py-2 font-mono text-xs text-neutral-500">{variant.sku}</td>
-                    <td className="px-3 py-2">{formatAttributes(variant.attributes)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{formatPrice(variant.mrp)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{variant.discount}%</td>
-                    <td className="px-3 py-2 text-right font-medium tabular-nums text-neutral-900">
-                      {formatPrice(variant.sellingPrice)}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{variant.stock}</td>
-                    <td className="px-3 py-2">
-                      <span
-                        className={
-                          variant.active
-                            ? "rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
-                            : "rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-500"
-                        }
-                      >
-                        {variant.active ? "Yes" : "No"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </Table>
           <p className="mt-2 text-[11px] text-neutral-400">
             Deactivated variants stay embedded on the document — never hard-removed.
           </p>
-        </section>
+        </Card>
       )}
     </main>
   );

@@ -65,7 +65,8 @@ export interface Product {
   updatedAt: string;
 }
 
-export type ProductSort = "-createdAt" | "createdAt" | "name" | "-name" | "mrp" | "-mrp" | "stock" | "-stock";
+export type ProductSort =
+  "-createdAt" | "createdAt" | "name" | "-name" | "mrp" | "-mrp" | "stock" | "-stock";
 
 // Request-side image shape — distinct from ProductImage (the response
 // shape): the backend only ever accepts a freshly presigned/consumed

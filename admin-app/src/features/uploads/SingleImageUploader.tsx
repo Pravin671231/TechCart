@@ -1,15 +1,17 @@
 import { useState, type ChangeEvent } from "react";
-import { usePresignUploadMutation, putFileToPresignedUrl } from "@/features/uploads/uploadsApi";
-import type { UploadContentType } from "@/features/uploads/uploadsApi";
+import { usePresignUploadMutation, putFileToPresignedUrl } from "./uploadsApi";
+import type { UploadContentType, UploadPurpose } from "./uploadsApi";
 
 const ACCEPTED_CONTENT_TYPES: UploadContentType[] = ["image/jpeg", "image/png", "image/webp"];
 
-export interface ImageUploaderProps {
+export interface SingleImageUploaderProps {
+  label: string;
+  purpose: UploadPurpose;
   previewUrl?: string;
   onUploaded: (result: { objectKey: string; publicUrl: string }) => void;
 }
 
-export function ImageUploader({ previewUrl, onUploaded }: ImageUploaderProps) {
+export function SingleImageUploader({ label, purpose, previewUrl, onUploaded }: SingleImageUploaderProps) {
   const [presignUpload, { isLoading }] = usePresignUploadMutation();
   const [error, setError] = useState<string | null>(null);
   const [localPreview, setLocalPreview] = useState<string | undefined>(previewUrl);
@@ -21,31 +23,28 @@ export function ImageUploader({ previewUrl, onUploaded }: ImageUploaderProps) {
     setError(null);
 
     if (!ACCEPTED_CONTENT_TYPES.includes(file.type as UploadContentType)) {
-      setError("Image must be a JPEG, PNG, or WebP file.");
+      setError(`${label} must be a JPEG, PNG, or WebP image.`);
       return;
     }
 
     try {
-      const presigned = await presignUpload({
-        purpose: "category-image",
-        contentType: file.type as UploadContentType,
-      }).unwrap();
+      const presigned = await presignUpload({ purpose, contentType: file.type as UploadContentType }).unwrap();
       await putFileToPresignedUrl(presigned.uploadUrl, file);
       setLocalPreview(presigned.publicUrl);
       onUploaded({ objectKey: presigned.objectKey, publicUrl: presigned.publicUrl });
     } catch {
-      setError("Image upload failed. Please try again.");
+      setError(`${label} upload failed. Please try again.`);
     }
   }
 
   return (
     <div>
-      <span className="block text-sm font-medium text-neutral-700">Image</span>
+      <span className="block text-sm font-medium text-neutral-700">{label}</span>
       <div className="mt-1 flex items-center gap-3">
         {localPreview ? (
           <img
             src={localPreview}
-            alt="Image preview"
+            alt={`${label} preview`}
             className="h-12 w-24 rounded-md border border-neutral-200 object-cover"
           />
         ) : (

@@ -47,7 +47,10 @@ export interface UpdateVariantArgs {
 
 export const productsApi = api.injectEndpoints({
   endpoints: (build) => ({
-    getProducts: build.query<{ items: Product[]; pagination: Pagination }, ListProductsParams | void>({
+    getProducts: build.query<
+      { items: Product[]; pagination: Pagination },
+      ListProductsParams | void
+    >({
       query: (params) => ({
         url: "/products",
         params: {
@@ -68,12 +71,20 @@ export const productsApi = api.injectEndpoints({
       providesTags: ["Product"],
     }),
     updateProductStatus: build.mutation<Product, UpdateProductStatusArgs>({
-      query: ({ id, status }) => ({ url: `/products/${id}/status`, method: "PATCH", body: { status } }),
+      query: ({ id, status }) => ({
+        url: `/products/${id}/status`,
+        method: "PATCH",
+        body: { status },
+      }),
       transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
       invalidatesTags: ["Product"],
     }),
     updateProductStock: build.mutation<Product, UpdateProductStockArgs>({
-      query: ({ id, stock }) => ({ url: `/products/${id}/stock`, method: "PATCH", body: { stock } }),
+      query: ({ id, stock }) => ({
+        url: `/products/${id}/stock`,
+        method: "PATCH",
+        body: { stock },
+      }),
       transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
       invalidatesTags: ["Product"],
     }),

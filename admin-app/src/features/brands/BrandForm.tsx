@@ -1,7 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { getApiErrorEnvelope } from "@/store/api";
+import { Button } from "@/components/ui/Button";
+import { Card, CardHeading } from "@/components/ui/Card";
+import { ReadOnlyField, TextAreaField, TextField } from "@/components/ui/FormField";
+import { SingleImageUploader } from "@/features/uploads/SingleImageUploader";
 import { useCreateBrandMutation, useUpdateBrandMutation } from "./brandsApi";
-import { LogoUploader } from "./LogoUploader";
 import type { Brand, CreateBrandInput } from "./types";
 
 export interface BrandFormProps {
@@ -52,50 +55,33 @@ export function BrandForm({ brand, onSaved, onCancel }: BrandFormProps) {
   }
 
   return (
-    <section className="w-full shrink-0 rounded-lg border border-neutral-200 p-4 xl:w-96">
-      <h2 className="text-xs font-semibold uppercase text-neutral-700">
-        {brand ? "Edit brand" : "New brand"}
-      </h2>
-      <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-4">
-        <div>
-          <label htmlFor="brand-name" className="block text-sm font-medium text-neutral-700">
-            Name
-          </label>
-          <input
-            id="brand-name"
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
-            className="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
-          />
-        </div>
+    <Card className="w-full shrink-0 xl:w-96">
+      <CardHeading>{brand ? "Edit brand" : "New brand"}</CardHeading>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <TextField
+          id="brand-name"
+          label="Name"
+          type="text"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          required
+        />
 
-        {brand && (
-          <div>
-            <span className="block text-sm font-medium text-neutral-700">Slug</span>
-            <span className="mt-1 block rounded-md bg-neutral-50 px-3 py-2 font-mono text-xs text-neutral-500">
-              {brand.slug}
-            </span>
-          </div>
-        )}
+        {brand && <ReadOnlyField label="Slug" value={brand.slug} mono />}
 
-        <LogoUploader
+        <SingleImageUploader
+          label="Logo"
+          purpose="brand-logo"
           previewUrl={brand?.logo?.url}
           onUploaded={(result) => setLogo(result)}
         />
 
-        <div>
-          <label htmlFor="brand-description" className="block text-sm font-medium text-neutral-700">
-            Description
-          </label>
-          <textarea
-            id="brand-description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            className="mt-1 block h-20 w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
-          />
-        </div>
+        <TextAreaField
+          id="brand-description"
+          label="Description"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+        />
 
         {saveError && (
           <p role="alert" className="text-[11px] text-red-600">
@@ -104,22 +90,14 @@ export function BrandForm({ brand, onSaved, onCancel }: BrandFormProps) {
         )}
 
         <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-neutral-300"
-          >
+          <Button type="submit" loading={isSaving} loadingLabel="Saving…">
             Save
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-md border border-neutral-400 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-          >
+          </Button>
+          <Button type="button" variant="secondary" onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
-    </section>
+    </Card>
   );
 }

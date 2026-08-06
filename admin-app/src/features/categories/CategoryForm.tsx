@@ -1,7 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { getApiErrorEnvelope } from "@/store/api";
+import { Button } from "@/components/ui/Button";
+import { Card, CardHeading } from "@/components/ui/Card";
+import { ReadOnlyField, SelectField, TextAreaField, TextField } from "@/components/ui/FormField";
+import { SingleImageUploader } from "@/features/uploads/SingleImageUploader";
 import { useCreateCategoryMutation, useUpdateCategoryMutation } from "./categoriesApi";
-import { ImageUploader } from "./ImageUploader";
 import type { Category, CategoryListItem, CreateCategoryInput, UpdateCategoryInput } from "./types";
 
 export interface CategoryFormProps {
@@ -76,130 +79,82 @@ export function CategoryForm({ category, allCategories, onSaved, onCancel }: Cat
   }
 
   return (
-    <section className="w-full shrink-0 rounded-lg border border-neutral-200 p-4 xl:w-96">
-      <h2 className="text-xs font-semibold uppercase text-neutral-700">
-        {category ? "Edit category" : "New category"}
-      </h2>
-      <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-4">
-        <div>
-          <label htmlFor="category-name" className="block text-sm font-medium text-neutral-700">
-            Name
-          </label>
-          <input
-            id="category-name"
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
-            className="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
-          />
-        </div>
+    <Card className="w-full shrink-0 xl:w-96">
+      <CardHeading>{category ? "Edit category" : "New category"}</CardHeading>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <TextField
+          id="category-name"
+          label="Name"
+          type="text"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          required
+        />
 
-        {category && (
-          <div>
-            <span className="block text-sm font-medium text-neutral-700">Slug</span>
-            <span className="mt-1 block rounded-md bg-neutral-50 px-3 py-2 font-mono text-xs text-neutral-500">
-              {category.slug}
-            </span>
-          </div>
-        )}
+        {category && <ReadOnlyField label="Slug" value={category.slug} mono />}
 
-        <div>
-          <label htmlFor="category-parent" className="block text-sm font-medium text-neutral-700">
-            Parent category
-          </label>
-          <select
-            id="category-parent"
-            value={parentCategory ?? ""}
-            onChange={(event) => setParentCategory(event.target.value)}
-            className="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
-          >
-            <option value="">— None (top-level) —</option>
-            {parentOptions.map((option) => (
-              <option key={option._id} value={option._id}>
-                {option.name}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-[11px] text-neutral-400">
-            Only top-level categories are selectable · FR-CAT-014
-          </p>
-          {saveError && (
-            <p role="alert" className="mt-1 text-[11px] text-red-600">
-              {saveError.message ?? "Unable to save category."}
-            </p>
-          )}
-        </div>
+        <SelectField
+          id="category-parent"
+          label="Parent category"
+          value={parentCategory ?? ""}
+          onChange={(event) => setParentCategory(event.target.value)}
+          hint="Only top-level categories are selectable · FR-CAT-014"
+          error={saveError ? (saveError.message ?? "Unable to save category.") : undefined}
+        >
+          <option value="">— None (top-level) —</option>
+          {parentOptions.map((option) => (
+            <option key={option._id} value={option._id}>
+              {option.name}
+            </option>
+          ))}
+        </SelectField>
 
-        <ImageUploader previewUrl={category?.image?.url} onUploaded={(result) => setImage(result)} />
+        <SingleImageUploader
+          label="Image"
+          purpose="category-image"
+          previewUrl={category?.image?.url}
+          onUploaded={(result) => setImage(result)}
+        />
 
-        <div>
-          <label htmlFor="category-sort-order" className="block text-sm font-medium text-neutral-700">
-            Sort order
-          </label>
-          <input
-            id="category-sort-order"
-            type="number"
-            value={sortOrder}
-            onChange={(event) => setSortOrder(Number(event.target.value))}
-            className="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
-          />
-        </div>
+        <TextField
+          id="category-sort-order"
+          label="Sort order"
+          type="number"
+          value={sortOrder}
+          onChange={(event) => setSortOrder(Number(event.target.value))}
+        />
 
-        <div>
-          <label htmlFor="category-description" className="block text-sm font-medium text-neutral-700">
-            Description
-          </label>
-          <textarea
-            id="category-description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            className="mt-1 block h-20 w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
-          />
-        </div>
+        <TextAreaField
+          id="category-description"
+          label="Description"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+        />
 
-        <div>
-          <label htmlFor="category-meta-title" className="block text-sm font-medium text-neutral-700">
-            Meta title
-          </label>
-          <input
-            id="category-meta-title"
-            type="text"
-            value={metaTitle}
-            onChange={(event) => setMetaTitle(event.target.value)}
-            className="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
-          />
-        </div>
+        <TextField
+          id="category-meta-title"
+          label="Meta title"
+          type="text"
+          value={metaTitle}
+          onChange={(event) => setMetaTitle(event.target.value)}
+        />
 
-        <div>
-          <label htmlFor="category-meta-description" className="block text-sm font-medium text-neutral-700">
-            Meta description
-          </label>
-          <textarea
-            id="category-meta-description"
-            value={metaDescription}
-            onChange={(event) => setMetaDescription(event.target.value)}
-            className="mt-1 block h-20 w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
-          />
-        </div>
+        <TextAreaField
+          id="category-meta-description"
+          label="Meta description"
+          value={metaDescription}
+          onChange={(event) => setMetaDescription(event.target.value)}
+        />
 
         <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-neutral-300"
-          >
+          <Button type="submit" loading={isSaving} loadingLabel="Saving…">
             Save
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-md border border-neutral-400 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-          >
+          </Button>
+          <Button type="button" variant="secondary" onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
-    </section>
+    </Card>
   );
 }

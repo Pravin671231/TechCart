@@ -2,12 +2,19 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { useGetBrandsQuery } from "@/features/brands/brandsApi";
 import { useGetCategoriesQuery } from "@/features/categories/categoriesApi";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { Pagination } from "@/components/ui/Pagination";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
 import { formatPrice } from "./money";
 import {
   useGetProductsQuery,
   useUpdateProductStatusMutation,
   useUpdateProductStockMutation,
 } from "./productsApi";
+import { STATUS_LABEL, STATUS_TONE } from "./statusPresentation";
 import type { Product, ProductStatus } from "./types";
 
 export interface ProductListProps {
@@ -20,18 +27,6 @@ export interface ProductListProps {
   page: number;
   onPageChange: (page: number) => void;
 }
-
-const STATUS_LABEL: Record<ProductStatus, string> = {
-  draft: "Draft",
-  published: "Published",
-  archived: "Archived",
-};
-
-const STATUS_BADGE_CLASS: Record<ProductStatus, string> = {
-  published: "bg-green-100 text-green-700",
-  draft: "bg-neutral-100 text-neutral-600",
-  archived: "bg-neutral-100 text-neutral-500",
-};
 
 export function ProductList({
   search,
@@ -80,16 +75,13 @@ export function ProductList({
   return (
     <section className="min-w-0 flex-1">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <label htmlFor="product-search" className="sr-only">
-          Search products
-        </label>
-        <input
+        <SearchInput
           id="product-search"
-          type="text"
+          label="Search products"
           placeholder="Search name or SKU…"
           value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          className="h-9 w-72 rounded-md border border-neutral-300 px-3 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+          onChange={onSearchChange}
+          width="w-72"
         />
         <label htmlFor="product-status" className="sr-only">
           Status
@@ -105,162 +97,129 @@ export function ProductList({
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
-        <label className="flex items-center gap-2 text-sm text-neutral-600">
-          <input
-            type="checkbox"
-            checked={lowStockOnly}
-            onChange={(event) => onLowStockOnlyChange(event.target.checked)}
-            className="h-4 w-4 rounded border-neutral-300"
-          />
-          Low stock only
-        </label>
+        <Checkbox
+          label="Low stock only"
+          checked={lowStockOnly}
+          onChange={(event) => onLowStockOnlyChange(event.target.checked)}
+        />
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-neutral-500">Loading…</p>
+        <LoadingState label="Loading…" spaced={false} />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-neutral-200">
-          <table className="w-full min-w-[900px] border-collapse text-sm">
-            <thead className="bg-neutral-50 text-left">
-              <tr className="border-b border-neutral-200">
-                <th className="px-3 py-2 font-medium text-neutral-500">Name</th>
-                <th className="px-3 py-2 font-medium text-neutral-500">SKU</th>
-                <th className="px-3 py-2 font-medium text-neutral-500">Brand</th>
-                <th className="px-3 py-2 font-medium text-neutral-500">Category</th>
-                <th className="px-3 py-2 text-right font-medium text-neutral-500">Price</th>
-                <th className="px-3 py-2 text-right font-medium text-neutral-500">Stock</th>
-                <th className="px-3 py-2 font-medium text-neutral-500">Status</th>
-                <th className="px-3 py-2 font-medium text-neutral-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {products.map((product) => {
-                const isLowStock = product.stock <= product.lowStockThreshold;
-                const isEditingStock = stockDraft?.id === product._id;
-                return (
-                  <tr key={product._id}>
-                    <td className="px-3 py-2 font-medium text-neutral-900">{product.name}</td>
-                    <td className="px-3 py-2 font-mono text-xs text-neutral-500">{product.sku}</td>
-                    <td className="px-3 py-2">{brandNameById.get(product.brand) ?? "—"}</td>
-                    <td className="px-3 py-2">{categoryNameById.get(product.category) ?? "—"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      {formatPrice(product.sellingPrice)}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      {isEditingStock ? (
-                        <span className="inline-flex items-center gap-1">
-                          <input
-                            type="text"
-                            aria-label={`Stock for ${product.name}`}
-                            value={stockDraft.value}
-                            onChange={(event) =>
-                              setStockDraft({ id: product._id, value: event.target.value })
-                            }
-                            className="w-14 rounded-md border border-primary-300 px-1.5 py-0.5 text-right text-sm"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => void handleSaveStock(product)}
-                            className="rounded-md bg-primary-600 px-1.5 py-0.5 text-[10px] font-medium text-white"
-                          >
-                            Save
-                          </button>
-                        </span>
-                      ) : (
+        <Table minWidthClassName="min-w-[900px]">
+          <TableHeadRow variant="shaded">
+            <th className="px-3 py-2 font-medium text-neutral-500">Name</th>
+            <th className="px-3 py-2 font-medium text-neutral-500">SKU</th>
+            <th className="px-3 py-2 font-medium text-neutral-500">Brand</th>
+            <th className="px-3 py-2 font-medium text-neutral-500">Category</th>
+            <th className="px-3 py-2 text-right font-medium text-neutral-500">Price</th>
+            <th className="px-3 py-2 text-right font-medium text-neutral-500">Stock</th>
+            <th className="px-3 py-2 font-medium text-neutral-500">Status</th>
+            <th className="px-3 py-2 font-medium text-neutral-500">Actions</th>
+          </TableHeadRow>
+          <tbody className="divide-y divide-neutral-100">
+            {products.map((product) => {
+              const isLowStock = product.stock <= product.lowStockThreshold;
+              const isEditingStock = stockDraft?.id === product._id;
+              return (
+                <tr key={product._id}>
+                  <td className="px-3 py-2 font-medium text-neutral-900">{product.name}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-neutral-500">{product.sku}</td>
+                  <td className="px-3 py-2">{brandNameById.get(product.brand) ?? "—"}</td>
+                  <td className="px-3 py-2">{categoryNameById.get(product.category) ?? "—"}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {formatPrice(product.sellingPrice)}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    {isEditingStock ? (
+                      <span className="inline-flex items-center gap-1">
+                        <input
+                          type="text"
+                          aria-label={`Stock for ${product.name}`}
+                          value={stockDraft.value}
+                          onChange={(event) =>
+                            setStockDraft({ id: product._id, value: event.target.value })
+                          }
+                          className="w-14 rounded-md border border-primary-300 px-1.5 py-0.5 text-right text-sm"
+                        />
                         <button
                           type="button"
-                          onClick={() => setStockDraft({ id: product._id, value: String(product.stock) })}
-                          className="tabular-nums hover:underline"
+                          onClick={() => void handleSaveStock(product)}
+                          className="rounded-md bg-primary-600 px-1.5 py-0.5 text-[10px] font-medium text-white"
                         >
-                          {product.stock}
-                          {isLowStock && (
-                            <span className="ml-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                              Low
-                            </span>
-                          )}
+                          Save
                         </button>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span
-                        className={`rounded-md px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASS[product.status]}`}
-                      >
-                        {STATUS_LABEL[product.status]}
                       </span>
-                    </td>
-                    <td className="px-3 py-2 text-xs whitespace-nowrap text-neutral-500">
-                      <Link to={`/products/${product._id}`} className="text-primary-600 hover:underline">
-                        View
-                      </Link>
-                      {" · "}
-                      <Link to={`/products/${product._id}/edit`} className="text-primary-600 hover:underline">
-                        Edit
-                      </Link>
-                      {product.status === "archived" ? (
-                        <>
-                          {" · "}
-                          <button
-                            type="button"
-                            onClick={() => void handleRestore(product)}
-                            className="text-primary-600 hover:underline"
-                          >
-                            Restore
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          {" · "}
-                          <button
-                            type="button"
-                            onClick={() => void handleArchive(product)}
-                            className="text-primary-600 hover:underline"
-                          >
-                            Archive
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-              {products.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-3 py-4 text-center text-neutral-500">
-                    No products found.
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setStockDraft({ id: product._id, value: String(product.stock) })
+                        }
+                        className="tabular-nums hover:underline"
+                      >
+                        {product.stock}
+                        {isLowStock && (
+                          <span className="ml-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                            Low
+                          </span>
+                        )}
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    <StatusBadge tone={STATUS_TONE[product.status]}>
+                      {STATUS_LABEL[product.status]}
+                    </StatusBadge>
+                  </td>
+                  <td className="px-3 py-2 text-xs whitespace-nowrap text-neutral-500">
+                    <Link
+                      to={`/products/${product._id}`}
+                      className="text-primary-600 hover:underline"
+                    >
+                      View
+                    </Link>
+                    {" · "}
+                    <Link
+                      to={`/products/${product._id}/edit`}
+                      className="text-primary-600 hover:underline"
+                    >
+                      Edit
+                    </Link>
+                    {product.status === "archived" ? (
+                      <>
+                        {" · "}
+                        <button
+                          type="button"
+                          onClick={() => void handleRestore(product)}
+                          className="text-primary-600 hover:underline"
+                        >
+                          Restore
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {" · "}
+                        <button
+                          type="button"
+                          onClick={() => void handleArchive(product)}
+                          className="text-primary-600 hover:underline"
+                        >
+                          Archive
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              );
+            })}
+            {products.length === 0 && <EmptyRow colSpan={8} message="No products found." />}
+          </tbody>
+        </Table>
       )}
 
-      {pagination && pagination.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <p className="text-neutral-500">
-            Showing {(pagination.page - 1) * pagination.limit + 1}–
-            {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
-          </p>
-          <nav className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => onPageChange(page - 1)}
-              disabled={page <= 1}
-              className="rounded-md border border-neutral-200 px-3 py-1 text-neutral-500 disabled:cursor-not-allowed disabled:text-neutral-300"
-            >
-              ‹ Prev
-            </button>
-            <button
-              type="button"
-              onClick={() => onPageChange(page + 1)}
-              disabled={!pagination.hasNextPage}
-              className="rounded-md border border-neutral-300 px-3 py-1 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:text-neutral-300"
-            >
-              Next ›
-            </button>
-          </nav>
-        </div>
-      )}
+      {pagination && <Pagination page={page} pagination={pagination} onPageChange={onPageChange} />}
     </section>
   );
 }

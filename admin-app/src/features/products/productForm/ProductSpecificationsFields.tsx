@@ -1,3 +1,6 @@
+import { Checkbox } from "@/components/ui/Checkbox";
+import { SelectField, TextField } from "@/components/ui/FormField";
+import { LoadingState } from "@/components/ui/LoadingState";
 import { useGetCategorySpecificationsQuery } from "@/features/categorySpecifications/categorySpecificationsApi";
 import type { SpecificationField } from "@/features/categorySpecifications/types";
 import { specKey, type SpecificationValues } from "./specificationValues";
@@ -14,70 +17,61 @@ function FieldInput({
   onChange: (value: string | number | boolean | undefined) => void;
 }) {
   const key = specKey(groupName, field.name);
+  const label = (
+    <>
+      {field.name}
+      {field.required ? " *" : ""}{" "}
+      <em>
+        ({field.type}
+        {field.type !== "boolean" && field.type !== "enum" && field.unit ? `, ${field.unit}` : ""})
+      </em>
+    </>
+  );
 
   if (field.type === "boolean") {
     return (
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          id={key}
-          checked={Boolean(value)}
-          onChange={(event) => onChange(event.target.checked)}
-          className="h-4 w-4 rounded border-neutral-300"
-        />
-        <span className="text-neutral-500">
-          {field.name}
-          {field.required ? " *" : ""} <em>(boolean)</em>
-        </span>
-      </label>
+      <Checkbox
+        label={label}
+        id={key}
+        checked={Boolean(value)}
+        onChange={(event) => onChange(event.target.checked)}
+      />
     );
   }
 
   if (field.type === "enum") {
     return (
-      <label className="block text-sm">
-        <span className="text-neutral-500">
-          {field.name}
-          {field.required ? " *" : ""} <em>(enum)</em>
-        </span>
-        <select
-          id={key}
-          value={typeof value === "string" ? value : ""}
-          onChange={(event) => onChange(event.target.value || undefined)}
-          className="mt-1 block w-full rounded-md border border-neutral-300 px-3 py-2"
-        >
-          <option value="">— select —</option>
-          {(field.options ?? []).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </label>
+      <SelectField
+        id={key}
+        label={label}
+        value={typeof value === "string" ? value : ""}
+        onChange={(event) => onChange(event.target.value || undefined)}
+      >
+        <option value="">— select —</option>
+        {(field.options ?? []).map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </SelectField>
     );
   }
 
   return (
-    <label className="block text-sm">
-      <span className="text-neutral-500">
-        {field.name}
-        {field.required ? " *" : ""} <em>({field.type}{field.unit ? `, ${field.unit}` : ""})</em>
-      </span>
-      <input
-        id={key}
-        type={field.type === "number" ? "number" : "text"}
-        value={value === undefined ? "" : String(value)}
-        onChange={(event) => {
-          const raw = event.target.value;
-          if (raw === "") {
-            onChange(undefined);
-          } else {
-            onChange(field.type === "number" ? Number(raw) : raw);
-          }
-        }}
-        className="mt-1 block w-full rounded-md border border-neutral-300 px-3 py-2"
-      />
-    </label>
+    <TextField
+      id={key}
+      label={label}
+      type={field.type === "number" ? "number" : "text"}
+      value={value === undefined ? "" : String(value)}
+      onChange={(event) => {
+        const raw = event.target.value;
+        if (raw === "") {
+          onChange(undefined);
+        } else {
+          onChange(field.type === "number" ? Number(raw) : raw);
+        }
+      }}
+    />
   );
 }
 
@@ -93,11 +87,15 @@ export function ProductSpecificationsFields({
   const { data, isLoading } = useGetCategorySpecificationsQuery(categoryId, { skip: !categoryId });
 
   if (!categoryId) {
-    return <p className="text-sm text-neutral-400">Choose a category to see its specification fields.</p>;
+    return (
+      <p className="text-sm text-neutral-400">Choose a category to see its specification fields.</p>
+    );
   }
-  if (isLoading) return <p className="text-sm text-neutral-500">Loading…</p>;
+  if (isLoading) return <LoadingState spaced={false} />;
   if (!data || data.specificationGroups.length === 0) {
-    return <p className="text-sm text-neutral-400">This category defines no specification fields.</p>;
+    return (
+      <p className="text-sm text-neutral-400">This category defines no specification fields.</p>
+    );
   }
 
   return (
