@@ -1,5 +1,10 @@
 import { api } from "@/store/api";
-import type { GetProductsArgs, GetProductsResult, PublicProductListItem } from "./types";
+import type {
+  GetCategoryProductsArgs,
+  GetProductsArgs,
+  GetProductsResult,
+  PublicProductListItem,
+} from "./types";
 
 export const productsApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -13,7 +18,30 @@ export const productsApi = api.injectEndpoints({
       },
       providesTags: ["Product"],
     }),
+    getCategoryProducts: builder.query<GetProductsResult, GetCategoryProductsArgs>({
+      query: ({ slug, page, sort, brand, minPrice, maxPrice, inStock, onSale }) => ({
+        url: `/api/categories/${slug}/products`,
+        params: {
+          page,
+          sort,
+          brand: brand && brand.length > 0 ? brand : undefined,
+          minPrice,
+          maxPrice,
+          // Backend only accepts the literal string "true"; an unchecked box
+          // must omit the key entirely, never send "false".
+          inStock: inStock ? "true" : undefined,
+          onSale: onSale ? "true" : undefined,
+        },
+      }),
+      transformResponse: (response: unknown, meta): GetProductsResult => {
+        if (!meta?.pagination) {
+          throw new Error("Expected pagination metadata on a product list response.");
+        }
+        return { items: response as PublicProductListItem[], pagination: meta.pagination };
+      },
+      providesTags: ["Product"],
+    }),
   }),
 });
 
-export const { useGetProductsQuery } = productsApi;
+export const { useGetProductsQuery, useGetCategoryProductsQuery } = productsApi;

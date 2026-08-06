@@ -29,3 +29,17 @@ export type ProductSort = "price_asc" | "price_desc" | "newest";
 
 export type GetProductsArgs = { page: number; sort: ProductSort };
 export type GetProductsResult = { items: PublicProductListItem[]; pagination: Pagination };
+
+export type CategoryProductFilters = {
+  brand?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
+  onSale?: boolean;
+};
+
+export type GetCategoryProductsArgs = {
+  slug: string;
+  page: number;
+  sort: ProductSort;
+} & CategoryProductFilters;
