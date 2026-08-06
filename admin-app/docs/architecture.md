@@ -48,6 +48,13 @@ src/
 │   │   ├── CategoryVariantsPage.tsx                           # routed at /variant-types — same in-page category <select> pattern as specifications
 │   │   ├── CategoryVariantEditor.tsx                            # draft axes[] state, Save axes (PUT), no in-use guard on delete
 │   │   └── VariantAxisRow.tsx                                     # one axis's row — type-dependent options editor, no group nesting
+│   ├── products/
+│   │   ├── productsApi.ts                                # injectEndpoints: getProducts/getProduct/updateProductStatus/updateProductStock
+│   │   ├── types.ts                                         # Product (brand/category as raw ids, unpopulated) / ProductVariant / ProductSort
+│   │   ├── money.ts                                           # formatPrice() — Intl.NumberFormat("en-IN", {style:"currency",currency:"INR"})
+│   │   ├── ProductsPage.tsx                                     # routed at /products — owns search/status/lowStock/page state
+│   │   ├── ProductList.tsx                                        # table + inline stock quick-edit + archive/restore + pagination
+│   │   └── ProductDetailPage.tsx                                    # routed at /products/:id — read-only, every field + all variants
 │   └── landing/
 │       └── LandingPlaceholder.tsx  # first feature — static placeholder content, now links to /brands and /categories
 ├── main.tsx                    # Vite entry — mounts <App /> into #root
@@ -84,7 +91,8 @@ admin-app/
 │       ├── brands/BrandsPage.test.tsx               # list/create/edit/delete-guard/status-toggle/search/logo-upload
 │       ├── categories/CategoriesPage.test.tsx         # tree render, all 4 hierarchy errors, combined delete-guard, status/search
 │       ├── categorySpecifications/CategorySpecificationsPage.test.tsx  # synthetic-empty render, full-replace PUT, each PATCH op, in-use guard (field + group)
-│       └── categoryVariants/CategoryVariantsPage.test.tsx        # synthetic-empty render, full-replace PUT, unguarded deleteAxis, updateAxis toggle, options visibility
+│       ├── categoryVariants/CategoryVariantsPage.test.tsx        # synthetic-empty render, full-replace PUT, unguarded deleteAxis, updateAxis toggle, options visibility
+│       └── products/ProductsPage.test.tsx                  # list+resolved names, search/status/lowStock composition, stock quick-edit, archive/restore, detail view (all variants)
 └── src/
     ├── main.tsx
     ├── index.css
@@ -92,7 +100,7 @@ admin-app/
     ├── config/env.ts
     ├── store/{authSlice.ts,api.ts,store.ts}
     ├── app/App.tsx
-    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/uploadsApi.ts,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx,LogoUploader.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx,ImageUploader.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},landing/LandingPlaceholder.tsx}
+    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/uploadsApi.ts,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx,LogoUploader.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx,ImageUploader.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx},landing/LandingPlaceholder.tsx}
 ```
 
 ## Config

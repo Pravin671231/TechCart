@@ -7,6 +7,8 @@ import { BrandsPage } from "@/features/brands/BrandsPage";
 import { CategoriesPage } from "@/features/categories/CategoriesPage";
 import { CategorySpecificationsPage } from "@/features/categorySpecifications/CategorySpecificationsPage";
 import { CategoryVariantsPage } from "@/features/categoryVariants/CategoryVariantsPage";
+import { ProductsPage } from "@/features/products/ProductsPage";
+import { ProductDetailPage } from "@/features/products/ProductDetailPage";
 
 export default function App() {
   return (
@@ -19,6 +21,8 @@ export default function App() {
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/specifications" element={<CategorySpecificationsPage />} />
             <Route path="/variant-types" element={<CategoryVariantsPage />} />
+            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/products/:id" element={<ProductDetailPage />} />
           </Routes>
         </AdminKeyGate>
       </BrowserRouter>
