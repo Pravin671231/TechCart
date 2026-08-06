@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import { Provider } from "react-redux";
 import { store } from "@/store/store";
 import { AdminKeyGate } from "@/features/adminKey/AdminKeyGate";
+import { AppShell } from "@/features/shell/AppShell";
 import { LandingPlaceholder } from "@/features/landing/LandingPlaceholder";
 import { BrandsPage } from "@/features/brands/BrandsPage";
 import { CategoriesPage } from "@/features/categories/CategoriesPage";
@@ -17,15 +18,17 @@ export default function App() {
       <BrowserRouter>
         <AdminKeyGate>
           <Routes>
-            <Route path="/" element={<LandingPlaceholder />} />
-            <Route path="/brands" element={<BrandsPage />} />
-            <Route path="/categories" element={<CategoriesPage />} />
-            <Route path="/specifications" element={<CategorySpecificationsPage />} />
-            <Route path="/variant-types" element={<CategoryVariantsPage />} />
-            <Route path="/products" element={<ProductsPage />} />
-            <Route path="/products/new" element={<ProductFormPage />} />
-            <Route path="/products/:id" element={<ProductDetailPage />} />
-            <Route path="/products/:id/edit" element={<ProductFormPage />} />
+            <Route element={<AppShell />}>
+              <Route path="/" element={<LandingPlaceholder />} />
+              <Route path="/brands" element={<BrandsPage />} />
+              <Route path="/categories" element={<CategoriesPage />} />
+              <Route path="/specifications" element={<CategorySpecificationsPage />} />
+              <Route path="/variant-types" element={<CategoryVariantsPage />} />
+              <Route path="/products" element={<ProductsPage />} />
+              <Route path="/products/new" element={<ProductFormPage />} />
+              <Route path="/products/:id" element={<ProductDetailPage />} />
+              <Route path="/products/:id/edit" element={<ProductFormPage />} />
+            </Route>
           </Routes>
         </AdminKeyGate>
       </BrowserRouter>
