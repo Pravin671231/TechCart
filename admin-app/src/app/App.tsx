@@ -6,6 +6,7 @@ import { LandingPlaceholder } from "@/features/landing/LandingPlaceholder";
 import { BrandsPage } from "@/features/brands/BrandsPage";
 import { CategoriesPage } from "@/features/categories/CategoriesPage";
 import { CategorySpecificationsPage } from "@/features/categorySpecifications/CategorySpecificationsPage";
+import { CategoryVariantsPage } from "@/features/categoryVariants/CategoryVariantsPage";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
             <Route path="/brands" element={<BrandsPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/specifications" element={<CategorySpecificationsPage />} />
+            <Route path="/variant-types" element={<CategoryVariantsPage />} />
           </Routes>
         </AdminKeyGate>
       </BrowserRouter>

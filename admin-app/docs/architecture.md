@@ -42,6 +42,12 @@ src/
 │   │   ├── CategorySpecificationsPage.tsx                     # routed at /specifications — in-page category <select>, mounts the editor with key={categoryId}
 │   │   ├── CategorySpecificationEditor.tsx                      # draft groups[] state, Save schema (PUT), persisted-vs-local dispatch for rename/delete/filterable-toggle
 │   │   └── SpecificationGroupCard.tsx                              # one group's field table — type-dependent inputs, move up/down, delete
+│   ├── categoryVariants/
+│   │   ├── categoryVariantsApi.ts                         # injectEndpoints: getCategoryVariants/replaceCategoryVariants (PUT)/patchCategoryVariants (PATCH)
+│   │   ├── types.ts                                         # VariantAxis/Option, CategoryVariantsView, VariantAxisPatchOperation (mirrors backend's union)
+│   │   ├── CategoryVariantsPage.tsx                           # routed at /variant-types — same in-page category <select> pattern as specifications
+│   │   ├── CategoryVariantEditor.tsx                            # draft axes[] state, Save axes (PUT), no in-use guard on delete
+│   │   └── VariantAxisRow.tsx                                     # one axis's row — type-dependent options editor, no group nesting
 │   └── landing/
 │       └── LandingPlaceholder.tsx  # first feature — static placeholder content, now links to /brands and /categories
 ├── main.tsx                    # Vite entry — mounts <App /> into #root
@@ -77,7 +83,8 @@ admin-app/
 │       ├── adminKey/AdminKeyGate.test.tsx         # prompt-vs-children gating, key-submission round trip
 │       ├── brands/BrandsPage.test.tsx               # list/create/edit/delete-guard/status-toggle/search/logo-upload
 │       ├── categories/CategoriesPage.test.tsx         # tree render, all 4 hierarchy errors, combined delete-guard, status/search
-│       └── categorySpecifications/CategorySpecificationsPage.test.tsx  # synthetic-empty render, full-replace PUT, each PATCH op, in-use guard (field + group)
+│       ├── categorySpecifications/CategorySpecificationsPage.test.tsx  # synthetic-empty render, full-replace PUT, each PATCH op, in-use guard (field + group)
+│       └── categoryVariants/CategoryVariantsPage.test.tsx        # synthetic-empty render, full-replace PUT, unguarded deleteAxis, updateAxis toggle, options visibility
 └── src/
     ├── main.tsx
     ├── index.css
@@ -85,7 +92,7 @@ admin-app/
     ├── config/env.ts
     ├── store/{authSlice.ts,api.ts,store.ts}
     ├── app/App.tsx
-    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/uploadsApi.ts,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx,LogoUploader.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx,ImageUploader.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},landing/LandingPlaceholder.tsx}
+    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/uploadsApi.ts,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx,LogoUploader.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx,ImageUploader.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},landing/LandingPlaceholder.tsx}
 ```
 
 ## Config
