@@ -192,6 +192,10 @@ export function ProductList({
                       <Link to={`/products/${product._id}`} className="text-primary-600 hover:underline">
                         View
                       </Link>
+                      {" · "}
+                      <Link to={`/products/${product._id}/edit`} className="text-primary-600 hover:underline">
+                        Edit
+                      </Link>
                       {product.status === "archived" ? (
                         <>
                           {" · "}

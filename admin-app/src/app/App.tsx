@@ -9,6 +9,7 @@ import { CategorySpecificationsPage } from "@/features/categorySpecifications/Ca
 import { CategoryVariantsPage } from "@/features/categoryVariants/CategoryVariantsPage";
 import { ProductsPage } from "@/features/products/ProductsPage";
 import { ProductDetailPage } from "@/features/products/ProductDetailPage";
+import { ProductFormPage } from "@/features/products/productForm/ProductFormPage";
 
 export default function App() {
   return (
@@ -22,7 +23,9 @@ export default function App() {
             <Route path="/specifications" element={<CategorySpecificationsPage />} />
             <Route path="/variant-types" element={<CategoryVariantsPage />} />
             <Route path="/products" element={<ProductsPage />} />
+            <Route path="/products/new" element={<ProductFormPage />} />
             <Route path="/products/:id" element={<ProductDetailPage />} />
+            <Route path="/products/:id/edit" element={<ProductFormPage />} />
           </Routes>
         </AdminKeyGate>
       </BrowserRouter>

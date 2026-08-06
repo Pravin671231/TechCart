@@ -1,6 +1,14 @@
 import { api, unwrapData, unwrapList } from "@/store/api";
 import type { ApiSuccessEnvelope, ApiSuccessListEnvelope, Pagination } from "@/store/api";
-import type { Product, ProductSort, ProductStatus } from "./types";
+import type {
+  AddVariantInput,
+  CreateProductInput,
+  Product,
+  ProductSort,
+  ProductStatus,
+  UpdateProductInput,
+  UpdateVariantInput,
+} from "./types";
 
 export interface ListProductsParams {
   page?: number;
@@ -19,6 +27,22 @@ export interface UpdateProductStatusArgs {
 export interface UpdateProductStockArgs {
   id: string;
   stock: number;
+}
+
+export interface UpdateProductArgs {
+  id: string;
+  patch: UpdateProductInput;
+}
+
+export interface AddVariantArgs {
+  productId: string;
+  body: AddVariantInput;
+}
+
+export interface UpdateVariantArgs {
+  productId: string;
+  variantId: string;
+  patch: UpdateVariantInput;
 }
 
 export const productsApi = api.injectEndpoints({
@@ -53,6 +77,34 @@ export const productsApi = api.injectEndpoints({
       transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
       invalidatesTags: ["Product"],
     }),
+    createProduct: build.mutation<Product, CreateProductInput>({
+      query: (body) => ({ url: "/products", method: "POST", body }),
+      transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
+      invalidatesTags: ["Product"],
+    }),
+    updateProduct: build.mutation<Product, UpdateProductArgs>({
+      query: ({ id, patch }) => ({ url: `/products/${id}`, method: "PATCH", body: patch }),
+      transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
+      invalidatesTags: ["Product"],
+    }),
+    addVariant: build.mutation<Product, AddVariantArgs>({
+      query: ({ productId, body }) => ({
+        url: `/products/${productId}/variants`,
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
+      invalidatesTags: ["Product"],
+    }),
+    updateVariant: build.mutation<Product, UpdateVariantArgs>({
+      query: ({ productId, variantId, patch }) => ({
+        url: `/products/${productId}/variants/${variantId}`,
+        method: "PATCH",
+        body: patch,
+      }),
+      transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
+      invalidatesTags: ["Product"],
+    }),
   }),
 });
 
@@ -61,4 +113,8 @@ export const {
   useGetProductQuery,
   useUpdateProductStatusMutation,
   useUpdateProductStockMutation,
+  useCreateProductMutation,
+  useUpdateProductMutation,
+  useAddVariantMutation,
+  useUpdateVariantMutation,
 } = productsApi;

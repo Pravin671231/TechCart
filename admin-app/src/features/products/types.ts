@@ -66,3 +66,51 @@ export interface Product {
 }
 
 export type ProductSort = "-createdAt" | "createdAt" | "name" | "-name" | "mrp" | "-mrp" | "stock" | "-stock";
+
+// Request-side image shape — distinct from ProductImage (the response
+// shape): the backend only ever accepts a freshly presigned/consumed
+// objectKey, never a url, and never returns objectKey back once consumed.
+export interface ProductImageInput {
+  objectKey: string;
+  alt?: string;
+  isPrimary?: boolean;
+}
+
+export interface CreateProductInput {
+  name: string;
+  description: string;
+  sku: string;
+  brand: string;
+  category: string;
+  images: ProductImageInput[];
+  specifications?: ProductSpecificationGroup[];
+  mrp: number;
+  discount?: number;
+  stock: number;
+  lowStockThreshold?: number;
+  isFeatured?: boolean;
+  metaTitle?: string;
+  metaDescription?: string;
+}
+
+// sku is immutable after create (FR-CAT-004) — omitted entirely, not just
+// optional, so a client-submitted sku on update is a type error, not just
+// silently ignored.
+export type UpdateProductInput = Partial<Omit<CreateProductInput, "sku">>;
+
+export interface ProductVariantAttributeInput {
+  name: string;
+  value: string;
+}
+
+export interface AddVariantInput {
+  sku: string;
+  attributes: ProductVariantAttributeInput[];
+  images?: ProductImageInput[];
+  mrp: number;
+  discount?: number;
+  stock: number;
+  weight?: number;
+}
+
+export type UpdateVariantInput = Partial<AddVariantInput> & { active?: boolean };
