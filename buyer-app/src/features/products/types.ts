@@ -43,3 +43,15 @@ export type GetCategoryProductsArgs = {
   page: number;
   sort: ProductSort;
 } & CategoryProductFilters;
+
+// Relevance only means something alongside a keyword — search is the only
+// screen that offers it, and it's the default there (FR-CAT-075).
+export type SearchProductSort = "relevance" | ProductSort;
+
+export type SearchProductFilters = CategoryProductFilters & { category?: string };
+
+export type GetSearchProductsArgs = {
+  q: string;
+  page: number;
+  sort: SearchProductSort;
+} & SearchProductFilters;
