@@ -169,8 +169,9 @@ describe("ProductsPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Archive" }));
     expect(await screen.findByText("Archived")).toBeInTheDocument();
+    const restoreButton = await screen.findByRole("button", { name: "Restore" });
 
-    fireEvent.click(screen.getByRole("button", { name: "Restore" }));
+    fireEvent.click(restoreButton);
     expect(await screen.findByText("Draft")).toBeInTheDocument();
   });
 
