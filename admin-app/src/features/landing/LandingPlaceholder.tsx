@@ -15,6 +15,9 @@ export function LandingPlaceholder() {
         <Link to="/specifications" className="text-primary-600 hover:underline">
           Category specifications
         </Link>
+        <Link to="/variant-types" className="text-primary-600 hover:underline">
+          Category variant types
+        </Link>
       </div>
     </main>
   );
