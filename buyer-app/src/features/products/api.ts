@@ -4,6 +4,7 @@ import type {
   GetProductsArgs,
   GetProductsResult,
   GetSearchProductsArgs,
+  PublicProductDetail,
   PublicProductListItem,
 } from "./types";
 
@@ -65,8 +66,18 @@ export const productsApi = api.injectEndpoints({
       },
       providesTags: ["Product"],
     }),
+    getProductBySlug: builder.query<PublicProductDetail, string>({
+      query: (slug) => ({ url: `/api/products/${slug}` }),
+      transformResponse: (response: unknown): PublicProductDetail =>
+        response as PublicProductDetail,
+      providesTags: ["Product"],
+    }),
   }),
 });
 
-export const { useGetProductsQuery, useGetCategoryProductsQuery, useSearchProductsQuery } =
-  productsApi;
+export const {
+  useGetProductsQuery,
+  useGetCategoryProductsQuery,
+  useSearchProductsQuery,
+  useGetProductBySlugQuery,
+} = productsApi;

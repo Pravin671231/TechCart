@@ -55,3 +55,45 @@ export type GetSearchProductsArgs = {
   page: number;
   sort: SearchProductSort;
 } & SearchProductFilters;
+
+export type ProductVariantAttribute = { name: string; value: string };
+
+export type PublicProductVariant = {
+  _id: string;
+  sku: string;
+  attributes: ProductVariantAttribute[];
+  images: ProductImageRef[];
+  mrp: number;
+  discount: number;
+  sellingPrice: number;
+  availability: ProductAvailability;
+  weight?: number;
+};
+
+export type ProductSpecificationValue = { name: string; value: string | number | boolean };
+export type ProductSpecificationGroup = {
+  groupName: string;
+  values: ProductSpecificationValue[];
+};
+
+export type PublicProductDetail = {
+  _id: string;
+  name: string;
+  slug: string;
+  sku: string;
+  description: string;
+  brand: ProductBrandRef;
+  category: ProductBrandRef;
+  images: ProductImageRef[];
+  mrp: number;
+  discount: number;
+  sellingPrice: number;
+  availability: ProductAvailability;
+  isFeatured: boolean;
+  specifications: ProductSpecificationGroup[];
+  hasVariants: boolean;
+  defaultVariantId?: string;
+  variants: PublicProductVariant[];
+  metaTitle: string;
+  metaDescription: string;
+};
