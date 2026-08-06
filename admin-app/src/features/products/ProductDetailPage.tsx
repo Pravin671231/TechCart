@@ -54,19 +54,27 @@ export function ProductDetailPage() {
           <span className="mx-1 text-neutral-300">/</span>
           {product.name}
         </h1>
-        <label className="flex items-center gap-2 text-sm">
-          <span className="text-neutral-500">Change status</span>
-          <select
-            value={product.status}
-            disabled={isChangingStatus}
-            onChange={(event) => void handleStatusChange(event.target.value as ProductStatus)}
-            className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 font-medium text-neutral-600"
+        <div className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2">
+            <span className="text-neutral-500">Change status</span>
+            <select
+              value={product.status}
+              disabled={isChangingStatus}
+              onChange={(event) => void handleStatusChange(event.target.value as ProductStatus)}
+              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 font-medium text-neutral-600"
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </select>
+          </label>
+          <Link
+            to={`/products/${product._id}/edit`}
+            className="rounded-md bg-primary-600 px-3 py-1.5 font-medium text-white hover:bg-primary-700"
           >
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-            <option value="archived">Archived</option>
-          </select>
-        </label>
+            Edit
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">

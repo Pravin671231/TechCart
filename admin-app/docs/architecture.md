@@ -54,7 +54,14 @@ src/
 │   │   ├── money.ts                                           # formatPrice() — Intl.NumberFormat("en-IN", {style:"currency",currency:"INR"})
 │   │   ├── ProductsPage.tsx                                     # routed at /products — owns search/status/lowStock/page state
 │   │   ├── ProductList.tsx                                        # table + inline stock quick-edit + archive/restore + pagination
-│   │   └── ProductDetailPage.tsx                                    # routed at /products/:id — read-only, every field + all variants
+│   │   ├── ProductDetailPage.tsx                                    # routed at /products/:id — read-only, every field + all variants
+│   │   └── productForm/
+│   │       ├── ProductFormPage.tsx                                     # routed at /products/new and /products/:id/edit
+│   │       ├── ProductForm.tsx                                          # basics/pricing/SEO state, orchestrates the pieces below, create-vs-update submit
+│   │       ├── ProductImagesEditor.tsx                                   # 1-8 (product) or 0-2 (variant) presign-upload widget w/ primary selection
+│   │       ├── ProductSpecificationsFields.tsx                           # dynamic inputs from the selected category's specification schema
+│   │       ├── specificationValues.ts                                     # SpecificationValues type + specKey() — split out for react-refresh's export rule
+│   │       └── ProductVariantsEditor.tsx                                   # embedded variant list/add/edit, one control per category variant axis
 │   └── landing/
 │       └── LandingPlaceholder.tsx  # first feature — static placeholder content, now links to /brands and /categories
 ├── main.tsx                    # Vite entry — mounts <App /> into #root
@@ -92,7 +99,8 @@ admin-app/
 │       ├── categories/CategoriesPage.test.tsx         # tree render, all 4 hierarchy errors, combined delete-guard, status/search
 │       ├── categorySpecifications/CategorySpecificationsPage.test.tsx  # synthetic-empty render, full-replace PUT, each PATCH op, in-use guard (field + group)
 │       ├── categoryVariants/CategoryVariantsPage.test.tsx        # synthetic-empty render, full-replace PUT, unguarded deleteAxis, updateAxis toggle, options visibility
-│       └── products/ProductsPage.test.tsx                  # list+resolved names, search/status/lowStock composition, stock quick-edit, archive/restore, detail view (all variants)
+│       ├── products/ProductsPage.test.tsx                  # list+resolved names, search/status/lowStock composition, stock quick-edit, archive/restore, detail view (all variants)
+│       └── products/ProductForm.test.tsx                     # SKU disabled on edit, category-change re-fetch, create+upload flow, SPECIFICATION_VALIDATION_FAILED, add-variant
 └── src/
     ├── main.tsx
     ├── index.css
@@ -100,7 +108,7 @@ admin-app/
     ├── config/env.ts
     ├── store/{authSlice.ts,api.ts,store.ts}
     ├── app/App.tsx
-    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/uploadsApi.ts,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx,LogoUploader.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx,ImageUploader.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx},landing/LandingPlaceholder.tsx}
+    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/uploadsApi.ts,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx,LogoUploader.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx,ImageUploader.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx,productForm/{ProductFormPage.tsx,ProductForm.tsx,ProductImagesEditor.tsx,ProductSpecificationsFields.tsx,specificationValues.ts,ProductVariantsEditor.tsx}},landing/LandingPlaceholder.tsx}
 ```
 
 ## Config
