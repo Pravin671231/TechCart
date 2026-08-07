@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useGetCategoriesQuery } from "./categoriesApi";
 import { CategoryForm } from "./CategoryForm";
 import { CategoryList } from "./CategoryList";

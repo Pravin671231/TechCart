@@ -4,6 +4,8 @@ import type {
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from "react";
+import { cva } from "class-variance-authority";
+import { cn } from "@/lib/utils";
 
 const INPUT_CLASS =
   "mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none disabled:bg-neutral-50 disabled:text-neutral-500";
@@ -64,7 +66,7 @@ export function TextField({
       error={error}
       containerClassName={containerClassName}
     >
-      <input id={id} className={[INPUT_CLASS, className].filter(Boolean).join(" ")} {...rest} />
+      <input id={id} className={cn(INPUT_CLASS, className)} {...rest} />
     </FieldShell>
   );
 }
@@ -96,11 +98,7 @@ export function TextAreaField({
       error={error}
       containerClassName={containerClassName}
     >
-      <textarea
-        id={id}
-        className={[INPUT_CLASS, height, className].filter(Boolean).join(" ")}
-        {...rest}
-      />
+      <textarea id={id} className={cn(INPUT_CLASS, height, className)} {...rest} />
     </FieldShell>
   );
 }
@@ -134,12 +132,37 @@ export function SelectField({
       error={error}
       containerClassName={containerClassName}
     >
-      <select id={id} className={`${INPUT_CLASS} bg-white`} {...rest}>
+      <select id={id} className={cn(INPUT_CLASS, "bg-white")} {...rest}>
         {children}
       </select>
     </FieldShell>
   );
 }
+
+const readOnlyValueVariants = cva(
+  "mt-1 block rounded-md bg-neutral-50 px-3 py-2 text-neutral-500",
+  {
+    variants: {
+      size: {
+        xs: "text-xs",
+        sm: "text-sm",
+      },
+      mono: {
+        true: "font-mono",
+        false: "",
+      },
+      bordered: {
+        true: "border border-neutral-200",
+        false: "",
+      },
+    },
+    defaultVariants: {
+      size: "xs",
+      mono: false,
+      bordered: false,
+    },
+  },
+);
 
 export interface ReadOnlyFieldProps {
   id?: string;
@@ -165,11 +188,7 @@ export function ReadOnlyField({
       <span id={id} className="block text-sm font-medium text-neutral-700">
         {label}
       </span>
-      <span
-        className={`mt-1 block rounded-md bg-neutral-50 px-3 py-2 text-neutral-500 ${size === "xs" ? "text-xs" : "text-sm"} ${mono ? "font-mono" : ""} ${bordered ? "border border-neutral-200" : ""}`}
-      >
-        {value}
-      </span>
+      <span className={readOnlyValueVariants({ size, mono, bordered })}>{value}</span>
       {hint && <p className="mt-1 text-[11px] text-neutral-400">{hint}</p>}
     </div>
   );

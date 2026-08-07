@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 const VARIANT_CLASS = {
   error: "border-red-200 bg-red-50 text-red-800",
@@ -14,9 +15,7 @@ export function InlineAlert({ variant = "error", children, className }: InlineAl
   return (
     <div
       role="alert"
-      className={["rounded-md border p-3 text-sm", VARIANT_CLASS[variant], className]
-        .filter(Boolean)
-        .join(" ")}
+      className={cn("rounded-md border p-3 text-sm", VARIANT_CLASS[variant], className)}
     >
       {children}
     </div>

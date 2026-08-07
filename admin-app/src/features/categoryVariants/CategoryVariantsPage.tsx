@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useGetCategoriesQuery } from "@/features/categories/categoriesApi";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { CategoryVariantEditor } from "./CategoryVariantEditor";
 
 export function CategoryVariantsPage() {

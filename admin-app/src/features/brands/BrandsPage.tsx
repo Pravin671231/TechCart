@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { BrandForm } from "./BrandForm";
 import { BrandList } from "./BrandList";
 import type { BrandListItem } from "./types";

@@ -1,4 +1,4 @@
-import { Checkbox } from "@/components/ui/Checkbox";
+import { Checkbox } from "@/components/form/Checkbox";
 import type { VariantAxis, VariantAxisType } from "./types";
 
 const AXIS_TYPES: VariantAxisType[] = ["text", "select", "color", "number"];

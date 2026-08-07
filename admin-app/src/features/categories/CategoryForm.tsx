@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { getApiErrorEnvelope } from "@/store/api";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeading } from "@/components/ui/Card";
-import { ReadOnlyField, SelectField, TextAreaField, TextField } from "@/components/ui/FormField";
+import { ReadOnlyField, SelectField, TextAreaField, TextField } from "@/components/form/FormField";
 import { SingleImageUploader } from "@/features/uploads/SingleImageUploader";
 import { useCreateCategoryMutation, useUpdateCategoryMutation } from "./categoriesApi";
 import type { Category, CategoryListItem, CreateCategoryInput, UpdateCategoryInput } from "./types";

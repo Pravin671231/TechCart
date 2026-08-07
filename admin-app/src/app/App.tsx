@@ -2,7 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import { Provider } from "react-redux";
 import { store } from "@/store/store";
 import { AdminKeyGate } from "@/features/adminKey/AdminKeyGate";
-import { AppShell } from "@/features/shell/AppShell";
+import { AppShell } from "@/components/layout/AppShell";
 import { LandingPlaceholder } from "@/features/landing/LandingPlaceholder";
 import { BrandsPage } from "@/features/brands/BrandsPage";
 import { CategoriesPage } from "@/features/categories/CategoriesPage";

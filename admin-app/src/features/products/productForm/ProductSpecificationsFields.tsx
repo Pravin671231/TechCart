@@ -1,5 +1,5 @@
-import { Checkbox } from "@/components/ui/Checkbox";
-import { SelectField, TextField } from "@/components/ui/FormField";
+import { Checkbox } from "@/components/form/Checkbox";
+import { SelectField, TextField } from "@/components/form/FormField";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useGetCategorySpecificationsQuery } from "@/features/categorySpecifications/categorySpecificationsApi";
 import type { SpecificationField } from "@/features/categorySpecifications/types";

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 export interface TableProps {
   minWidthClassName?: string;
@@ -9,15 +10,11 @@ export interface TableProps {
 export function Table({ minWidthClassName, bordered = true, children }: TableProps) {
   return (
     <div
-      className={
-        bordered ? "overflow-x-auto rounded-lg border border-neutral-200" : "overflow-x-auto"
-      }
+      className={cn(
+        bordered ? "overflow-x-auto rounded-lg border border-neutral-200" : "overflow-x-auto",
+      )}
     >
-      <table
-        className={["w-full border-collapse text-sm", minWidthClassName].filter(Boolean).join(" ")}
-      >
-        {children}
-      </table>
+      <table className={cn("w-full border-collapse text-sm", minWidthClassName)}>{children}</table>
     </div>
   );
 }

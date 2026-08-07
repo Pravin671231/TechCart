@@ -4,7 +4,7 @@ import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import { LoadingState } from "@/components/ui/LoadingState";
-import { SearchInput } from "@/components/ui/SearchInput";
+import { SearchInput } from "@/components/form/SearchInput";
 import { useDeleteBrandMutation, useGetBrandsQuery, useUpdateBrandStatusMutation } from "./brandsApi";
 import type { BrandListItem } from "./types";
 

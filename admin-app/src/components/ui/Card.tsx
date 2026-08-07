@@ -1,4 +1,28 @@
 import type { HTMLAttributes, ReactNode } from "react";
+import { cva } from "class-variance-authority";
+import { cn } from "@/lib/utils";
+
+const cardVariants = cva("rounded-lg border", {
+  variants: {
+    padding: {
+      sm: "p-3",
+      md: "p-4",
+    },
+    tone: {
+      default: "",
+      muted: "bg-neutral-50",
+    },
+    dashed: {
+      true: "border-dashed border-neutral-300",
+      false: "border-neutral-200",
+    },
+  },
+  defaultVariants: {
+    padding: "md",
+    tone: "default",
+    dashed: false,
+  },
+});
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   padding?: "sm" | "md";
@@ -15,17 +39,8 @@ export function Card({
   children,
   ...rest
 }: CardProps) {
-  const paddingClass = padding === "sm" ? "p-3" : "p-4";
-  const borderClass = dashed ? "border-dashed border-neutral-300" : "border-neutral-200";
-  const toneClass = tone === "muted" ? "bg-neutral-50" : "";
-
   return (
-    <div
-      className={["rounded-lg border", borderClass, paddingClass, toneClass, className]
-        .filter(Boolean)
-        .join(" ")}
-      {...rest}
-    >
+    <div className={cn(cardVariants({ padding, tone, dashed }), className)} {...rest}>
       {children}
     </div>
   );
@@ -38,7 +53,7 @@ export interface CardHeadingProps {
 
 export function CardHeading({ children, spacing = "mb-3" }: CardHeadingProps) {
   return (
-    <h2 className={`${spacing} text-xs font-semibold tracking-wide text-neutral-700 uppercase`}>
+    <h2 className={cn(spacing, "text-xs font-semibold tracking-wide text-neutral-700 uppercase")}>
       {children}
     </h2>
   );

@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 export interface SearchInputProps {
   id: string;
   label: string;
@@ -26,7 +28,11 @@ export function SearchInput({
         placeholder={placeholder}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`h-9 ${width} rounded-md border border-neutral-300 px-3 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none`}
+        className={cn(
+          "h-9",
+          width,
+          "rounded-md border border-neutral-300 px-3 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none",
+        )}
       />
     </>
   );

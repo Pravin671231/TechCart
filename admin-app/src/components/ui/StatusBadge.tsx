@@ -1,13 +1,25 @@
 import type { ReactNode } from "react";
+import { cva } from "class-variance-authority";
 
 type Tone = "success" | "neutral" | "warning";
 type Shape = "pill" | "rounded";
 
-const TONE_CLASS: Record<Tone, string> = {
-  success: "bg-green-100 text-green-700",
-  neutral: "bg-neutral-100 text-neutral-600",
-  warning: "bg-amber-100 text-amber-700",
-};
+const statusBadgeVariants = cva("px-2 py-0.5 text-xs font-medium", {
+  variants: {
+    tone: {
+      success: "bg-green-100 text-green-700",
+      neutral: "bg-neutral-100 text-neutral-600",
+      warning: "bg-amber-100 text-amber-700",
+    },
+    shape: {
+      pill: "rounded-full",
+      rounded: "rounded-md",
+    },
+  },
+  defaultVariants: {
+    shape: "rounded",
+  },
+});
 
 export interface StatusBadgeProps {
   tone: Tone;
@@ -17,7 +29,7 @@ export interface StatusBadgeProps {
 }
 
 export function StatusBadge({ tone, shape = "rounded", children, onClick }: StatusBadgeProps) {
-  const className = `${shape === "pill" ? "rounded-full" : "rounded-md"} px-2 py-0.5 text-xs font-medium ${TONE_CLASS[tone]}`;
+  const className = statusBadgeVariants({ tone, shape });
 
   if (onClick) {
     return (

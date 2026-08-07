@@ -1,4 +1,4 @@
-import { Checkbox } from "@/components/ui/Checkbox";
+import { Checkbox } from "@/components/form/Checkbox";
 import { Table } from "@/components/ui/Table";
 import type { SpecificationField, SpecificationFieldType, SpecificationGroup } from "./types";
 

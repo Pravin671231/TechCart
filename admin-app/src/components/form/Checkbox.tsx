@@ -1,4 +1,5 @@
 import type { InputHTMLAttributes, ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 export interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> {
   label: ReactNode;
@@ -14,10 +15,10 @@ export function Checkbox({
   ...rest
 }: CheckboxProps) {
   return (
-    <label className={`flex items-center ${labelClassName}`}>
+    <label className={cn("flex items-center", labelClassName)}>
       <input
         type="checkbox"
-        className={["h-4 w-4 rounded border-neutral-300", className].filter(Boolean).join(" ")}
+        className={cn("h-4 w-4 rounded border-neutral-300", className)}
         {...rest}
       />
       {visuallyHiddenLabel ? <span className="sr-only">{label}</span> : label}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { LinkButton } from "@/components/ui/Button";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { ProductList } from "./ProductList";
 import type { ProductStatus } from "./types";
 
