@@ -8,8 +8,14 @@ Implementation-level detail for `admin-app/`. This is the concrete companion to 
 
 ```
 src/
+├── App.tsx                  # top-level composition root: Provider(store) > BrowserRouter > AdminKeyGate > MainRoutes
 ├── app/
-│   └── App.tsx              # Provider(store) > BrowserRouter > AdminKeyGate > Routes(AppShell layout route) — renders LandingPlaceholder at "/"
+│   └── store/                  # Redux/RTK Query state — the sole thing app/ now holds
+│       ├── authSlice.ts           # adminKey state, sessionStorage-backed
+│       ├── api.ts                   # RTK Query createApi + X-Admin-Key header + 401 guard
+│       └── store.ts                   # configureStore + createStore() factory (for isolated test stores)
+├── routes/
+│   └── mainRoutes.tsx          # MainRoutes: <Routes> tree — AppShell layout route wrapping all page routes, renders LandingPlaceholder at "/"
 ├── components/
 │   ├── ui/                     # generic reusable primitives, no domain semantics
 │   │   ├── Button.tsx             # cva() variants: primary/secondary/outline × sm/md
@@ -32,10 +38,6 @@ src/
 │   └── env.ts                  # API_URL / ADMIN_API_BASE_URL, read from VITE_API_URL (falls back to http://localhost:4000)
 ├── lib/
 │   └── utils.ts                # cn() = twMerge(clsx(inputs)) — the required way to build any conditional/mergeable className app-wide
-├── store/
-│   ├── authSlice.ts               # adminKey state, sessionStorage-backed
-│   ├── api.ts                      # RTK Query createApi + X-Admin-Key header + 401 guard — see AGENTS.md
-│   └── store.ts                     # configureStore + createStore() factory (for isolated test stores)
 ├── features/
 │   ├── adminKey/
 │   │   ├── AdminKeyGate.tsx        # blocks all routes until an admin key is set
@@ -89,7 +91,7 @@ src/
 └── index.css                     # @import "tailwindcss";
 ```
 
-See `AGENTS.md` for the full `app/` vs `features/` vs `components/` convention, its `cn()`/`class-variance-authority` styling section, and its Redux/RTK Query section for the `src/store/` and `src/features/adminKey/` internals.
+See `AGENTS.md` for the full `app/` vs `routes/` vs `features/` vs `components/` convention, its `cn()`/`class-variance-authority` styling section, and its Redux/RTK Query section for the `src/app/store/` and `src/features/adminKey/` internals.
 
 ## Current file tree
 
@@ -110,7 +112,7 @@ admin-app/
 ├── CLAUDE.md                                 # @AGENTS.md (Claude Code import syntax)
 ├── docs/architecture.md                        # this file
 ├── __tests__/
-│   ├── app.test.tsx                              # renders src/app/App.tsx, seeds an admin key first, asserts placeholder content
+│   ├── app.test.tsx                              # renders src/App.tsx, seeds an admin key first, asserts placeholder content
 │   ├── mocks/{handlers.ts,server.ts}                # shared MSW server, extended by later feature tests
 │   ├── utils/renderWithStore.tsx                      # Provider-wrapped render helper using an isolated createStore()
 │   ├── store/{authSlice.test.ts,api.test.ts}            # authSlice reducers + sessionStorage sync; X-Admin-Key header + 401 guard
@@ -125,12 +127,13 @@ admin-app/
 │           └── products/ProductForm.test.tsx                             # SKU disabled on edit, category-change re-fetch, create+upload flow, SPECIFICATION_VALIDATION_FAILED, add-variant
 └── src/
     ├── main.tsx
+    ├── App.tsx
     ├── index.css
     ├── vite-env.d.ts
     ├── config/env.ts
     ├── lib/utils.ts
-    ├── store/{authSlice.ts,api.ts,store.ts}
-    ├── app/App.tsx
+    ├── app/store/{authSlice.ts,api.ts,store.ts}
+    ├── routes/mainRoutes.tsx
     ├── components/{ui/{Button.tsx,Card.tsx,InlineAlert.tsx,LoadingState.tsx,Pagination.tsx,StatusBadge.tsx,Table.tsx},form/{Checkbox.tsx,FormField.tsx,SearchInput.tsx},layout/{AppShell.tsx,SidebarNav.tsx,navItems.ts,PageHeader.tsx}}
     └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/{uploadsApi.ts,SingleImageUploader.tsx},product-catalog/{brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,statusPresentation.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx,productForm/{ProductFormPage.tsx,ProductForm.tsx,ProductImagesEditor.tsx,ProductSpecificationsFields.tsx,specificationValues.ts,ProductVariantsEditor.tsx}}},landing/LandingPlaceholder.tsx}
 ```
@@ -147,7 +150,7 @@ admin-app/
 ## Testing
 
 - Vitest (`environment: "jsdom"`) + React Testing Library + MSW, per root `docs/architecture.md` §8 — same shape as `buyer-app` (see `buyer-app/docs/architecture.md`). `vitest.config.ts` reuses the `@vitejs/plugin-react` and `vite-tsconfig-paths` devDependencies already installed for `vite.config.ts`, rather than adding a second copy.
-- Test files live in workspace-root `__tests__/`, not colocated in `src/` — `__tests__/app.test.tsx` renders `App` directly, since `src/app/App.tsx` is itself the router (`BrowserRouter` + `Routes`), unlike `buyer-app` where Next owns routing externally to the page component.
+- Test files live in workspace-root `__tests__/`, not colocated in `src/` — `__tests__/app.test.tsx` renders `App` directly (`src/App.tsx`), since routing is composed in-app via `react-router`'s `BrowserRouter` + `src/routes/mainRoutes.tsx`, unlike `buyer-app` where Next owns routing externally to the page component.
 - `__tests__/mocks/server.ts` + `handlers.ts` hold one shared MSW server, started/stopped once in `vitest.setup.ts`; later feature tests extend `handlers.ts` or call `server.use(...)` per-test rather than re-wiring MSW from scratch.
 - `__tests__/features/` mirrors `src/features/`'s own layout, including the `product-catalog/` nesting — a test file's directory depth always matches its source counterpart, so relative imports to shared `__tests__` helpers (`../../../mocks/server`, `../../../utils/renderWithStore`) stay in sync with wherever the source feature actually sits.
 - No coverage threshold yet, matching `backend`/`buyer-app`'s "reporting only" stance.

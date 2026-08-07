@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useDispatch } from "react-redux";
-import { setAdminKey } from "@/store/authSlice";
+import { setAdminKey } from "@/app/store/authSlice";
 
 export function AdminKeyPrompt() {
   const dispatch = useDispatch();

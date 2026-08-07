@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useSelector } from "react-redux";
-import type { RootState } from "@/store/store";
+import type { RootState } from "@/app/store/store";
 import { AdminKeyPrompt } from "./AdminKeyPrompt";
 
 export function AdminKeyGate({ children }: { children: ReactNode }) {

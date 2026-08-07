@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import reducer, { ADMIN_KEY_STORAGE_KEY, clearAdminKey, setAdminKey } from "@/store/authSlice";
+import reducer, { ADMIN_KEY_STORAGE_KEY, clearAdminKey, setAdminKey } from "@/app/store/authSlice";
 
 describe("authSlice", () => {
   beforeEach(() => {
@@ -26,7 +26,7 @@ describe("authSlice", () => {
   it("hydrates adminKey from sessionStorage on module load", async () => {
     sessionStorage.setItem(ADMIN_KEY_STORAGE_KEY, "seeded-key");
     vi.resetModules();
-    const { default: freshReducer } = await import("@/store/authSlice");
+    const { default: freshReducer } = await import("@/app/store/authSlice");
     expect(freshReducer(undefined, { type: "@@INIT" }).adminKey).toBe("seeded-key");
   });
 });

@@ -1,5 +1,5 @@
-import { api, unwrapData } from "@/store/api";
-import type { ApiSuccessEnvelope } from "@/store/api";
+import { api, unwrapData } from "@/app/store/api";
+import type { ApiSuccessEnvelope } from "@/app/store/api";
 import type { CategoryVariantsView, VariantAxis, VariantAxisPatchOperation } from "./types";
 
 export interface ReplaceCategoryVariantsArgs {

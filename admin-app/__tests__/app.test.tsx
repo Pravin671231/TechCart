@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import App from "@/app/App";
-import { store } from "@/store/store";
-import { clearAdminKey, setAdminKey } from "@/store/authSlice";
+import App from "@/App";
+import { store } from "@/app/store/store";
+import { clearAdminKey, setAdminKey } from "@/app/store/authSlice";
 
 describe("App", () => {
   beforeEach(() => {
