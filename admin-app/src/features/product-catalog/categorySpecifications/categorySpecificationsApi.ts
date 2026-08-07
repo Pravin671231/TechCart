@@ -1,6 +1,7 @@
 import { api } from "@/app/api/baseApi";
 import { unwrapData } from "@/app/api/apiResponse";
 import type { ApiSuccessEnvelope } from "@/app/api/api.types";
+import { PRODUCT_CATALOG_ENDPOINTS } from "../endpoints";
 import type { CategorySpecificationsView, SpecPatchOperation, SpecificationGroup } from "./types";
 
 export interface ReplaceCategorySpecificationsArgs {
@@ -16,7 +17,7 @@ export interface PatchCategorySpecificationsArgs {
 export const categorySpecificationsApi = api.injectEndpoints({
   endpoints: (build) => ({
     getCategorySpecifications: build.query<CategorySpecificationsView, string>({
-      query: (categoryId) => ({ url: `/categories/${categoryId}/specifications` }),
+      query: (categoryId) => ({ url: PRODUCT_CATALOG_ENDPOINTS.categorySpecifications.detail(categoryId) }),
       transformResponse: (response: ApiSuccessEnvelope<CategorySpecificationsView>) =>
         unwrapData(response),
       providesTags: ["CategorySpecification"],
@@ -26,7 +27,7 @@ export const categorySpecificationsApi = api.injectEndpoints({
       ReplaceCategorySpecificationsArgs
     >({
       query: ({ categoryId, specificationGroups }) => ({
-        url: `/categories/${categoryId}/specifications`,
+        url: PRODUCT_CATALOG_ENDPOINTS.categorySpecifications.detail(categoryId),
         method: "PUT",
         body: { specificationGroups },
       }),
@@ -39,7 +40,7 @@ export const categorySpecificationsApi = api.injectEndpoints({
       PatchCategorySpecificationsArgs
     >({
       query: ({ categoryId, operation }) => ({
-        url: `/categories/${categoryId}/specifications`,
+        url: PRODUCT_CATALOG_ENDPOINTS.categorySpecifications.detail(categoryId),
         method: "PATCH",
         body: operation,
       }),

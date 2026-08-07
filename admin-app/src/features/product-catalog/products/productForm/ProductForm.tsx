@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
 import { useGetBrandsQuery } from "@/features/product-catalog/brands/brandsApi";
 import { useGetCategoriesQuery } from "@/features/product-catalog/categories/categoriesApi";
+import { PRODUCT_CATALOG_ROUTES } from "@/features/product-catalog/routePaths";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { Checkbox } from "@/components/form/Checkbox";
@@ -155,11 +156,11 @@ export function ProductForm({ product }: { product: Product | null }) {
           ...(images.length > 0 ? { images: imagesPayload } : {}),
         };
         await updateProduct({ id: product._id, patch }).unwrap();
-        navigate(`/products/${product._id}`);
+        navigate(PRODUCT_CATALOG_ROUTES.products.detail(product._id));
       } else {
         const input: CreateProductInput = { ...shared, sku: sku.trim(), images: imagesPayload };
         const created = await createProduct(input).unwrap();
-        navigate(`/products/${created._id}/edit`);
+        navigate(PRODUCT_CATALOG_ROUTES.products.edit(created._id));
       }
     } catch {
       // surfaced via saveErrorMessage below
@@ -387,7 +388,7 @@ export function ProductForm({ product }: { product: Product | null }) {
           <Button type="submit" loading={isSaving} loadingLabel="Saving…">
             Save
           </Button>
-          <Button type="button" variant="secondary" onClick={() => navigate("/products")}>
+          <Button type="button" variant="secondary" onClick={() => navigate(PRODUCT_CATALOG_ROUTES.products.list)}>
             Cancel
           </Button>
         </div>

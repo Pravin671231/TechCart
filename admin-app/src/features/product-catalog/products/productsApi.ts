@@ -1,6 +1,7 @@
 import { api } from "@/app/api/baseApi";
 import { unwrapData, unwrapList } from "@/app/api/apiResponse";
 import type { ApiSuccessEnvelope, ApiSuccessListEnvelope, Pagination } from "@/app/api/api.types";
+import { PRODUCT_CATALOG_ENDPOINTS } from "../endpoints";
 import type {
   AddVariantInput,
   CreateProductInput,
@@ -53,7 +54,7 @@ export const productsApi = api.injectEndpoints({
       ListProductsParams | void
     >({
       query: (params) => ({
-        url: "/products",
+        url: PRODUCT_CATALOG_ENDPOINTS.products.list,
         params: {
           page: params?.page,
           limit: params?.limit,
@@ -67,13 +68,13 @@ export const productsApi = api.injectEndpoints({
       providesTags: ["Product"],
     }),
     getProduct: build.query<Product, string>({
-      query: (id) => ({ url: `/products/${id}` }),
+      query: (id) => ({ url: PRODUCT_CATALOG_ENDPOINTS.products.detail(id) }),
       transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
       providesTags: ["Product"],
     }),
     updateProductStatus: build.mutation<Product, UpdateProductStatusArgs>({
       query: ({ id, status }) => ({
-        url: `/products/${id}/status`,
+        url: PRODUCT_CATALOG_ENDPOINTS.products.status(id),
         method: "PATCH",
         body: { status },
       }),
@@ -82,7 +83,7 @@ export const productsApi = api.injectEndpoints({
     }),
     updateProductStock: build.mutation<Product, UpdateProductStockArgs>({
       query: ({ id, stock }) => ({
-        url: `/products/${id}/stock`,
+        url: PRODUCT_CATALOG_ENDPOINTS.products.stock(id),
         method: "PATCH",
         body: { stock },
       }),
@@ -90,18 +91,22 @@ export const productsApi = api.injectEndpoints({
       invalidatesTags: ["Product"],
     }),
     createProduct: build.mutation<Product, CreateProductInput>({
-      query: (body) => ({ url: "/products", method: "POST", body }),
+      query: (body) => ({ url: PRODUCT_CATALOG_ENDPOINTS.products.list, method: "POST", body }),
       transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
       invalidatesTags: ["Product"],
     }),
     updateProduct: build.mutation<Product, UpdateProductArgs>({
-      query: ({ id, patch }) => ({ url: `/products/${id}`, method: "PATCH", body: patch }),
+      query: ({ id, patch }) => ({
+        url: PRODUCT_CATALOG_ENDPOINTS.products.detail(id),
+        method: "PATCH",
+        body: patch,
+      }),
       transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
       invalidatesTags: ["Product"],
     }),
     addVariant: build.mutation<Product, AddVariantArgs>({
       query: ({ productId, body }) => ({
-        url: `/products/${productId}/variants`,
+        url: PRODUCT_CATALOG_ENDPOINTS.products.variants(productId),
         method: "POST",
         body,
       }),
@@ -110,7 +115,7 @@ export const productsApi = api.injectEndpoints({
     }),
     updateVariant: build.mutation<Product, UpdateVariantArgs>({
       query: ({ productId, variantId, patch }) => ({
-        url: `/products/${productId}/variants/${variantId}`,
+        url: PRODUCT_CATALOG_ENDPOINTS.products.variant(productId, variantId),
         method: "PATCH",
         body: patch,
       }),

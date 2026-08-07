@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { useGetBrandsQuery } from "@/features/product-catalog/brands/brandsApi";
 import { useGetCategoriesQuery } from "@/features/product-catalog/categories/categoriesApi";
+import { PRODUCT_CATALOG_ROUTES } from "@/features/product-catalog/routePaths";
 import { Checkbox } from "@/components/form/Checkbox";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { Pagination } from "@/components/ui/Pagination";
@@ -175,14 +176,14 @@ export function ProductList({
                   </td>
                   <td className="px-3 py-2 text-xs whitespace-nowrap text-neutral-500">
                     <Link
-                      to={`/products/${product._id}`}
+                      to={PRODUCT_CATALOG_ROUTES.products.detail(product._id)}
                       className="text-primary-600 hover:underline"
                     >
                       View
                     </Link>
                     {" · "}
                     <Link
-                      to={`/products/${product._id}/edit`}
+                      to={PRODUCT_CATALOG_ROUTES.products.edit(product._id)}
                       className="text-primary-600 hover:underline"
                     >
                       Edit

@@ -20,9 +20,9 @@ src/
 │       ├── api.types.ts                # Pagination/ApiSuccessEnvelope/ApiSuccessListEnvelope/ApiErrorEnvelope types
 │       ├── apiResponse.ts                # unwrapData/unwrapList — success-response helpers
 │       ├── apiError.ts                     # getApiErrorEnvelope — error-response helper
-│       └── ENDPOINTS.ts                      # scaffold for centralized endpoint paths — not yet populated, feature *Api.ts files still inline their own URLs
+│       └── ENDPOINTS.ts                      # re-exports PRODUCT_CATALOG_ENDPOINTS from features/product-catalog/endpoints.ts
 ├── routes/
-│   └── mainRoutes.tsx          # MainRoutes: <Routes> tree — AppShell layout route wrapping all page routes, renders LandingPlaceholder at "/"
+│   └── mainRoutes.tsx          # MainRoutes: <Routes> tree — AppShell layout route rendering LandingPlaceholder at "/" plus {ProductCatalogRoutes()}
 ├── components/
 │   ├── ui/                     # generic reusable primitives, no domain semantics
 │   │   ├── Button.tsx             # cva() variants: primary/secondary/outline × sm/md
@@ -53,6 +53,9 @@ src/
 │   │   ├── uploadsApi.ts            # presignUpload mutation + putFileToPresignedUrl (direct-to-R2 PUT), shared across features
 │   │   └── SingleImageUploader.tsx    # presign → PUT-to-R2 → preview, feature-agnostic (purpose param), used by both brands/ and categories/
 │   ├── product-catalog/        # the 5 features that together implement the Product Catalog domain — see AGENTS.md for the grouping rationale
+│   │   ├── endpoints.ts            # PRODUCT_CATALOG_ENDPOINTS — backend API paths for all 5 sub-features, re-exported by app/api/ENDPOINTS.ts
+│   │   ├── routePaths.ts             # PRODUCT_CATALOG_ROUTES — frontend page paths (+ *Pattern/builder pairs for dynamic product routes)
+│   │   ├── routes.tsx                  # ProductCatalogRoutes() — the actual <Route> elements, mounted into routes/mainRoutes.tsx
 │   │   ├── brands/
 │   │   │   ├── brandsApi.ts               # injectEndpoints: getBrands/createBrand/updateBrand/updateBrandStatus/deleteBrand
 │   │   │   ├── types.ts                     # Brand / BrandListItem / Create·UpdateBrandInput
@@ -142,7 +145,7 @@ admin-app/
     ├── app/{store/{authSlice.ts,store.ts,hooks.ts},api/{baseQuery.ts,baseApi.ts,api.types.ts,apiResponse.ts,apiError.ts,ENDPOINTS.ts}}
     ├── routes/mainRoutes.tsx
     ├── components/{ui/{Button.tsx,Card.tsx,InlineAlert.tsx,LoadingState.tsx,Pagination.tsx,StatusBadge.tsx,Table.tsx},form/{Checkbox.tsx,FormField.tsx,SearchInput.tsx},layout/{AppShell.tsx,SidebarNav.tsx,navItems.ts,PageHeader.tsx}}
-    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/{uploadsApi.ts,SingleImageUploader.tsx},product-catalog/{brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,statusPresentation.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx,productForm/{ProductFormPage.tsx,ProductForm.tsx,ProductImagesEditor.tsx,ProductSpecificationsFields.tsx,specificationValues.ts,ProductVariantsEditor.tsx}}},landing/LandingPlaceholder.tsx}
+    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/{uploadsApi.ts,SingleImageUploader.tsx},product-catalog/{endpoints.ts,routePaths.ts,routes.tsx,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,statusPresentation.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx,productForm/{ProductFormPage.tsx,ProductForm.tsx,ProductImagesEditor.tsx,ProductSpecificationsFields.tsx,specificationValues.ts,ProductVariantsEditor.tsx}}},landing/LandingPlaceholder.tsx}
 ```
 
 ## Config

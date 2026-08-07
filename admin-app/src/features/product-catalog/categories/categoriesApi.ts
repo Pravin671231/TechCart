@@ -1,6 +1,7 @@
 import { api } from "@/app/api/baseApi";
 import { unwrapData } from "@/app/api/apiResponse";
 import type { ApiSuccessEnvelope } from "@/app/api/api.types";
+import { PRODUCT_CATALOG_ENDPOINTS } from "../endpoints";
 import type { Category, CategoryListItem, CreateCategoryInput, UpdateCategoryInput } from "./types";
 
 export interface ListCategoriesParams {
@@ -21,25 +22,29 @@ export const categoriesApi = api.injectEndpoints({
   endpoints: (build) => ({
     getCategories: build.query<CategoryListItem[], ListCategoriesParams | void>({
       query: (params) => ({
-        url: "/categories",
+        url: PRODUCT_CATALOG_ENDPOINTS.categories.list,
         params: params?.search ? { search: params.search } : undefined,
       }),
       transformResponse: (response: ApiSuccessEnvelope<CategoryListItem[]>) => unwrapData(response),
       providesTags: ["Category"],
     }),
     createCategory: build.mutation<Category, CreateCategoryInput>({
-      query: (body) => ({ url: "/categories", method: "POST", body }),
+      query: (body) => ({ url: PRODUCT_CATALOG_ENDPOINTS.categories.list, method: "POST", body }),
       transformResponse: (response: ApiSuccessEnvelope<Category>) => unwrapData(response),
       invalidatesTags: ["Category"],
     }),
     updateCategory: build.mutation<Category, UpdateCategoryArgs>({
-      query: ({ id, patch }) => ({ url: `/categories/${id}`, method: "PATCH", body: patch }),
+      query: ({ id, patch }) => ({
+        url: PRODUCT_CATALOG_ENDPOINTS.categories.detail(id),
+        method: "PATCH",
+        body: patch,
+      }),
       transformResponse: (response: ApiSuccessEnvelope<Category>) => unwrapData(response),
       invalidatesTags: ["Category"],
     }),
     updateCategoryStatus: build.mutation<Category, UpdateCategoryStatusArgs>({
       query: ({ id, status }) => ({
-        url: `/categories/${id}/status`,
+        url: PRODUCT_CATALOG_ENDPOINTS.categories.status(id),
         method: "PATCH",
         body: { status },
       }),
@@ -47,7 +52,7 @@ export const categoriesApi = api.injectEndpoints({
       invalidatesTags: ["Category"],
     }),
     deleteCategory: build.mutation<null, string>({
-      query: (id) => ({ url: `/categories/${id}`, method: "DELETE" }),
+      query: (id) => ({ url: PRODUCT_CATALOG_ENDPOINTS.categories.detail(id), method: "DELETE" }),
       transformResponse: (response: ApiSuccessEnvelope<null>) => unwrapData(response),
       invalidatesTags: ["Category"],
     }),
