@@ -1,5 +1,6 @@
 import { api } from "@/app/api/baseApi";
-import { unwrapData, type ApiSuccessEnvelope } from "@/app/api/responseEnvelope";
+import { unwrapData } from "@/app/api/apiResponse";
+import type { ApiSuccessEnvelope } from "@/app/api/api.types";
 import type { Category, CategoryListItem, CreateCategoryInput, UpdateCategoryInput } from "./types";
 
 export interface ListCategoriesParams {

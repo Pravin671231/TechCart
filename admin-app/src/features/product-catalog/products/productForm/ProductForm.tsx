@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
-import { getApiErrorEnvelope } from "@/app/api/responseEnvelope";
+import { getApiErrorEnvelope } from "@/app/api/apiError";
 import { useGetBrandsQuery } from "@/features/product-catalog/brands/brandsApi";
 import { useGetCategoriesQuery } from "@/features/product-catalog/categories/categoriesApi";
 import { Button } from "@/components/ui/Button";

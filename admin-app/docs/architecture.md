@@ -17,8 +17,10 @@ src/
 │   └── api/
 │       ├── baseQuery.ts            # fetchBaseQuery config + baseQueryWithAdminKeyGuard (401 → clearAdminKey)
 │       ├── baseApi.ts                # createApi instance (reducerPath, tagTypes) — every feature injectEndpoints into this
-│       ├── responseEnvelope.ts         # Pagination/ApiSuccessEnvelope/ApiErrorEnvelope types + unwrapData/unwrapList/getApiErrorEnvelope
-│       └── ENDPOINTS.ts                  # scaffold for centralized endpoint paths — not yet populated, feature *Api.ts files still inline their own URLs
+│       ├── api.types.ts                # Pagination/ApiSuccessEnvelope/ApiSuccessListEnvelope/ApiErrorEnvelope types
+│       ├── apiResponse.ts                # unwrapData/unwrapList — success-response helpers
+│       ├── apiError.ts                     # getApiErrorEnvelope — error-response helper
+│       └── ENDPOINTS.ts                      # scaffold for centralized endpoint paths — not yet populated, feature *Api.ts files still inline their own URLs
 ├── routes/
 │   └── mainRoutes.tsx          # MainRoutes: <Routes> tree — AppShell layout route wrapping all page routes, renders LandingPlaceholder at "/"
 ├── components/
@@ -137,7 +139,7 @@ admin-app/
     ├── vite-env.d.ts
     ├── config/env.ts
     ├── lib/utils.ts
-    ├── app/{store/{authSlice.ts,store.ts,hooks.ts},api/{baseQuery.ts,baseApi.ts,responseEnvelope.ts,ENDPOINTS.ts}}
+    ├── app/{store/{authSlice.ts,store.ts,hooks.ts},api/{baseQuery.ts,baseApi.ts,api.types.ts,apiResponse.ts,apiError.ts,ENDPOINTS.ts}}
     ├── routes/mainRoutes.tsx
     ├── components/{ui/{Button.tsx,Card.tsx,InlineAlert.tsx,LoadingState.tsx,Pagination.tsx,StatusBadge.tsx,Table.tsx},form/{Checkbox.tsx,FormField.tsx,SearchInput.tsx},layout/{AppShell.tsx,SidebarNav.tsx,navItems.ts,PageHeader.tsx}}
     └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/{uploadsApi.ts,SingleImageUploader.tsx},product-catalog/{brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,statusPresentation.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx,productForm/{ProductFormPage.tsx,ProductForm.tsx,ProductImagesEditor.tsx,ProductSpecificationsFields.tsx,specificationValues.ts,ProductVariantsEditor.tsx}}},landing/LandingPlaceholder.tsx}

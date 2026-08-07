@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { getApiErrorEnvelope } from "@/app/api/responseEnvelope";
+import { getApiErrorEnvelope } from "@/app/api/apiError";
 import { useGetCategoryVariantsQuery } from "@/features/product-catalog/categoryVariants/categoryVariantsApi";
 import type { VariantAxis } from "@/features/product-catalog/categoryVariants/types";
 import { Button } from "@/components/ui/Button";
