@@ -9,11 +9,16 @@ Implementation-level detail for `admin-app/`. This is the concrete companion to 
 ```
 src/
 ├── App.tsx                  # top-level composition root: Provider(store) > BrowserRouter > AdminKeyGate > MainRoutes
-├── app/
-│   └── store/                  # Redux/RTK Query state — the sole thing app/ now holds
-│       ├── authSlice.ts           # adminKey state, sessionStorage-backed
-│       ├── api.ts                   # RTK Query createApi + X-Admin-Key header + 401 guard
-│       └── store.ts                   # configureStore + createStore() factory (for isolated test stores)
+├── app/                      # Redux/RTK Query state only — two sibling subfolders
+│   ├── store/
+│   │   ├── authSlice.ts           # adminKey state, sessionStorage-backed
+│   │   ├── store.ts                 # configureStore + createStore() factory (for isolated test stores)
+│   │   └── hooks.ts                   # useAppDispatch/useAppSelector — typed react-redux hooks
+│   └── api/
+│       ├── baseQuery.ts            # fetchBaseQuery config + baseQueryWithAdminKeyGuard (401 → clearAdminKey)
+│       ├── baseApi.ts                # createApi instance (reducerPath, tagTypes) — every feature injectEndpoints into this
+│       ├── responseEnvelope.ts         # Pagination/ApiSuccessEnvelope/ApiErrorEnvelope types + unwrapData/unwrapList/getApiErrorEnvelope
+│       └── ENDPOINTS.ts                  # scaffold for centralized endpoint paths — not yet populated, feature *Api.ts files still inline their own URLs
 ├── routes/
 │   └── mainRoutes.tsx          # MainRoutes: <Routes> tree — AppShell layout route wrapping all page routes, renders LandingPlaceholder at "/"
 ├── components/
@@ -91,7 +96,7 @@ src/
 └── index.css                     # @import "tailwindcss";
 ```
 
-See `AGENTS.md` for the full `app/` vs `routes/` vs `features/` vs `components/` convention, its `cn()`/`class-variance-authority` styling section, and its Redux/RTK Query section for the `src/app/store/` and `src/features/adminKey/` internals.
+See `AGENTS.md` for the full `app/` vs `routes/` vs `features/` vs `components/` convention, its `cn()`/`class-variance-authority` styling section, and its Redux/RTK Query section for the `src/app/store/`, `src/app/api/`, and `src/features/adminKey/` internals.
 
 ## Current file tree
 
@@ -132,7 +137,7 @@ admin-app/
     ├── vite-env.d.ts
     ├── config/env.ts
     ├── lib/utils.ts
-    ├── app/store/{authSlice.ts,api.ts,store.ts}
+    ├── app/{store/{authSlice.ts,store.ts,hooks.ts},api/{baseQuery.ts,baseApi.ts,responseEnvelope.ts,ENDPOINTS.ts}}
     ├── routes/mainRoutes.tsx
     ├── components/{ui/{Button.tsx,Card.tsx,InlineAlert.tsx,LoadingState.tsx,Pagination.tsx,StatusBadge.tsx,Table.tsx},form/{Checkbox.tsx,FormField.tsx,SearchInput.tsx},layout/{AppShell.tsx,SidebarNav.tsx,navItems.ts,PageHeader.tsx}}
     └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/{uploadsApi.ts,SingleImageUploader.tsx},product-catalog/{brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,statusPresentation.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx,productForm/{ProductFormPage.tsx,ProductForm.tsx,ProductImagesEditor.tsx,ProductSpecificationsFields.tsx,specificationValues.ts,ProductVariantsEditor.tsx}}},landing/LandingPlaceholder.tsx}

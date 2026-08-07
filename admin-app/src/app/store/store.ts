@@ -1,6 +1,6 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import authReducer from "./authSlice";
-import { api } from "./api";
+import { api } from "@/app/api/baseApi";
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -9,13 +9,13 @@ const rootReducer = combineReducers({
 
 export type RootState = ReturnType<typeof rootReducer>;
 
-export function createStore(preloadedState?: Partial<RootState>) {
+export const createStore = (preloadedState?: Partial<RootState>) => {
   return configureStore({
     reducer: rootReducer,
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(api.middleware),
     preloadedState,
   });
-}
+};
 
 export const store = createStore();
 

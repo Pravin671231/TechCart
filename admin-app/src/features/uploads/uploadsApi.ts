@@ -1,5 +1,5 @@
-import { api, unwrapData } from "@/app/store/api";
-import type { ApiSuccessEnvelope } from "@/app/store/api";
+import { api } from "@/app/api/baseApi";
+import { unwrapData, type ApiSuccessEnvelope } from "@/app/api/responseEnvelope";
 
 export const UPLOAD_PURPOSES = ["product-image", "brand-logo", "category-image"] as const;
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number];

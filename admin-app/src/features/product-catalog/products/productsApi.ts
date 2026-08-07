@@ -1,5 +1,11 @@
-import { api, unwrapData, unwrapList } from "@/app/store/api";
-import type { ApiSuccessEnvelope, ApiSuccessListEnvelope, Pagination } from "@/app/store/api";
+import { api } from "@/app/api/baseApi";
+import {
+  unwrapData,
+  unwrapList,
+  type ApiSuccessEnvelope,
+  type ApiSuccessListEnvelope,
+  type Pagination,
+} from "@/app/api/responseEnvelope";
 import type {
   AddVariantInput,
   CreateProductInput,

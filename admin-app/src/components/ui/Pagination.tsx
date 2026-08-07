@@ -1,4 +1,4 @@
-import type { Pagination as PaginationData } from "@/app/store/api";
+import type { Pagination as PaginationData } from "@/app/api/responseEnvelope";
 import { cn } from "@/lib/utils";
 
 export interface PaginationProps {

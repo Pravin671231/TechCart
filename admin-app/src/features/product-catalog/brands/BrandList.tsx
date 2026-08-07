@@ -1,5 +1,5 @@
 import { Fragment, useState } from "react";
-import { getApiErrorEnvelope } from "@/app/store/api";
+import { getApiErrorEnvelope } from "@/app/api/responseEnvelope";
 import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InlineAlert } from "@/components/ui/InlineAlert";

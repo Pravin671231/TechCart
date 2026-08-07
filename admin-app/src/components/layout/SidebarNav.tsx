@@ -1,10 +1,10 @@
 import { NavLink } from "react-router";
-import { useDispatch } from "react-redux";
+import { useAppDispatch } from "@/app/store/hooks";
 import { clearAdminKey } from "@/app/store/authSlice";
 import { NAV_ITEMS } from "./navItems";
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   return (
     <>

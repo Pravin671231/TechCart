@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw";
 import { server } from "../mocks/server";
-import { api } from "@/app/store/api";
+import { api } from "@/app/api/baseApi";
 import { createStore } from "@/app/store/store";
 import { ADMIN_KEY_STORAGE_KEY } from "@/app/store/authSlice";
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { getApiErrorEnvelope } from "@/app/store/api";
+import { getApiErrorEnvelope } from "@/app/api/responseEnvelope";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { ReadOnlyField, TextAreaField, TextField } from "@/components/form/FormField";

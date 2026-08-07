@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getApiErrorEnvelope } from "@/app/store/api";
+import { getApiErrorEnvelope } from "@/app/api/responseEnvelope";
 import { Button } from "@/components/ui/Button";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import { ErrorState, LoadingState } from "@/components/ui/LoadingState";

@@ -1,5 +1,5 @@
-import { api, unwrapData } from "@/app/store/api";
-import type { ApiSuccessEnvelope } from "@/app/store/api";
+import { api } from "@/app/api/baseApi";
+import { unwrapData, type ApiSuccessEnvelope } from "@/app/api/responseEnvelope";
 import type { Brand, BrandListItem, CreateBrandInput, UpdateBrandInput } from "./types";
 
 export interface ListBrandsParams {
