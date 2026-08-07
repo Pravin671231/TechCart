@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { server } from "../../mocks/server";
-import { renderWithStore } from "../../utils/renderWithStore";
-import { CategoryVariantsPage } from "@/features/categoryVariants/CategoryVariantsPage";
-import type { VariantAxis } from "@/features/categoryVariants/types";
+import { server } from "../../../mocks/server";
+import { renderWithStore } from "../../../utils/renderWithStore";
+import { CategoryVariantsPage } from "@/features/product-catalog/categoryVariants/CategoryVariantsPage";
+import type { VariantAxis } from "@/features/product-catalog/categoryVariants/types";
 
 const BASE = "http://localhost:4000/api/admin";
 const CATEGORY_ID = "cat-1";

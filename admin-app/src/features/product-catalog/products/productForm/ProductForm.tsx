@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { getApiErrorEnvelope } from "@/store/api";
-import { useGetBrandsQuery } from "@/features/brands/brandsApi";
-import { useGetCategoriesQuery } from "@/features/categories/categoriesApi";
+import { useGetBrandsQuery } from "@/features/product-catalog/brands/brandsApi";
+import { useGetCategoriesQuery } from "@/features/product-catalog/categories/categoriesApi";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { Checkbox } from "@/components/form/Checkbox";

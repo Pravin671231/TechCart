@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGetCategoriesQuery } from "@/features/categories/categoriesApi";
+import { useGetCategoriesQuery } from "@/features/product-catalog/categories/categoriesApi";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CategorySpecificationEditor } from "./CategorySpecificationEditor";
 

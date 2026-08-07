@@ -1,8 +1,8 @@
 import { Checkbox } from "@/components/form/Checkbox";
 import { SelectField, TextField } from "@/components/form/FormField";
 import { LoadingState } from "@/components/ui/LoadingState";
-import { useGetCategorySpecificationsQuery } from "@/features/categorySpecifications/categorySpecificationsApi";
-import type { SpecificationField } from "@/features/categorySpecifications/types";
+import { useGetCategorySpecificationsQuery } from "@/features/product-catalog/categorySpecifications/categorySpecificationsApi";
+import type { SpecificationField } from "@/features/product-catalog/categorySpecifications/types";
 import { specKey, type SpecificationValues } from "./specificationValues";
 
 function FieldInput({

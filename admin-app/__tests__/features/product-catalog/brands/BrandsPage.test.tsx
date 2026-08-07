@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { server } from "../../mocks/server";
-import { renderWithStore } from "../../utils/renderWithStore";
-import { BrandsPage } from "@/features/brands/BrandsPage";
-import type { BrandListItem } from "@/features/brands/types";
+import { server } from "../../../mocks/server";
+import { renderWithStore } from "../../../utils/renderWithStore";
+import { BrandsPage } from "@/features/product-catalog/brands/BrandsPage";
+import type { BrandListItem } from "@/features/product-catalog/brands/types";
 
 const BASE = "http://localhost:4000/api/admin";
 

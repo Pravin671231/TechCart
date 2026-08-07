@@ -4,13 +4,13 @@ import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { http, HttpResponse } from "msw";
-import { server } from "../../mocks/server";
+import { server } from "../../../mocks/server";
 import { createStore } from "@/store/store";
 import type { AuthState } from "@/store/authSlice";
-import { ProductsPage } from "@/features/products/ProductsPage";
-import { ProductDetailPage } from "@/features/products/ProductDetailPage";
-import { ProductFormPage } from "@/features/products/productForm/ProductFormPage";
-import type { Product } from "@/features/products/types";
+import { ProductsPage } from "@/features/product-catalog/products/ProductsPage";
+import { ProductDetailPage } from "@/features/product-catalog/products/ProductDetailPage";
+import { ProductFormPage } from "@/features/product-catalog/products/productForm/ProductFormPage";
+import type { Product } from "@/features/product-catalog/products/types";
 
 const BASE = "http://localhost:4000/api/admin";
 

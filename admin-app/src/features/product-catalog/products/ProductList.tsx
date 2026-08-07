@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { useGetBrandsQuery } from "@/features/brands/brandsApi";
-import { useGetCategoriesQuery } from "@/features/categories/categoriesApi";
+import { useGetBrandsQuery } from "@/features/product-catalog/brands/brandsApi";
+import { useGetCategoriesQuery } from "@/features/product-catalog/categories/categoriesApi";
 import { Checkbox } from "@/components/form/Checkbox";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { Pagination } from "@/components/ui/Pagination";

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { getApiErrorEnvelope } from "@/store/api";
-import { useGetCategoryVariantsQuery } from "@/features/categoryVariants/categoryVariantsApi";
-import type { VariantAxis } from "@/features/categoryVariants/types";
+import { useGetCategoryVariantsQuery } from "@/features/product-catalog/categoryVariants/categoryVariantsApi";
+import type { VariantAxis } from "@/features/product-catalog/categoryVariants/types";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/form/Checkbox";
 import { TextField } from "@/components/form/FormField";
