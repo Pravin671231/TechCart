@@ -65,7 +65,7 @@ function describeApiError(envelope: ReturnType<typeof getApiErrorEnvelope>): str
   return "Unable to save this product.";
 }
 
-export function ProductForm({ product }: { product: Product | null }) {
+export const ProductForm = ({ product }: { product: Product | null }) => {
   const navigate = useNavigate();
   const { data: brands = [] } = useGetBrandsQuery(undefined);
   const { data: categories = [] } = useGetCategoriesQuery(undefined);
@@ -388,11 +388,15 @@ export function ProductForm({ product }: { product: Product | null }) {
           <Button type="submit" loading={isSaving} loadingLabel="Saving…">
             Save
           </Button>
-          <Button type="button" variant="secondary" onClick={() => navigate(PRODUCT_CATALOG_ROUTES.products.list)}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => navigate(PRODUCT_CATALOG_ROUTES.products.list)}
+          >
             Cancel
           </Button>
         </div>
       </form>
     </main>
   );
-}
+};

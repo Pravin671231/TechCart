@@ -31,11 +31,11 @@ export interface PageHeaderProps {
   actions?: ReactNode;
 }
 
-export function PageHeader({ title, size = "lg", actions }: PageHeaderProps) {
+export const PageHeader = ({ title, size = "lg", actions }: PageHeaderProps) => {
   return (
     <div className={headerContainerVariants({ size })}>
       <h1 className={headingVariants({ size })}>{title}</h1>
       {actions}
     </div>
   );
-}
+};

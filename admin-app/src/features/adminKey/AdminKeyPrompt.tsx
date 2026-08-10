@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useAppDispatch } from "@/app/store/hooks";
 import { setAdminKey } from "@/app/store/authSlice";
 
-export function AdminKeyPrompt() {
+export const AdminKeyPrompt = () => {
   const dispatch = useAppDispatch();
   const [value, setValue] = useState("");
 
@@ -38,4 +38,4 @@ export function AdminKeyPrompt() {
       </form>
     </main>
   );
-}
+};

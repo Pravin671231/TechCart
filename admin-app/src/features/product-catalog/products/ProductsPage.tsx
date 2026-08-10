@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { ProductList } from "./ProductList";
 import type { ProductStatus } from "./types";
 
-export function ProductsPage() {
+export const ProductsPage = () => {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<ProductStatus | "">("");
   const [lowStockOnly, setLowStockOnly] = useState(false);
@@ -44,4 +44,4 @@ export function ProductsPage() {
       />
     </main>
   );
-}
+};

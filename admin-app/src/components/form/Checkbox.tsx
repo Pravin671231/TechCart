@@ -7,13 +7,13 @@ export interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> {
   labelClassName?: string;
 }
 
-export function Checkbox({
+export const Checkbox = ({
   label,
   visuallyHiddenLabel = false,
   labelClassName = "gap-2 text-sm text-neutral-600",
   className,
   ...rest
-}: CheckboxProps) {
+}: CheckboxProps) => {
   return (
     <label className={cn("flex items-center", labelClassName)}>
       <input
@@ -24,4 +24,4 @@ export function Checkbox({
       {visuallyHiddenLabel ? <span className="sr-only">{label}</span> : label}
     </label>
   );
-}
+};

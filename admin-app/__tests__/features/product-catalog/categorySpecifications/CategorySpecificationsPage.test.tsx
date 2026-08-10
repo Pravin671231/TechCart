@@ -196,6 +196,9 @@ describe("CategorySpecificationsPage", () => {
     const row = nameInput.closest("tr")!;
     fireEvent.click(within(row).getByRole("button", { name: "Delete" }));
 
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
     expect(await screen.findByRole("alert")).toHaveTextContent(
       'Cannot delete field "RAM": referenced by 36 product(s).',
     );
@@ -221,6 +224,9 @@ describe("CategorySpecificationsPage", () => {
 
     await screen.findByDisplayValue("RAM");
     fireEvent.click(screen.getByRole("button", { name: "Delete group" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       'Cannot delete group "Performance": "RAM" referenced by 36 product(s).',

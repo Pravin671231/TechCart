@@ -8,12 +8,15 @@ import { ProductDetailPage } from "./products/ProductDetailPage";
 import { ProductFormPage } from "./products/productForm/ProductFormPage";
 import { PRODUCT_CATALOG_ROUTES } from "./routePaths";
 
-export function ProductCatalogRoutes() {
+export const ProductCatalogRoutes = () => {
   return (
     <>
       <Route path={PRODUCT_CATALOG_ROUTES.brands} element={<BrandsPage />} />
       <Route path={PRODUCT_CATALOG_ROUTES.categories} element={<CategoriesPage />} />
-      <Route path={PRODUCT_CATALOG_ROUTES.specifications} element={<CategorySpecificationsPage />} />
+      <Route
+        path={PRODUCT_CATALOG_ROUTES.specifications}
+        element={<CategorySpecificationsPage />}
+      />
       <Route path={PRODUCT_CATALOG_ROUTES.variantTypes} element={<CategoryVariantsPage />} />
       <Route path={PRODUCT_CATALOG_ROUTES.products.list} element={<ProductsPage />} />
       <Route path={PRODUCT_CATALOG_ROUTES.products.new} element={<ProductFormPage />} />
@@ -21,4 +24,4 @@ export function ProductCatalogRoutes() {
       <Route path={PRODUCT_CATALOG_ROUTES.products.editPattern} element={<ProductFormPage />} />
     </>
   );
-}
+};

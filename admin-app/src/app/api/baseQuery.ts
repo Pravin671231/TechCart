@@ -14,11 +14,11 @@ const rawBaseQuery = fetchBaseQuery({
   },
 });
 
-export const baseQueryWithAdminKeyGuard: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
-  args,
-  apiCtx,
-  extraOptions,
-) => {
+export const baseQueryWithAdminKeyGuard: BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  FetchBaseQueryError
+> = async (args, apiCtx, extraOptions) => {
   const result = await rawBaseQuery(args, apiCtx, extraOptions);
   if (result.error?.status === 401) {
     apiCtx.dispatch(clearAdminKey());

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "../../../mocks/server";
 import { renderWithStore } from "../../../utils/renderWithStore";
@@ -104,6 +104,9 @@ describe("CategoryVariantsPage", () => {
 
     await screen.findByDisplayValue("Colour");
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
     await waitFor(() => expect(handlers.getDeleteCallCount()).toBe(1));
     await waitFor(() => expect(screen.queryByDisplayValue("Colour")).not.toBeInTheDocument());

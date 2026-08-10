@@ -1,5 +1,6 @@
 import { Fragment, useState } from "react";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InlineAlert } from "@/components/ui/InlineAlert";
@@ -41,11 +42,14 @@ function orderAsTree(categories: CategoryListItem[]): CategoryListItem[] {
   return ordered;
 }
 
-export function CategoryList({ search, onSearchChange, onEdit }: CategoryListProps) {
-  const { data: categories = [], isLoading } = useGetCategoriesQuery(search ? { search } : undefined);
-  const [deleteCategory] = useDeleteCategoryMutation();
+export const CategoryList = ({ search, onSearchChange, onEdit }: CategoryListProps) => {
+  const { data: categories = [], isLoading } = useGetCategoriesQuery(
+    search ? { search } : undefined,
+  );
+  const [deleteCategory, { isLoading: isDeleting }] = useDeleteCategoryMutation();
   const [updateCategoryStatus] = useUpdateCategoryStatusMutation();
   const [deleteGuard, setDeleteGuard] = useState<{ id: string; message: string } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<CategoryListItem | null>(null);
 
   const orderedCategories = orderAsTree(categories);
   const nameById = new Map(categories.map((c) => [c._id, c.name]));
@@ -56,7 +60,10 @@ export function CategoryList({ search, onSearchChange, onEdit }: CategoryListPro
       await deleteCategory(category._id).unwrap();
     } catch (err) {
       const envelope = getApiErrorEnvelope(err);
-      setDeleteGuard({ id: category._id, message: envelope?.message ?? "Unable to delete category." });
+      setDeleteGuard({
+        id: category._id,
+        message: envelope?.message ?? "Unable to delete category.",
+      });
     }
   }
 
@@ -90,11 +97,15 @@ export function CategoryList({ search, onSearchChange, onEdit }: CategoryListPro
             <tbody>
               {orderedCategories.map((category) => {
                 const isChild = Boolean(category.parentCategory);
-                const parentName = category.parentCategory ? nameById.get(category.parentCategory) : undefined;
+                const parentName = category.parentCategory
+                  ? nameById.get(category.parentCategory)
+                  : undefined;
                 return (
                   <Fragment key={category._id}>
                     <tr className="border-b border-neutral-100">
-                      <td className={`px-3 py-2 font-medium text-neutral-900 ${isChild ? "pl-8" : ""}`}>
+                      <td
+                        className={`px-3 py-2 font-medium text-neutral-900 ${isChild ? "pl-8" : ""}`}
+                      >
                         {isChild ? `↳ ${category.name}` : category.name}
                       </td>
                       <td className="px-3 py-2 text-neutral-500">{parentName ?? "—"}</td>
@@ -119,7 +130,7 @@ export function CategoryList({ search, onSearchChange, onEdit }: CategoryListPro
                         </button>
                         <button
                           type="button"
-                          onClick={() => void handleDelete(category)}
+                          onClick={() => setPendingDelete(category)}
                           className="text-primary-600 hover:underline"
                         >
                           Delete
@@ -136,11 +147,26 @@ export function CategoryList({ search, onSearchChange, onEdit }: CategoryListPro
                   </Fragment>
                 );
               })}
-              {orderedCategories.length === 0 && <EmptyRow colSpan={6} message="No categories found." />}
+              {orderedCategories.length === 0 && (
+                <EmptyRow colSpan={6} message="No categories found." />
+              )}
             </tbody>
           </Table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete category"
+        message={`Delete "${pendingDelete?.name}"? This can't be undone.`}
+        isConfirming={isDeleting}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          const target = pendingDelete;
+          setPendingDelete(null);
+          if (target) void handleDelete(target);
+        }}
+      />
     </section>
   );
-}
+};

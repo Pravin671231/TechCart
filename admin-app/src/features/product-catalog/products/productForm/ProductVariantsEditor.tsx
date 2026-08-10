@@ -16,7 +16,7 @@ function computeSellingPreview(mrp: number, discount: number): number | null {
   return mrp - Math.floor((mrp * clamped) / 100);
 }
 
-function AxisControl({
+const AxisControl = ({
   axis,
   value,
   onChange,
@@ -24,7 +24,7 @@ function AxisControl({
   axis: VariantAxis;
   value: string;
   onChange: (value: string) => void;
-}) {
+}) => {
   if (axis.type === "color") {
     return (
       <div className="mt-1 flex flex-wrap gap-1">
@@ -75,9 +75,9 @@ function AxisControl({
       className="mt-1 block w-full rounded-md border border-neutral-300 px-3 py-2"
     />
   );
-}
+};
 
-function VariantForm({
+const VariantForm = ({
   productId,
   axes,
   variant,
@@ -89,7 +89,7 @@ function VariantForm({
   variant: ProductVariant | null;
   onDone: () => void;
   onCancel: () => void;
-}) {
+}) => {
   const [addVariant, { isLoading: isAdding, error: addError }] = useAddVariantMutation();
   const [updateVariant, { isLoading: isUpdating, error: updateError }] = useUpdateVariantMutation();
 
@@ -261,13 +261,13 @@ function VariantForm({
       </div>
     </form>
   );
-}
+};
 
 function formatAttributes(attributes: { name: string; value: string }[]): string {
   return attributes.map((attribute) => `${attribute.name}=${attribute.value}`).join(" · ");
 }
 
-export function ProductVariantsEditor({
+export const ProductVariantsEditor = ({
   productId,
   categoryId,
   variants,
@@ -275,7 +275,7 @@ export function ProductVariantsEditor({
   productId: string;
   categoryId: string;
   variants: ProductVariant[];
-}) {
+}) => {
   const { data, isLoading } = useGetCategoryVariantsQuery(categoryId, { skip: !categoryId });
   const axes = data?.variants ?? [];
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
@@ -350,4 +350,4 @@ export function ProductVariantsEditor({
       )}
     </div>
   );
-}
+};

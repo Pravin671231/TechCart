@@ -31,30 +31,30 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
 }
 
-export function Card({
+export const Card = ({
   padding = "md",
   tone = "default",
   dashed = false,
   className,
   children,
   ...rest
-}: CardProps) {
+}: CardProps) => {
   return (
     <div className={cn(cardVariants({ padding, tone, dashed }), className)} {...rest}>
       {children}
     </div>
   );
-}
+};
 
 export interface CardHeadingProps {
   children: ReactNode;
   spacing?: "mb-1" | "mb-3" | "mb-4";
 }
 
-export function CardHeading({ children, spacing = "mb-3" }: CardHeadingProps) {
+export const CardHeading = ({ children, spacing = "mb-3" }: CardHeadingProps) => {
   return (
     <h2 className={cn(spacing, "text-xs font-semibold tracking-wide text-neutral-700 uppercase")}>
       {children}
     </h2>
   );
-}
+};

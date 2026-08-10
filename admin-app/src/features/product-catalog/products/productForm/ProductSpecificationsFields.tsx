@@ -5,7 +5,7 @@ import { useGetCategorySpecificationsQuery } from "@/features/product-catalog/ca
 import type { SpecificationField } from "@/features/product-catalog/categorySpecifications/types";
 import { specKey, type SpecificationValues } from "./specificationValues";
 
-function FieldInput({
+const FieldInput = ({
   groupName,
   field,
   value,
@@ -15,7 +15,7 @@ function FieldInput({
   field: SpecificationField;
   value: string | number | boolean | undefined;
   onChange: (value: string | number | boolean | undefined) => void;
-}) {
+}) => {
   const key = specKey(groupName, field.name);
   const label = (
     <>
@@ -73,9 +73,9 @@ function FieldInput({
       }}
     />
   );
-}
+};
 
-export function ProductSpecificationsFields({
+export const ProductSpecificationsFields = ({
   categoryId,
   values,
   onChange,
@@ -83,7 +83,7 @@ export function ProductSpecificationsFields({
   categoryId: string;
   values: SpecificationValues;
   onChange: (key: string, value: string | number | boolean | undefined) => void;
-}) {
+}) => {
   const { data, isLoading } = useGetCategorySpecificationsQuery(categoryId, { skip: !categoryId });
 
   if (!categoryId) {
@@ -118,4 +118,4 @@ export function ProductSpecificationsFields({
       ))}
     </div>
   );
-}
+};

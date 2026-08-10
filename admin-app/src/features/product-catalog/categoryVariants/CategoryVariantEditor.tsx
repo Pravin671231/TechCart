@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import { ErrorState, LoadingState } from "@/components/ui/LoadingState";
 import { Table, TableHeadRow } from "@/components/ui/Table";
@@ -22,14 +23,19 @@ function nextAxisCode(existing: VariantAxis[]): string {
   return `axis-${n}`;
 }
 
-export function CategoryVariantEditor({ categoryId }: { categoryId: string }) {
+export const CategoryVariantEditor = ({ categoryId }: { categoryId: string }) => {
   const { data, isLoading, isError } = useGetCategoryVariantsQuery(categoryId);
   const [replace, { isLoading: isSaving }] = useReplaceCategoryVariantsMutation();
-  const [patch] = usePatchCategoryVariantsMutation();
+  const [patch, { isLoading: isPatching }] = usePatchCategoryVariantsMutation();
 
   const [axes, setAxes] = useState<VariantAxis[] | null>(null);
   const [persisted, setPersisted] = useState<VariantAxis[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    index: number;
+    code: string;
+    name: string;
+  } | null>(null);
 
   // Loaded once per mount (the page remounts this component via a `key` on
   // categoryId) — see CategorySpecificationEditor for why later automatic
@@ -141,7 +147,7 @@ export function CategoryVariantEditor({ categoryId }: { categoryId: string }) {
               axis={axis}
               onChange={(next) => updateAxisAt(index, next)}
               onToggleRequired={(next) => void handleToggleRequired(index, axis.code, next)}
-              onDelete={() => void handleDeleteAxis(index, axis.code)}
+              onDelete={() => setPendingDelete({ index, code: axis.code, name: axis.name })}
             />
           ))}
         </tbody>
@@ -152,6 +158,19 @@ export function CategoryVariantEditor({ categoryId }: { categoryId: string }) {
       </Button>
 
       {actionError && <InlineAlert>{actionError}</InlineAlert>}
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete variant axis"
+        message={`Delete "${pendingDelete?.name}"? This can't be undone.`}
+        isConfirming={isPatching}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          const target = pendingDelete;
+          setPendingDelete(null);
+          if (target) void handleDeleteAxis(target.index, target.code);
+        }}
+      />
     </section>
   );
-}
+};

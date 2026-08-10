@@ -1,11 +1,16 @@
 import { Fragment, useState } from "react";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { SearchInput } from "@/components/form/SearchInput";
-import { useDeleteBrandMutation, useGetBrandsQuery, useUpdateBrandStatusMutation } from "./brandsApi";
+import {
+  useDeleteBrandMutation,
+  useGetBrandsQuery,
+  useUpdateBrandStatusMutation,
+} from "./brandsApi";
 import type { BrandListItem } from "./types";
 
 export interface BrandListProps {
@@ -14,11 +19,12 @@ export interface BrandListProps {
   onEdit: (brand: BrandListItem) => void;
 }
 
-export function BrandList({ search, onSearchChange, onEdit }: BrandListProps) {
+export const BrandList = ({ search, onSearchChange, onEdit }: BrandListProps) => {
   const { data: brands = [], isLoading } = useGetBrandsQuery(search ? { search } : undefined);
-  const [deleteBrand] = useDeleteBrandMutation();
+  const [deleteBrand, { isLoading: isDeleting }] = useDeleteBrandMutation();
   const [updateBrandStatus] = useUpdateBrandStatusMutation();
   const [deleteGuard, setDeleteGuard] = useState<{ id: string; message: string } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<BrandListItem | null>(null);
 
   async function handleDelete(brand: BrandListItem) {
     setDeleteGuard(null);
@@ -92,7 +98,7 @@ export function BrandList({ search, onSearchChange, onEdit }: BrandListProps) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => void handleDelete(brand)}
+                        onClick={() => setPendingDelete(brand)}
                         className="text-primary-600 hover:underline"
                       >
                         Delete
@@ -113,6 +119,19 @@ export function BrandList({ search, onSearchChange, onEdit }: BrandListProps) {
           </Table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete brand"
+        message={`Delete "${pendingDelete?.name}"? This can't be undone.`}
+        isConfirming={isDeleting}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          const target = pendingDelete;
+          setPendingDelete(null);
+          if (target) void handleDelete(target);
+        }}
+      />
     </section>
   );
-}
+};

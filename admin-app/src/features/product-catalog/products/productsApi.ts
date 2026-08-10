@@ -1,5 +1,6 @@
 import { api } from "@/app/api/baseApi";
 import { unwrapData, unwrapList } from "@/app/api/apiResponse";
+import { notifyApiError, notifyApiSuccess } from "@/app/api/apiToast";
 import type { ApiSuccessEnvelope, ApiSuccessListEnvelope, Pagination } from "@/app/api/api.types";
 import { PRODUCT_CATALOG_ENDPOINTS } from "../endpoints";
 import type {
@@ -47,6 +48,12 @@ export interface UpdateVariantArgs {
   patch: UpdateVariantInput;
 }
 
+const PRODUCT_STATUS_MESSAGE: Record<ProductStatus, string> = {
+  draft: "Product set to draft.",
+  published: "Product published.",
+  archived: "Product archived.",
+};
+
 export const productsApi = api.injectEndpoints({
   endpoints: (build) => ({
     getProducts: build.query<
@@ -80,6 +87,14 @@ export const productsApi = api.injectEndpoints({
       }),
       transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
       invalidatesTags: ["Product"],
+      async onQueryStarted({ status }, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess(PRODUCT_STATUS_MESSAGE[status]);
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to update product status.");
+        }
+      },
     }),
     updateProductStock: build.mutation<Product, UpdateProductStockArgs>({
       query: ({ id, stock }) => ({
@@ -89,11 +104,27 @@ export const productsApi = api.injectEndpoints({
       }),
       transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
       invalidatesTags: ["Product"],
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess("Stock updated.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to update stock.");
+        }
+      },
     }),
     createProduct: build.mutation<Product, CreateProductInput>({
       query: (body) => ({ url: PRODUCT_CATALOG_ENDPOINTS.products.list, method: "POST", body }),
       transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
       invalidatesTags: ["Product"],
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess("Product created.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to create product.");
+        }
+      },
     }),
     updateProduct: build.mutation<Product, UpdateProductArgs>({
       query: ({ id, patch }) => ({
@@ -103,6 +134,14 @@ export const productsApi = api.injectEndpoints({
       }),
       transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
       invalidatesTags: ["Product"],
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess("Product updated.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to update product.");
+        }
+      },
     }),
     addVariant: build.mutation<Product, AddVariantArgs>({
       query: ({ productId, body }) => ({
@@ -112,6 +151,14 @@ export const productsApi = api.injectEndpoints({
       }),
       transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
       invalidatesTags: ["Product"],
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess("Variant added.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to add variant.");
+        }
+      },
     }),
     updateVariant: build.mutation<Product, UpdateVariantArgs>({
       query: ({ productId, variantId, patch }) => ({
@@ -121,6 +168,14 @@ export const productsApi = api.injectEndpoints({
       }),
       transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
       invalidatesTags: ["Product"],
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess("Variant updated.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to update variant.");
+        }
+      },
     }),
   }),
 });

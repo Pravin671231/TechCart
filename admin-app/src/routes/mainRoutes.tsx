@@ -3,7 +3,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { LandingPlaceholder } from "@/features/landing/LandingPlaceholder";
 import { ProductCatalogRoutes } from "@/features/product-catalog/routes";
 
-export function MainRoutes() {
+export const MainRoutes = () => {
   return (
     <Routes>
       <Route element={<AppShell />}>
@@ -12,4 +12,4 @@ export function MainRoutes() {
       </Route>
     </Routes>
   );
-}
+};

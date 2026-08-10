@@ -16,7 +16,7 @@ function formatAttributes(attributes: { name: string; value: string }[]): string
   return attributes.map((attribute) => `${attribute.name}=${attribute.value}`).join(" · ");
 }
 
-export function ProductDetailPage() {
+export const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const { data: product, isLoading, isError } = useGetProductQuery(id ?? "", { skip: !id });
   const { data: brands = [] } = useGetBrandsQuery(undefined);
@@ -49,7 +49,10 @@ export function ProductDetailPage() {
     <main className="p-6">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
-          <Link to={PRODUCT_CATALOG_ROUTES.products.list} className="text-neutral-400 hover:text-primary-600">
+          <Link
+            to={PRODUCT_CATALOG_ROUTES.products.list}
+            className="text-neutral-400 hover:text-primary-600"
+          >
             Products
           </Link>
           <span className="mx-1 text-neutral-300">/</span>
@@ -234,4 +237,4 @@ export function ProductDetailPage() {
       )}
     </main>
   );
-}
+};

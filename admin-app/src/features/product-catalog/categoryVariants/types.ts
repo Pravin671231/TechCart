@@ -25,5 +25,4 @@ export interface CategoryVariantsView {
 // axis that already exists; new axes are added via the PUT (full replace)
 // flow instead.
 export type VariantAxisPatchOperation =
-  | { op: "updateAxis"; code: string; axis: VariantAxis }
-  | { op: "deleteAxis"; code: string };
+  { op: "updateAxis"; code: string; axis: VariantAxis } | { op: "deleteAxis"; code: string };

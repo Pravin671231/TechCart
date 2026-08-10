@@ -7,7 +7,7 @@ export interface TableProps {
   children: ReactNode;
 }
 
-export function Table({ minWidthClassName, bordered = true, children }: TableProps) {
+export const Table = ({ minWidthClassName, bordered = true, children }: TableProps) => {
   return (
     <div
       className={cn(
@@ -17,14 +17,14 @@ export function Table({ minWidthClassName, bordered = true, children }: TablePro
       <table className={cn("w-full border-collapse text-sm", minWidthClassName)}>{children}</table>
     </div>
   );
-}
+};
 
 export interface TableHeadRowProps {
   variant?: "plain" | "shaded";
   children: ReactNode;
 }
 
-export function TableHeadRow({ variant = "plain", children }: TableHeadRowProps) {
+export const TableHeadRow = ({ variant = "plain", children }: TableHeadRowProps) => {
   if (variant === "shaded") {
     return (
       <thead className="bg-neutral-50 text-left">
@@ -40,14 +40,14 @@ export function TableHeadRow({ variant = "plain", children }: TableHeadRowProps)
       </tr>
     </thead>
   );
-}
+};
 
 export interface EmptyRowProps {
   colSpan: number;
   message: string;
 }
 
-export function EmptyRow({ colSpan, message }: EmptyRowProps) {
+export const EmptyRow = ({ colSpan, message }: EmptyRowProps) => {
   return (
     <tr>
       <td colSpan={colSpan} className="px-3 py-4 text-center text-neutral-500">
@@ -55,4 +55,4 @@ export function EmptyRow({ colSpan, message }: EmptyRowProps) {
       </td>
     </tr>
   );
-}
+};

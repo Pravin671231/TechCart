@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent } from "react";
+import { notifyApiError, notifyApiSuccess } from "@/app/api/apiToast";
 import { usePresignUploadMutation, putFileToPresignedUrl } from "@/features/uploads/uploadsApi";
 import type { UploadContentType, UploadPurpose } from "@/features/uploads/uploadsApi";
 
@@ -28,14 +29,14 @@ function withPrimaryGuaranteed(images: UploadedImage[]): UploadedImage[] {
   return images.map((image, index) => ({ ...image, isPrimary: index === 0 }));
 }
 
-export function ProductImagesEditor({
+export const ProductImagesEditor = ({
   images,
   onChange,
   min,
   max,
   purpose,
   label = "Images",
-}: ProductImagesEditorProps) {
+}: ProductImagesEditorProps) => {
   const [presignUpload, { isLoading }] = usePresignUploadMutation();
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +62,7 @@ export function ProductImagesEditor({
         contentType: file.type as UploadContentType,
       }).unwrap();
       await putFileToPresignedUrl(presigned.uploadUrl, file);
+      notifyApiSuccess("Image uploaded.");
       const next: UploadedImage = {
         objectKey: presigned.objectKey,
         publicUrl: presigned.publicUrl,
@@ -68,8 +70,10 @@ export function ProductImagesEditor({
         isPrimary: images.length === 0,
       };
       onChange(withPrimaryGuaranteed([...images, next]));
-    } catch {
-      setError("Image upload failed. Please try again.");
+    } catch (err) {
+      const message = "Image upload failed. Please try again.";
+      setError(message);
+      notifyApiError(err, message);
     }
   }
 
@@ -152,4 +156,4 @@ export function ProductImagesEditor({
       )}
     </div>
   );
-}
+};

@@ -15,7 +15,7 @@ export interface SpecificationGroupCardProps {
   onMoveField: (fieldIndex: number, direction: -1 | 1) => void;
 }
 
-export function SpecificationGroupCard({
+export const SpecificationGroupCard = ({
   group,
   onRenameGroup,
   onDeleteGroup,
@@ -24,7 +24,7 @@ export function SpecificationGroupCard({
   onToggleFilterable,
   onDeleteField,
   onMoveField,
-}: SpecificationGroupCardProps) {
+}: SpecificationGroupCardProps) => {
   function updateField(index: number, patch: Partial<SpecificationField>) {
     const current = group.specifications[index]!;
     const next: SpecificationField = { ...current, ...patch };
@@ -193,4 +193,4 @@ export function SpecificationGroupCard({
       </button>
     </div>
   );
-}
+};

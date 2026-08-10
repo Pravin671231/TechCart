@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useAppSelector } from "@/app/store/hooks";
 import { AdminKeyPrompt } from "./AdminKeyPrompt";
 
-export function AdminKeyGate({ children }: { children: ReactNode }) {
+export const AdminKeyGate = ({ children }: { children: ReactNode }) => {
   const adminKey = useAppSelector((state) => state.auth.adminKey);
 
   if (!adminKey) {
@@ -10,4 +10,4 @@ export function AdminKeyGate({ children }: { children: ReactNode }) {
   }
 
   return <>{children}</>;
-}
+};

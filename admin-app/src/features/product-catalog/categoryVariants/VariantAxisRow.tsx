@@ -20,7 +20,7 @@ function parseOptions(text: string): VariantAxis["options"] {
   return pairs.length > 0 ? pairs : undefined;
 }
 
-export function VariantAxisRow({
+export const VariantAxisRow = ({
   axis,
   onChange,
   onToggleRequired,
@@ -30,7 +30,7 @@ export function VariantAxisRow({
   onChange: (axis: VariantAxis) => void;
   onToggleRequired: (axis: VariantAxis) => void;
   onDelete: () => void;
-}) {
+}) => {
   function update(patch: Partial<VariantAxis>) {
     const next: VariantAxis = { ...axis, ...patch };
     if (next.type !== "select" && next.type !== "color") next.options = undefined;
@@ -102,4 +102,4 @@ export function VariantAxisRow({
       </td>
     </tr>
   );
-}
+};

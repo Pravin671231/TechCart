@@ -13,7 +13,7 @@ export interface BrandFormProps {
   onCancel: () => void;
 }
 
-export function BrandForm({ brand, onSaved, onCancel }: BrandFormProps) {
+export const BrandForm = ({ brand, onSaved, onCancel }: BrandFormProps) => {
   const [name, setName] = useState(brand?.name ?? "");
   const [description, setDescription] = useState(brand?.description ?? "");
   const [logo, setLogo] = useState<{ objectKey: string; publicUrl: string } | null>(null);
@@ -100,4 +100,4 @@ export function BrandForm({ brand, onSaved, onCancel }: BrandFormProps) {
       </form>
     </Card>
   );
-}
+};

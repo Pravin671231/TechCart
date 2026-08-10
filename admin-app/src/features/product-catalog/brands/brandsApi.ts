@@ -1,5 +1,6 @@
 import { api } from "@/app/api/baseApi";
 import { unwrapData } from "@/app/api/apiResponse";
+import { notifyApiError, notifyApiSuccess } from "@/app/api/apiToast";
 import type { ApiSuccessEnvelope } from "@/app/api/api.types";
 import { PRODUCT_CATALOG_ENDPOINTS } from "../endpoints";
 import type { Brand, BrandListItem, CreateBrandInput, UpdateBrandInput } from "./types";
@@ -32,6 +33,14 @@ export const brandsApi = api.injectEndpoints({
       query: (body) => ({ url: PRODUCT_CATALOG_ENDPOINTS.brands.list, method: "POST", body }),
       transformResponse: (response: ApiSuccessEnvelope<Brand>) => unwrapData(response),
       invalidatesTags: ["Brand"],
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess("Brand created.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to create brand.");
+        }
+      },
     }),
     updateBrand: build.mutation<Brand, UpdateBrandArgs>({
       query: ({ id, patch }) => ({
@@ -41,6 +50,14 @@ export const brandsApi = api.injectEndpoints({
       }),
       transformResponse: (response: ApiSuccessEnvelope<Brand>) => unwrapData(response),
       invalidatesTags: ["Brand"],
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess("Brand updated.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to update brand.");
+        }
+      },
     }),
     updateBrandStatus: build.mutation<Brand, UpdateBrandStatusArgs>({
       query: ({ id, status }) => ({
@@ -50,11 +67,27 @@ export const brandsApi = api.injectEndpoints({
       }),
       transformResponse: (response: ApiSuccessEnvelope<Brand>) => unwrapData(response),
       invalidatesTags: ["Brand"],
+      async onQueryStarted({ status }, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess(status ? "Brand activated." : "Brand deactivated.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to update brand status.");
+        }
+      },
     }),
     deleteBrand: build.mutation<null, string>({
       query: (id) => ({ url: PRODUCT_CATALOG_ENDPOINTS.brands.detail(id), method: "DELETE" }),
       transformResponse: (response: ApiSuccessEnvelope<null>) => unwrapData(response),
       invalidatesTags: ["Brand"],
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess("Brand deleted.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to delete brand.");
+        }
+      },
     }),
   }),
 });

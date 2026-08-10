@@ -2,7 +2,7 @@ import { useParams } from "react-router";
 import { useGetProductQuery } from "../productsApi";
 import { ProductForm } from "./ProductForm";
 
-export function ProductFormPage() {
+export const ProductFormPage = () => {
   const { id } = useParams<{ id: string }>();
   const { data: product, isLoading, isError } = useGetProductQuery(id ?? "", { skip: !id });
 
@@ -12,4 +12,4 @@ export function ProductFormPage() {
   }
 
   return <ProductForm product={id ? (product ?? null) : null} />;
-}
+};

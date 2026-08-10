@@ -210,6 +210,9 @@ describe("CategoriesPage", () => {
     const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
     fireEvent.click(deleteButtons[0]);
 
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
     const alert = await screen.findByRole("alert");
     expect(within(alert).getByText(/1 product\(s\) and 1 subcategory\(ies\)/)).toBeInTheDocument();
   });

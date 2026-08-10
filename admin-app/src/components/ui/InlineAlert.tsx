@@ -11,7 +11,7 @@ export interface InlineAlertProps {
   className?: string;
 }
 
-export function InlineAlert({ variant = "error", children, className }: InlineAlertProps) {
+export const InlineAlert = ({ variant = "error", children, className }: InlineAlertProps) => {
   return (
     <div
       role="alert"
@@ -20,4 +20,4 @@ export function InlineAlert({ variant = "error", children, className }: InlineAl
       {children}
     </div>
   );
-}
+};

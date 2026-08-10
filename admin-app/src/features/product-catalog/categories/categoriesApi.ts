@@ -1,5 +1,6 @@
 import { api } from "@/app/api/baseApi";
 import { unwrapData } from "@/app/api/apiResponse";
+import { notifyApiError, notifyApiSuccess } from "@/app/api/apiToast";
 import type { ApiSuccessEnvelope } from "@/app/api/api.types";
 import { PRODUCT_CATALOG_ENDPOINTS } from "../endpoints";
 import type { Category, CategoryListItem, CreateCategoryInput, UpdateCategoryInput } from "./types";
@@ -32,6 +33,14 @@ export const categoriesApi = api.injectEndpoints({
       query: (body) => ({ url: PRODUCT_CATALOG_ENDPOINTS.categories.list, method: "POST", body }),
       transformResponse: (response: ApiSuccessEnvelope<Category>) => unwrapData(response),
       invalidatesTags: ["Category"],
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess("Category created.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to create category.");
+        }
+      },
     }),
     updateCategory: build.mutation<Category, UpdateCategoryArgs>({
       query: ({ id, patch }) => ({
@@ -41,6 +50,14 @@ export const categoriesApi = api.injectEndpoints({
       }),
       transformResponse: (response: ApiSuccessEnvelope<Category>) => unwrapData(response),
       invalidatesTags: ["Category"],
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess("Category updated.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to update category.");
+        }
+      },
     }),
     updateCategoryStatus: build.mutation<Category, UpdateCategoryStatusArgs>({
       query: ({ id, status }) => ({
@@ -50,11 +67,27 @@ export const categoriesApi = api.injectEndpoints({
       }),
       transformResponse: (response: ApiSuccessEnvelope<Category>) => unwrapData(response),
       invalidatesTags: ["Category"],
+      async onQueryStarted({ status }, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess(status ? "Category activated." : "Category deactivated.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to update category status.");
+        }
+      },
     }),
     deleteCategory: build.mutation<null, string>({
       query: (id) => ({ url: PRODUCT_CATALOG_ENDPOINTS.categories.detail(id), method: "DELETE" }),
       transformResponse: (response: ApiSuccessEnvelope<null>) => unwrapData(response),
       invalidatesTags: ["Category"],
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess("Category deleted.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to delete category.");
+        }
+      },
     }),
   }),
 });

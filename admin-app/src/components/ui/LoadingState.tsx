@@ -6,16 +6,16 @@ export interface LoadingStateProps {
   spaced?: boolean;
 }
 
-export function LoadingState({
+export const LoadingState = ({
   fullPage = false,
   label = "Loading…",
   spaced = true,
-}: LoadingStateProps) {
+}: LoadingStateProps) => {
   if (fullPage) {
     return <main className="p-6 text-sm text-neutral-500">{label}</main>;
   }
   return <p className={cn("text-sm text-neutral-500", spaced && "mt-4")}>{label}</p>;
-}
+};
 
 export interface ErrorStateProps {
   fullPage?: boolean;
@@ -23,13 +23,13 @@ export interface ErrorStateProps {
   spaced?: boolean;
 }
 
-export function ErrorState({
+export const ErrorState = ({
   fullPage = false,
   message = "Something went wrong.",
   spaced = true,
-}: ErrorStateProps) {
+}: ErrorStateProps) => {
   if (fullPage) {
     return <main className="p-6 text-sm text-red-600">{message}</main>;
   }
   return <p className={cn("text-sm text-red-600", spaced && "mt-4")}>{message}</p>;
-}
+};

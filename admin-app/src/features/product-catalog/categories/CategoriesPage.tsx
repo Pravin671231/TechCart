@@ -6,7 +6,7 @@ import { CategoryForm } from "./CategoryForm";
 import { CategoryList } from "./CategoryList";
 import type { CategoryListItem } from "./types";
 
-export function CategoriesPage() {
+export const CategoriesPage = () => {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<CategoryListItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -56,4 +56,4 @@ export function CategoriesPage() {
       </div>
     </main>
   );
-}
+};

@@ -11,7 +11,12 @@ export interface SingleImageUploaderProps {
   onUploaded: (result: { objectKey: string; publicUrl: string }) => void;
 }
 
-export function SingleImageUploader({ label, purpose, previewUrl, onUploaded }: SingleImageUploaderProps) {
+export const SingleImageUploader = ({
+  label,
+  purpose,
+  previewUrl,
+  onUploaded,
+}: SingleImageUploaderProps) => {
   const [presignUpload, { isLoading }] = usePresignUploadMutation();
   const [error, setError] = useState<string | null>(null);
   const [localPreview, setLocalPreview] = useState<string | undefined>(previewUrl);
@@ -28,7 +33,10 @@ export function SingleImageUploader({ label, purpose, previewUrl, onUploaded }: 
     }
 
     try {
-      const presigned = await presignUpload({ purpose, contentType: file.type as UploadContentType }).unwrap();
+      const presigned = await presignUpload({
+        purpose,
+        contentType: file.type as UploadContentType,
+      }).unwrap();
       await putFileToPresignedUrl(presigned.uploadUrl, file);
       setLocalPreview(presigned.publicUrl);
       onUploaded({ objectKey: presigned.objectKey, publicUrl: presigned.publicUrl });
@@ -64,4 +72,4 @@ export function SingleImageUploader({ label, purpose, previewUrl, onUploaded }: 
       {error && <p className="mt-1 text-[11px] text-red-600">{error}</p>}
     </div>
   );
-}
+};

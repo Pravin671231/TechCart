@@ -125,6 +125,9 @@ describe("BrandsPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
     const alert = await screen.findByRole("alert");
     expect(within(alert).getByText(/referenced by 3 product\(s\)/)).toBeInTheDocument();
     expect(screen.getByText("Acme")).toBeInTheDocument();

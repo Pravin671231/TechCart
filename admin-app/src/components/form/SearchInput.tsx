@@ -9,14 +9,14 @@ export interface SearchInputProps {
   width?: string;
 }
 
-export function SearchInput({
+export const SearchInput = ({
   id,
   label,
   value,
   onChange,
   placeholder,
   width = "w-64",
-}: SearchInputProps) {
+}: SearchInputProps) => {
   return (
     <>
       <label htmlFor={id} className="sr-only">
@@ -36,4 +36,4 @@ export function SearchInput({
       />
     </>
   );
-}
+};

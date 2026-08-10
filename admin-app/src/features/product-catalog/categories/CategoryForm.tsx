@@ -14,7 +14,7 @@ export interface CategoryFormProps {
   onCancel: () => void;
 }
 
-export function CategoryForm({ category, allCategories, onSaved, onCancel }: CategoryFormProps) {
+export const CategoryForm = ({ category, allCategories, onSaved, onCancel }: CategoryFormProps) => {
   const [name, setName] = useState(category?.name ?? "");
   const [description, setDescription] = useState(category?.description ?? "");
   const [parentCategory, setParentCategory] = useState(category?.parentCategory ?? "");
@@ -23,8 +23,10 @@ export function CategoryForm({ category, allCategories, onSaved, onCancel }: Cat
   const [metaDescription, setMetaDescription] = useState(category?.metaDescription ?? "");
   const [image, setImage] = useState<{ objectKey: string; publicUrl: string } | null>(null);
 
-  const [createCategory, { isLoading: isCreating, error: createError }] = useCreateCategoryMutation();
-  const [updateCategory, { isLoading: isUpdating, error: updateError }] = useUpdateCategoryMutation();
+  const [createCategory, { isLoading: isCreating, error: createError }] =
+    useCreateCategoryMutation();
+  const [updateCategory, { isLoading: isUpdating, error: updateError }] =
+    useUpdateCategoryMutation();
 
   useEffect(() => {
     setName(category?.name ?? "");
@@ -157,4 +159,4 @@ export function CategoryForm({ category, allCategories, onSaved, onCancel }: Cat
       </form>
     </Card>
   );
-}
+};

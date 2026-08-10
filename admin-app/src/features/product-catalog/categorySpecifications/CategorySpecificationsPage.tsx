@@ -3,7 +3,7 @@ import { useGetCategoriesQuery } from "@/features/product-catalog/categories/cat
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CategorySpecificationEditor } from "./CategorySpecificationEditor";
 
-export function CategorySpecificationsPage() {
+export const CategorySpecificationsPage = () => {
   const { data: categories = [] } = useGetCategoriesQuery(undefined);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
@@ -43,4 +43,4 @@ export function CategorySpecificationsPage() {
       )}
     </main>
   );
-}
+};

@@ -34,7 +34,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loadingLabel?: ReactNode;
 }
 
-export function Button({
+export const Button = ({
   variant = "primary",
   size = "md",
   loading = false,
@@ -44,7 +44,7 @@ export function Button({
   disabled,
   type = "button",
   ...rest
-}: ButtonProps) {
+}: ButtonProps) => {
   return (
     <button
       type={type}
@@ -55,18 +55,18 @@ export function Button({
       {loading ? (loadingLabel ?? children) : children}
     </button>
   );
-}
+};
 
 export interface LinkButtonProps extends LinkProps {
   variant?: Variant;
   size?: Size;
 }
 
-export function LinkButton({
+export const LinkButton = ({
   variant = "primary",
   size = "md",
   className,
   ...rest
-}: LinkButtonProps) {
+}: LinkButtonProps) => {
   return <Link className={cn(buttonVariants({ variant, size }), className)} {...rest} />;
-}
+};

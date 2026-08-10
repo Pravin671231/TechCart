@@ -3,7 +3,7 @@ import { useAppDispatch } from "@/app/store/hooks";
 import { clearAdminKey } from "@/app/store/authSlice";
 import { NAV_ITEMS } from "./navItems";
 
-export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+export const SidebarNav = ({ onNavigate }: { onNavigate?: () => void }) => {
   const dispatch = useAppDispatch();
 
   return (
@@ -66,4 +66,4 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
       </div>
     </>
   );
-}
+};

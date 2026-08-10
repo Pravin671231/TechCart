@@ -7,7 +7,7 @@ export interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
-export function Pagination({ page, pagination, onPageChange }: PaginationProps) {
+export const Pagination = ({ page, pagination, onPageChange }: PaginationProps) => {
   if (pagination.totalPages <= 1) return null;
 
   return (
@@ -40,4 +40,4 @@ export function Pagination({ page, pagination, onPageChange }: PaginationProps) 
       </nav>
     </div>
   );
-}
+};

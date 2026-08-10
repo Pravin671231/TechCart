@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router";
 import { SidebarNav } from "./SidebarNav";
 
-export function AppShell() {
+export const AppShell = () => {
   const location = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -75,4 +75,4 @@ export function AppShell() {
       </div>
     </div>
   );
-}
+};

@@ -29,7 +29,7 @@ export interface ProductListProps {
   onPageChange: (page: number) => void;
 }
 
-export function ProductList({
+export const ProductList = ({
   search,
   onSearchChange,
   status,
@@ -38,7 +38,7 @@ export function ProductList({
   onLowStockOnlyChange,
   page,
   onPageChange,
-}: ProductListProps) {
+}: ProductListProps) => {
   const { data, isLoading } = useGetProductsQuery({
     page,
     search: search || undefined,
@@ -223,4 +223,4 @@ export function ProductList({
       {pagination && <Pagination page={page} pagination={pagination} onPageChange={onPageChange} />}
     </section>
   );
-}
+};

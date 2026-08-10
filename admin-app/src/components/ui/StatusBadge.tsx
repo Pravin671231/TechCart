@@ -28,7 +28,7 @@ export interface StatusBadgeProps {
   onClick?: () => void;
 }
 
-export function StatusBadge({ tone, shape = "rounded", children, onClick }: StatusBadgeProps) {
+export const StatusBadge = ({ tone, shape = "rounded", children, onClick }: StatusBadgeProps) => {
   const className = statusBadgeVariants({ tone, shape });
 
   if (onClick) {
@@ -40,4 +40,4 @@ export function StatusBadge({ tone, shape = "rounded", children, onClick }: Stat
   }
 
   return <span className={className}>{children}</span>;
-}
+};

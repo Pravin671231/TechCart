@@ -8,7 +8,7 @@ Implementation-level detail for `admin-app/`. This is the concrete companion to 
 
 ```
 src/
-├── App.tsx                  # top-level composition root: Provider(store) > BrowserRouter > AdminKeyGate > MainRoutes
+├── App.tsx                  # top-level composition root: Provider(store) > BrowserRouter > AdminKeyGate > MainRoutes, plus sibling <Toaster />
 ├── app/                      # Redux/RTK Query state only — two sibling subfolders
 │   ├── store/
 │   │   ├── authSlice.ts           # adminKey state, sessionStorage-backed
@@ -20,13 +20,15 @@ src/
 │       ├── api.types.ts                # Pagination/ApiSuccessEnvelope/ApiSuccessListEnvelope/ApiErrorEnvelope types
 │       ├── apiResponse.ts                # unwrapData/unwrapList — success-response helpers
 │       ├── apiError.ts                     # getApiErrorEnvelope — error-response helper
-│       └── ENDPOINTS.ts                      # re-exports PRODUCT_CATALOG_ENDPOINTS from features/product-catalog/endpoints.ts
+│       ├── apiToast.ts                       # notifyApiSuccess/notifyApiError — sonner toast bridge, used by every *Api.ts's onQueryStarted
+│       └── ENDPOINTS.ts                        # re-exports PRODUCT_CATALOG_ENDPOINTS from features/product-catalog/endpoints.ts
 ├── routes/
 │   └── mainRoutes.tsx          # MainRoutes: <Routes> tree — AppShell layout route rendering LandingPlaceholder at "/" plus {ProductCatalogRoutes()}
 ├── components/
 │   ├── ui/                     # generic reusable primitives, no domain semantics
 │   │   ├── Button.tsx             # cva() variants: primary/secondary/outline × sm/md
 │   │   ├── Card.tsx                 # cva() variants: padding × tone × dashed
+│   │   ├── ConfirmDialog.tsx          # controlled modal gating delete-only actions — see AGENTS.md
 │   │   ├── InlineAlert.tsx            # cn() only — single-branch VARIANT_CLASS map
 │   │   ├── LoadingState.tsx             # LoadingState + ErrorState, cn() only
 │   │   ├── Pagination.tsx                 # cn() only, no variant map
@@ -107,7 +109,7 @@ See `AGENTS.md` for the full `app/` vs `routes/` vs `features/` vs `components/`
 
 ```
 admin-app/
-├── package.json          # name "admin-app"; scripts: dev, build, lint, preview, test; deps incl. clsx/tailwind-merge/class-variance-authority
+├── package.json          # name "admin-app"; scripts: dev, build, lint, preview, test; deps incl. clsx/tailwind-merge/class-variance-authority/sonner; devDeps incl. eslint-plugin-react
 ├── .env.example             # VITE_API_URL=http://localhost:4000
 ├── vercel.json                # rewrites all paths to /index.html (SPA client-side routing on Vercel)
 ├── tsconfig.json                # solution file — references tsconfig.app.json + tsconfig.node.json
@@ -142,9 +144,9 @@ admin-app/
     ├── vite-env.d.ts
     ├── config/env.ts
     ├── lib/utils.ts
-    ├── app/{store/{authSlice.ts,store.ts,hooks.ts},api/{baseQuery.ts,baseApi.ts,api.types.ts,apiResponse.ts,apiError.ts,ENDPOINTS.ts}}
+    ├── app/{store/{authSlice.ts,store.ts,hooks.ts},api/{baseQuery.ts,baseApi.ts,api.types.ts,apiResponse.ts,apiError.ts,apiToast.ts,ENDPOINTS.ts}}
     ├── routes/mainRoutes.tsx
-    ├── components/{ui/{Button.tsx,Card.tsx,InlineAlert.tsx,LoadingState.tsx,Pagination.tsx,StatusBadge.tsx,Table.tsx},form/{Checkbox.tsx,FormField.tsx,SearchInput.tsx},layout/{AppShell.tsx,SidebarNav.tsx,navItems.ts,PageHeader.tsx}}
+    ├── components/{ui/{Button.tsx,Card.tsx,ConfirmDialog.tsx,InlineAlert.tsx,LoadingState.tsx,Pagination.tsx,StatusBadge.tsx,Table.tsx},form/{Checkbox.tsx,FormField.tsx,SearchInput.tsx},layout/{AppShell.tsx,SidebarNav.tsx,navItems.ts,PageHeader.tsx}}
     └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/{uploadsApi.ts,SingleImageUploader.tsx},product-catalog/{endpoints.ts,routePaths.ts,routes.tsx,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,statusPresentation.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx,productForm/{ProductFormPage.tsx,ProductForm.tsx,ProductImagesEditor.tsx,ProductSpecificationsFields.tsx,specificationValues.ts,ProductVariantsEditor.tsx}}},landing/LandingPlaceholder.tsx}
 ```
 
@@ -154,7 +156,7 @@ admin-app/
 - **Path aliases**: `@/*` → `./src/*` is resolved by the `vite-tsconfig-paths` plugin in `vite.config.ts`, for both dev and build. This is a deliberate difference from `backend/vitest.config.ts`'s `resolve: { tsconfigPaths: true }` — that option is **not real** (Vite silently ignores it; confirmed while fixing `buyer-app`'s Vitest config in Issue #5), so it's never used here.
 - **Tailwind CSS 4**: CSS-first config — no `tailwind.config.js`. Wired via the `@tailwindcss/vite` plugin in `vite.config.ts` and a single `@import "tailwindcss";` in `src/index.css` — the Vite-native equivalent of `buyer-app`'s PostCSS-based `@tailwindcss/postcss` wiring.
 - **Styling utilities**: `clsx` + `tailwind-merge` are combined into one `cn()` helper (`src/lib/utils.ts`, `twMerge(clsx(inputs))`), the required way to build any conditional or externally-mergeable className anywhere in the app — it gives passthrough `className` props correct last-wins Tailwind conflict resolution, unlike a plain string join. `class-variance-authority` (`cva()`) is layered on top only for components with a real variant prop map (`Button`, `Card`, `StatusBadge`, `FormField`'s `ReadOnlyField`, `PageHeader`) — see AGENTS.md's "Shared UI component library styling" section for the full convention and rationale.
-- **ESLint**: `eslint.config.mjs` uses `typescript-eslint` + `eslint-plugin-react-hooks` + `eslint-plugin-react-refresh` (the standard Vite React-TS template set) — resolved when `eslint` runs from within `admin-app/` (e.g. `npm run lint --workspace admin-app`). The root `eslint.config.ts` still covers `admin-app/**` with baseline TS rules when run repo-wide (`npx eslint .` from root) — same non-conflicting layering as `buyer-app`.
+- **ESLint**: `eslint.config.mjs` uses `typescript-eslint` + `eslint-plugin-react-hooks` + `eslint-plugin-react-refresh` (the standard Vite React-TS template set) plus `eslint-plugin-react` (added solely for `react/function-component-definition`, enforcing arrow-function components — see AGENTS.md's "Component definition style" section) — resolved when `eslint` runs from within `admin-app/` (e.g. `npm run lint --workspace admin-app`). The root `eslint.config.ts` still covers `admin-app/**` with baseline TS rules when run repo-wide (`npx eslint .` from root) — same non-conflicting layering as `buyer-app`.
 - **Deployment**: `vercel.json` rewrites every path to `/index.html` — required for a client-side-routed SPA (`react-router`'s `BrowserRouter`) hosted on Vercel, otherwise a hard refresh on e.g. `/products/123` 404s at the host level before React ever loads.
 
 ## Testing

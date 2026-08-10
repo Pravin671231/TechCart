@@ -5,7 +5,7 @@ import { BrandForm } from "./BrandForm";
 import { BrandList } from "./BrandList";
 import type { BrandListItem } from "./types";
 
-export function BrandsPage() {
+export const BrandsPage = () => {
   const [search, setSearch] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<BrandListItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -43,9 +43,13 @@ export function BrandsPage() {
           }}
         />
         {showForm && (
-          <BrandForm brand={isCreating ? null : selectedBrand} onSaved={closeForm} onCancel={closeForm} />
+          <BrandForm
+            brand={isCreating ? null : selectedBrand}
+            onSaved={closeForm}
+            onCancel={closeForm}
+          />
         )}
       </div>
     </main>
   );
-}
+};

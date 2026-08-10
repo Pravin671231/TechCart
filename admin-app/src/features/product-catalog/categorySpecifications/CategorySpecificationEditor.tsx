@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import { ErrorState, LoadingState } from "@/components/ui/LoadingState";
 import {
@@ -11,11 +12,19 @@ import {
 import { SpecificationGroupCard } from "./SpecificationGroupCard";
 import type { SpecificationField, SpecificationGroup } from "./types";
 
+type PendingDelete =
+  | { kind: "group"; groupIndex: number; groupName: string }
+  | { kind: "field"; groupIndex: number; groupName: string; fieldIndex: number; fieldName: string };
+
 function isGroupPersisted(persisted: SpecificationGroup[], groupName: string): boolean {
   return persisted.some((group) => group.groupName === groupName);
 }
 
-function isFieldPersisted(persisted: SpecificationGroup[], groupName: string, name: string): boolean {
+function isFieldPersisted(
+  persisted: SpecificationGroup[],
+  groupName: string,
+  name: string,
+): boolean {
   const group = persisted.find((g) => g.groupName === groupName);
   return group ? group.specifications.some((field) => field.name === name) : false;
 }
@@ -32,14 +41,15 @@ function nextFieldName(existing: SpecificationField[]): string {
   return `New field ${n}`;
 }
 
-export function CategorySpecificationEditor({ categoryId }: { categoryId: string }) {
+export const CategorySpecificationEditor = ({ categoryId }: { categoryId: string }) => {
   const { data, isLoading, isError } = useGetCategorySpecificationsQuery(categoryId);
   const [replace, { isLoading: isSaving }] = useReplaceCategorySpecificationsMutation();
-  const [patch] = usePatchCategorySpecificationsMutation();
+  const [patch, { isLoading: isPatching }] = usePatchCategorySpecificationsMutation();
 
   const [groups, setGroups] = useState<SpecificationGroup[] | null>(null);
   const [persisted, setPersisted] = useState<SpecificationGroup[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
   // Loaded once per mount (the page remounts this component via a `key` on
   // categoryId) — later automatic refetches from our own tag invalidation
@@ -56,7 +66,10 @@ export function CategorySpecificationEditor({ categoryId }: { categoryId: string
     setPersisted(view.specificationGroups);
   }
 
-  function updateGroup(groupIndex: number, updater: (group: SpecificationGroup) => SpecificationGroup) {
+  function updateGroup(
+    groupIndex: number,
+    updater: (group: SpecificationGroup) => SpecificationGroup,
+  ) {
     setGroups((prev) => {
       if (!prev) return prev;
       const next = [...prev];
@@ -104,7 +117,10 @@ export function CategorySpecificationEditor({ categoryId }: { categoryId: string
     setActionError(null);
     if (isGroupPersisted(persisted, groupName)) {
       try {
-        const view = await patch({ categoryId, operation: { op: "deleteGroup", groupName } }).unwrap();
+        const view = await patch({
+          categoryId,
+          operation: { op: "deleteGroup", groupName },
+        }).unwrap();
         applyServerView(view);
       } catch (err) {
         const envelope = getApiErrorEnvelope(err);
@@ -120,7 +136,12 @@ export function CategorySpecificationEditor({ categoryId }: { categoryId: string
       ...group,
       specifications: [
         ...group.specifications,
-        { name: nextFieldName(group.specifications), type: "text", required: false, filterable: false },
+        {
+          name: nextFieldName(group.specifications),
+          type: "text",
+          required: false,
+          filterable: false,
+        },
       ],
     }));
   }
@@ -211,14 +232,26 @@ export function CategorySpecificationEditor({ categoryId }: { categoryId: string
           key={group.groupName}
           group={group}
           onRenameGroup={(newName) => void handleRenameGroup(groupIndex, group.groupName, newName)}
-          onDeleteGroup={() => void handleDeleteGroup(groupIndex, group.groupName)}
+          onDeleteGroup={() =>
+            setPendingDelete({ kind: "group", groupIndex, groupName: group.groupName })
+          }
           onAddField={() => handleAddField(groupIndex)}
           onFieldChange={(fieldIndex, field) => handleFieldChange(groupIndex, fieldIndex, field)}
           onToggleFilterable={(fieldIndex, field) =>
             void handleToggleFilterable(groupIndex, group.groupName, fieldIndex, field)
           }
-          onDeleteField={(fieldIndex) => void handleDeleteField(groupIndex, group.groupName, fieldIndex)}
-          onMoveField={(fieldIndex, direction) => handleMoveField(groupIndex, fieldIndex, direction)}
+          onDeleteField={(fieldIndex) =>
+            setPendingDelete({
+              kind: "field",
+              groupIndex,
+              groupName: group.groupName,
+              fieldIndex,
+              fieldName: group.specifications[fieldIndex]!.name,
+            })
+          }
+          onMoveField={(fieldIndex, direction) =>
+            handleMoveField(groupIndex, fieldIndex, direction)
+          }
         />
       ))}
 
@@ -227,6 +260,28 @@ export function CategorySpecificationEditor({ categoryId }: { categoryId: string
       </Button>
 
       {actionError && <InlineAlert>{actionError}</InlineAlert>}
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={pendingDelete?.kind === "field" ? "Delete field" : "Delete group"}
+        message={
+          pendingDelete?.kind === "field"
+            ? `Delete "${pendingDelete.fieldName}"? This can't be undone.`
+            : `Delete "${pendingDelete?.groupName}"? This can't be undone.`
+        }
+        isConfirming={isPatching}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          const target = pendingDelete;
+          setPendingDelete(null);
+          if (!target) return;
+          if (target.kind === "group") {
+            void handleDeleteGroup(target.groupIndex, target.groupName);
+          } else {
+            void handleDeleteField(target.groupIndex, target.groupName, target.fieldIndex);
+          }
+        }}
+      />
     </section>
   );
-}
+};
