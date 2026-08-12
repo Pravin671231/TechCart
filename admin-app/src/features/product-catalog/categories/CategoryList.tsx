@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { SearchInput } from "@/components/form/SearchInput";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   useDeleteCategoryMutation,
   useGetCategoriesQuery,
@@ -43,9 +44,12 @@ function orderAsTree(categories: CategoryListItem[]): CategoryListItem[] {
 }
 
 export const CategoryList = ({ search, onSearchChange, onEdit }: CategoryListProps) => {
-  const { data: categories = [], isLoading } = useGetCategoriesQuery(
-    search ? { search } : undefined,
-  );
+  const debouncedSearch = useDebouncedValue(search, 300);
+  const {
+    data: categories = [],
+    isLoading,
+    isFetching,
+  } = useGetCategoriesQuery(debouncedSearch ? { search: debouncedSearch } : undefined);
   const [deleteCategory, { isLoading: isDeleting }] = useDeleteCategoryMutation();
   const [updateCategoryStatus] = useUpdateCategoryStatusMutation();
   const [deleteGuard, setDeleteGuard] = useState<{ id: string; message: string } | null>(null);
@@ -85,7 +89,7 @@ export const CategoryList = ({ search, onSearchChange, onEdit }: CategoryListPro
         <LoadingState />
       ) : (
         <div className="mt-4">
-          <Table minWidthClassName="min-w-[640px]">
+          <Table minWidthClassName="min-w-[640px]" isFetching={isFetching}>
             <TableHeadRow>
               <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Parent</th>

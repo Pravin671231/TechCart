@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { SearchInput } from "@/components/form/SearchInput";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   useDeleteBrandMutation,
   useGetBrandsQuery,
@@ -20,7 +21,12 @@ export interface BrandListProps {
 }
 
 export const BrandList = ({ search, onSearchChange, onEdit }: BrandListProps) => {
-  const { data: brands = [], isLoading } = useGetBrandsQuery(search ? { search } : undefined);
+  const debouncedSearch = useDebouncedValue(search, 300);
+  const {
+    data: brands = [],
+    isLoading,
+    isFetching,
+  } = useGetBrandsQuery(debouncedSearch ? { search: debouncedSearch } : undefined);
   const [deleteBrand, { isLoading: isDeleting }] = useDeleteBrandMutation();
   const [updateBrandStatus] = useUpdateBrandStatusMutation();
   const [deleteGuard, setDeleteGuard] = useState<{ id: string; message: string } | null>(null);
@@ -54,7 +60,7 @@ export const BrandList = ({ search, onSearchChange, onEdit }: BrandListProps) =>
         <LoadingState />
       ) : (
         <div className="mt-4">
-          <Table minWidthClassName="min-w-[560px]">
+          <Table minWidthClassName="min-w-[560px]" isFetching={isFetching}>
             <TableHeadRow>
               <th className="px-3 py-2">Logo</th>
               <th className="px-3 py-2">Name</th>

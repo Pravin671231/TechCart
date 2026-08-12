@@ -7,8 +7,10 @@ import { Checkbox } from "@/components/form/Checkbox";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { Pagination } from "@/components/ui/Pagination";
 import { SearchInput } from "@/components/form/SearchInput";
+import { SortableHeader } from "@/components/ui/SortableHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { formatPrice } from "./money";
 import {
   useGetProductsQuery,
@@ -16,7 +18,7 @@ import {
   useUpdateProductStockMutation,
 } from "./productsApi";
 import { STATUS_LABEL, STATUS_TONE } from "./statusPresentation";
-import type { Product, ProductStatus } from "./types";
+import type { Product, ProductSort, ProductStatus } from "./types";
 
 export interface ProductListProps {
   search: string;
@@ -25,6 +27,8 @@ export interface ProductListProps {
   onStatusChange: (value: ProductStatus | "") => void;
   lowStockOnly: boolean;
   onLowStockOnlyChange: (value: boolean) => void;
+  sort: ProductSort | undefined;
+  onSortChange: (sort: ProductSort) => void;
   page: number;
   onPageChange: (page: number) => void;
 }
@@ -36,12 +40,16 @@ export const ProductList = ({
   onStatusChange,
   lowStockOnly,
   onLowStockOnlyChange,
+  sort,
+  onSortChange,
   page,
   onPageChange,
 }: ProductListProps) => {
-  const { data, isLoading } = useGetProductsQuery({
+  const debouncedSearch = useDebouncedValue(search, 300);
+  const { data, isLoading, isFetching } = useGetProductsQuery({
     page,
-    search: search || undefined,
+    sort,
+    search: debouncedSearch || undefined,
     status: status || undefined,
     lowStock: lowStockOnly,
   });
@@ -108,14 +116,34 @@ export const ProductList = ({
       {isLoading ? (
         <LoadingState label="Loading…" spaced={false} />
       ) : (
-        <Table minWidthClassName="min-w-[900px]">
+        <Table minWidthClassName="min-w-[900px]" isFetching={isFetching}>
           <TableHeadRow variant="shaded">
-            <th className="px-3 py-2 font-medium text-neutral-500">Name</th>
+            <SortableHeader<ProductSort>
+              label="Name"
+              sortKeyAsc="name"
+              sortKeyDesc="-name"
+              currentSort={sort}
+              onSortChange={onSortChange}
+            />
             <th className="px-3 py-2 font-medium text-neutral-500">SKU</th>
             <th className="px-3 py-2 font-medium text-neutral-500">Brand</th>
             <th className="px-3 py-2 font-medium text-neutral-500">Category</th>
-            <th className="px-3 py-2 text-right font-medium text-neutral-500">Price</th>
-            <th className="px-3 py-2 text-right font-medium text-neutral-500">Stock</th>
+            <SortableHeader<ProductSort>
+              label="Price"
+              sortKeyAsc="mrp"
+              sortKeyDesc="-mrp"
+              align="right"
+              currentSort={sort}
+              onSortChange={onSortChange}
+            />
+            <SortableHeader<ProductSort>
+              label="Stock"
+              sortKeyAsc="stock"
+              sortKeyDesc="-stock"
+              align="right"
+              currentSort={sort}
+              onSortChange={onSortChange}
+            />
             <th className="px-3 py-2 font-medium text-neutral-500">Status</th>
             <th className="px-3 py-2 font-medium text-neutral-500">Actions</th>
           </TableHeadRow>

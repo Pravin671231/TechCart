@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { server } from "../../../mocks/server";
 import { createStore } from "@/app/store/store";
 import type { AuthState } from "@/app/store/authSlice";
@@ -217,5 +217,70 @@ describe("ProductsPage", () => {
 
     const inactiveRow = screen.getByText("TC-SP-0001-WHT-128").closest("tr")!;
     expect(within(inactiveRow).getByText("No")).toBeInTheDocument();
+  });
+
+  it("sorts by clicking a sortable column header, toggling asc/desc", async () => {
+    const handlers = setupHandlers([makeProduct()]);
+    renderProductsApp();
+    await screen.findByText("Test Phone");
+
+    fireEvent.click(screen.getByRole("button", { name: "Name" }));
+    await waitFor(() => {
+      expect(handlers.getLastListUrl()!.searchParams.get("sort")).toBe("name");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Name" }));
+    await waitFor(() => {
+      expect(handlers.getLastListUrl()!.searchParams.get("sort")).toBe("-name");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Stock" }));
+    await waitFor(() => {
+      expect(handlers.getLastListUrl()!.searchParams.get("sort")).toBe("stock");
+    });
+  });
+
+  it("debounces rapid search keystrokes into a single request", async () => {
+    const handlers = setupHandlers([makeProduct()]);
+    renderProductsApp();
+    await screen.findByText("Test Phone");
+
+    const searchInput = screen.getByLabelText("Search products");
+    fireEvent.change(searchInput, { target: { value: "p" } });
+    fireEvent.change(searchInput, { target: { value: "ph" } });
+    fireEvent.change(searchInput, { target: { value: "pho" } });
+
+    await waitFor(() => {
+      expect(handlers.getLastListUrl()!.searchParams.get("search")).toBe("pho");
+    });
+  });
+
+  it("shows an in-body indicator while a filter-triggered refetch is in flight", async () => {
+    const products = [makeProduct({ status: "published" })];
+    server.use(
+      http.get(`${BASE}/brands`, () =>
+        HttpResponse.json({ success: true, data: [{ _id: "brand-1", name: "Brand A", slug: "brand-a" }] }),
+      ),
+      http.get(`${BASE}/categories`, () => HttpResponse.json({ success: true, data: [] })),
+      http.get(`${BASE}/products`, async ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get("status")) await delay(50);
+        return HttpResponse.json({
+          success: true,
+          data: products,
+          pagination: { page: 1, limit: 20, total: products.length, totalPages: 1, hasNextPage: false },
+        });
+      }),
+    );
+
+    renderProductsApp();
+    await screen.findByText("Test Phone");
+
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "published" } });
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Updating…");
+    await waitFor(() => {
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
   });
 });

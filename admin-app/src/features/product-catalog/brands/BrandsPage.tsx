@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useListQueryState } from "@/hooks/useListQueryState";
 import { BrandForm } from "./BrandForm";
 import { BrandList } from "./BrandList";
 import type { BrandListItem } from "./types";
 
 export const BrandsPage = () => {
-  const [search, setSearch] = useState("");
+  const { filters, setFilter } = useListQueryState<{ search: string }>({ search: "" });
   const [selectedBrand, setSelectedBrand] = useState<BrandListItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -35,8 +36,8 @@ export const BrandsPage = () => {
 
       <div className="flex flex-col gap-6 xl:flex-row">
         <BrandList
-          search={search}
-          onSearchChange={setSearch}
+          search={filters.search}
+          onSearchChange={(value) => setFilter("search", value)}
           onEdit={(brand) => {
             setIsCreating(false);
             setSelectedBrand(brand);

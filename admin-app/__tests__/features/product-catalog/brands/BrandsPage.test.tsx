@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { server } from "../../../mocks/server";
 import { renderWithStore } from "../../../utils/renderWithStore";
 import { BrandsPage } from "@/features/product-catalog/brands/BrandsPage";
@@ -161,6 +161,62 @@ describe("BrandsPage", () => {
       expect(screen.queryByText("Acme")).not.toBeInTheDocument();
     });
     expect(screen.getByText("Zenith")).toBeInTheDocument();
+  });
+
+  it("debounces rapid search keystrokes into a single request", async () => {
+    setupBrandHandlers([
+      makeBrand({ _id: "brand-1", name: "Acme" }),
+      makeBrand({ _id: "brand-2", name: "Zenith" }),
+    ]);
+    const requestedSearches: (string | null)[] = [];
+    server.use(
+      http.get(`${BASE}/brands`, ({ request }) => {
+        const url = new URL(request.url);
+        requestedSearches.push(url.searchParams.get("search"));
+        return HttpResponse.json({ success: true, data: [] });
+      }),
+    );
+
+    renderWithStore(<BrandsPage />, { adminKey: "test-key" });
+    await waitFor(() => expect(requestedSearches.length).toBeGreaterThan(0));
+    const requestsBeforeTyping = requestedSearches.length;
+
+    const searchInput = screen.getByLabelText("Search brands");
+    fireEvent.change(searchInput, { target: { value: "z" } });
+    fireEvent.change(searchInput, { target: { value: "ze" } });
+    fireEvent.change(searchInput, { target: { value: "zen" } });
+
+    await waitFor(() => {
+      expect(requestedSearches.slice(requestsBeforeTyping)).toEqual(["zen"]);
+    });
+  });
+
+  it("shows an in-body indicator while a search refetch is in flight", async () => {
+    setupBrandHandlers([
+      makeBrand({ _id: "brand-1", name: "Acme" }),
+      makeBrand({ _id: "brand-2", name: "Zenith" }),
+    ]);
+    server.use(
+      http.get(`${BASE}/brands`, async ({ request }) => {
+        const url = new URL(request.url);
+        const search = url.searchParams.get("search");
+        if (search) await delay(50);
+        const data = search
+          ? [makeBrand({ _id: "brand-2", name: "Zenith" })]
+          : [makeBrand({ _id: "brand-1", name: "Acme" }), makeBrand({ _id: "brand-2", name: "Zenith" })];
+        return HttpResponse.json({ success: true, data });
+      }),
+    );
+
+    renderWithStore(<BrandsPage />, { adminKey: "test-key" });
+    await screen.findByText("Acme");
+
+    fireEvent.change(screen.getByLabelText("Search brands"), { target: { value: "zen" } });
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Updating…");
+    await waitFor(() => {
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
   });
 
   it("uploads a logo via the presigned-upload flow and includes it on save", async () => {

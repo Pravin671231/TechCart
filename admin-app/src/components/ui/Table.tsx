@@ -4,17 +4,43 @@ import { cn } from "@/lib/utils";
 export interface TableProps {
   minWidthClassName?: string;
   bordered?: boolean;
+  isFetching?: boolean;
   children: ReactNode;
 }
 
-export const Table = ({ minWidthClassName, bordered = true, children }: TableProps) => {
+export const Table = ({
+  minWidthClassName,
+  bordered = true,
+  isFetching = false,
+  children,
+}: TableProps) => {
   return (
     <div
       className={cn(
+        "relative",
         bordered ? "overflow-x-auto rounded-lg border border-neutral-200" : "overflow-x-auto",
       )}
     >
-      <table className={cn("w-full border-collapse text-sm", minWidthClassName)}>{children}</table>
+      <table
+        aria-busy={isFetching}
+        className={cn(
+          "w-full border-collapse text-sm",
+          isFetching && "opacity-50 transition-opacity",
+          minWidthClassName,
+        )}
+      >
+        {children}
+      </table>
+      {isFetching && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none absolute top-2 right-2 flex items-center gap-1.5 rounded-full bg-white px-2 py-1 text-xs text-neutral-500 shadow-sm ring-1 ring-neutral-200"
+        >
+          <span className="h-3 w-3 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-600" />
+          Updating…
+        </div>
+      )}
     </div>
   );
 };

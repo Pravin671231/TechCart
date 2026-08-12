@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useListQueryState } from "@/hooks/useListQueryState";
 import { useGetCategoriesQuery } from "./categoriesApi";
 import { CategoryForm } from "./CategoryForm";
 import { CategoryList } from "./CategoryList";
 import type { CategoryListItem } from "./types";
 
 export const CategoriesPage = () => {
-  const [search, setSearch] = useState("");
+  const { filters, setFilter } = useListQueryState<{ search: string }>({ search: "" });
   const [selectedCategory, setSelectedCategory] = useState<CategoryListItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -38,8 +39,8 @@ export const CategoriesPage = () => {
 
       <div className="flex flex-col gap-6 xl:flex-row">
         <CategoryList
-          search={search}
-          onSearchChange={setSearch}
+          search={filters.search}
+          onSearchChange={(value) => setFilter("search", value)}
           onEdit={(category) => {
             setIsCreating(false);
             setSelectedCategory(category);

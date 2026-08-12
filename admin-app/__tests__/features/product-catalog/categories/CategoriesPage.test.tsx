@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { server } from "../../../mocks/server";
 import { renderWithStore } from "../../../utils/renderWithStore";
 import { CategoriesPage } from "@/features/product-catalog/categories/CategoriesPage";
@@ -245,5 +245,64 @@ describe("CategoriesPage", () => {
       expect(screen.queryByText("Electronics")).not.toBeInTheDocument();
     });
     expect(screen.getByText("Furniture")).toBeInTheDocument();
+  });
+
+  it("debounces rapid search keystrokes into a single request", async () => {
+    setupCategoryHandlers([
+      makeCategory({ _id: "cat-1", name: "Electronics" }),
+      makeCategory({ _id: "cat-2", name: "Furniture", sortOrder: 2 }),
+    ]);
+    const requestedSearches: (string | null)[] = [];
+    server.use(
+      http.get(`${BASE}/categories`, ({ request }) => {
+        const url = new URL(request.url);
+        requestedSearches.push(url.searchParams.get("search"));
+        return HttpResponse.json({ success: true, data: [] });
+      }),
+    );
+
+    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    await waitFor(() => expect(requestedSearches.length).toBeGreaterThan(0));
+    const requestsBeforeTyping = requestedSearches.length;
+
+    const searchInput = screen.getByLabelText("Search categories");
+    fireEvent.change(searchInput, { target: { value: "f" } });
+    fireEvent.change(searchInput, { target: { value: "fu" } });
+    fireEvent.change(searchInput, { target: { value: "fur" } });
+
+    await waitFor(() => {
+      expect(requestedSearches.slice(requestsBeforeTyping)).toEqual(["fur"]);
+    });
+  });
+
+  it("shows an in-body indicator while a search refetch is in flight", async () => {
+    setupCategoryHandlers([
+      makeCategory({ _id: "cat-1", name: "Electronics" }),
+      makeCategory({ _id: "cat-2", name: "Furniture", sortOrder: 2 }),
+    ]);
+    server.use(
+      http.get(`${BASE}/categories`, async ({ request }) => {
+        const url = new URL(request.url);
+        const search = url.searchParams.get("search");
+        if (search) await delay(50);
+        const data = search
+          ? [makeCategory({ _id: "cat-2", name: "Furniture", sortOrder: 2 })]
+          : [
+              makeCategory({ _id: "cat-1", name: "Electronics" }),
+              makeCategory({ _id: "cat-2", name: "Furniture", sortOrder: 2 }),
+            ];
+        return HttpResponse.json({ success: true, data });
+      }),
+    );
+
+    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    await screen.findByText("Electronics");
+
+    fireEvent.change(screen.getByLabelText("Search categories"), { target: { value: "fur" } });
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Updating…");
+    await waitFor(() => {
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
   });
 });
