@@ -1,7 +1,8 @@
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { useGetBrandsQuery } from "@/features/product-catalog/brands/brandsApi";
 import { useGetCategoriesQuery } from "@/features/product-catalog/categories/categoriesApi";
 import { PRODUCT_CATALOG_ROUTES } from "@/features/product-catalog/routePaths";
+import { BreadcrumbHeading } from "@/components/ui/BreadcrumbHeading";
 import { LinkButton } from "@/components/ui/Button";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { ErrorState, LoadingState } from "@/components/ui/LoadingState";
@@ -48,16 +49,11 @@ export const ProductDetailPage = () => {
   return (
     <main className="p-6">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
-          <Link
-            to={PRODUCT_CATALOG_ROUTES.products.list}
-            className="text-neutral-400 hover:text-primary-600"
-          >
-            Products
-          </Link>
-          <span className="mx-1 text-neutral-300">/</span>
-          {product.name}
-        </h1>
+        <BreadcrumbHeading
+          backTo={PRODUCT_CATALOG_ROUTES.products.list}
+          backLabel="Products"
+          current={product.name}
+        />
         <div className="flex items-center gap-2 text-sm">
           <label className="flex items-center gap-2">
             <span className="text-neutral-500">Change status</span>

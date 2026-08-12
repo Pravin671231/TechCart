@@ -212,6 +212,24 @@ function setupHandlers(
 }
 
 describe("ProductForm", () => {
+  it("renders a breadcrumb link back to the products list when creating a product", async () => {
+    setupHandlers();
+    renderProductsApp("/products/new");
+
+    const link = await screen.findByRole("link", { name: "Products" });
+    expect(link).toHaveAttribute("href", "/products");
+    expect(screen.getByText("New product")).toBeInTheDocument();
+  });
+
+  it("renders a breadcrumb link back to the products list when editing a product", async () => {
+    setupHandlers({ products: [makeProduct()] });
+    renderProductsApp("/products/p1/edit");
+
+    const link = await screen.findByRole("link", { name: "Products" });
+    expect(link).toHaveAttribute("href", "/products");
+    expect(screen.getByText("Edit product")).toBeInTheDocument();
+  });
+
   it("disables the SKU field when editing an existing product", async () => {
     setupHandlers({ products: [makeProduct()] });
     renderProductsApp("/products/p1/edit");

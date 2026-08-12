@@ -4,6 +4,7 @@ import { getApiErrorEnvelope } from "@/app/api/apiError";
 import { useGetBrandsQuery } from "@/features/product-catalog/brands/brandsApi";
 import { useGetCategoriesQuery } from "@/features/product-catalog/categories/categoriesApi";
 import { PRODUCT_CATALOG_ROUTES } from "@/features/product-catalog/routePaths";
+import { BreadcrumbHeading } from "@/components/ui/BreadcrumbHeading";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { Checkbox } from "@/components/form/Checkbox";
@@ -170,9 +171,11 @@ export const ProductForm = ({ product }: { product: Product | null }) => {
   return (
     <main className="p-6">
       <div className="mb-2 flex items-center justify-between">
-        <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
-          {product ? "Edit product" : "New product"}
-        </h1>
+        <BreadcrumbHeading
+          backTo={PRODUCT_CATALOG_ROUTES.products.list}
+          backLabel="Products"
+          current={product ? "Edit product" : "New product"}
+        />
       </div>
 
       <form onSubmit={(event) => void handleSubmit(event)} className="max-w-4xl space-y-6">
