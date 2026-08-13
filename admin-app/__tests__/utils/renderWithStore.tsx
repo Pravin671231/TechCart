@@ -1,8 +1,8 @@
 import type { ReactElement } from "react";
 import { render } from "@testing-library/react";
 import { Provider } from "react-redux";
-import { createStore } from "@/store/store";
-import type { AuthState } from "@/store/authSlice";
+import { createStore } from "@/app/store/store";
+import type { AuthState } from "@/app/store/authSlice";
 
 export function renderWithStore(ui: ReactElement, { adminKey = null }: { adminKey?: string | null } = {}) {
   const testStore = createStore({ auth: { adminKey } as AuthState });

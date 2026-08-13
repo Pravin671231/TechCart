@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw";
 import { server } from "../mocks/server";
-import { api } from "@/store/api";
-import { createStore } from "@/store/store";
-import { ADMIN_KEY_STORAGE_KEY } from "@/store/authSlice";
+import { api } from "@/app/api/baseApi";
+import { createStore } from "@/app/store/store";
+import { ADMIN_KEY_STORAGE_KEY } from "@/app/store/authSlice";
 
 const PING_URL = "http://localhost:4000/api/admin/ping";
 

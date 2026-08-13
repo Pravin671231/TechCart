@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from "react";
-import { useDispatch } from "react-redux";
-import { setAdminKey } from "@/store/authSlice";
+import { useAppDispatch } from "@/app/store/hooks";
+import { setAdminKey } from "@/app/store/authSlice";
 
-export function AdminKeyPrompt() {
-  const dispatch = useDispatch();
+export const AdminKeyPrompt = () => {
+  const dispatch = useAppDispatch();
   const [value, setValue] = useState("");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -38,4 +38,4 @@ export function AdminKeyPrompt() {
       </form>
     </main>
   );
-}
+};

@@ -1,14 +1,13 @@
 import type { ReactNode } from "react";
-import { useSelector } from "react-redux";
-import type { RootState } from "@/store/store";
+import { useAppSelector } from "@/app/store/hooks";
 import { AdminKeyPrompt } from "./AdminKeyPrompt";
 
-export function AdminKeyGate({ children }: { children: ReactNode }) {
-  const adminKey = useSelector((state: RootState) => state.auth.adminKey);
+export const AdminKeyGate = ({ children }: { children: ReactNode }) => {
+  const adminKey = useAppSelector((state) => state.auth.adminKey);
 
   if (!adminKey) {
     return <AdminKeyPrompt />;
   }
 
   return <>{children}</>;
-}
+};
