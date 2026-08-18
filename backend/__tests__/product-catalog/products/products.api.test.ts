@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 
 vi.mock("@/modules/product-catalog/features/products/products.repository", () => ({
+  PRODUCT_SORT_FIELDS: ["createdAt", "name"],
   create: vi.fn(),
   findById: vi.fn(),
   slugExists: vi.fn(),
@@ -345,17 +346,52 @@ describe("GET /api/admin/products", () => {
   });
 
   // mrp/stock sort options were removed with #102 — the product no longer
-  // has either field; name/createdAt remain.
+  // has either field; name/createdAt remain. Issue #104: sort is now
+  // ?sortBy=&orderBy= instead of a combined ?sort=-field enum.
   it("passes the parsed sort field/order through to the repository", async () => {
     vi.mocked(productsRepository.listPaginated).mockResolvedValue({ items: [], total: 0 });
 
-    await request(app).get("/api/admin/products?sort=-name").set("X-Admin-Key", env.ADMIN_API_KEY);
+    await request(app)
+      .get("/api/admin/products?sortBy=name&orderBy=desc")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
 
     expect(productsRepository.listPaginated).toHaveBeenCalledWith(
       {},
       { field: "name", order: -1 },
       { page: 1, limit: 20 },
     );
+  });
+
+  it("passes sort: undefined to the repository when orderBy is none", async () => {
+    vi.mocked(productsRepository.listPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    await request(app)
+      .get("/api/admin/products?orderBy=none")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(productsRepository.listPaginated).toHaveBeenCalledWith(
+      {},
+      undefined,
+      { page: 1, limit: 20 },
+    );
+  });
+
+  it("rejects an unrecognized sortBy value", async () => {
+    const res = await request(app)
+      .get("/api/admin/products?sortBy=badfield")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rejects an unrecognized orderBy value", async () => {
+    const res = await request(app)
+      .get("/api/admin/products?orderBy=sideways")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
   });
 
   it("passes the search term through to the repository", async () => {

@@ -165,25 +165,43 @@ describe("getBrandById", () => {
 
 describe("listBrandsForAdmin", () => {
   it("merges each brand with its product count, defaulting to 0", async () => {
-    vi.mocked(brandsRepository.list).mockResolvedValue([brandA, brandB]);
+    vi.mocked(brandsRepository.list).mockResolvedValue({ items: [brandA, brandB], total: 2 });
     vi.mocked(productsRepository.countByBrandIds).mockResolvedValue(new Map([[idA.toString(), 3]]));
 
-    const result = await listBrandsForAdmin();
+    const result = await listBrandsForAdmin({}, undefined, { page: 1, limit: 20 });
 
-    expect(result).toEqual([
+    expect(result.items).toEqual([
       { ...brandA, productCount: 3 },
       { ...brandB, productCount: 0 },
     ]);
     expect(productsRepository.countByBrandIds).toHaveBeenCalledWith([idA, idB]);
   });
 
-  it("passes the search term through to the repository", async () => {
-    vi.mocked(brandsRepository.list).mockResolvedValue([brandA]);
+  it("passes filter/sort/page straight through to the repository", async () => {
+    vi.mocked(brandsRepository.list).mockResolvedValue({ items: [brandA], total: 1 });
     vi.mocked(productsRepository.countByBrandIds).mockResolvedValue(new Map());
 
-    await listBrandsForAdmin("nov");
+    const filter = { name: { $regex: "nov", $options: "i" } };
+    const sort = { field: "name" as const, order: 1 as const };
 
-    expect(brandsRepository.list).toHaveBeenCalledWith("nov");
+    await listBrandsForAdmin(filter, sort, { page: 1, limit: 20 });
+
+    expect(brandsRepository.list).toHaveBeenCalledWith(filter, sort, { page: 1, limit: 20 });
+  });
+
+  it("computes pagination fields from the repository's total", async () => {
+    vi.mocked(brandsRepository.list).mockResolvedValue({ items: [brandA], total: 45 });
+    vi.mocked(productsRepository.countByBrandIds).mockResolvedValue(new Map());
+
+    const result = await listBrandsForAdmin({}, undefined, { page: 2, limit: 20 });
+
+    expect(result.pagination).toEqual({
+      page: 2,
+      limit: 20,
+      total: 45,
+      totalPages: 3,
+      hasNextPage: true,
+    });
   });
 });
 

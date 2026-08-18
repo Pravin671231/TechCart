@@ -4,6 +4,7 @@ import { z } from "zod";
 import { successResponse } from "@/utils/apiResponse";
 import { parseObjectId } from "@/utils/objectId";
 import { parseSlugParam } from "@/utils/routeParams";
+import { parseQuery } from "@/utils/parseQuery";
 import {
   createProduct,
   updateProduct,
@@ -18,7 +19,7 @@ import {
   getPublicProductBySlug,
 } from "./products.service";
 import { PRODUCT_STATUSES } from "./products.model";
-import type { ProductSortField, SpecFilter } from "./products.repository";
+import { PRODUCT_SORT_FIELDS, type ProductSortField, type SpecFilter } from "./products.repository";
 
 const objectIdString = z.string().refine(isValidObjectId, { message: "Must be a valid id." });
 
@@ -93,28 +94,20 @@ const updateVariantSchema = z.object({
   active: z.boolean().optional(),
 });
 
-// mrp/stock sort options dropped with #102 — the product no longer has
-// either field to sort on.
-const SORT_VALUES = ["createdAt", "-createdAt", "name", "-name"] as const;
-
 // search (FR-CAT-050) and status (FR-CAT-053, narrows the all-statuses admin
-// grid further) are the two additions #34 makes to this schema. lowStock
-// (FR-CAT-011) was removed by #102 — there's no stock to filter on.
+// grid further) are two of #34's additions to this schema. lowStock
+// (FR-CAT-011) was removed by #102 — there's no stock to filter on. Issue
+// #104: sort splits from the old combined `?sort=-field` enum into
+// `sortBy`/`orderBy`; defaults ("createdAt"/"desc") reproduce the old
+// `-createdAt` default exactly.
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
-  sort: z.enum(SORT_VALUES).optional().default("-createdAt"),
+  sortBy: z.enum(PRODUCT_SORT_FIELDS).optional().default("createdAt"),
+  orderBy: z.enum(["asc", "desc", "none"]).optional().default("desc"),
   search: z.string().min(1).optional(),
   status: z.enum(PRODUCT_STATUSES).optional(),
 });
-
-// Pure mapping, no I/O — SORT_VALUES already constrains the input via Zod,
-// so this never sees an unrecognized field.
-function parseSort(raw: (typeof SORT_VALUES)[number]): { field: ProductSortField; order: 1 | -1 } {
-  const order: 1 | -1 = raw.startsWith("-") ? -1 : 1;
-  const field = (raw.startsWith("-") ? raw.slice(1) : raw) as ProductSortField;
-  return { field, order };
-}
 
 export async function createProductHandler(req: Request, res: Response): Promise<void> {
   const input = createProductSchema.parse(req.body);
@@ -155,7 +148,16 @@ export async function getProductHandler(req: Request, res: Response): Promise<vo
 
 export async function listProductsHandler(req: Request, res: Response): Promise<void> {
   const query = listQuerySchema.parse(req.query);
-  const sort = parseSort(query.sort);
+  // search stays untouched, bespoke, inside listProductsForAdmin/listPaginated
+  // (name + variants.sku, asymmetric regex shapes) — parseQuery is only
+  // consulted here for sortBy/orderBy/field (Issue #104).
+  const { sort } = parseQuery<ProductSortField>(
+    undefined,
+    { page: query.page, limit: query.limit },
+    query.sortBy,
+    query.orderBy,
+    PRODUCT_SORT_FIELDS,
+  );
   const { items, pagination } = await listProductsForAdmin({
     page: query.page,
     limit: query.limit,

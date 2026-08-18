@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 
 vi.mock("@/modules/product-catalog/features/categories/categories.repository", () => ({
+  CATEGORY_SORT_FIELDS: ["name", "sortOrder", "createdAt"],
   create: vi.fn(),
   findById: vi.fn(),
   slugExists: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock("@/modules/product-catalog/features/categories/categories.repository", (
 }));
 
 vi.mock("@/modules/product-catalog/features/products/products.repository", () => ({
+  PRODUCT_SORT_FIELDS: ["createdAt", "name"],
   countByBrand: vi.fn(),
   countByBrandIds: vi.fn(),
   countByCategory: vi.fn(),
@@ -213,28 +215,31 @@ describe("GET /api/admin/categories", () => {
   it("returns each category with an accurate product count across statuses", async () => {
     const idA = new Types.ObjectId();
     const idB = new Types.ObjectId();
-    vi.mocked(categoriesRepository.list).mockResolvedValue([
-      {
-        _id: idA,
-        name: "Electronics",
-        slug: "electronics",
-        parentCategory: null,
-        sortOrder: 0,
-        status: true,
-        createdBy: null,
-        updatedBy: null,
-      },
-      {
-        _id: idB,
-        name: "Furniture",
-        slug: "furniture",
-        parentCategory: null,
-        sortOrder: 1,
-        status: true,
-        createdBy: null,
-        updatedBy: null,
-      },
-    ]);
+    vi.mocked(categoriesRepository.list).mockResolvedValue({
+      items: [
+        {
+          _id: idA,
+          name: "Electronics",
+          slug: "electronics",
+          parentCategory: null,
+          sortOrder: 0,
+          status: true,
+          createdBy: null,
+          updatedBy: null,
+        },
+        {
+          _id: idB,
+          name: "Furniture",
+          slug: "furniture",
+          parentCategory: null,
+          sortOrder: 1,
+          status: true,
+          createdBy: null,
+          updatedBy: null,
+        },
+      ],
+      total: 2,
+    });
     vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(
       new Map([[idA.toString(), 4]]),
     );
@@ -248,17 +253,61 @@ describe("GET /api/admin/categories", () => {
       expect.objectContaining({ name: "Electronics", productCount: 4 }),
       expect.objectContaining({ name: "Furniture", productCount: 0 }),
     ]);
+    expect(res.body.pagination).toEqual({
+      page: 1,
+      limit: 20,
+      total: 2,
+      totalPages: 1,
+      hasNextPage: false,
+    });
   });
 
-  it("passes a search query param through to the repository", async () => {
-    vi.mocked(categoriesRepository.list).mockResolvedValue([]);
+  it("passes a search query param through to the repository as a name regex filter", async () => {
+    vi.mocked(categoriesRepository.list).mockResolvedValue({ items: [], total: 0 });
     vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(new Map());
 
     await request(app)
       .get("/api/admin/categories?search=elec")
       .set("X-Admin-Key", env.ADMIN_API_KEY);
 
-    expect(categoriesRepository.list).toHaveBeenCalledWith("elec");
+    expect(categoriesRepository.list).toHaveBeenCalledWith(
+      { $or: [{ name: { $regex: "elec", $options: "i" } }] },
+      undefined,
+      { page: 1, limit: 20 },
+    );
+  });
+
+  it("accepts page/limit/sortBy/orderBy query params", async () => {
+    vi.mocked(categoriesRepository.list).mockResolvedValue({ items: [], total: 0 });
+    vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(new Map());
+
+    await request(app)
+      .get("/api/admin/categories?page=2&limit=5&sortBy=sortOrder&orderBy=asc")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(categoriesRepository.list).toHaveBeenCalledWith(
+      {},
+      { field: "sortOrder", order: 1 },
+      { page: 2, limit: 5 },
+    );
+  });
+
+  it("rejects an unrecognized sortBy value", async () => {
+    const res = await request(app)
+      .get("/api/admin/categories?sortBy=badfield")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rejects an oversized limit", async () => {
+    const res = await request(app)
+      .get("/api/admin/categories?limit=1000")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
   });
 });
 

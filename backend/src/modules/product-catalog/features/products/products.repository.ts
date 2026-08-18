@@ -404,13 +404,21 @@ export type ProductListFilter = {
   status?: ProductStatus | undefined;
 };
 // mrp/stock dropped with #102 — the product no longer has either field.
-export type ProductSortField = "createdAt" | "name";
+// Issue #104: the single source of truth for the admin list's sortable
+// fields, consumed both by the Mongoose enum-of-truth style below and by
+// products.controller.ts's Zod schema / parseQuery call, so the two can't
+// drift apart the way the old controller-local SORT_VALUES could.
+export const PRODUCT_SORT_FIELDS = ["createdAt", "name"] as const;
+export type ProductSortField = (typeof PRODUCT_SORT_FIELDS)[number];
 export type ProductListSort = { field: ProductSortField; order: 1 | -1 };
 export type ProductListPage = { page: number; limit: number };
 
 export async function listPaginated(
   filter: ProductListFilter,
-  sort: ProductListSort,
+  // Issue #104: optional — orderBy:"none" means no explicit sort at all,
+  // not a fallback default; Mongoose leaves natural order when .sort() is
+  // never called.
+  sort: ProductListSort | undefined,
   page: ProductListPage,
 ): Promise<{ items: ProductRecord[]; total: number }> {
   const query: QueryFilter<ProductDocument> = {};
@@ -434,7 +442,7 @@ export async function listPaginated(
   const skip = (page.page - 1) * page.limit;
   const [items, total] = await Promise.all([
     Product.find(query)
-      .sort({ [sort.field]: sort.order })
+      .sort(sort ? { [sort.field]: sort.order } : undefined)
       .skip(skip)
       .limit(page.limit)
       .lean(),

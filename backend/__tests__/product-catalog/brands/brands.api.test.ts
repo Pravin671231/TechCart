@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 
 vi.mock("@/modules/product-catalog/features/brands/brands.repository", () => ({
+  BRAND_SORT_FIELDS: ["name", "createdAt"],
   create: vi.fn(),
   findById: vi.fn(),
   slugExists: vi.fn(),
@@ -13,6 +14,7 @@ vi.mock("@/modules/product-catalog/features/brands/brands.repository", () => ({
 }));
 
 vi.mock("@/modules/product-catalog/features/products/products.repository", () => ({
+  PRODUCT_SORT_FIELDS: ["createdAt", "name"],
   countByBrand: vi.fn(),
   countByBrandIds: vi.fn(),
 }));
@@ -161,10 +163,13 @@ describe("GET /api/admin/brands", () => {
   it("returns each brand with an accurate product count across statuses", async () => {
     const idA = new Types.ObjectId();
     const idB = new Types.ObjectId();
-    vi.mocked(brandsRepository.list).mockResolvedValue([
-      { _id: idA, name: "Nova", slug: "nova", status: true, createdBy: null, updatedBy: null },
-      { _id: idB, name: "Zeta", slug: "zeta", status: true, createdBy: null, updatedBy: null },
-    ]);
+    vi.mocked(brandsRepository.list).mockResolvedValue({
+      items: [
+        { _id: idA, name: "Nova", slug: "nova", status: true, createdBy: null, updatedBy: null },
+        { _id: idB, name: "Zeta", slug: "zeta", status: true, createdBy: null, updatedBy: null },
+      ],
+      total: 2,
+    });
     // Stands in for "brand A has 2 products (one draft, one archived), brand
     // B has none" — the actual cross-status counting is products.repository's
     // job (no status filter in its $match), verified by reading that source.
@@ -177,15 +182,59 @@ describe("GET /api/admin/brands", () => {
       expect.objectContaining({ name: "Nova", productCount: 2 }),
       expect.objectContaining({ name: "Zeta", productCount: 0 }),
     ]);
+    expect(res.body.pagination).toEqual({
+      page: 1,
+      limit: 20,
+      total: 2,
+      totalPages: 1,
+      hasNextPage: false,
+    });
   });
 
-  it("passes a search query param through to the repository", async () => {
-    vi.mocked(brandsRepository.list).mockResolvedValue([]);
+  it("passes a search query param through to the repository as a name regex filter", async () => {
+    vi.mocked(brandsRepository.list).mockResolvedValue({ items: [], total: 0 });
     vi.mocked(productsRepository.countByBrandIds).mockResolvedValue(new Map());
 
     await request(app).get("/api/admin/brands?search=nov").set("X-Admin-Key", env.ADMIN_API_KEY);
 
-    expect(brandsRepository.list).toHaveBeenCalledWith("nov");
+    expect(brandsRepository.list).toHaveBeenCalledWith(
+      { $or: [{ name: { $regex: "nov", $options: "i" } }] },
+      undefined,
+      { page: 1, limit: 20 },
+    );
+  });
+
+  it("accepts page/limit/sortBy/orderBy query params", async () => {
+    vi.mocked(brandsRepository.list).mockResolvedValue({ items: [], total: 0 });
+    vi.mocked(productsRepository.countByBrandIds).mockResolvedValue(new Map());
+
+    await request(app)
+      .get("/api/admin/brands?page=2&limit=5&sortBy=name&orderBy=asc")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(brandsRepository.list).toHaveBeenCalledWith(
+      {},
+      { field: "name", order: 1 },
+      { page: 2, limit: 5 },
+    );
+  });
+
+  it("rejects an unrecognized sortBy value", async () => {
+    const res = await request(app)
+      .get("/api/admin/brands?sortBy=badfield")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rejects an oversized limit", async () => {
+    const res = await request(app)
+      .get("/api/admin/brands?limit=1000")
+      .set("X-Admin-Key", env.ADMIN_API_KEY);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
   });
 });
 

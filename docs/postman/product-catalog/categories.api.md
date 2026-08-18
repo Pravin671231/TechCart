@@ -300,7 +300,7 @@ Content-Type: application/json
 
 ## `GET /api/admin/categories`
 
-Lists every category, any status, each with its `parentCategory` and its product count.
+Lists every category, any status, each with its `parentCategory` and its product count — paginated and sortable (`FR-CAT-017`, Issue #104).
 
 | Field  | Value                              |
 | ------ | ------------------------------------ |
@@ -310,13 +310,19 @@ Lists every category, any status, each with its `parentCategory` and its product
 
 **Headers tab:** `X-Admin-Key: {{admin_api_key}}`. No body.
 
-**Query params (optional):**
+**Query params (all optional):**
 
-| Param    | Values                                                           | Default |
-| -------- | ---------------------------------------------------------------- | ------- |
-| `search` | free text — matched against `name`, partial and case-insensitive | omitted |
+| Param     | Values                                                           | Default |
+| --------- | ----------------------------------------------------------------- | ------- |
+| `page`    | integer ≥ 1                                                        | `1`     |
+| `limit`   | integer 1–100                                                      | `20`    |
+| `sortBy`  | `name` \| `sortOrder` \| `createdAt`                              | omitted |
+| `orderBy` | `asc` \| `desc` \| `none`                                          | `none`  |
+| `search`  | free text — matched against `name`, partial and case-insensitive  | omitted |
 
 Try: `{{base_url}}/api/admin/categories?search=elec` — matches "Electronics" regardless of case or position within the name (`FR-CAT-051`).
+
+Try pagination + sort: `{{base_url}}/api/admin/categories?page=1&limit=10&sortBy=sortOrder&orderBy=asc`
 
 **Click Send. Expected response — `200 OK`:**
 
@@ -337,13 +343,20 @@ Try: `{{base_url}}/api/admin/categories?search=elec` — matches "Electronics" r
       "updatedAt": "2026-07-30T10:00:00.000Z",
       "productCount": 0
     }
-  ]
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "totalPages": 1,
+    "hasNextPage": false
+  }
 }
 ```
 
 - `productCount` reflects products of **any** status directly assigned to that category — not counting products in its subcategories. Create a product against this category via [`products.api.md`](./products.api.md) (`#31`) to see this go above `0`.
 - Each item's `parentCategory` is a raw id (or `null`) — this is a **flat array, not a nested tree**. Build the two-level hierarchy client-side by grouping on `parentCategory`.
-- **No guaranteed order** — unlike the public list below, this endpoint doesn't sort, with or without `search`.
+- **Amended, Issue #104: paginated and sortable, same shape as [`GET /api/admin/products`](./products.api.md#get-apiadminproducts)** — previously this endpoint returned every category unpaginated with no guaranteed order. `orderBy` defaults to `none` (no `sortBy` default either) so a request with no sort params still returns the same unordered result this endpoint always has.
 - `search` spans **all** statuses, same as the unfiltered list — it doesn't hide inactive categories.
 - `search` is a plain MongoDB regex query, not Atlas Search — same mechanism as `search` on [`GET /api/admin/products`](./products.api.md#get-apiadminproducts) and [`GET /api/admin/brands`](./brands.api.md#get-apiadminbrands) (`FR-CAT-050`–`052`).
 
@@ -578,7 +591,7 @@ Category-specific codes, in addition to the ones already documented in [`uploads
 
 ## Understanding Validation Errors
 
-Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For categories, the fields that can appear as keys are `name`, `description`, `parentCategory`, `image.objectKey`, `image.alt`, `sortOrder`, `metaTitle`, `metaDescription`, and — on the admin list endpoint — `search`. `GET /api/categories/search` requires `q`; `GET /api/categories/:slug/products` accepts `page`, `limit`, and the full filter/sort field set documented in [`products.api.md`](./products.api.md#understanding-validation-errors) (`brand`, `minPrice`, `maxPrice`, `attributeValue`, ...). `INVALID_SPECIFICATION_FILTER` (also on `:slug/products`) is a separate, service-level error, not a `VALIDATION_ERROR`.
+Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For categories, the fields that can appear as keys are `name`, `description`, `parentCategory`, `image.objectKey`, `image.alt`, `sortOrder`, `metaTitle`, `metaDescription`, and — on the admin list endpoint — `page`, `limit`, `sortBy`, `orderBy`, `search`. `GET /api/categories/search` requires `q`; `GET /api/categories/:slug/products` accepts `page`, `limit`, and the full filter/sort field set documented in [`products.api.md`](./products.api.md#understanding-validation-errors) (`brand`, `minPrice`, `maxPrice`, `attributeValue`, ...). `INVALID_SPECIFICATION_FILTER` (also on `:slug/products`) is a separate, service-level error, not a `VALIDATION_ERROR`.
 
 ---
 

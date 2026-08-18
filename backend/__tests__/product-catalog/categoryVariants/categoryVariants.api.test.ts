@@ -9,6 +9,7 @@ vi.mock("@/modules/product-catalog/features/categoryVariants/categoryVariants.re
 }));
 
 vi.mock("@/modules/product-catalog/features/categories/categories.repository", () => ({
+  CATEGORY_SORT_FIELDS: ["name", "sortOrder", "createdAt"],
   findById: vi.fn(),
 }));
 

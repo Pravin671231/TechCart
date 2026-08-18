@@ -1,9 +1,10 @@
-import type { Types } from "mongoose";
+import type { QueryFilter, Types } from "mongoose";
 import { AppError } from "@/utils/AppError";
 import { generateUniqueSlug } from "@/utils/slug";
+import { buildPagination, type Pagination } from "@/utils/apiResponse";
 import { consumeImageKeys, buildPublicUrl } from "@/modules/uploads/uploads.service";
 import { countByBrand, countByBrandIds } from "@/modules/product-catalog/features/products/products.repository";
-import type { BrandLogo } from "./brands.model";
+import type { BrandDocument, BrandLogo } from "./brands.model";
 import {
   create,
   findById,
@@ -15,6 +16,8 @@ import {
   type BrandRecord,
   type CreateBrandDoc,
   type UpdateBrandDoc,
+  type BrandListSort,
+  type BrandListPage,
 } from "./brands.repository";
 
 // Optional fields spell out `| undefined` explicitly (not just `?:`) because
@@ -87,14 +90,24 @@ export async function getBrandById(id: Types.ObjectId): Promise<BrandRecord> {
   return brand;
 }
 
-export async function listBrandsForAdmin(search?: string): Promise<BrandListItem[]> {
-  const brands = await list(search);
-  const counts = await countByBrandIds(brands.map((brand) => brand._id));
+// Issue #104: paginated/sortable, previously an unfiltered full list —
+// `filter` (name search included, built by parseQuery) and `sort` arrive
+// pre-built from the controller, same layering categories'/products' own
+// list functions already established.
+export async function listBrandsForAdmin(
+  filter: QueryFilter<BrandDocument>,
+  sort: BrandListSort | undefined,
+  page: BrandListPage,
+): Promise<{ items: BrandListItem[]; pagination: Pagination }> {
+  const { items, total } = await list(filter, sort, page);
+  const counts = await countByBrandIds(items.map((brand) => brand._id));
 
-  return brands.map((brand) => ({
+  const withCounts = items.map((brand) => ({
     ...brand,
     productCount: counts.get(brand._id.toString()) ?? 0,
   }));
+
+  return { items: withCounts, pagination: buildPagination(page.page, page.limit, total) };
 }
 
 export async function listBrandsForPublic(): Promise<PublicBrand[]> {

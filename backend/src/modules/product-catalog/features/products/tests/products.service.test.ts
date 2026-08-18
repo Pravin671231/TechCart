@@ -468,6 +468,20 @@ describe("listProductsForAdmin", () => {
 
     expect(result.pagination.hasNextPage).toBe(false);
   });
+
+  // Issue #104: orderBy:"none" (parsed in products.controller.ts) means no
+  // sort at all — passed straight through as undefined, not a fallback.
+  it("passes sort: undefined straight through to the repository", async () => {
+    vi.mocked(productsRepository.listPaginated).mockResolvedValue({ items: [], total: 0 });
+
+    await listProductsForAdmin({ page: 1, limit: 20, sort: undefined });
+
+    expect(productsRepository.listPaginated).toHaveBeenCalledWith(
+      { search: undefined, status: undefined },
+      undefined,
+      { page: 1, limit: 20 },
+    );
+  });
 });
 
 describe("updateProductStatus", () => {

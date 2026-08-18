@@ -3,7 +3,7 @@ import { AppError } from "@/utils/AppError";
 import { generateUniqueSlug } from "@/utils/slug";
 import { truncate } from "@/utils/text";
 import { computeSellingPrice } from "@/utils/pricing";
-import type { Pagination } from "@/utils/apiResponse";
+import { buildPagination, type Pagination } from "@/utils/apiResponse";
 import {
   consumeImageKeys,
   validateImageCount,
@@ -91,7 +91,9 @@ export type UpdateProductInput = {
 export type ProductListParams = {
   page: number;
   limit: number;
-  sort: { field: ProductSortField; order: 1 | -1 };
+  // Issue #104: optional — orderBy:"none" (parsed in products.controller.ts
+  // via parseQuery) means no sort at all, not a fallback default.
+  sort?: { field: ProductSortField; order: 1 | -1 } | undefined;
   search?: string | undefined;
   status?: ProductStatus | undefined;
 };
@@ -244,17 +246,7 @@ export async function listProductsForAdmin(
     { page: params.page, limit: params.limit },
   );
 
-  const totalPages = Math.max(1, Math.ceil(total / params.limit));
-  return {
-    items,
-    pagination: {
-      page: params.page,
-      limit: params.limit,
-      total,
-      totalPages,
-      hasNextPage: params.page < totalPages,
-    },
-  };
+  return { items, pagination: buildPagination(params.page, params.limit, total) };
 }
 
 // FR-CAT-045 — the general three-state setter. Unlike brands'/categories'
@@ -698,11 +690,6 @@ function toPublicDetail(product: PublicProductDoc): PublicProductDetail {
     detail.defaultVariantId = defaultVariant._id;
   }
   return detail;
-}
-
-function buildPagination(page: number, limit: number, total: number): Pagination {
-  const totalPages = Math.max(1, Math.ceil(total / limit));
-  return { page, limit, total, totalPages, hasNextPage: page < totalPages };
 }
 
 function invalidSpecFilter(name: string): AppError {
