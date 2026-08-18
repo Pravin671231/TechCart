@@ -1,7 +1,7 @@
 # Issue Drafts
 
 **Project:** TechCart
-**Status:** M0 (Foundation), M1 (CI Pipeline), and M2 (Product Catalog, backend only) are all opened as real GitHub Issues — #1–#10, and #25–#36 under [Milestone #3](https://github.com/Pravin671231/TechCart/milestone/3) respectively — so all three milestones' draft text has been removed from this file; see `docs/milestone.md` and `docs/srs/SRS.md` §6 for their roadmap-level and traceability records. The **Backlog** below holds the M2 addendum: `M2.13` (mock-ui verification, opened as Issue #41), `M2.14`–`M2.25` (the frontend build-out of every `mock-ui/` screen into real `buyer-app`/`admin-app` code, opened as Issues #71–#82, also under Milestone #3), and `M2.26` (backend variant-only pricing / SRS v0.2 amendment, opened as Issue #102) — draft text kept here for reference rather than removed, following `M2.13`'s own precedent.
+**Status:** M0 (Foundation), M1 (CI Pipeline), and M2 (Product Catalog, backend only) are all opened as real GitHub Issues — #1–#10, and #25–#36 under [Milestone #3](https://github.com/Pravin671231/TechCart/milestone/3) respectively — so all three milestones' draft text has been removed from this file; see `docs/milestone.md` and `docs/srs/SRS.md` §6 for their roadmap-level and traceability records. The **Backlog** below holds the M2 addendum: `M2.13` (mock-ui verification, opened as Issue #41), `M2.14`–`M2.25` (the frontend build-out of every `mock-ui/` screen into real `buyer-app`/`admin-app` code, opened as Issues #71–#82, also under Milestone #3), `M2.26` (backend variant-only pricing / SRS v0.2 amendment, opened as Issue #102), and `M2.27` (backend shared parseQuery utility + categories/brands pagination+sort / SRS v0.2 amendment, opened as Issue #104) — draft text kept here for reference rather than removed, following `M2.13`'s own precedent.
 
 This is where issues get drafted — full context, a build-order task checklist, and test criteria — before they're opened as real GitHub Issues. It sits between [docs/milestone.md](milestone.md) (which milestone/goal) and GitHub itself (which is the actual tracker once an issue is opened): draft it here, then `gh issue create` it, then work it via the branch/PR flow in [docs/srs/SRS.md](srs/SRS.md) §5. Once a milestone's issues are opened on GitHub, its draft section is removed from here — this happened for M2 as of Issues #25–#36.
 
@@ -388,3 +388,32 @@ M2 (Issues #25–#36) shipped a product model where a product with zero active v
 - `PATCH .../status` to `"published"` on a product with zero active variants returns `400 PRODUCT_HAS_NO_VARIANTS`; the same call succeeds once an active variant exists
 - Buyer price-range, on-sale, and price-sort (`?sort=price_asc`/`price_desc`) all resolve against `variants[].sellingPrice`/`.discount`, not any product-level field
 - No buyer-facing or admin response contains a `stock`, `lowStockThreshold`, or `availability` key anywhere
+
+#### M2.27 — backend: shared parseQuery utility, categories/brands pagination+sort (SRS v0.2 amendment)
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/104-parse-query
+**Labels:** backend, catalog
+
+**Context**
+Only the products admin list (`GET /api/admin/products`) currently supports pagination and sort — `products.controller.ts` hand-rolls its own `page`/`limit`/`sort` Zod schema plus a `parseSort()` helper turning a combined `?sort=-createdAt`-style enum into `{field, order}`. The categories and brands admin lists (`GET /api/admin/categories`, `GET /api/admin/brands`) support only `?search=` — no pagination, no sort, returning an unpaginated full array via `successResponse(data)` with no `pagination` key at all. This issue extracts a shared `backend/src/utils/parseQuery.ts` (pure functions, no I/O — same house style as `slug.ts`/`text.ts`/`pricing.ts`/`availability.ts`) that validates and normalizes `page`/`limit` (mirroring products' existing "oversized `limit` is rejected, not clamped" rule), a `sortBy` field name checked against a per-caller allow-list (an unrecognized field is rejected, not silently ignored), an `orderBy` of `"asc" | "desc" | "none"` (`"none"` = no sort applied), and an optional `filter` object merged alongside `search` into a Mongo-ready query. All three admin list endpoints are wired through it. Categories and brands gain pagination + sort for the first time; products' sort wire format changes from the single `?sort=-field` enum to two params, `?sortBy=<field>&orderBy=asc|desc|none`, matching the new shared shape. This is an SRS v0.2 amendment (`FR-CAT-005`, `017`, `026` rewritten in place in `docs/srs/features/0.2-product-catalog.md` to state "paginated, sortable" uniformly across all three admin lists — no new FR numbers, since this generalizes existing capability rather than adding new functional scope). Backend-only, same precedent as #102: `admin-app`'s product list request (currently `?sort=-createdAt`) and its categories/brands list UI are explicitly left out of sync with this API change and are deferred to a separate follow-up issue.
+
+**Tasks**
+
+- [ ] `backend/src/utils/parseQuery.ts` (new): pure function(s) validating/normalizing `page`/`limit`, `sortBy` against an allow-listed field array, `orderBy` (`"asc"|"desc"|"none"`), and merging an optional `filter` object with a `search` value into a Mongo-ready query piece
+- [ ] `backend/src/utils/tests/parseQuery.test.ts` (new): Vitest unit tests mirroring `text.test.ts`/`availability.test.ts`'s one-`describe`-per-export style — happy path, invalid `sortBy`, oversized `limit`, `orderBy: "none"`
+- [ ] `products.controller.ts`: replace `SORT_VALUES`/`parseSort`/the `sort` enum in `listQuerySchema` with `sortBy`/`orderBy` query params validated through `parseQuery`; `products.repository.ts`'s `listPaginated` keeps its existing `(filter, sort, page)` shape, now fed by `parseQuery`'s output
+- [ ] `categories.controller.ts` + `categories.repository.ts` + `categories.service.ts`: add `page`/`limit`/`sortBy`/`orderBy` query params via `parseQuery`; repository's `list()` gains `.sort()`/`.skip()`/`.limit()` plus a `countDocuments()` for `total`; `listCategoriesForAdmin` returns `{items, pagination}` instead of a plain array; controller switches to the `successResponse(items, pagination)` overload
+- [ ] `brands.controller.ts` + `brands.repository.ts` + `brands.service.ts`: identical shape change as categories
+- [ ] Update `categories.service.test.ts`/`categories.api.test.ts` and `brands.service.test.ts`/`brands.api.test.ts` for the new pagination/sort behavior, following `products.service.test.ts`'s existing `listProductsForAdmin` test pattern
+- [ ] SRS amendment: `FR-CAT-005`/`017`/`026` rewritten in place in `docs/srs/features/0.2-product-catalog.md`; endpoint table rows for `GET /api/admin/categories` and `GET /api/admin/brands` note pagination; §7 worked examples updated
+- [ ] `docs/postman/product-catalog/{products,categories,brands}.api.md`: update sort query param docs to `sortBy`/`orderBy`, add a pagination example to the categories/brands list requests
+- [ ] `backend/CLAUDE.md`: append a summary entry once this issue's real number is known
+
+**Test Criteria**
+
+- `npm run build --workspace backend` and `npm run test --workspace backend` both pass
+- `GET /api/admin/products?sortBy=name&orderBy=desc` sorts correctly; an unrecognized `sortBy` value returns `400 VALIDATION_ERROR`
+- `GET /api/admin/categories` and `GET /api/admin/brands` both accept `page`/`limit`/`sortBy`/`orderBy` and return a `pagination` object matching `FR-CAT-094`'s shape
+- `orderBy=none` returns results with no explicit sort applied
+- Existing `?search=` behavior on all three admin lists is unchanged
