@@ -283,7 +283,7 @@ Every code below was found by grepping every `AppError(...)`/error-producing cal
 | `UNAUTHORIZED`              | 401    | `adminAuth.ts` — missing/wrong `X-Admin-Key`                                                                              | Yes                                                                                                                                                                 |
 | `VALIDATION_ERROR`          | 400    | `errorHandler.ts` — a thrown `ZodError` (e.g. bad `purpose`/`contentType`), reported as an `errors` object keyed by field | Yes                                                                                                                                                                 |
 | `NOT_FOUND`                 | 404    | `notFound.ts` — unmatched route                                                                                           | Yes                                                                                                                                                                 |
-| `INTERNAL_ERROR`            | 500    | `errorHandler.ts` — fallback for anything unrecognized                                                                    | Yes, but not triggered in normal use                                                                                                                                |
+| `INTERNAL_ERROR`            | 500    | `errorHandler.ts` — fallback for anything unrecognized; response shape depends on `NODE_ENV`, see note below              | Yes, but not triggered in normal use                                                                                                                                |
 | `OBJECT_KEY_NOT_ISSUED`     | 400    | `uploads.service.ts`'s `consumeImageKeys()` — a key that was never issued or is already consumed                          | Yes — via brand/category/product create-and-update, see [`brands.api.md`](./brands.api.md), [`categories.api.md`](./categories.api.md), [`products.api.md`](./products.api.md) |
 | `IMAGE_COUNT_OUT_OF_BOUNDS` | 400    | `uploads.service.ts`'s `validateImageCount()` — image array outside its allowed bounds                                    | Yes — products (1–8) and, with a different bound, product variants (0 or 1–2); brands/categories cap at a single image with no count check — see [`products.api.md`](./products.api.md) |
 | `NO_FILE_UPLOADED`          | 400    | `uploads.controller.ts`'s `directUpload()` — `POST /direct` called with no `file` field attached                          | Yes                                                                                                                                                                 |
@@ -292,6 +292,20 @@ Every code below was found by grepping every `AppError(...)`/error-producing cal
 | `UPLOAD_ERROR`              | 400    | `errorHandler.ts` — any other thrown `MulterError` (e.g. malformed multipart body)                                        | Only via a malformed request — not triggered by normal Postman use                                                                                                  |
 
 `UPLOAD_ERROR` is listed for completeness rather than omitted — it's a real code path in this codebase, just not something a normal Postman request triggers (it needs a malformed multipart body, not just a bad field value).
+
+**`INTERNAL_ERROR`'s response shape depends on `NODE_ENV`.** In `development`, it includes the real error's `message`, `name`, and a `stack` trace, to make local debugging fast:
+
+```json
+{
+  "success": false,
+  "code": "INTERNAL_ERROR",
+  "message": "Cannot read properties of undefined (reading 'foo')",
+  "name": "TypeError",
+  "stack": "TypeError: Cannot read properties of undefined (reading 'foo')\n    at ..."
+}
+```
+
+In `production` — and in `test`, and for any other/unrecognized `NODE_ENV` value, since the fallback is fail-safe — the response stays the generic shape shown in the table above, with no error detail reaching the client. Either way, the full error is always logged server-side via `console.error`, in every environment, regardless of what the client response contains.
 
 ---
 
