@@ -513,10 +513,7 @@ export type PublicProductListParams = {
   sort?: PublicSort | undefined;
 };
 
-export type PublicCategoryProductListParams = Omit<
-  PublicProductListParams,
-  "q" | "categorySlug"
->;
+export type PublicCategoryProductListParams = Omit<PublicProductListParams, "q" | "categorySlug">;
 
 function toPublicRef(ref: PopulatedRef): PublicRef {
   return { _id: ref._id, name: ref.name, slug: ref.slug };

@@ -238,7 +238,9 @@ const specFilterRangeSchema = z
   .refine((range) => range.min !== undefined || range.max !== undefined, {
     message: "At least one of min/max is required.",
   });
-const specFilterQuerySchema = z.record(z.string(), z.union([z.string(), specFilterRangeSchema])).optional();
+const specFilterQuerySchema = z
+  .record(z.string(), z.union([z.string(), specFilterRangeSchema]))
+  .optional();
 
 const publicFilterFieldsSchema = z.object({
   brand: brandFilterSchema,

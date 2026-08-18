@@ -102,7 +102,9 @@ function buildVariantList(
 
   // "color" kind — a single axis, three variants
   const colors = pick(COLOR_TRIOS, index);
-  return colors.map((color, colorIndex) => makeVariant([attribute("Color", color)], colorIndex * 1500));
+  return colors.map((color, colorIndex) =>
+    makeVariant([attribute("Color", color)], colorIndex * 1500),
+  );
 }
 
 /**

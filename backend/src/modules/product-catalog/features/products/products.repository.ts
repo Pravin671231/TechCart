@@ -164,13 +164,10 @@ async function runFacetedAggregate(
   const items = result?.items ?? [];
   const total = result?.totalCount[0]?.count ?? 0;
 
-  const populated = await Product.populate<{ brand: PopulatedRef; category: PopulatedRef }>(
-    items,
-    [
-      { path: "brand", select: "name slug" },
-      { path: "category", select: "name slug" },
-    ],
-  );
+  const populated = await Product.populate<{ brand: PopulatedRef; category: PopulatedRef }>(items, [
+    { path: "brand", select: "name slug" },
+    { path: "category", select: "name slug" },
+  ]);
 
   return { items: populated as unknown as PublicProductDoc[], total };
 }

@@ -191,7 +191,7 @@ A feature earns a row once its spec is drafted (step 2 of the workflow above); t
 
 | Feature         | SRS Version                                                  | Milestone                                                                    | Issue(s)                                                                                                            | Status      |
 | --------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
-| Product Catalog | [v0.2](features/0.2-product-catalog.md) — `FR-CAT-001`–`096` | [M2 - Product Catalog](https://github.com/Pravin671231/TechCart/milestone/3) | [#25](https://github.com/Pravin671231/TechCart/issues/25)–[#36](https://github.com/Pravin671231/TechCart/issues/36) | Issues open |
+| Product Catalog | [v0.2](features/0.2-product-catalog.md) — `FR-CAT-001`–`100` | [M2 - Product Catalog](https://github.com/Pravin671231/TechCart/milestone/3) | [#25](https://github.com/Pravin671231/TechCart/issues/25)–[#36](https://github.com/Pravin671231/TechCart/issues/36), [#102](https://github.com/Pravin671231/TechCart/issues/102) | Issues open |
 
 ---
 

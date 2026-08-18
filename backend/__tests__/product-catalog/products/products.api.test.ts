@@ -25,11 +25,14 @@ vi.mock("@/modules/product-catalog/features/categories/categories.service", () =
   listActiveSubcategoryIds: vi.fn(),
 }));
 
-vi.mock("@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service", () => ({
-  validateProductSpecifications: vi.fn(),
-  getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
-  getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
-}));
+vi.mock(
+  "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service",
+  () => ({
+    validateProductSpecifications: vi.fn(),
+    getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
+    getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
+  }),
+);
 
 // Partial mock via importOriginal — the real app boots uploads.routes.ts too
 // (mounted under the same adminRouter), which reads UPLOAD_PURPOSES/
@@ -51,7 +54,10 @@ vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
 import app from "@/app";
 import { env } from "@/config/env";
 import { AppError } from "@/utils/AppError";
-import type { ProductRecord, PublicProductDoc } from "@/modules/product-catalog/features/products/products.repository";
+import type {
+  ProductRecord,
+  PublicProductDoc,
+} from "@/modules/product-catalog/features/products/products.repository";
 import * as productsRepository from "@/modules/product-catalog/features/products/products.repository";
 import * as brandsService from "@/modules/product-catalog/features/brands/brands.service";
 import * as categoriesService from "@/modules/product-catalog/features/categories/categories.service";
@@ -167,7 +173,15 @@ describe("POST /api/admin/products", () => {
 
     expect(res.status).toBe(201);
     const doc = vi.mocked(productsRepository.create).mock.calls[0]?.[0];
-    for (const field of ["sku", "images", "mrp", "discount", "sellingPrice", "stock", "lowStockThreshold"]) {
+    for (const field of [
+      "sku",
+      "images",
+      "mrp",
+      "discount",
+      "sellingPrice",
+      "stock",
+      "lowStockThreshold",
+    ]) {
       expect(doc).not.toHaveProperty(field);
     }
   });
@@ -232,7 +246,15 @@ describe("PATCH /api/admin/products/:id", () => {
 
     expect(res.status).toBe(200);
     const patch = vi.mocked(productsRepository.updateById).mock.calls[0]?.[1];
-    for (const field of ["sku", "mrp", "discount", "sellingPrice", "stock", "lowStockThreshold", "images"]) {
+    for (const field of [
+      "sku",
+      "mrp",
+      "discount",
+      "sellingPrice",
+      "stock",
+      "lowStockThreshold",
+      "images",
+    ]) {
       expect(patch).not.toHaveProperty(field);
     }
   });
@@ -698,11 +720,10 @@ describe("GET /api/products", () => {
     const res = await request(app).get("/api/products?limit=1000");
 
     expect(res.status).toBe(200);
-    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
-      {},
-      "newest",
-      { page: 1, limit: 48 },
-    );
+    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith({}, "newest", {
+      page: 1,
+      limit: 48,
+    });
   });
 
   it("uses Atlas Search when q is present", async () => {
@@ -811,7 +832,9 @@ describe("GET /api/products", () => {
     });
     vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([]);
     vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
-      new Map([["RAM", { name: "RAM", type: "enum", options: ["8GB"], required: false, filterable: true }]]),
+      new Map([
+        ["RAM", { name: "RAM", type: "enum", options: ["8GB"], required: false, filterable: true }],
+      ]),
     );
     vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({ items: [], total: 0 });
 
@@ -839,7 +862,9 @@ describe("GET /api/products", () => {
     });
     vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([]);
     vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
-      new Map([["ScreenSize", { name: "ScreenSize", type: "number", required: false, filterable: true }]]),
+      new Map([
+        ["ScreenSize", { name: "ScreenSize", type: "number", required: false, filterable: true }],
+      ]),
     );
     vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({ items: [], total: 0 });
 
@@ -871,7 +896,9 @@ describe("GET /api/products", () => {
       updatedBy: null,
     });
     vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([]);
-    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(new Map());
+    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
+      new Map(),
+    );
 
     const res = await request(app).get("/api/products?category=electronics&spec[Resolution]=1080p");
 
@@ -884,9 +911,7 @@ describe("GET /api/products", () => {
       items: [
         {
           ...publicProductStub,
-          specifications: [
-            { groupName: "Display", values: [{ name: "Screen Size", value: 6.1 }] },
-          ],
+          specifications: [{ groupName: "Display", values: [{ name: "Screen Size", value: 6.1 }] }],
         },
       ],
       total: 1,

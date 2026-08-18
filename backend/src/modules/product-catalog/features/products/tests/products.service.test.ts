@@ -36,11 +36,14 @@ vi.mock("@/modules/product-catalog/features/categories/categories.service", () =
   listActiveSubcategoryIds: vi.fn(),
 }));
 
-vi.mock("@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service", () => ({
-  validateProductSpecifications: vi.fn(),
-  getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
-  getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
-}));
+vi.mock(
+  "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service",
+  () => ({
+    validateProductSpecifications: vi.fn(),
+    getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
+    getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
+  }),
+);
 
 import * as productsRepository from "../products.repository";
 import * as uploadsService from "@/modules/uploads/uploads.service";
@@ -264,7 +267,15 @@ describe("createProduct", () => {
     await createProduct(baseCreateInput);
 
     const doc = vi.mocked(productsRepository.create).mock.calls[0]?.[0];
-    for (const field of ["sku", "images", "mrp", "discount", "sellingPrice", "stock", "lowStockThreshold"]) {
+    for (const field of [
+      "sku",
+      "images",
+      "mrp",
+      "discount",
+      "sellingPrice",
+      "stock",
+      "lowStockThreshold",
+    ]) {
       expect(doc).not.toHaveProperty(field);
     }
     expect(uploadsService.validateImageCount).not.toHaveBeenCalled();
@@ -776,11 +787,10 @@ describe("listPublicProducts", () => {
 
     await listPublicProducts({ page: 1, limit: 24 });
 
-    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith(
-      {},
-      "newest",
-      { page: 1, limit: 24 },
-    );
+    expect(productsRepository.listPublicPaginated).toHaveBeenCalledWith({}, "newest", {
+      page: 1,
+      limit: 24,
+    });
     expect(productsRepository.searchPublicPaginated).not.toHaveBeenCalled();
   });
 
@@ -920,7 +930,9 @@ describe("listPublicProducts", () => {
     vi.mocked(categoriesService.getActiveCategoryBySlug).mockResolvedValue(categoryStub);
     vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([]);
     vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
-      new Map([["RAM", { name: "RAM", type: "enum", options: ["8GB"], required: false, filterable: true }]]),
+      new Map([
+        ["RAM", { name: "RAM", type: "enum", options: ["8GB"], required: false, filterable: true }],
+      ]),
     );
     vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({ items: [], total: 0 });
 
@@ -945,7 +957,9 @@ describe("listPublicProducts", () => {
   it("rejects a specification filter on a field that isn't filterable for the resolved category", async () => {
     vi.mocked(categoriesService.getActiveCategoryBySlug).mockResolvedValue(categoryStub);
     vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([]);
-    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(new Map());
+    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
+      new Map(),
+    );
 
     await expect(
       listPublicProducts({
@@ -962,7 +976,9 @@ describe("listPublicProducts", () => {
     vi.mocked(categoriesService.getActiveCategoryBySlug).mockResolvedValue(categoryStub);
     vi.mocked(categoriesService.listActiveSubcategoryIds).mockResolvedValue([]);
     vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
-      new Map([["RAM", { name: "RAM", type: "enum", options: ["8GB"], required: false, filterable: true }]]),
+      new Map([
+        ["RAM", { name: "RAM", type: "enum", options: ["8GB"], required: false, filterable: true }],
+      ]),
     );
 
     await expect(
@@ -998,9 +1014,7 @@ describe("listPublicProducts", () => {
       items: [
         {
           ...publicProductStub,
-          specifications: [
-            { groupName: "Display", values: [{ name: "Screen Size", value: 6.1 }] },
-          ],
+          specifications: [{ groupName: "Display", values: [{ name: "Screen Size", value: 6.1 }] }],
         },
       ],
       total: 1,
@@ -1036,7 +1050,10 @@ describe("listPublicProducts", () => {
   it("defaults unit to null when the filterable field has none", async () => {
     vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
       items: [
-        { ...publicProductStub, specifications: [{ groupName: "G", values: [{ name: "RAM", value: "8GB" }] }] },
+        {
+          ...publicProductStub,
+          specifications: [{ groupName: "G", values: [{ name: "RAM", value: "8GB" }] }],
+        },
       ],
       total: 1,
     });
@@ -1046,7 +1063,9 @@ describe("listPublicProducts", () => {
 
     const result = await listPublicProducts({ page: 1, limit: 24 });
 
-    expect(result.items[0]?.cardSpecifications).toEqual([{ name: "RAM", value: "8GB", unit: null }]);
+    expect(result.items[0]?.cardSpecifications).toEqual([
+      { name: "RAM", value: "8GB", unit: null },
+    ]);
   });
 });
 

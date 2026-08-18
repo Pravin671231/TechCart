@@ -32,11 +32,14 @@ vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
   };
 });
 
-vi.mock("@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service", () => ({
-  deleteForCategory: vi.fn(),
-  getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
-  getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
-}));
+vi.mock(
+  "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service",
+  () => ({
+    deleteForCategory: vi.fn(),
+    getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
+    getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
+  }),
+);
 
 vi.mock("@/modules/product-catalog/features/categoryVariants/categoryVariants.service", () => ({
   deleteForCategory: vi.fn(),
