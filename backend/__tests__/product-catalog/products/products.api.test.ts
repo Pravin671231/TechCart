@@ -81,22 +81,18 @@ const categoryStub = {
   updatedBy: null,
 };
 
+// Issue #102: sku/images/mrp/discount/sellingPrice/stock/lowStockThreshold
+// are gone from the product — every sellable, priced, imaged field lives
+// only on a variant now.
 const productStub: ProductRecord = {
   _id: productId,
   name: "Phone",
   slug: "phone",
-  sku: "SKU-1",
   description: "A phone",
   brand: brandId,
   category: categoryId,
-  images: [{ url: "https://cdn.test.example/product-image/a.png", isPrimary: true }],
   specifications: [],
   variants: [],
-  mrp: 99900,
-  discount: 10,
-  sellingPrice: 89910,
-  stock: 10,
-  lowStockThreshold: 0,
   isFeatured: false,
   status: "draft",
   createdBy: null,
@@ -106,13 +102,8 @@ const productStub: ProductRecord = {
 const validBody = {
   name: "Phone",
   description: "A phone",
-  sku: "SKU-1",
   brand: brandId.toString(),
   category: categoryId.toString(),
-  images: [{ objectKey: "product-image/a.png" }],
-  mrp: 99900,
-  discount: 10,
-  stock: 10,
 };
 
 const publicProductStub: PublicProductDoc = {
@@ -124,6 +115,8 @@ const publicProductStub: PublicProductDoc = {
 
 const variantId = new Types.ObjectId();
 
+// images is required (1-2), not optional/empty-default, since #102 removed
+// the parent product's own images fallback.
 const existingVariant = {
   _id: variantId,
   sku: "SKU-1-RED-L",
@@ -131,11 +124,10 @@ const existingVariant = {
     { name: "Color", value: "Red" },
     { name: "Size", value: "L" },
   ],
-  images: [],
+  images: [{ url: "https://cdn.test.example/product-image/red-l.png", isPrimary: true }],
   mrp: 51000,
   discount: 0,
   sellingPrice: 51000,
-  stock: 5,
   active: true,
 };
 
@@ -147,9 +139,9 @@ const addVariantBody = {
     { name: "Color", value: "Blue" },
     { name: "Size", value: "M" },
   ],
+  images: [{ objectKey: "product-image/blue-m.png" }],
   mrp: 51000,
   discount: 0,
-  stock: 3,
 };
 
 afterEach(() => {
@@ -162,81 +154,34 @@ describe("POST /api/admin/products", () => {
     expect(res.status).toBe(401);
   });
 
-  it("creates a product and computes sellingPrice server-side", async () => {
+  it("creates a product with just metadata, ignoring unknown fields like sku/mrp/stock", async () => {
     vi.mocked(brandsService.getBrandById).mockResolvedValue(brandStub);
     vi.mocked(categoriesService.getCategoryById).mockResolvedValue(categoryStub);
-    vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
     vi.mocked(productsRepository.slugExists).mockResolvedValue(false);
     vi.mocked(productsRepository.create).mockResolvedValue(productStub);
 
     const res = await request(app)
       .post("/api/admin/products")
       .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ ...validBody, sellingPrice: 1 });
+      .send({ ...validBody, sku: "IGNORED", mrp: 99900, stock: 10, images: [{ objectKey: "x" }] });
 
     expect(res.status).toBe(201);
-    expect(productsRepository.create).toHaveBeenCalledWith(
-      expect.objectContaining({ mrp: 99900, discount: 10, sellingPrice: 89910 }),
-    );
-    // sellingPrice submitted by the client has no effect (FR-CAT-087) —
-    // stripped by Zod's default "unknown keys" handling before it ever
-    // reaches the service.
-    expect(res.body.data.sellingPrice).toBe(89910);
+    const doc = vi.mocked(productsRepository.create).mock.calls[0]?.[0];
+    for (const field of ["sku", "images", "mrp", "discount", "sellingPrice", "stock", "lowStockThreshold"]) {
+      expect(doc).not.toHaveProperty(field);
+    }
   });
 
-  it("rejects a non-positive mrp with a validation error", async () => {
+  it("rejects a request missing a required field", async () => {
+    const { category: _category, ...withoutCategory } = validBody;
+
     const res = await request(app)
       .post("/api/admin/products")
       .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ ...validBody, mrp: 0 });
+      .send(withoutCategory);
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
-    expect(productsRepository.create).not.toHaveBeenCalled();
-  });
-
-  it("rejects a discount of 100", async () => {
-    const res = await request(app)
-      .post("/api/admin/products")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ ...validBody, discount: 100 });
-
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe("VALIDATION_ERROR");
-  });
-
-  it("rejects negative stock", async () => {
-    const res = await request(app)
-      .post("/api/admin/products")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ ...validBody, stock: -1 });
-
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe("VALIDATION_ERROR");
-  });
-
-  it("rejects fractional stock", async () => {
-    const res = await request(app)
-      .post("/api/admin/products")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ ...validBody, stock: 1.5 });
-
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe("VALIDATION_ERROR");
-  });
-
-  it("rejects a duplicate SKU", async () => {
-    vi.mocked(brandsService.getBrandById).mockResolvedValue(brandStub);
-    vi.mocked(categoriesService.getCategoryById).mockResolvedValue(categoryStub);
-    vi.mocked(productsRepository.skuInUse).mockResolvedValue(true);
-
-    const res = await request(app)
-      .post("/api/admin/products")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send(validBody);
-
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe("DUPLICATE_SKU");
     expect(productsRepository.create).not.toHaveBeenCalled();
   });
 
@@ -257,7 +202,6 @@ describe("POST /api/admin/products", () => {
   it("returns SPECIFICATION_VALIDATION_FAILED when specs don't satisfy the category's schema", async () => {
     vi.mocked(brandsService.getBrandById).mockResolvedValue(brandStub);
     vi.mocked(categoriesService.getCategoryById).mockResolvedValue(categoryStub);
-    vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
     vi.mocked(categorySpecificationsService.validateProductSpecifications).mockRejectedValueOnce(
       new AppError(400, "SPECIFICATION_VALIDATION_FAILED", "bad specs"),
     );
@@ -274,7 +218,7 @@ describe("POST /api/admin/products", () => {
 });
 
 describe("PATCH /api/admin/products/:id", () => {
-  it("updates a product without touching its sku", async () => {
+  it("ignores unknown fields like sku/mrp/stock submitted in the body", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productStub);
     vi.mocked(productsRepository.updateById).mockResolvedValue({
       ...productStub,
@@ -284,11 +228,13 @@ describe("PATCH /api/admin/products/:id", () => {
     const res = await request(app)
       .patch(`/api/admin/products/${productId.toString()}`)
       .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "New name", sku: "SHOULD-BE-IGNORED" });
+      .send({ name: "New name", sku: "SHOULD-BE-IGNORED", mrp: 1, stock: 1 });
 
     expect(res.status).toBe(200);
     const patch = vi.mocked(productsRepository.updateById).mock.calls[0]?.[1];
-    expect(patch).not.toHaveProperty("sku");
+    for (const field of ["sku", "mrp", "discount", "sellingPrice", "stock", "lowStockThreshold", "images"]) {
+      expect(patch).not.toHaveProperty(field);
+    }
   });
 
   it("returns PRODUCT_NOT_FOUND for a nonexistent id", async () => {
@@ -376,14 +322,16 @@ describe("GET /api/admin/products", () => {
     expect(res.body.code).toBe("VALIDATION_ERROR");
   });
 
+  // mrp/stock sort options were removed with #102 — the product no longer
+  // has either field; name/createdAt remain.
   it("passes the parsed sort field/order through to the repository", async () => {
     vi.mocked(productsRepository.listPaginated).mockResolvedValue({ items: [], total: 0 });
 
-    await request(app).get("/api/admin/products?sort=-mrp").set("X-Admin-Key", env.ADMIN_API_KEY);
+    await request(app).get("/api/admin/products?sort=-name").set("X-Admin-Key", env.ADMIN_API_KEY);
 
     expect(productsRepository.listPaginated).toHaveBeenCalledWith(
-      { lowStock: false },
-      { field: "mrp", order: -1 },
+      {},
+      { field: "name", order: -1 },
       { page: 1, limit: 20 },
     );
   });
@@ -396,7 +344,7 @@ describe("GET /api/admin/products", () => {
       .set("X-Admin-Key", env.ADMIN_API_KEY);
 
     expect(productsRepository.listPaginated).toHaveBeenCalledWith(
-      { lowStock: false, search: "SKU-1", status: undefined },
+      { search: "SKU-1", status: undefined },
       { field: "createdAt", order: -1 },
       { page: 1, limit: 20 },
     );
@@ -410,7 +358,7 @@ describe("GET /api/admin/products", () => {
       .set("X-Admin-Key", env.ADMIN_API_KEY);
 
     expect(productsRepository.listPaginated).toHaveBeenCalledWith(
-      { lowStock: false, search: "phone", status: "published" },
+      { search: "phone", status: "published" },
       { field: "createdAt", order: -1 },
       { page: 1, limit: 20 },
     );
@@ -454,30 +402,6 @@ describe("DELETE /api/admin/products/:id", () => {
   });
 });
 
-describe("PATCH /api/admin/products/:id/stock", () => {
-  it("adjusts stock without requiring any other field", async () => {
-    vi.mocked(productsRepository.updateById).mockResolvedValue({ ...productStub, stock: 42 });
-
-    const res = await request(app)
-      .patch(`/api/admin/products/${productId.toString()}/stock`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ stock: 42 });
-
-    expect(res.status).toBe(200);
-    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, { stock: 42 });
-  });
-
-  it("rejects negative stock", async () => {
-    const res = await request(app)
-      .patch(`/api/admin/products/${productId.toString()}/stock`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ stock: -1 });
-
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe("VALIDATION_ERROR");
-  });
-});
-
 describe("PATCH /api/admin/products/:id/status", () => {
   it("rejects a request with no X-Admin-Key header", async () => {
     const res = await request(app)
@@ -486,9 +410,11 @@ describe("PATCH /api/admin/products/:id/status", () => {
     expect(res.status).toBe(401);
   });
 
-  it("sets the requested status", async () => {
+  // FR-CAT-043 (#102): publishing requires at least one active variant.
+  it("publishes when the product has an active variant", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariant);
     vi.mocked(productsRepository.updateById).mockResolvedValue({
-      ...productStub,
+      ...productWithVariant,
       status: "published",
     });
 
@@ -502,8 +428,37 @@ describe("PATCH /api/admin/products/:id/status", () => {
     expect(productsRepository.updateById).toHaveBeenCalledWith(productId, { status: "published" });
   });
 
-  it("returns PRODUCT_NOT_FOUND for a nonexistent id", async () => {
-    vi.mocked(productsRepository.updateById).mockResolvedValue(null);
+  it("rejects publishing a product with zero variants with PRODUCT_HAS_NO_VARIANTS", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productStub);
+
+    const res = await request(app)
+      .patch(`/api/admin/products/${productId.toString()}/status`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ status: "published" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("PRODUCT_HAS_NO_VARIANTS");
+    expect(productsRepository.updateById).not.toHaveBeenCalled();
+  });
+
+  it("sets a non-publish status without checking variants", async () => {
+    vi.mocked(productsRepository.updateById).mockResolvedValue({
+      ...productStub,
+      status: "archived",
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/products/${productId.toString()}/status`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send({ status: "archived" });
+
+    expect(res.status).toBe(200);
+    expect(productsRepository.findById).not.toHaveBeenCalled();
+    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, { status: "archived" });
+  });
+
+  it("returns PRODUCT_NOT_FOUND for a nonexistent id when publishing", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(null);
 
     const res = await request(app)
       .patch(`/api/admin/products/${productId.toString()}/status`)
@@ -550,6 +505,7 @@ describe("POST /api/admin/products/:id/variants", () => {
       active: true,
       sellingPrice: 54000,
     });
+    expect(persisted?.[1]).not.toHaveProperty("stock");
   });
 
   it("returns PRODUCT_NOT_FOUND for a nonexistent product", async () => {
@@ -616,6 +572,18 @@ describe("POST /api/admin/products/:id/variants", () => {
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
   });
+
+  it("rejects a request missing images — required since #102 removed the parent product's fallback", async () => {
+    const { images: _images, ...withoutImages } = addVariantBody;
+
+    const res = await request(app)
+      .post(`/api/admin/products/${productId.toString()}/variants`)
+      .set("X-Admin-Key", env.ADMIN_API_KEY)
+      .send(withoutImages);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
 });
 
 describe("PATCH /api/admin/products/:id/variants/:variantId", () => {
@@ -648,7 +616,7 @@ describe("PATCH /api/admin/products/:id/variants/:variantId", () => {
         `/api/admin/products/${productId.toString()}/variants/${new Types.ObjectId().toString()}`,
       )
       .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ stock: 1 });
+      .send({ weight: 1 });
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("VARIANT_NOT_FOUND");
@@ -660,17 +628,17 @@ describe("PATCH /api/admin/products/:id/variants/:variantId", () => {
     const res = await request(app)
       .patch(url)
       .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ stock: 1 });
+      .send({ weight: 1 });
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("PRODUCT_NOT_FOUND");
   });
 
-  it("rejects negative stock", async () => {
+  it("rejects a non-positive mrp when mrp is provided", async () => {
     const res = await request(app)
       .patch(url)
       .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ stock: -1 });
+      .send({ mrp: 0 });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -710,7 +678,7 @@ describe("GET /api/products", () => {
 
     const res = await request(app).get("/api/products");
 
-    for (const field of ["stock", "lowStockThreshold", "status", "createdBy", "updatedBy"]) {
+    for (const field of ["status", "createdBy", "updatedBy"]) {
       expect(res.body.data[0]).not.toHaveProperty(field);
     }
   });
@@ -755,12 +723,12 @@ describe("GET /api/products", () => {
     expect(productsRepository.listPublicPaginated).not.toHaveBeenCalled();
   });
 
-  it("filters by price range, brand, in-stock, and on-sale, all composed together", async () => {
+  it("filters by price range, brand, and on-sale, all composed together", async () => {
     vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({ items: [], total: 0 });
     const otherBrandId = new Types.ObjectId();
 
     const res = await request(app).get(
-      `/api/products?minPrice=1000&maxPrice=5000&brand=${brandId.toString()},${otherBrandId.toString()}&inStock=true&onSale=true&sort=price_asc`,
+      `/api/products?minPrice=1000&maxPrice=5000&brand=${brandId.toString()},${otherBrandId.toString()}&onSale=true&sort=price_asc`,
     );
 
     expect(res.status).toBe(200);
@@ -769,7 +737,6 @@ describe("GET /api/products", () => {
         brandIds: [brandId, otherBrandId],
         minPrice: 1000,
         maxPrice: 5000,
-        inStockOnly: true,
         onSaleOnly: true,
       },
       "price_asc",
@@ -948,7 +915,6 @@ describe("GET /api/products/:slug", () => {
       _id: productId.toString(),
       name: "Phone",
       slug: "phone",
-      sku: "SKU-1",
       brand: { _id: brandId.toString(), name: "Nova", slug: "nova" },
       category: { _id: categoryId.toString(), name: "Electronics", slug: "electronics" },
       hasVariants: false,
@@ -960,7 +926,7 @@ describe("GET /api/products/:slug", () => {
 
     const res = await request(app).get("/api/products/phone");
 
-    for (const field of ["stock", "lowStockThreshold", "status", "createdBy", "updatedBy"]) {
+    for (const field of ["status", "createdBy", "updatedBy"]) {
       expect(res.body.data).not.toHaveProperty(field);
     }
   });
