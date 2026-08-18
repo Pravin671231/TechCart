@@ -74,7 +74,6 @@ function buildVariantList(
       mrp,
       discount,
       sellingPrice: computeSellingPrice(mrp, discount),
-      stock: 20 + ((index + variantOrdinal) % 5) * 15,
       active: true,
     };
   };
@@ -103,7 +102,9 @@ function buildVariantList(
 
   // "color" kind — a single axis, three variants
   const colors = pick(COLOR_TRIOS, index);
-  return colors.map((color, colorIndex) => makeVariant([attribute("Color", color)], colorIndex * 1500));
+  return colors.map((color, colorIndex) =>
+    makeVariant([attribute("Color", color)], colorIndex * 1500),
+  );
 }
 
 /**
@@ -137,29 +138,23 @@ export function createProductBuilder() {
     const sku = skuBase.toUpperCase();
 
     const variants = buildVariantList(kind, template.name, sku, template.basePrice, index);
-    const [firstVariant] = variants;
-    if (!firstVariant) {
+    if (variants.length === 0) {
       throw new Error(`buildVariantList produced no variants for "${template.name}"`);
     }
 
     return {
       name: template.name,
       slug,
-      sku,
       description: `${template.name} from ${template.brand}. Seeded catalog data for local development and testing.`,
       brand: brandId,
       category: categoryId,
-      images: [buildImage(template.name, true), buildImage(`${template.name} alternate view`, false)],
       specifications: [],
       variants,
-      mrp: firstVariant.mrp,
-      discount: firstVariant.discount,
-      sellingPrice: firstVariant.sellingPrice,
-      stock: variants.reduce((sum, variant) => sum + variant.stock, 0),
-      lowStockThreshold: 5,
       isFeatured: index % 7 === 0,
       // Schema default is "draft" — overridden here so seeded products are
       // actually visible through the buyer-facing (published-only) endpoints.
+      // Every product built here always has variants (see the throw above),
+      // satisfying the FR-CAT-043 publish guard (#102).
       status: "published",
     };
   };

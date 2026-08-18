@@ -32,11 +32,14 @@ vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
   };
 });
 
-vi.mock("@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service", () => ({
-  deleteForCategory: vi.fn(),
-  getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
-  getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
-}));
+vi.mock(
+  "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service",
+  () => ({
+    deleteForCategory: vi.fn(),
+    getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
+    getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
+  }),
+);
 
 vi.mock("@/modules/product-catalog/features/categoryVariants/categoryVariants.service", () => ({
   deleteForCategory: vi.fn(),
@@ -438,18 +441,24 @@ describe("GET /api/categories/:slug/products", () => {
           _id: productId,
           name: "Phone",
           slug: "phone",
-          sku: "SKU-1",
           description: "A phone",
           brand: { _id: brandId, name: "Nova", slug: "nova" },
           category: { _id: categoryId, name: "Electronics", slug: "electronics" },
-          images: [{ url: "https://cdn.test.example/a.png", isPrimary: true }],
           specifications: [],
-          variants: [],
-          mrp: 50000,
-          discount: 0,
-          sellingPrice: 50000,
-          stock: 10,
-          lowStockThreshold: 0,
+          // #102: price/image are sourced from the default (lowest-price
+          // active) variant — the product itself carries neither anymore.
+          variants: [
+            {
+              _id: new Types.ObjectId(),
+              sku: "SKU-1",
+              attributes: [],
+              images: [{ url: "https://cdn.test.example/a.png", isPrimary: true }],
+              mrp: 50000,
+              discount: 0,
+              sellingPrice: 50000,
+              active: true,
+            },
+          ],
           isFeatured: false,
           status: "published",
           createdBy: null,
@@ -477,7 +486,6 @@ describe("GET /api/categories/:slug/products", () => {
         mrp: 50000,
         discount: 0,
         sellingPrice: 50000,
-        availability: "in_stock",
         isFeatured: false,
         cardSpecifications: [],
       },

@@ -31,19 +31,24 @@ export type ProductVariantAttribute = {
 // default auto-generated `_id` (no `{ _id: false }`), matching the SRS's own
 // variant shape table, which lists `_id` as a field — needed so a variant
 // can be addressed individually via PATCH .../variants/:variantId.
+//
+// Every sellable, priced, imaged unit is a variant — the product itself
+// carries none of `sku`/`images`/`mrp`/`discount`/`sellingPrice` (Issue #102,
+// SRS v0.2 amendment, FR-CAT-001/003/004/039/043). Stock/inventory tracking
+// is removed system-wide, not moved here — there is no `stock` field on
+// either the product or the variant (FR-CAT-008/009/011/059/073/095/096).
 export type ProductVariant = {
   _id: Types.ObjectId;
   sku: string;
   attributes: ProductVariantAttribute[];
-  // Always an array, same convention as the product's own `images` — an
-  // empty array represents "no images of its own," which falls back to the
-  // parent's images at read time (FR-CAT-064, a #35/buyer concern, not
-  // enforced here).
+  // Required, 1-2 images (bound enforced in products.service.ts, same split
+  // as every other structural bound in this schema) — there is no parent
+  // product gallery to fall back to now that the product carries no images
+  // of its own (FR-CAT-064, FR-CAT-083).
   images: ProductImage[];
   mrp: number;
   discount: number;
   sellingPrice: number;
-  stock: number;
   weight?: number;
   active: boolean;
 };
@@ -51,18 +56,11 @@ export type ProductVariant = {
 export type ProductDocument = {
   name: string;
   slug: string;
-  sku: string;
   description: string;
   brand: Types.ObjectId;
   category: Types.ObjectId;
-  images: ProductImage[];
   specifications: ProductSpecificationGroup[];
   variants: ProductVariant[];
-  mrp: number;
-  discount: number;
-  sellingPrice: number;
-  stock: number;
-  lowStockThreshold: number;
   isFeatured: boolean;
   status: ProductStatus;
   metaTitle?: string;
@@ -104,48 +102,40 @@ const productVariantAttributeSchema = new Schema<ProductVariantAttribute>(
   { _id: false },
 );
 
-// Structural bounds (mrp/discount/stock rules identical to the product's own
-// — FR-CAT-042 — plus the attribute-set duplicate guard and the 1-2 image
-// bound when images are present) live in products.controller.ts (Zod) and
-// products.service.ts, same split as the product schema above.
+// Structural bounds (mrp/discount rules per FR-CAT-042/085/086, the
+// attribute-set duplicate guard, and the 1-2 image bound — required, not
+// optional, since #102 removed the parent product's own images) live in
+// products.controller.ts (Zod) and products.service.ts, same split as the
+// product schema above.
 const productVariantSchema = new Schema<ProductVariant>(
   {
     sku: { type: String, required: true },
     attributes: { type: [productVariantAttributeSchema], required: true },
-    images: { type: [productImageSchema], default: [] },
+    images: { type: [productImageSchema], required: true },
     mrp: { type: Number, required: true },
     discount: { type: Number, required: true, default: 0 },
     sellingPrice: { type: Number, required: true },
-    stock: { type: Number, required: true },
     weight: { type: Number },
     active: { type: Boolean, required: true, default: true },
   },
   { timestamps: true },
 );
 
-// Structural bounds (mrp > 0, discount 0-99, images 1-8, specifications
-// matching the category's schema) live in products.controller.ts (Zod) and
-// products.service.ts (schema-validation and image-count checks needing
-// external state), not here — no custom Mongoose validators, same split
-// every prior catalog module uses.
+// Structural bounds (specifications matching the category's schema) live in
+// products.controller.ts (Zod) and products.service.ts (schema-validation
+// needing external state), not here — no custom Mongoose validators, same
+// split every prior catalog module uses.
 const productSchema = new Schema<ProductDocument>(
   {
     name: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
-    sku: { type: String, required: true, unique: true },
     description: { type: String, required: true },
     brand: { type: Schema.Types.ObjectId, ref: "Brand", required: true },
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
-    images: { type: [productImageSchema], required: true, default: [] },
     // Validated against the owning category's categorySpecifications schema
     // (FR-CAT-032/034) in products.service.ts.
     specifications: { type: [productSpecificationGroupSchema], default: [] },
     variants: { type: [productVariantSchema], default: [] },
-    mrp: { type: Number, required: true },
-    discount: { type: Number, required: true, default: 0 },
-    sellingPrice: { type: Number, required: true },
-    stock: { type: Number, required: true },
-    lowStockThreshold: { type: Number, required: true, default: 0 },
     isFeatured: { type: Boolean, required: true, default: false },
     status: {
       type: String,
@@ -165,10 +155,12 @@ const productSchema = new Schema<ProductDocument>(
 productSchema.index({ brand: 1 });
 productSchema.index({ category: 1 });
 productSchema.index({ status: 1 });
-// A unique multikey index — MongoDB indexes each array element separately, so
-// this enforces uniqueness across every product's variants.sku individually.
-// Declared back in #31, ahead of any variant-creation endpoint (an empty
-// array contributes no index entries) — now actually populated by #32.
+// The sole SKU-uniqueness index now that #102 removed the product's own
+// `sku` — a unique multikey index, since MongoDB indexes each array element
+// separately, enforcing uniqueness across every product's variants.sku
+// individually. Declared back in #31, ahead of any variant-creation endpoint
+// (an empty array contributes no index entries) — now actually populated by
+// #32.
 productSchema.index({ "variants.sku": 1 }, { unique: true });
 
 export const Product = model<ProductDocument>("Product", productSchema);

@@ -526,7 +526,7 @@ No headers, no body.
 
 ## `GET /api/categories/:slug/products`
 
-Lists **published-only** products within a category, including its subcategories (`FR-CAT-055`) — the response is product data, so its controller (`listProductsByCategorySlugHandler`) actually lives in `products.controller.ts`; only this route's wiring is declared here. See [`products.api.md`](./products.api.md#get-apiproducts) for the item shape (including `cardSpecifications`), `availability`, and pagination-clamp behavior — identical to the flat `GET /api/products` listing, just scoped to this one category (and its direct subcategories; categories are at most two levels deep, so that already covers the whole subtree).
+Lists **published-only** products within a category, including its subcategories (`FR-CAT-055`) — the response is product data, so its controller (`listProductsByCategorySlugHandler`) actually lives in `products.controller.ts`; only this route's wiring is declared here. See [`products.api.md`](./products.api.md#get-apiproducts) for the item shape (including `cardSpecifications`) and pagination-clamp behavior — identical to the flat `GET /api/products` listing, just scoped to this one category (and its direct subcategories; categories are at most two levels deep, so that already covers the whole subtree).
 
 | Field  | Value                                              |
 | ------ | -------------------------------------------------- |
@@ -534,9 +534,9 @@ Lists **published-only** products within a category, including its subcategories
 | URL    | `{{base_url}}/api/categories/electronics/products` |
 | Name   | `List Products by Category (Buyer)`                |
 
-No headers, no body. **Every filter/sort param `GET /api/products` accepts also works here** — `brand`, `minPrice`/`maxPrice`, `inStock`, `onSale`, `attributeName`/`attributeValue`, `spec[...]`, `sort` (`FR-CAT-076`) — with two differences: there's no `q` (keyword search stays flat-listing-only) and no `category` param (this route's `:slug` already fixes it).
+No headers, no body. **Every filter/sort param `GET /api/products` accepts also works here** — `brand`, `minPrice`/`maxPrice`, `onSale`, `attributeName`/`attributeValue`, `spec[...]`, `sort` (`FR-CAT-076`) — with two differences: there's no `q` (keyword search stays flat-listing-only) and no `category` param (this route's `:slug` already fixes it).
 
-**Click Send. Try:** `{{base_url}}/api/categories/electronics/products?minPrice=20000&inStock=true&sort=price_asc`
+**Click Send. Try:** `{{base_url}}/api/categories/electronics/products?minPrice=20000&onSale=true&sort=price_asc`
 
 **Expected response — `200 OK`:** identical envelope shape to `GET /api/products`, scoped to the resolved category (and its active subcategories).
 

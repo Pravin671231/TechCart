@@ -3,7 +3,6 @@ import { AppError } from "@/utils/AppError";
 import { generateUniqueSlug } from "@/utils/slug";
 import { truncate } from "@/utils/text";
 import { computeSellingPrice } from "@/utils/pricing";
-import { deriveAvailability, bestAvailability, type Availability } from "@/utils/availability";
 import type { Pagination } from "@/utils/apiResponse";
 import {
   consumeImageKeys,
@@ -63,37 +62,27 @@ export type ProductImageInput = {
   isPrimary?: boolean | undefined;
 };
 
+// Issue #102 (SRS v0.2 amendment): sku/images/mrp/discount/stock/
+// lowStockThreshold are all gone — every sellable, priced, imaged field now
+// lives on the variant only (AddVariantInput below), and stock/inventory
+// tracking is removed system-wide, not moved.
 export type CreateProductInput = {
   name: string;
   description: string;
-  sku: string;
   brand: Types.ObjectId;
   category: Types.ObjectId;
-  images: ProductImageInput[];
   specifications: ProductSpecificationGroup[];
-  mrp: number;
-  discount: number;
-  stock: number;
-  lowStockThreshold: number;
   isFeatured: boolean;
   metaTitle?: string | undefined;
   metaDescription?: string | undefined;
 };
 
-// sku is deliberately absent — FR-CAT-004's editable-field list doesn't
-// include it, so it's set once at create time and never touched again,
-// exactly like brands'/categories' slug.
 export type UpdateProductInput = {
   name?: string | undefined;
   description?: string | undefined;
   brand?: Types.ObjectId | undefined;
   category?: Types.ObjectId | undefined;
-  images?: ProductImageInput[] | undefined;
   specifications?: ProductSpecificationGroup[] | undefined;
-  mrp?: number | undefined;
-  discount?: number | undefined;
-  stock?: number | undefined;
-  lowStockThreshold?: number | undefined;
   isFeatured?: boolean | undefined;
   metaTitle?: string | undefined;
   metaDescription?: string | undefined;
@@ -103,23 +92,20 @@ export type ProductListParams = {
   page: number;
   limit: number;
   sort: { field: ProductSortField; order: 1 | -1 };
-  lowStock: boolean;
   search?: string | undefined;
   status?: ProductStatus | undefined;
 };
 
-// sku IS editable here, unlike the parent product's own — FR-CAT-004
-// explicitly enumerates products' editable fields and omits sku, but
-// FR-CAT-040's "admin can update a variant" names no such exclusion list,
-// so a variant's sku is treated as editable, re-validated identically to
-// create when it changes.
+// A variant's sku is editable — FR-CAT-040's "admin can update a variant"
+// names no exclusion list, re-validated identically to create when it
+// changes. stock is gone system-wide (#102); images is now required, 1-2
+// (no more parent-product fallback — see resolveVariantImages below).
 export type AddVariantInput = {
   sku: string;
   attributes: ProductVariantAttribute[];
   images: ProductImageInput[];
   mrp: number;
   discount: number;
-  stock: number;
   weight?: number | undefined;
 };
 
@@ -129,7 +115,6 @@ export type UpdateVariantInput = {
   images?: ProductImageInput[] | undefined;
   mrp?: number | undefined;
   discount?: number | undefined;
-  stock?: number | undefined;
   weight?: number | undefined;
   active?: boolean | undefined;
 };
@@ -152,10 +137,17 @@ function variantNotFound(variantId: Types.ObjectId): AppError {
 }
 
 function duplicateSku(sku: string): AppError {
+  return new AppError(400, "DUPLICATE_SKU", `SKU "${sku}" is already in use by another variant.`);
+}
+
+// FR-CAT-043 (#102): a product needs at least one active variant to be
+// published — there's no product-level sku/price/stock left to sell it on
+// otherwise.
+function productHasNoVariants(id: Types.ObjectId): AppError {
   return new AppError(
     400,
-    "DUPLICATE_SKU",
-    `SKU "${sku}" is already in use by another product or variant.`,
+    "PRODUCT_HAS_NO_VARIANTS",
+    `Product ${id.toString()} has no active variants and cannot be published.`,
   );
 }
 
@@ -177,52 +169,21 @@ function attributeSetKey(attributes: ProductVariantAttribute[]): string {
     .join("|");
 }
 
-// Shared by create and update. validateImageCount/consumeImageKeys/
-// normalizeImages/buildPublicUrl are uploads.service.ts exports built during
-// #26 specifically for this call — see backend/CLAUDE.md's R2 uploads
-// section. { min: 1, max: 8 } matches FR-CAT-083's product bound; variants'
-// bespoke { min: 0/1, max: 2 } bound is resolveVariantImages below.
-async function resolveImages(images: ProductImageInput[]): Promise<ProductImage[]> {
-  validateImageCount(images, { min: 1, max: 8 });
-  await consumeImageKeys(images.map((image) => image.objectKey));
-
-  const withUrls: ProductImage[] = images.map((image) => {
-    const resolved: ProductImage = {
-      url: buildPublicUrl(image.objectKey),
-      isPrimary: image.isPrimary ?? false,
-    };
-    if (image.alt !== undefined) resolved.alt = image.alt;
-    return resolved;
-  });
-
-  return normalizeImages(withUrls);
-}
-
 export async function createProduct(input: CreateProductInput): Promise<ProductRecord> {
   await getBrandById(input.brand);
   await getCategoryById(input.category);
 
-  if (await skuInUse(input.sku)) throw duplicateSku(input.sku);
   await validateProductSpecifications(input.category, input.specifications);
 
   const slug = await generateUniqueSlug(input.name, slugExists);
-  const images = await resolveImages(input.images);
-  const sellingPrice = computeSellingPrice(input.mrp, input.discount);
 
   const doc: CreateProductDoc = {
     name: input.name,
     slug,
-    sku: input.sku,
     description: input.description,
     brand: input.brand,
     category: input.category,
-    images,
     specifications: input.specifications,
-    mrp: input.mrp,
-    discount: input.discount,
-    sellingPrice,
-    stock: input.stock,
-    lowStockThreshold: input.lowStockThreshold,
     isFeatured: input.isFeatured,
   };
   if (input.metaTitle !== undefined) doc.metaTitle = input.metaTitle;
@@ -231,11 +192,12 @@ export async function createProduct(input: CreateProductInput): Promise<ProductR
   return create(doc);
 }
 
-// Slug and sku are never touched here — see UpdateProductInput's comment.
-// category re-validates its own existence, and — per FR-CAT-034 — triggers a
-// re-validation of specifications against the *new* schema even when the
-// request itself doesn't also submit new specifications (the existing
-// stored ones must still satisfy whatever category the product ends up in).
+// Slug is never touched here — server-generated once at create time, same as
+// brands'/categories' own. category re-validates its own existence, and —
+// per FR-CAT-034 — triggers a re-validation of specifications against the
+// *new* schema even when the request itself doesn't also submit new
+// specifications (the existing stored ones must still satisfy whatever
+// category the product ends up in).
 export async function updateProduct(
   id: Types.ObjectId,
   input: UpdateProductInput,
@@ -257,17 +219,7 @@ export async function updateProduct(
   if (input.description !== undefined) patch.description = input.description;
   if (input.brand !== undefined) patch.brand = input.brand;
   if (input.category !== undefined) patch.category = input.category;
-  if (input.images !== undefined) patch.images = await resolveImages(input.images);
   if (input.specifications !== undefined) patch.specifications = input.specifications;
-  if (input.mrp !== undefined || input.discount !== undefined) {
-    const mrp = input.mrp ?? existing.mrp;
-    const discount = input.discount ?? existing.discount;
-    patch.mrp = mrp;
-    patch.discount = discount;
-    patch.sellingPrice = computeSellingPrice(mrp, discount);
-  }
-  if (input.stock !== undefined) patch.stock = input.stock;
-  if (input.lowStockThreshold !== undefined) patch.lowStockThreshold = input.lowStockThreshold;
   if (input.isFeatured !== undefined) patch.isFeatured = input.isFeatured;
   if (input.metaTitle !== undefined) patch.metaTitle = input.metaTitle;
   if (input.metaDescription !== undefined) patch.metaDescription = input.metaDescription;
@@ -287,7 +239,7 @@ export async function listProductsForAdmin(
   params: ProductListParams,
 ): Promise<{ items: ProductRecord[]; pagination: Pagination }> {
   const { items, total } = await listPaginated(
-    { lowStock: params.lowStock, search: params.search, status: params.status },
+    { search: params.search, status: params.status },
     params.sort,
     { page: params.page, limit: params.limit },
   );
@@ -309,10 +261,23 @@ export async function listProductsForAdmin(
 // boolean toggle, a product's status is a tri-state enum, so this is a plain
 // pass-through rather than a flip; validity of the value itself is Zod's job
 // in products.controller.ts.
+//
+// FR-CAT-043 (#102): publishing requires at least one active variant — a
+// product carries no sku/price of its own to sell otherwise. Only the
+// "published" transition is guarded; "draft"/"archived" are unaffected.
+// Deactivating the last active variant on an already-published product isn't
+// separately guarded — a documented, accepted gap, same "TOCTOU documented,
+// not fixed" treatment this module already gives other races.
 export async function updateProductStatus(
   id: Types.ObjectId,
   status: ProductStatus,
 ): Promise<ProductRecord> {
+  if (status === "published") {
+    const product = await findById(id);
+    if (!product) throw notFound(id);
+    if (!product.variants.some((variant) => variant.active)) throw productHasNoVariants(id);
+  }
+
   const updated = await updateById(id, { status });
   if (!updated) throw notFound(id);
   return updated;
@@ -328,19 +293,10 @@ export async function deleteProduct(id: Types.ObjectId): Promise<void> {
   await updateProductStatus(id, "archived");
 }
 
-export async function updateStock(id: Types.ObjectId, stock: number): Promise<ProductRecord> {
-  const updated = await updateById(id, { stock });
-  if (!updated) throw notFound(id);
-  return updated;
-}
-
-// Same shape as resolveImages above, different bound: FR-CAT-064's "0 or 1-2"
-// rather than FR-CAT-083's "1-8" — an empty array is valid (falls back to the
-// parent's images at read time, #35's concern), so the count guard only
-// engages once at least one image is submitted.
+// Required, 1-2 images (#102) — no more empty-array short-circuit, since
+// there's no parent product gallery left to fall back to (FR-CAT-064,
+// FR-CAT-083).
 async function resolveVariantImages(images: ProductImageInput[]): Promise<ProductImage[]> {
-  if (images.length === 0) return [];
-
   validateImageCount(images, { min: 1, max: 2 });
   await consumeImageKeys(images.map((image) => image.objectKey));
 
@@ -356,18 +312,17 @@ async function resolveVariantImages(images: ProductImageInput[]): Promise<Produc
   return normalizeImages(withUrls);
 }
 
-// The three-part SKU cross-check FR-CAT-003's shared namespace needs: against
-// the parent product's own sku, against every *other* variant already on
-// this product, and — via skuInUse(sku, productId) — against every other
-// product's own sku and variants anywhere else. skuInUse excludes the whole
-// current product doc by id, so it deliberately doesn't cover the first two
-// cases; those are checked locally against the already-fetched `product`.
+// The SKU cross-check FR-CAT-003's single (#102: variant-only) namespace
+// needs: against every *other* variant already on this product, and — via
+// skuInUse(sku, productId) — against every other product's variants
+// anywhere else. skuInUse excludes the whole current product doc by id, so
+// it deliberately doesn't cover the sibling case; that's checked locally
+// against the already-fetched `product`.
 async function assertVariantSkuAvailable(
   product: ProductRecord,
   sku: string,
   excludeVariantId?: Types.ObjectId,
 ): Promise<void> {
-  if (sku === product.sku) throw duplicateSku(sku);
   const collidesWithSibling = product.variants.some(
     (variant) => !(excludeVariantId && variant._id.equals(excludeVariantId)) && variant.sku === sku,
   );
@@ -400,7 +355,6 @@ export async function addVariant(
     mrp: input.mrp,
     discount: input.discount,
     sellingPrice,
-    stock: input.stock,
     active: true,
   };
   if (input.weight !== undefined) variant.weight = input.weight;
@@ -448,7 +402,6 @@ export async function updateVariant(
     updatedVariant.discount = discount;
     updatedVariant.sellingPrice = computeSellingPrice(mrp, discount);
   }
-  if (input.stock !== undefined) updatedVariant.stock = input.stock;
   if (input.weight !== undefined) updatedVariant.weight = input.weight;
   if (input.active !== undefined) updatedVariant.active = input.active;
 
@@ -478,23 +431,29 @@ export type PublicCardSpecification = {
 };
 
 // FR-CAT-091's card contract (image, name, sellingPrice, no specifications)
-// plus brand, availability, and — as of #36 — `cardSpecifications`
-// (FR-CAT-092's first-four-filterable-specs augmentation), following the
-// SRS's own worked listing-item example. `cardSpecifications` is always
-// present, even as `[]` for a home/all-products listing or a category with
-// no filterable fields — per the SRS, the home and category views share
-// this one response shape, and it's `buyer-app`'s job to ignore the field
-// on the home grid rather than the API omitting it in that context.
+// plus brand and — as of #36 — `cardSpecifications` (FR-CAT-092's
+// first-four-filterable-specs augmentation), following the SRS's own worked
+// listing-item example. `cardSpecifications` is always present, even as `[]`
+// for a home/all-products listing or a category with no filterable fields —
+// per the SRS, the home and category views share this one response shape,
+// and it's `buyer-app`'s job to ignore the field on the home grid rather
+// than the API omitting it in that context.
+//
+// #102: image/price fields are sourced from the product's default variant
+// (FR-CAT-064) — the product itself carries none of its own. They're
+// optional, not defaulted/omitted-as-zero, for the one documented edge case
+// where a published product ends up with zero active variants (deactivating
+// the last one isn't guarded — see updateProductStatus's publish guard
+// comment) and therefore has nothing to show.
 export type PublicProductListItem = {
   _id: Types.ObjectId;
   name: string;
   slug: string;
   brand: PublicRef;
   primaryImage?: PublicImage;
-  mrp: number;
-  discount: number;
-  sellingPrice: number;
-  availability: Availability;
+  mrp?: number;
+  discount?: number;
+  sellingPrice?: number;
   isFeatured: boolean;
   cardSpecifications: PublicCardSpecification[];
 };
@@ -507,23 +466,24 @@ export type PublicProductVariant = {
   mrp: number;
   discount: number;
   sellingPrice: number;
-  availability: Availability;
   weight?: number;
 };
 
+// sku/images are deliberately absent here — #102 removed both from the
+// product; they live only per-variant (variants[].sku/.images) now, where
+// "which variant's sku/images" is unambiguous. mrp/discount/sellingPrice are
+// the default variant's, same "optional for the no-active-variant edge case"
+// reasoning as PublicProductListItem above.
 export type PublicProductDetail = {
   _id: Types.ObjectId;
   name: string;
   slug: string;
-  sku: string;
   description: string;
   brand: PublicRef;
   category: PublicRef;
-  images: PublicImage[];
-  mrp: number;
-  discount: number;
-  sellingPrice: number;
-  availability: Availability;
+  mrp?: number;
+  discount?: number;
+  sellingPrice?: number;
   isFeatured: boolean;
   specifications: ProductSpecificationGroup[];
   hasVariants: boolean;
@@ -547,17 +507,13 @@ export type PublicProductListParams = {
   brandIds?: Types.ObjectId[] | undefined;
   minPrice?: number | undefined;
   maxPrice?: number | undefined;
-  inStockOnly?: boolean | undefined;
   onSaleOnly?: boolean | undefined;
   variantAttribute?: VariantAttributeFilter | undefined;
   specFilters?: SpecFilter[] | undefined;
   sort?: PublicSort | undefined;
 };
 
-export type PublicCategoryProductListParams = Omit<
-  PublicProductListParams,
-  "q" | "categorySlug"
->;
+export type PublicCategoryProductListParams = Omit<PublicProductListParams, "q" | "categorySlug">;
 
 function toPublicRef(ref: PopulatedRef): PublicRef {
   return { _id: ref._id, name: ref.name, slug: ref.slug };
@@ -570,10 +526,10 @@ function toPublicImage(image: ProductImage): PublicImage {
 }
 
 // normalizeImages() (FR-CAT-084) already guarantees exactly one isPrimary on
-// every stored product, so .find() only ever misses on a product with zero
-// images — which create/update's own 1-8 bound (FR-CAT-083) never allows to
-// exist. The ?? images[0] fallback is defensive, not a case this codebase
-// can actually produce.
+// every stored variant, so .find() only ever misses on a variant with zero
+// images — which resolveVariantImages' own 1-2 bound (FR-CAT-083) never
+// allows to exist. The ?? images[0] fallback is defensive, not a case this
+// codebase can actually produce.
 function getPrimaryImage(images: ProductImage[]): ProductImage | undefined {
   return images.find((image) => image.isPrimary) ?? images[0];
 }
@@ -605,44 +561,21 @@ function selectDefaultVariant(variants: ProductVariant[]): ProductVariant | unde
   );
 }
 
-function toPublicVariant(variant: ProductVariant, product: PublicProductDoc): PublicProductVariant {
-  // FR-CAT-064's last sentence: a variant with no images of its own falls
-  // back to the parent's images — resolved here so buyer-app consumers never
-  // have to duplicate this fallback themselves.
-  const images = variant.images.length > 0 ? variant.images : product.images;
-
+// #102: no parent-images fallback anymore — a variant's images are always
+// required (FR-CAT-083), and no availability field exists (stock/inventory
+// tracking is removed system-wide).
+function toPublicVariant(variant: ProductVariant): PublicProductVariant {
   const publicVariant: PublicProductVariant = {
     _id: variant._id,
     sku: variant.sku,
     attributes: variant.attributes,
-    images: images.map(toPublicImage),
+    images: variant.images.map(toPublicImage),
     mrp: variant.mrp,
     discount: variant.discount,
     sellingPrice: variant.sellingPrice,
-    // Variants carry no lowStockThreshold of their own — every per-unit
-    // availability calculation in this module reuses the *parent product's*
-    // single threshold, since the schema has nowhere else to store one.
-    availability: deriveAvailability(variant.stock, product.lowStockThreshold),
   };
   if (variant.weight !== undefined) publicVariant.weight = variant.weight;
   return publicVariant;
-}
-
-// FR-CAT-096: "product-level availability, when variants exist, is the best
-// state across active variants" — this is the *listing/card* reading of
-// that rule (one availability badge per product). The *detail page's*
-// initially-displayed availability is a different, narrower thing: per
-// FR-CAT-064, it's whichever single unit is currently selected (the default
-// variant, or the product's own stock when there's no active variant) — see
-// toPublicDetail below, which deliberately does NOT use this function.
-function listAvailability(product: PublicProductDoc): Availability {
-  if (product.variants.length === 0) {
-    return deriveAvailability(product.stock, product.lowStockThreshold);
-  }
-  const activeStates = product.variants
-    .filter((variant) => variant.active)
-    .map((variant) => deriveAvailability(variant.stock, product.lowStockThreshold));
-  return bestAvailability(activeStates);
 }
 
 // cardSpecifications starts as [] here — attachCardSpecifications below
@@ -650,21 +583,27 @@ function listAvailability(product: PublicProductDoc): Availability {
 // out this way keeps this function synchronous and per-product; the actual
 // lookup is a batched, per-page query keyed by category, not something a
 // single product's own mapper can do on its own.
+//
+// #102: image/price come from the default variant (FR-CAT-064) — the
+// product itself has neither. Both stay absent (not defaulted) on the one
+// documented edge case where a published product has no active variant.
 function toPublicListItem(product: PublicProductDoc): PublicProductListItem {
-  const primaryImage = getPrimaryImage(product.images);
+  const defaultVariant = selectDefaultVariant(product.variants);
+  const primaryImage = defaultVariant ? getPrimaryImage(defaultVariant.images) : undefined;
 
   const item: PublicProductListItem = {
     _id: product._id,
     name: product.name,
     slug: product.slug,
     brand: toPublicRef(product.brand),
-    mrp: product.mrp,
-    discount: product.discount,
-    sellingPrice: product.sellingPrice,
-    availability: listAvailability(product),
     isFeatured: product.isFeatured,
     cardSpecifications: [],
   };
+  if (defaultVariant) {
+    item.mrp = defaultVariant.mrp;
+    item.discount = defaultVariant.discount;
+    item.sellingPrice = defaultVariant.sellingPrice;
+  }
   if (primaryImage) item.primaryImage = toPublicImage(primaryImage);
   return item;
 }
@@ -725,6 +664,12 @@ async function attachCardSpecifications(
   });
 }
 
+// #102: the product has no sku/images/mrp/discount/sellingPrice of its own
+// — the detail page's initially-displayed price comes from the default
+// variant (FR-CAT-064), and there's no parent gallery to fall back to
+// (buyer-app reads the selected/default variant's own images via
+// variants[]). Price fields and defaultVariantId stay absent on the one
+// documented edge case where a published product has no active variant.
 function toPublicDetail(product: PublicProductDoc): PublicProductDetail {
   const defaultVariant = selectDefaultVariant(product.variants);
   const activeVariants = product.variants.filter((variant) => variant.active);
@@ -734,30 +679,24 @@ function toPublicDetail(product: PublicProductDoc): PublicProductDetail {
     _id: product._id,
     name: product.name,
     slug: product.slug,
-    sku: product.sku,
     description: product.description,
     brand: toPublicRef(product.brand),
     category: toPublicRef(product.category),
-    images: product.images.map(toPublicImage),
-    // FR-CAT-064: the detail page's initially-displayed price/availability
-    // come from the default variant, not the parent product's own stored
-    // fields, whenever a purchasable (active) variant exists.
-    mrp: defaultVariant ? defaultVariant.mrp : product.mrp,
-    discount: defaultVariant ? defaultVariant.discount : product.discount,
-    sellingPrice: defaultVariant ? defaultVariant.sellingPrice : product.sellingPrice,
-    availability: defaultVariant
-      ? deriveAvailability(defaultVariant.stock, product.lowStockThreshold)
-      : deriveAvailability(product.stock, product.lowStockThreshold),
     isFeatured: product.isFeatured,
     // FR-CAT-063: every specification pair, grouped, regardless of
     // filterable — unlike list items, the detail page draws no distinction.
     specifications: product.specifications,
     hasVariants: activeVariants.length > 0,
-    variants: activeVariants.map((variant) => toPublicVariant(variant, product)),
+    variants: activeVariants.map((variant) => toPublicVariant(variant)),
     metaTitle,
     metaDescription,
   };
-  if (defaultVariant) detail.defaultVariantId = defaultVariant._id;
+  if (defaultVariant) {
+    detail.mrp = defaultVariant.mrp;
+    detail.discount = defaultVariant.discount;
+    detail.sellingPrice = defaultVariant.sellingPrice;
+    detail.defaultVariantId = defaultVariant._id;
+  }
   return detail;
 }
 
@@ -820,7 +759,6 @@ async function listPublicProductsCore(
   if (params.brandIds) filter.brandIds = params.brandIds;
   if (params.minPrice !== undefined) filter.minPrice = params.minPrice;
   if (params.maxPrice !== undefined) filter.maxPrice = params.maxPrice;
-  if (params.inStockOnly) filter.inStockOnly = true;
   if (params.onSaleOnly) filter.onSaleOnly = true;
   if (params.variantAttribute) filter.variantAttribute = params.variantAttribute;
 

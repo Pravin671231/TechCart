@@ -3,7 +3,6 @@ import { escapeRegExp } from "@/utils/text";
 import {
   Product,
   type ProductDocument,
-  type ProductImage,
   type ProductSpecificationGroup,
   type ProductStatus,
   type ProductVariant,
@@ -11,20 +10,17 @@ import {
 
 export type ProductRecord = ProductDocument & { _id: Types.ObjectId };
 
+// #102: sku/images/mrp/discount/sellingPrice/stock/lowStockThreshold all
+// removed — every sellable, priced, imaged field lives only on a variant now
+// (added via the separate addVariant/replaceVariants path, never through
+// create/update here).
 export type CreateProductDoc = {
   name: string;
   slug: string;
-  sku: string;
   description: string;
   brand: Types.ObjectId;
   category: Types.ObjectId;
-  images: ProductImage[];
   specifications: ProductSpecificationGroup[];
-  mrp: number;
-  discount: number;
-  sellingPrice: number;
-  stock: number;
-  lowStockThreshold: number;
   isFeatured: boolean;
   metaTitle?: string;
   metaDescription?: string;
@@ -80,13 +76,33 @@ export type PublicProductFilter = {
   brandIds?: Types.ObjectId[];
   minPrice?: number;
   maxPrice?: number;
-  inStockOnly?: boolean;
   onSaleOnly?: boolean;
   variantAttribute?: VariantAttributeFilter;
   specFilters?: SpecFilter[];
 };
 
 export type PublicSort = "relevance" | "price_asc" | "price_desc" | "newest";
+
+// #102: price range and on-sale are variant-level fields now (there's no
+// top-level sellingPrice/discount left on the product) — folded into one
+// $elemMatch alongside `active` so a *single* variant must satisfy every
+// requested condition together, not "some variant matches price, some other
+// variant matches on-sale." Returns undefined when neither is requested, so
+// callers can skip adding a `variants` key to the query at all.
+function buildVariantElemMatch(filter: PublicProductFilter): Record<string, unknown> | undefined {
+  if (filter.minPrice === undefined && filter.maxPrice === undefined && !filter.onSaleOnly) {
+    return undefined;
+  }
+  const elemMatch: Record<string, unknown> = { active: true };
+  if (filter.minPrice !== undefined || filter.maxPrice !== undefined) {
+    const range: { $gte?: number; $lte?: number } = {};
+    if (filter.minPrice !== undefined) range.$gte = filter.minPrice;
+    if (filter.maxPrice !== undefined) range.$lte = filter.maxPrice;
+    elemMatch.sellingPrice = range;
+  }
+  if (filter.onSaleOnly) elemMatch.discount = { $gt: 0 };
+  return elemMatch;
+}
 
 // Shared by both query paths below — every filter dimension here is a plain
 // MongoDB operator. variantAttribute/specFilters never reach this function;
@@ -98,55 +114,96 @@ function buildMatchStage(filter: PublicProductFilter): QueryFilter<ProductDocume
   const query: QueryFilter<ProductDocument> = { status: "published" };
   if (filter.categoryIds) query.category = { $in: filter.categoryIds };
   if (filter.brandIds) query.brand = { $in: filter.brandIds };
-  if (filter.minPrice !== undefined || filter.maxPrice !== undefined) {
-    const range: { $gte?: number; $lte?: number } = {};
-    if (filter.minPrice !== undefined) range.$gte = filter.minPrice;
-    if (filter.maxPrice !== undefined) range.$lte = filter.maxPrice;
-    query.sellingPrice = range;
-  }
-  if (filter.onSaleOnly) query.discount = { $gt: 0 };
-  if (filter.inStockOnly) {
-    // FR-CAT-073: no variants -> in stock via the product's own stock; with
-    // variants -> in stock when any *active* variant has stock above zero.
-    query.$or = [
-      { variants: { $size: 0 }, stock: { $gt: 0 } },
-      { variants: { $elemMatch: { active: true, stock: { $gt: 0 } } } },
-    ];
-  }
+  const variantElemMatch = buildVariantElemMatch(filter);
+  if (variantElemMatch) query.variants = { $elemMatch: variantElemMatch };
   return query;
 }
 
-// FR-CAT-075: price sorts always target sellingPrice, never mrp. "relevance"
-// only means something alongside $search's own score order (see
-// searchPublicPaginated) — the plain .find() path here has no score to sort
-// by, so it falls back to newest-first, same as the unscoped default.
-function sortSpec(sort: PublicSort): Record<string, 1 | -1> {
-  switch (sort) {
-    case "price_asc":
-      return { sellingPrice: 1 };
-    case "price_desc":
-      return { sellingPrice: -1 };
-    case "newest":
-    case "relevance":
-      return { createdAt: -1 };
-  }
+function isPriceSort(sort: PublicSort): sort is "price_asc" | "price_desc" {
+  return sort === "price_asc" || sort === "price_desc";
+}
+
+// FR-CAT-075 (#102): price sorts order by each product's cheapest *active*
+// variant's sellingPrice (the "starting from" price) — the same key for both
+// directions, just the sort order flipped, rather than a different
+// representative value per direction. There's no top-level sellingPrice
+// field left to sort a plain query by, so this computes one via aggregation
+// — used by both listPublicPaginated's price-sort branch below and
+// searchPublicPaginated's own price-sort case.
+function priceSortStages(sort: "price_asc" | "price_desc"): Record<string, unknown>[] {
+  return [
+    {
+      $addFields: {
+        sortPrice: {
+          $min: {
+            $map: {
+              input: { $filter: { input: "$variants", as: "v", cond: "$$v.active" } },
+              as: "v",
+              in: "$$v.sellingPrice",
+            },
+          },
+        },
+      },
+    },
+    { $sort: { sortPrice: sort === "price_asc" ? 1 : -1 } },
+  ];
+}
+
+// Shared tail for every aggregation-based listing path below: pull the
+// $facet result apart, then populate brand/category manually — aggregation
+// doesn't run schema-level populate automatically the way .find().populate()
+// does.
+async function runFacetedAggregate(
+  pipeline: Record<string, unknown>[],
+): Promise<{ items: PublicProductDoc[]; total: number }> {
+  const [result] = await Product.aggregate<{
+    items: ProductRecord[];
+    totalCount: { count: number }[];
+  }>(pipeline as unknown as Parameters<typeof Product.aggregate>[0]);
+
+  const items = result?.items ?? [];
+  const total = result?.totalCount[0]?.count ?? 0;
+
+  const populated = await Product.populate<{ brand: PopulatedRef; category: PopulatedRef }>(items, [
+    { path: "brand", select: "name slug" },
+    { path: "category", select: "name slug" },
+  ]);
+
+  return { items: populated as unknown as PublicProductDoc[], total };
 }
 
 // Plain listing — FR-CAT-054 (flat) and FR-CAT-055 (category-scoped, via
 // categoryIds) share this one function; the Atlas Search case below is a
 // genuinely different query shape ($search must lead an aggregation
 // pipeline, incompatible with a plain .find()), not a variant of this.
+// A price sort is its own branch — it needs the aggregation-based
+// priceSortStages above, since a plain .find().sort() has no top-level
+// field to sort by (#102).
 export async function listPublicPaginated(
   filter: PublicProductFilter,
   sort: PublicSort,
   page: ProductListPage,
 ): Promise<{ items: PublicProductDoc[]; total: number }> {
   const query = buildMatchStage(filter);
-
   const skip = (page.page - 1) * page.limit;
+
+  if (isPriceSort(sort)) {
+    const pipeline = [
+      { $match: query },
+      ...priceSortStages(sort),
+      {
+        $facet: {
+          items: [{ $skip: skip }, { $limit: page.limit }],
+          totalCount: [{ $count: "count" }],
+        },
+      },
+    ];
+    return runFacetedAggregate(pipeline);
+  }
+
   const [items, total] = await Promise.all([
     Product.find(query)
-      .sort(sortSpec(sort))
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(page.limit)
       .populate<{ brand: PopulatedRef }>("brand", "name slug")
@@ -167,39 +224,50 @@ function buildSearchFilters(filter: PublicProductFilter): Record<string, unknown
   const filters: Record<string, unknown>[] = [];
 
   if (filter.variantAttribute) {
+    const variantClauses: Record<string, unknown>[] = [
+      { equals: { path: "variants.active", value: true } },
+      {
+        embeddedDocument: {
+          path: "variants.attributes",
+          operator: {
+            compound: {
+              filter: [
+                {
+                  equals: {
+                    path: "variants.attributes.name",
+                    value: filter.variantAttribute.name,
+                  },
+                },
+                {
+                  equals: {
+                    path: "variants.attributes.value",
+                    value: filter.variantAttribute.value,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    ];
+    // #102: when combined with an attribute filter, price range/on-sale
+    // apply to that *same* matched variant element, not "any variant"
+    // independently — same same-element semantics buildVariantElemMatch
+    // enforces for the plain query path above.
+    if (filter.minPrice !== undefined || filter.maxPrice !== undefined) {
+      const range: Record<string, number> = {};
+      if (filter.minPrice !== undefined) range.gte = filter.minPrice;
+      if (filter.maxPrice !== undefined) range.lte = filter.maxPrice;
+      variantClauses.push({ range: { path: "variants.sellingPrice", ...range } });
+    }
+    if (filter.onSaleOnly) {
+      variantClauses.push({ range: { path: "variants.discount", gt: 0 } });
+    }
+
     filters.push({
       embeddedDocument: {
         path: "variants",
-        operator: {
-          compound: {
-            filter: [
-              { equals: { path: "variants.active", value: true } },
-              {
-                embeddedDocument: {
-                  path: "variants.attributes",
-                  operator: {
-                    compound: {
-                      filter: [
-                        {
-                          equals: {
-                            path: "variants.attributes.name",
-                            value: filter.variantAttribute.name,
-                          },
-                        },
-                        {
-                          equals: {
-                            path: "variants.attributes.value",
-                            value: filter.variantAttribute.value,
-                          },
-                        },
-                      ],
-                    },
-                  },
-                },
-              },
-            ],
-          },
-        },
+        operator: { compound: { filter: variantClauses } },
       },
     });
   }
@@ -246,12 +314,12 @@ function buildSearchFilters(filter: PublicProductFilter): Record<string, unknown
 // embeddedDocument filter shape here is this codebase's best-faith
 // translation of Atlas Search's documented syntax for "array of
 // subdocuments" exact/range matching, unverified against a live cluster).
-// Every other filter dimension (category/brand/price/in-stock/on-sale)
-// still narrows via a plain $match after scoring, identical to
-// listPublicPaginated's own buildMatchStage. `q` is optional — this function
-// is also the query path for a variant-attribute/spec filter with no
-// keyword search at all, since Atlas Search's embeddedDocument filters
-// can't be expressed as a plain query.
+// Every other filter dimension (category/brand/price/on-sale) still narrows
+// via a plain $match after scoring, identical to listPublicPaginated's own
+// buildMatchStage. `q` is optional — this function is also the query path
+// for a variant-attribute/spec filter with no keyword search at all, since
+// Atlas Search's embeddedDocument filters can't be expressed as a plain
+// query.
 export async function searchPublicPaginated(
   q: string | undefined,
   filter: PublicProductFilter,
@@ -263,15 +331,22 @@ export async function searchPublicPaginated(
   const searchFilters = buildSearchFilters(filter);
 
   const skip = (page.page - 1) * page.limit;
-  const itemsPipeline: Record<string, unknown>[] = [{ $skip: skip }, { $limit: page.limit }];
+  const itemsPipeline: Record<string, unknown>[] = [];
   // A non-relevance sort (price/newest) always wins outright — an explicit
   // buyer choice, never overridden by search scoring. "relevance" with no
   // `q` has nothing to rank by (only attribute/spec filters, no keyword
   // search), so it falls back to newest-first too, same as the plain
-  // .find() path's own default.
+  // .find() path's own default. Price sorts (#102) need the same
+  // aggregation-based priceSortStages listPublicPaginated uses, since
+  // there's no top-level sellingPrice field to $sort by directly.
   if (sort !== "relevance" || !q) {
-    itemsPipeline.unshift({ $sort: sortSpec(sort === "relevance" ? "newest" : sort) });
+    if (isPriceSort(sort)) {
+      itemsPipeline.push(...priceSortStages(sort));
+    } else {
+      itemsPipeline.push({ $sort: { createdAt: -1 } });
+    }
   }
+  itemsPipeline.push({ $skip: skip }, { $limit: page.limit });
 
   const pipeline = [
     { $search: { compound: { must, filter: searchFilters } } },
@@ -279,23 +354,7 @@ export async function searchPublicPaginated(
     { $facet: { items: itemsPipeline, totalCount: [{ $count: "count" }] } },
   ];
 
-  const [result] = await Product.aggregate<{
-    items: ProductRecord[];
-    totalCount: { count: number }[];
-  }>(pipeline as Parameters<typeof Product.aggregate>[0]);
-
-  const items = result?.items ?? [];
-  const total = result?.totalCount[0]?.count ?? 0;
-
-  const populated = await Product.populate<{ brand: PopulatedRef; category: PopulatedRef }>(
-    items,
-    [
-      { path: "brand", select: "name slug" },
-      { path: "category", select: "name slug" },
-    ],
-  );
-
-  return { items: populated as unknown as PublicProductDoc[], total };
+  return runFacetedAggregate(pipeline);
 }
 
 export async function slugExists(slug: string): Promise<boolean> {
@@ -303,15 +362,14 @@ export async function slugExists(slug: string): Promise<boolean> {
   return existing !== null;
 }
 
-// FR-CAT-003's namespace spans both a top-level field and an array field on
-// the same collection — no single index can enforce that, so this is the
-// application-level half of the cross-check the unique indexes alone can't
-// provide. `excludeId` lets update calls exclude the product being updated
-// from colliding with its own stored SKU (SKU itself is never actually
-// editable — see products.service.ts — but this stays generic for #32's
-// variant-SKU writes, which will need the same exclusion shape).
+// FR-CAT-003's SKU namespace is variant-only since #102 — the
+// `variants.sku` unique multikey index alone is now sufficient to guarantee
+// this at the DB level, but this application-level check stays so a
+// collision surfaces as a friendly 400 DUPLICATE_SKU rather than a raw Mongo
+// E11000 error bubbling up as a 500. `excludeId` lets update calls exclude
+// the product being updated from colliding with its own stored variant SKUs.
 export async function skuInUse(sku: string, excludeId?: Types.ObjectId): Promise<boolean> {
-  const filter: QueryFilter<ProductDocument> = { $or: [{ sku }, { "variants.sku": sku }] };
+  const filter: QueryFilter<ProductDocument> = { "variants.sku": sku };
   if (excludeId) filter._id = { $ne: excludeId };
   const existing = await Product.exists(filter);
   return existing !== null;
@@ -342,11 +400,11 @@ export async function replaceVariants(
 }
 
 export type ProductListFilter = {
-  lowStock?: boolean;
   search?: string | undefined;
   status?: ProductStatus | undefined;
 };
-export type ProductSortField = "createdAt" | "name" | "mrp" | "stock";
+// mrp/stock dropped with #102 — the product no longer has either field.
+export type ProductSortField = "createdAt" | "name";
 export type ProductListSort = { field: ProductSortField; order: 1 | -1 };
 export type ProductListPage = { page: number; limit: number };
 
@@ -356,21 +414,21 @@ export async function listPaginated(
   page: ProductListPage,
 ): Promise<{ items: ProductRecord[]; total: number }> {
   const query: QueryFilter<ProductDocument> = {};
-  // $expr is required here — comparing two fields of the same document
-  // (stock vs. its own lowStockThreshold) can't be expressed as a plain
-  // query-operator filter.
-  if (filter.lowStock) query.$expr = { $lte: ["$stock", "$lowStockThreshold"] };
   // FR-CAT-053: search stays over all statuses (the admin grid's existing
   // all-statuses visibility rule) unless a status filter narrows it further.
   if (filter.status) query.status = filter.status;
-  // FR-CAT-050: name is an unanchored, case-insensitive partial match; sku is
-  // anchored at the start (exact-or-prefix) so pasting a full sku returns
-  // exactly that product. A plain MongoDB regex, not Atlas Search — see
+  // FR-CAT-050: name is an unanchored, case-insensitive partial match; sku
+  // (#102: variants.sku, the product's own sku is gone) is anchored at the
+  // start (exact-or-prefix) so pasting a full sku returns exactly that
+  // product. A plain MongoDB regex, not Atlas Search — see
   // docs/srs/features/0.2-product-catalog.md's note accepting the resulting
   // name-side collection scan at this catalog's scale.
   if (filter.search) {
     const escaped = escapeRegExp(filter.search);
-    query.$or = [{ name: { $regex: escaped, $options: "i" } }, { sku: { $regex: `^${escaped}` } }];
+    query.$or = [
+      { name: { $regex: escaped, $options: "i" } },
+      { "variants.sku": { $regex: `^${escaped}` } },
+    ];
   }
 
   const skip = (page.page - 1) * page.limit;
