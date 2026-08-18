@@ -1,7 +1,9 @@
 import type { Request, Response } from "express";
+import { type QueryFilter } from "mongoose";
 import { z } from "zod";
 import { successResponse } from "@/utils/apiResponse";
 import { parseObjectId } from "@/utils/objectId";
+import { parseQuery } from "@/utils/parseQuery";
 import {
   createBrand,
   updateBrand,
@@ -11,6 +13,8 @@ import {
   deleteBrand,
   updateBrandStatus,
 } from "./brands.service";
+import { BRAND_SORT_FIELDS, type BrandSortField } from "./brands.repository";
+import type { BrandDocument } from "./brands.model";
 
 const logoSchema = z.object({
   objectKey: z.string().min(1),
@@ -19,7 +23,16 @@ const logoSchema = z.object({
 
 const updateStatusSchema = z.object({ status: z.boolean() });
 
-const listBrandsQuerySchema = z.object({ search: z.string().min(1).optional() });
+// Issue #104: pagination + sort added for the first time — `orderBy`
+// defaults to "none" (no `sortBy` default) to preserve today's "no
+// guaranteed order" behavior when the caller sends nothing.
+const listBrandsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  sortBy: z.enum(BRAND_SORT_FIELDS).optional(),
+  orderBy: z.enum(["asc", "desc", "none"]).optional().default("none"),
+  search: z.string().min(1).optional(),
+});
 
 const createBrandSchema = z.object({
   name: z.string().min(1),
@@ -54,8 +67,19 @@ export async function getBrandHandler(req: Request, res: Response): Promise<void
 
 export async function listBrandsHandler(req: Request, res: Response): Promise<void> {
   const query = listBrandsQuerySchema.parse(req.query);
-  const brands = await listBrandsForAdmin(query.search);
-  res.status(200).json(successResponse(brands));
+  const { filter, sort, page, limit } = parseQuery<BrandSortField>(
+    query.search ? { value: query.search, fields: ["name"] } : undefined,
+    { page: query.page, limit: query.limit },
+    query.sortBy,
+    query.orderBy,
+    BRAND_SORT_FIELDS,
+  );
+  const { items, pagination } = await listBrandsForAdmin(
+    filter as QueryFilter<BrandDocument>,
+    sort,
+    { page, limit },
+  );
+  res.status(200).json(successResponse(items, pagination));
 }
 
 export async function deleteBrandHandler(req: Request, res: Response): Promise<void> {

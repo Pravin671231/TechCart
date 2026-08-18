@@ -110,7 +110,7 @@ Content-Type: application/json
 
 ## `GET /api/admin/brands`
 
-Lists every brand, any status, each with its product count.
+Lists every brand, any status, each with its product count — paginated and sortable (`FR-CAT-026`, Issue #104).
 
 | Field  | Value                          |
 | ------ | ------------------------------- |
@@ -120,13 +120,19 @@ Lists every brand, any status, each with its product count.
 
 **Headers tab:** `X-Admin-Key: {{admin_api_key}}`. No body.
 
-**Query params (optional):**
+**Query params (all optional):**
 
-| Param    | Values                                                           | Default |
-| -------- | ---------------------------------------------------------------- | ------- |
-| `search` | free text — matched against `name`, partial and case-insensitive | omitted |
+| Param     | Values                                                           | Default |
+| --------- | ----------------------------------------------------------------- | ------- |
+| `page`    | integer ≥ 1                                                        | `1`     |
+| `limit`   | integer 1–100                                                      | `20`    |
+| `sortBy`  | `name` \| `createdAt`                                              | omitted |
+| `orderBy` | `asc` \| `desc` \| `none`                                          | `none`  |
+| `search`  | free text — matched against `name`, partial and case-insensitive  | omitted |
 
 Try: `{{base_url}}/api/admin/brands?search=nova` — matches "Nova Electronics" regardless of case or position within the name (`FR-CAT-052`).
+
+Try pagination + sort: `{{base_url}}/api/admin/brands?page=1&limit=10&sortBy=name&orderBy=asc`
 
 **Click Send. Expected response — `200 OK`:**
 
@@ -145,14 +151,21 @@ Try: `{{base_url}}/api/admin/brands?search=nova` — matches "Nova Electronics" 
       "updatedAt": "2026-07-29T10:00:00.000Z",
       "productCount": 0
     }
-  ]
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "totalPages": 1,
+    "hasNextPage": false
+  }
 }
 ```
 
 - `productCount` reflects products of **any** status (`draft`, `published`, `archived`) referencing the brand — not just published ones. Create a product against this brand via [`products.api.md`](./products.api.md) (`#31`) to see this go above `0`.
 - `search` spans **all** statuses, same as the unfiltered list — it doesn't hide inactive brands.
 - `search` is a plain MongoDB regex query, not Atlas Search — same mechanism as `search` on [`GET /api/admin/products`](./products.api.md#get-apiadminproducts) and [`GET /api/admin/categories`](./categories.api.md#get-apiadmincategories) (`FR-CAT-050`–`052`).
-- No `pagination` key — every brand is returned in one response at this scale.
+- **Amended, Issue #104: paginated and sortable, same shape as [`GET /api/admin/products`](./products.api.md#get-apiadminproducts)** — previously this endpoint returned every brand unpaginated in one response. `orderBy` defaults to `none` (no `sortBy` default either) so a request with no sort params still returns the same unordered result this endpoint always has.
 
 ---
 
@@ -389,7 +402,7 @@ Brand-specific codes, in addition to the ones already documented in [`uploads.ap
 
 ## Understanding Validation Errors
 
-Same `errors`-object shape as `uploads.api.md` — see [that section](./uploads.api.md#understanding-validation-errors) for the general explanation. For brands, the fields that can appear as keys are `name`, `description`, `logo.objectKey`, `logo.alt`, and — on the list endpoint — `search`.
+Same `errors`-object shape as `uploads.api.md` — see [that section](./uploads.api.md#understanding-validation-errors) for the general explanation. For brands, the fields that can appear as keys are `name`, `description`, `logo.objectKey`, `logo.alt`, and — on the list endpoint — `page`, `limit`, `sortBy`, `orderBy`, `search`.
 
 ---
 

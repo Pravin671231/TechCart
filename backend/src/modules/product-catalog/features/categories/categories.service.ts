@@ -1,12 +1,13 @@
-import type { Types } from "mongoose";
+import type { QueryFilter, Types } from "mongoose";
 import { AppError } from "@/utils/AppError";
 import { generateUniqueSlug } from "@/utils/slug";
 import { truncate } from "@/utils/text";
+import { buildPagination, type Pagination } from "@/utils/apiResponse";
 import { consumeImageKeys, buildPublicUrl } from "@/modules/uploads/uploads.service";
 import { countByCategory, countByCategoryIds } from "@/modules/product-catalog/features/products/products.repository";
 import { deleteForCategory as deleteSpecificationsForCategory } from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service";
 import { deleteForCategory as deleteVariantsForCategory } from "@/modules/product-catalog/features/categoryVariants/categoryVariants.service";
-import type { CategoryImage } from "./categories.model";
+import type { CategoryDocument, CategoryImage } from "./categories.model";
 import {
   create,
   findById,
@@ -21,6 +22,8 @@ import {
   type CategoryRecord,
   type CreateCategoryDoc,
   type UpdateCategoryDoc,
+  type CategoryListSort,
+  type CategoryListPage,
 } from "./categories.repository";
 
 // See brands.service.ts's CreateBrandInput for why optionals spell out
@@ -166,14 +169,24 @@ export async function getCategoryById(id: Types.ObjectId): Promise<CategoryRecor
   return category;
 }
 
-export async function listCategoriesForAdmin(search?: string): Promise<CategoryListItem[]> {
-  const categories = await list(search);
-  const counts = await countByCategoryIds(categories.map((category) => category._id));
+// Issue #104: paginated/sortable, previously an unfiltered full list —
+// `filter` (name search included, built by parseQuery) and `sort` arrive
+// pre-built from the controller, same layering products' own
+// listProductsForAdmin already established.
+export async function listCategoriesForAdmin(
+  filter: QueryFilter<CategoryDocument>,
+  sort: CategoryListSort | undefined,
+  page: CategoryListPage,
+): Promise<{ items: CategoryListItem[]; pagination: Pagination }> {
+  const { items, total } = await list(filter, sort, page);
+  const counts = await countByCategoryIds(items.map((category) => category._id));
 
-  return categories.map((category) => ({
+  const withCounts = items.map((category) => ({
     ...category,
     productCount: counts.get(category._id.toString()) ?? 0,
   }));
+
+  return { items: withCounts, pagination: buildPagination(page.page, page.limit, total) };
 }
 
 // search (FR-CAT-066) is the same active-only query with an optional name

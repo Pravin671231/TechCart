@@ -9,10 +9,12 @@ vi.mock("@/modules/product-catalog/features/categorySpecifications/categorySpeci
 }));
 
 vi.mock("@/modules/product-catalog/features/categories/categories.repository", () => ({
+  CATEGORY_SORT_FIELDS: ["name", "sortOrder", "createdAt"],
   findById: vi.fn(),
 }));
 
 vi.mock("@/modules/product-catalog/features/products/products.repository", () => ({
+  PRODUCT_SORT_FIELDS: ["createdAt", "name"],
   countBySpecificationField: vi.fn(),
 }));
 

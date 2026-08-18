@@ -1,5 +1,4 @@
 import type { QueryFilter, Types } from "mongoose";
-import { escapeRegExp } from "@/utils/text";
 import { Brand, type BrandDocument, type BrandLogo } from "./brands.model";
 
 export type BrandRecord = BrandDocument & { _id: Types.ObjectId };
@@ -47,12 +46,33 @@ export async function deleteById(id: Types.ObjectId): Promise<void> {
   await Brand.findByIdAndDelete(id);
 }
 
-// FR-CAT-052: case-insensitive partial match on name, same plain-regex
-// mechanism as categories'/products' own admin search.
-export async function list(search?: string): Promise<BrandRecord[]> {
-  const query: QueryFilter<BrandDocument> = {};
-  if (search) query.name = { $regex: escapeRegExp(search), $options: "i" };
-  return Brand.find(query).lean();
+// Issue #104: the admin list's sortable-field allow-list — reused by
+// brands.controller.ts's Zod schema and its parseQuery call. No sortOrder
+// field exists on brands (unlike categories), so this is narrower.
+export const BRAND_SORT_FIELDS = ["name", "createdAt"] as const;
+export type BrandSortField = (typeof BRAND_SORT_FIELDS)[number];
+export type BrandListSort = { field: BrandSortField; order: 1 | -1 };
+export type BrandListPage = { page: number; limit: number };
+
+// FR-CAT-026/052 (#104: now paginated/sortable, previously an unfiltered
+// full list) — filter (built by parseQuery, name search included) and sort
+// both arrive pre-built from the controller, same layering categories'/
+// products' own list functions already established.
+export async function list(
+  filter: QueryFilter<BrandDocument>,
+  sort: BrandListSort | undefined,
+  page: BrandListPage,
+): Promise<{ items: BrandRecord[]; total: number }> {
+  const skip = (page.page - 1) * page.limit;
+  const [items, total] = await Promise.all([
+    Brand.find(filter)
+      .sort(sort ? { [sort.field]: sort.order } : undefined)
+      .skip(skip)
+      .limit(page.limit)
+      .lean(),
+    Brand.countDocuments(filter),
+  ]);
+  return { items, total };
 }
 
 export async function listActive(): Promise<BrandRecord[]> {

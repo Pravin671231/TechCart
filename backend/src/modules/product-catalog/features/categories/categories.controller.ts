@@ -1,8 +1,9 @@
 import type { Request, Response } from "express";
-import { isValidObjectId, Types } from "mongoose";
+import { isValidObjectId, Types, type QueryFilter } from "mongoose";
 import { z } from "zod";
 import { successResponse } from "@/utils/apiResponse";
 import { parseObjectId } from "@/utils/objectId";
+import { parseQuery } from "@/utils/parseQuery";
 import {
   createCategory,
   updateCategory,
@@ -12,6 +13,8 @@ import {
   deleteCategory,
   updateCategoryStatus,
 } from "./categories.service";
+import { CATEGORY_SORT_FIELDS, type CategorySortField } from "./categories.repository";
+import type { CategoryDocument } from "./categories.model";
 
 const categoryImageSchema = z.object({
   objectKey: z.string().min(1),
@@ -44,7 +47,16 @@ const updateCategorySchema = z.object({
 
 const updateStatusSchema = z.object({ status: z.boolean() });
 
-const listCategoriesQuerySchema = z.object({ search: z.string().min(1).optional() });
+// Issue #104: pagination + sort added for the first time — `orderBy`
+// defaults to "none" (no `sortBy` default) to preserve today's "no
+// guaranteed order" behavior when the caller sends nothing.
+const listCategoriesQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  sortBy: z.enum(CATEGORY_SORT_FIELDS).optional(),
+  orderBy: z.enum(["asc", "desc", "none"]).optional().default("none"),
+  search: z.string().min(1).optional(),
+});
 
 // q is required here, unlike the admin list's optional search — this route
 // exists specifically to search (FR-CAT-066), not to list.
@@ -94,8 +106,19 @@ export async function getCategoryHandler(req: Request, res: Response): Promise<v
 
 export async function listCategoriesHandler(req: Request, res: Response): Promise<void> {
   const query = listCategoriesQuerySchema.parse(req.query);
-  const categories = await listCategoriesForAdmin(query.search);
-  res.status(200).json(successResponse(categories));
+  const { filter, sort, page, limit } = parseQuery<CategorySortField>(
+    query.search ? { value: query.search, fields: ["name"] } : undefined,
+    { page: query.page, limit: query.limit },
+    query.sortBy,
+    query.orderBy,
+    CATEGORY_SORT_FIELDS,
+  );
+  const { items, pagination } = await listCategoriesForAdmin(
+    filter as QueryFilter<CategoryDocument>,
+    sort,
+    { page, limit },
+  );
+  res.status(200).json(successResponse(items, pagination));
 }
 
 export async function deleteCategoryHandler(req: Request, res: Response): Promise<void> {

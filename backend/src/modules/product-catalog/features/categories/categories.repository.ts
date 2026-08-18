@@ -52,12 +52,32 @@ export async function deleteById(id: Types.ObjectId): Promise<void> {
   await Category.findByIdAndDelete(id);
 }
 
-// FR-CAT-051: case-insensitive partial match on name, same plain-regex
-// mechanism as brands'/products' own admin search.
-export async function list(search?: string): Promise<CategoryRecord[]> {
-  const query: QueryFilter<CategoryDocument> = {};
-  if (search) query.name = { $regex: escapeRegExp(search), $options: "i" };
-  return Category.find(query).lean();
+// Issue #104: the admin list's sortable-field allow-list — reused by
+// categories.controller.ts's Zod schema and its parseQuery call.
+export const CATEGORY_SORT_FIELDS = ["name", "sortOrder", "createdAt"] as const;
+export type CategorySortField = (typeof CATEGORY_SORT_FIELDS)[number];
+export type CategoryListSort = { field: CategorySortField; order: 1 | -1 };
+export type CategoryListPage = { page: number; limit: number };
+
+// FR-CAT-017/051 (#104: now paginated/sortable, previously an unfiltered
+// full list) — filter (built by parseQuery, name search included) and sort
+// both arrive pre-built from the controller, same layering `products.repository.ts`'s
+// listPaginated already established.
+export async function list(
+  filter: QueryFilter<CategoryDocument>,
+  sort: CategoryListSort | undefined,
+  page: CategoryListPage,
+): Promise<{ items: CategoryRecord[]; total: number }> {
+  const skip = (page.page - 1) * page.limit;
+  const [items, total] = await Promise.all([
+    Category.find(filter)
+      .sort(sort ? { [sort.field]: sort.order } : undefined)
+      .skip(skip)
+      .limit(page.limit)
+      .lean(),
+    Category.countDocuments(filter),
+  ]);
+  return { items, total };
 }
 
 // FR-CAT-066: search is a second, optional parameter on the same active-only

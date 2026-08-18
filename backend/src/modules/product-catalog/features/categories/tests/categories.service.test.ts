@@ -329,27 +329,48 @@ describe("getCategoryById", () => {
 
 describe("listCategoriesForAdmin", () => {
   it("merges each category with its product count, defaulting to 0", async () => {
-    vi.mocked(categoriesRepository.list).mockResolvedValue([categoryA, categoryB]);
+    vi.mocked(categoriesRepository.list).mockResolvedValue({
+      items: [categoryA, categoryB],
+      total: 2,
+    });
     vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(
       new Map([[idA.toString(), 5]]),
     );
 
-    const result = await listCategoriesForAdmin();
+    const result = await listCategoriesForAdmin({}, undefined, { page: 1, limit: 20 });
 
-    expect(result).toEqual([
+    expect(result.items).toEqual([
       { ...categoryA, productCount: 5 },
       { ...categoryB, productCount: 0 },
     ]);
     expect(productsRepository.countByCategoryIds).toHaveBeenCalledWith([idA, idB]);
   });
 
-  it("passes the search term through to the repository", async () => {
-    vi.mocked(categoriesRepository.list).mockResolvedValue([categoryA]);
+  it("passes filter/sort/page straight through to the repository", async () => {
+    vi.mocked(categoriesRepository.list).mockResolvedValue({ items: [categoryA], total: 1 });
     vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(new Map());
 
-    await listCategoriesForAdmin("elec");
+    const filter = { name: { $regex: "elec", $options: "i" } };
+    const sort = { field: "name" as const, order: 1 as const };
 
-    expect(categoriesRepository.list).toHaveBeenCalledWith("elec");
+    await listCategoriesForAdmin(filter, sort, { page: 1, limit: 20 });
+
+    expect(categoriesRepository.list).toHaveBeenCalledWith(filter, sort, { page: 1, limit: 20 });
+  });
+
+  it("computes pagination fields from the repository's total", async () => {
+    vi.mocked(categoriesRepository.list).mockResolvedValue({ items: [categoryA], total: 45 });
+    vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(new Map());
+
+    const result = await listCategoriesForAdmin({}, undefined, { page: 2, limit: 20 });
+
+    expect(result.pagination).toEqual({
+      page: 2,
+      limit: 20,
+      total: 45,
+      totalPages: 3,
+      hasNextPage: true,
+    });
   });
 });
 

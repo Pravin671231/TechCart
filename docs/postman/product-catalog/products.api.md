@@ -238,13 +238,16 @@ Lists products at **any** status, paginated and sortable (`FR-CAT-005`) — the 
 | ---------- | ------------------------------------------------------------------------------------------ | ------------ |
 | `page`     | integer ≥ 1                                                                                | `1`          |
 | `limit`    | integer 1–100                                                                              | `20`         |
-| `sort`     | `createdAt` \| `-createdAt` \| `name` \| `-name`                                          | `-createdAt` |
+| `sortBy`   | `createdAt` \| `name`                                                                      | `createdAt`  |
+| `orderBy`  | `asc` \| `desc` \| `none`                                                                  | `desc`       |
 | `search`   | free text — matched against `name` (partial, case-insensitive) and variant `sku` (exact-or-prefix) | omitted      |
 | `status`   | `draft` \| `published` \| `archived`                                                       | omitted      |
 
 _Amended, Issue #102: `mrp`/`stock` sort options and the `lowStock` filter are gone — the product no longer has either field._
 
-Try: `{{base_url}}/api/admin/products?page=1&limit=10&sort=-name`
+_Amended, Issue #104: the combined `sort=-field` param is now two params, `sortBy`/`orderBy`, shared with the (also newly paginated/sortable) categories/brands admin lists below. `orderBy=none` returns results with no explicit sort applied at all._
+
+Try: `{{base_url}}/api/admin/products?page=1&limit=10&sortBy=name&orderBy=desc`
 
 Try search: `{{base_url}}/api/admin/products?search=NOVA-X1-001-BLK-128` — pasting a variant's full SKU returns exactly the product that owns it; `?search=nova` matches by name too, case-insensitively and partially (`FR-CAT-050`).
 
@@ -273,7 +276,7 @@ Try search + status together: `{{base_url}}/api/admin/products?search=nova&statu
 }
 ```
 
-- **`-` prefix means descending** — `sort=-name` orders Z→A; `sort=name` orders A→Z.
+- **`orderBy` controls direction, `sortBy` the field** — `sortBy=name&orderBy=desc` orders Z→A; `sortBy=name&orderBy=asc` orders A→Z; `orderBy=none` (or omitting both) applies no explicit sort.
 - **`search` is a plain MongoDB query, not Atlas Search** — a case-insensitive, unanchored regex on `name`, `OR`ed with a `^`-anchored (exact-or-prefix) regex on `variants.sku`. Consistent with `search` on `GET /api/admin/categories`/`GET /api/admin/brands` — all three admin lists use the identical mechanism (`FR-CAT-050`–`052`).
 - **`status` and `search` are independent filters, not mutually exclusive** — send either alone, both together, or neither. Neither one narrows the other incorrectly: `search` alone still spans all three statuses; adding `status` only ever removes results that don't also match `search`.
 - An oversized `limit` (e.g. `?limit=1000`) is **rejected**, not silently clamped:
@@ -292,14 +295,14 @@ Try search + status together: `{{base_url}}/api/admin/products?search=nova&statu
 }
 ```
 
-**An unrecognized `sort` value:**
+**An unrecognized `sortBy` value:**
 
 ```json
 {
   "success": false,
   "code": "VALIDATION_ERROR",
   "errors": {
-    "sort": "Invalid option: expected one of \"createdAt\"|\"-createdAt\"|\"name\"|\"-name\""
+    "sortBy": "Invalid option: expected one of \"createdAt\"|\"name\""
   }
 }
 ```
@@ -852,7 +855,7 @@ Product-specific codes, in addition to the ones already documented in [`uploads.
 
 ## Understanding Validation Errors
 
-Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For products, the fields that can appear as keys include `name`, `description`, `brand`, `category`, `specifications`, `isFeatured`, `metaTitle`, `metaDescription`, and — on the admin list endpoint — `page`, `limit`, `sort`, `search`, `status`. For the two variant endpoints: `sku`, `attributes`, `images`, `mrp`, `discount`, `weight`. For the status endpoint: `status`. For the buyer list endpoint (`GET /api/products`): `page`, `limit`, `q`, `category`, `brand`, `minPrice`, `maxPrice`, `attributeValue` (the both-or-neither check with `attributeName` surfaces here). `INVALID_SPECIFICATION_FILTER` and `PRODUCT_HAS_NO_VARIANTS` (above) are separate, service-level errors — not `VALIDATION_ERROR` — since each needs more than just the request shape to evaluate.
+Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-validation-errors). For products, the fields that can appear as keys include `name`, `description`, `brand`, `category`, `specifications`, `isFeatured`, `metaTitle`, `metaDescription`, and — on the admin list endpoint — `page`, `limit`, `sortBy`, `orderBy`, `search`, `status`. For the two variant endpoints: `sku`, `attributes`, `images`, `mrp`, `discount`, `weight`. For the status endpoint: `status`. For the buyer list endpoint (`GET /api/products`): `page`, `limit`, `q`, `category`, `brand`, `minPrice`, `maxPrice`, `attributeValue` (the both-or-neither check with `attributeName` surfaces here). `INVALID_SPECIFICATION_FILTER` and `PRODUCT_HAS_NO_VARIANTS` (above) are separate, service-level errors — not `VALIDATION_ERROR` — since each needs more than just the request shape to evaluate.
 
 ---
 
