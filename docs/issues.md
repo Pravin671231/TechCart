@@ -1,7 +1,7 @@
 # Issue Drafts
 
 **Project:** TechCart
-**Status:** M0 (Foundation), M1 (CI Pipeline), and M2 (Product Catalog, backend only) are all opened as real GitHub Issues — #1–#10, and #25–#36 under [Milestone #3](https://github.com/Pravin671231/TechCart/milestone/3) respectively — so all three milestones' draft text has been removed from this file; see `docs/milestone.md` and `docs/srs/SRS.md` §6 for their roadmap-level and traceability records. The **Backlog** below holds the M2 addendum: `M2.13` (mock-ui verification, opened as Issue #41) and `M2.14`–`M2.25` (the frontend build-out of every `mock-ui/` screen into real `buyer-app`/`admin-app` code, opened as Issues #71–#82, also under Milestone #3) — draft text kept here for reference rather than removed, following `M2.13`'s own precedent.
+**Status:** M0 (Foundation), M1 (CI Pipeline), and M2 (Product Catalog, backend only) are all opened as real GitHub Issues — #1–#10, and #25–#36 under [Milestone #3](https://github.com/Pravin671231/TechCart/milestone/3) respectively — so all three milestones' draft text has been removed from this file; see `docs/milestone.md` and `docs/srs/SRS.md` §6 for their roadmap-level and traceability records. The **Backlog** below holds the M2 addendum: `M2.13` (mock-ui verification, opened as Issue #41), `M2.14`–`M2.25` (the frontend build-out of every `mock-ui/` screen into real `buyer-app`/`admin-app` code, opened as Issues #71–#82, also under Milestone #3), and `M2.26` (backend variant-only pricing / SRS v0.2 amendment, opened as Issue #102) — draft text kept here for reference rather than removed, following `M2.13`'s own precedent.
 
 This is where issues get drafted — full context, a build-order task checklist, and test criteria — before they're opened as real GitHub Issues. It sits between [docs/milestone.md](milestone.md) (which milestone/goal) and GitHub itself (which is the actual tracker once an issue is opened): draft it here, then `gh issue create` it, then work it via the branch/PR flow in [docs/srs/SRS.md](srs/SRS.md) §5. Once a milestone's issues are opened on GitHub, its draft section is removed from here — this happened for M2 as of Issues #25–#36.
 
@@ -359,3 +359,32 @@ Builds `mock-ui/admin-app/product-form.html` (`FR-CAT-001`–`004`, `033`, `038`
 - Changing category re-fetches (via RTK Query arg change) and re-renders that category's specification/variant-axis inputs
 - A `SPECIFICATION_VALIDATION_FAILED` response highlights every named offending field, not just the first
 - `npm run build|test|lint --workspace admin-app` all pass
+
+#### M2.26 — backend: variant-only pricing, drop inventory tracking (SRS v0.2 amendment)
+
+**Milestone:** M2 – Product Catalog
+**Suggested branch:** feature/102-variant-only-pricing
+**Labels:** backend, catalog
+
+**Context**
+M2 (Issues #25–#36) shipped a product model where a product with zero active variants sells on its own `sku`/`mrp`/`discount`/`sellingPrice`/`stock`/`images`, and a product with one or more active variants sells per-variant instead (`FR-CAT-043`). This issue collapses that to **variant-only**: a product becomes pure metadata (name/description/brand/category/specifications/SEO/`isFeatured`) and every sellable, priced, imaged unit is a variant. Stock/inventory tracking is removed from the system entirely — not moved to the variant, deleted outright, along with the derived buyer-facing `availability` enum. A product now needs at least one active variant to be published. This is an SRS v0.2 amendment (`docs/srs/features/0.2-product-catalog.md`, `FR-CAT-001`, `003`, `004`, `008`, `009`, `011`, `039`, `042`, `043`, `056`, `059`, `064`, `068`, `073`–`076`, `083`, `084`, `087`, `091`, `092`, `095`, `096` all rewritten in place — no new FR numbers), not new scope, so it lands as its own issue against the already-complete M2 milestone rather than reopening #31/#32. Backend-only: `admin-app`/`buyer-app` product/variant screens are explicitly left out of sync with this API change and are deferred to separate follow-up work.
+
+**Tasks**
+
+- [ ] `products.model.ts`: remove `sku`/`images`/`mrp`/`discount`/`sellingPrice`/`stock`/`lowStockThreshold` from `ProductDocument`; remove `stock` from `ProductVariant`; make variant `images` schema-required (drop the empty-array default); keep `variants.sku` as the sole unique index
+- [ ] `products.controller.ts`: drop the removed fields from `createProductSchema`/`updateProductSchema`/`addVariantSchema`/`updateVariantSchema`; delete `updateStockSchema`/`updateStockHandler`/the `PATCH .../stock` route; drop `lowStock` and the `mrp`/`stock` sort options from the admin list query; drop `inStock` from the buyer filter schema
+- [ ] `products.service.ts`: trim `createProduct`/`updateProduct` to the new field set (delete `resolveImages`, the product-level image/price/stock handling, and the product-`sku` branch of `assertVariantSkuAvailable`); require 1–2 images unconditionally in `resolveVariantImages`; add a `PRODUCT_HAS_NO_VARIANTS` guard in `updateProductStatus` when transitioning to `"published"` with zero active variants; delete `updateStock`/`listAvailability`/`getPrimaryImage`/every `availability` field, sourcing list/detail image and price from `selectDefaultVariant()` unconditionally
+- [ ] `products.repository.ts`: drop `inStockOnly`; fold `minPrice`/`maxPrice`/`onSaleOnly` into one variant-level `$elemMatch` (plain and Atlas paths); add an aggregation-based price-sort path (`$addFields` a computed `sortPrice` from active variants, since there's no top-level `sellingPrice` to sort on); drop `lowStock`; repoint admin SKU search at `variants.sku`
+- [ ] Update `products.service.test.ts` and `__tests__/product-catalog/products/products.api.test.ts`: drop stock-endpoint/low-stock/availability tests and fixtures, add `PRODUCT_HAS_NO_VARIANTS` and variant-sourced price filter/sort tests
+- [ ] SRS amendment: rewrite the FR list above in place in `docs/srs/features/0.2-product-catalog.md` (schema tables, endpoint table, worked examples, NFR checklist, UI/UX §6 prose, acceptance criteria); bump `docs/srs/SRS.md`'s Product Catalog FR-range summary
+- [ ] `docs/postman/product-catalog/products.api.md` + `docs/postman/README.md`: strip removed fields from every example, delete the stock-endpoint section, add `PRODUCT_HAS_NO_VARIANTS`
+- [ ] `backend/atlas-search/README.md`: drop the stale "in-stock" mention from its plain-query filter list
+- [ ] `backend/CLAUDE.md`: append a summary entry once this issue's real number is known
+
+**Test Criteria**
+
+- `npm run build --workspace backend` and `npm run test --workspace backend` both pass with zero references to `stock`/`lowStockThreshold`/`availability` remaining in `products.*`
+- Creating a product accepts no `sku`/`mrp`/`stock`/`images`; adding a variant requires `sku`, 1–2 images, and `mrp`/`discount` and rejects 0 or 3+ images
+- `PATCH .../status` to `"published"` on a product with zero active variants returns `400 PRODUCT_HAS_NO_VARIANTS`; the same call succeeds once an active variant exists
+- Buyer price-range, on-sale, and price-sort (`?sort=price_asc`/`price_desc`) all resolve against `variants[].sellingPrice`/`.discount`, not any product-level field
+- No buyer-facing or admin response contains a `stock`, `lowStockThreshold`, or `availability` key anywhere
