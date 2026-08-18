@@ -10,7 +10,6 @@ import {
   getProductById,
   listProductsForAdmin,
   deleteProduct,
-  updateStock,
   updateProductStatus,
   addVariant,
   updateVariant,
@@ -39,47 +38,30 @@ const specificationGroupSchema = z.object({
   values: z.array(specificationValueSchema),
 });
 
-// Image count (1-8) and sellingPrice are deliberately not bounded/accepted
-// here: image count is enforced by uploads.service.ts's validateImageCount
-// so there's one authoritative source for IMAGE_COUNT_OUT_OF_BOUNDS, and
-// sellingPrice simply isn't a field on this schema — Zod's default "strip
-// unknown keys" behavior is what makes a client-submitted sellingPrice have
-// no effect rather than being rejected (FR-CAT-087).
+// Every sellable, priced, imaged field lives on the variant, not the product
+// (Issue #102, SRS v0.2 amendment) — a product create/update is just its own
+// metadata plus specifications/SEO/isFeatured.
 const createProductSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
-  sku: z.string().min(1),
   brand: objectIdString,
   category: objectIdString,
-  images: z.array(productImageSchema),
   specifications: z.array(specificationGroupSchema).optional().default([]),
-  mrp: z.number().int().positive(),
-  discount: z.number().int().min(0).max(99).optional().default(0),
-  stock: z.number().int().min(0),
-  lowStockThreshold: z.number().int().min(0).optional().default(0),
   isFeatured: z.boolean().optional().default(false),
   metaTitle: z.string().min(1).optional(),
   metaDescription: z.string().min(1).optional(),
 });
 
-// sku is absent — see products.service.ts's UpdateProductInput comment.
 const updateProductSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().min(1).optional(),
   brand: objectIdString.optional(),
   category: objectIdString.optional(),
-  images: z.array(productImageSchema).optional(),
   specifications: z.array(specificationGroupSchema).optional(),
-  mrp: z.number().int().positive().optional(),
-  discount: z.number().int().min(0).max(99).optional(),
-  stock: z.number().int().min(0).optional(),
-  lowStockThreshold: z.number().int().min(0).optional(),
   isFeatured: z.boolean().optional(),
   metaTitle: z.string().min(1).optional(),
   metaDescription: z.string().min(1).optional(),
 });
-
-const updateStockSchema = z.object({ stock: z.number().int().min(0) });
 
 const updateStatusSchema = z.object({ status: z.enum(PRODUCT_STATUSES) });
 
@@ -88,17 +70,16 @@ const productVariantAttributeSchema = z.object({
   value: z.string().min(1),
 });
 
-// Same mrp/discount/stock rules as products (FR-CAT-042); images has no
-// count bound here — that's enforced by resolveVariantImages' bespoke
-// { min: 1, max: 2 } call, only once at least one image is submitted, same
-// "one authoritative source" reasoning as the product schema above.
+// Same mrp/discount rules as products' own pricing did (FR-CAT-042, §2.13);
+// images has no count bound here — that's enforced by resolveVariantImages'
+// { min: 1, max: 2 } call, one authoritative source for
+// IMAGE_COUNT_OUT_OF_BOUNDS, same reasoning the product schema used to use.
 const addVariantSchema = z.object({
   sku: z.string().min(1),
   attributes: z.array(productVariantAttributeSchema).min(1),
-  images: z.array(productImageSchema).optional().default([]),
+  images: z.array(productImageSchema),
   mrp: z.number().int().positive(),
   discount: z.number().int().min(0).max(99).optional().default(0),
-  stock: z.number().int().min(0),
   weight: z.number().positive().optional(),
 });
 
@@ -108,32 +89,21 @@ const updateVariantSchema = z.object({
   images: z.array(productImageSchema).optional(),
   mrp: z.number().int().positive().optional(),
   discount: z.number().int().min(0).max(99).optional(),
-  stock: z.number().int().min(0).optional(),
   weight: z.number().positive().optional(),
   active: z.boolean().optional(),
 });
 
-const SORT_VALUES = [
-  "createdAt",
-  "-createdAt",
-  "name",
-  "-name",
-  "mrp",
-  "-mrp",
-  "stock",
-  "-stock",
-] as const;
+// mrp/stock sort options dropped with #102 — the product no longer has
+// either field to sort on.
+const SORT_VALUES = ["createdAt", "-createdAt", "name", "-name"] as const;
 
 // search (FR-CAT-050) and status (FR-CAT-053, narrows the all-statuses admin
-// grid further) are the two additions #34 makes to this schema.
+// grid further) are the two additions #34 makes to this schema. lowStock
+// (FR-CAT-011) was removed by #102 — there's no stock to filter on.
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   sort: z.enum(SORT_VALUES).optional().default("-createdAt"),
-  // Presence-based flag (FR-CAT-011) rather than a boolean coercion — a query
-  // string has no boolean type, and "?lowStock=true" reads more explicitly
-  // than accepting any truthy-looking value.
-  lowStock: z.enum(["true"]).optional(),
   search: z.string().min(1).optional(),
   status: z.enum(PRODUCT_STATUSES).optional(),
 });
@@ -151,15 +121,9 @@ export async function createProductHandler(req: Request, res: Response): Promise
   const product = await createProduct({
     name: input.name,
     description: input.description,
-    sku: input.sku,
     brand: new Types.ObjectId(input.brand),
     category: new Types.ObjectId(input.category),
-    images: input.images,
     specifications: input.specifications,
-    mrp: input.mrp,
-    discount: input.discount,
-    stock: input.stock,
-    lowStockThreshold: input.lowStockThreshold,
     isFeatured: input.isFeatured,
     metaTitle: input.metaTitle,
     metaDescription: input.metaDescription,
@@ -175,12 +139,7 @@ export async function updateProductHandler(req: Request, res: Response): Promise
     description: input.description,
     brand: input.brand !== undefined ? new Types.ObjectId(input.brand) : undefined,
     category: input.category !== undefined ? new Types.ObjectId(input.category) : undefined,
-    images: input.images,
     specifications: input.specifications,
-    mrp: input.mrp,
-    discount: input.discount,
-    stock: input.stock,
-    lowStockThreshold: input.lowStockThreshold,
     isFeatured: input.isFeatured,
     metaTitle: input.metaTitle,
     metaDescription: input.metaDescription,
@@ -201,7 +160,6 @@ export async function listProductsHandler(req: Request, res: Response): Promise<
     page: query.page,
     limit: query.limit,
     sort,
-    lowStock: query.lowStock === "true",
     search: query.search,
     status: query.status,
   });
@@ -212,13 +170,6 @@ export async function deleteProductHandler(req: Request, res: Response): Promise
   const id = parseObjectId(req.params.id);
   await deleteProduct(id);
   res.status(200).json(successResponse(null));
-}
-
-export async function updateStockHandler(req: Request, res: Response): Promise<void> {
-  const id = parseObjectId(req.params.id);
-  const input = updateStockSchema.parse(req.body);
-  const product = await updateStock(id, input.stock);
-  res.status(200).json(successResponse(product));
 }
 
 export async function updateStatusHandler(req: Request, res: Response): Promise<void> {
@@ -293,7 +244,6 @@ const publicFilterFieldsSchema = z.object({
   brand: brandFilterSchema,
   minPrice: z.coerce.number().int().min(0).optional(),
   maxPrice: z.coerce.number().int().min(0).optional(),
-  inStock: z.enum(["true"]).optional(),
   onSale: z.enum(["true"]).optional(),
   // FR-CAT-071: a single name/value pair (the SRS's own wording is
   // singular, "a variant attribute name and value") — both or neither, not
@@ -385,7 +335,6 @@ export async function listPublicProductsHandler(req: Request, res: Response): Pr
     brandIds: parseBrandIds(query.brand),
     minPrice: query.minPrice,
     maxPrice: query.maxPrice,
-    inStockOnly: query.inStock === "true",
     onSaleOnly: query.onSale === "true",
     variantAttribute: parseVariantAttribute(query.attributeName, query.attributeValue),
     specFilters: parseSpecFilters(query.spec),
@@ -416,7 +365,6 @@ export async function listProductsByCategorySlugHandler(
     brandIds: parseBrandIds(query.brand),
     minPrice: query.minPrice,
     maxPrice: query.maxPrice,
-    inStockOnly: query.inStock === "true",
     onSaleOnly: query.onSale === "true",
     variantAttribute: parseVariantAttribute(query.attributeName, query.attributeValue),
     specFilters: parseSpecFilters(query.spec),
