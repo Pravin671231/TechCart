@@ -12,6 +12,7 @@ import type {
   ProductVariant,
   ProductVariantAttribute,
 } from "@/modules/product-catalog/features/products/products.model";
+import type { VariantAxis, VariantAxisOption } from "@/modules/product-catalog/features/categoryVariants/categoryVariants.model";
 import type { ProductTemplate, VariantKind } from "./data";
 
 const STORAGE_PAIRS: [string, string][] = [
@@ -115,6 +116,40 @@ function buildVariantList(
  * there is no pre-existing data to collide with, only within-batch
  * collisions to guard against.
  */
+// Builds the actual product-fields object once slug/sku are already decided
+// (Issue #106) — shared by createProductBuilder's Set-deduped batch path
+// below and buildProductFieldsDeterministic's slug-based upsert path.
+export function buildProductFields(
+  template: ProductTemplate,
+  kind: VariantKind,
+  categoryId: Types.ObjectId,
+  brandId: Types.ObjectId,
+  index: number,
+  slug: string,
+  sku: string,
+): ProductDocument {
+  const variants = buildVariantList(kind, template.name, sku, template.basePrice, index);
+  if (variants.length === 0) {
+    throw new Error(`buildVariantList produced no variants for "${template.name}"`);
+  }
+
+  return {
+    name: template.name,
+    slug,
+    description: `${template.name} from ${template.brand}. Seeded catalog data for local development and testing.`,
+    brand: brandId,
+    category: categoryId,
+    specifications: [],
+    variants,
+    isFeatured: index % 7 === 0,
+    // Schema default is "draft" — overridden here so seeded products are
+    // actually visible through the buyer-facing (published-only) endpoints.
+    // Every product built here always has variants (see the throw above),
+    // satisfying the FR-CAT-043 publish guard (#102).
+    status: "published",
+  };
+}
+
 export function createProductBuilder() {
   const usedSlugs = new Set<string>();
   const usedSkus = new Set<string>();
@@ -137,27 +172,59 @@ export function createProductBuilder() {
     usedSkus.add(skuBase);
     const sku = skuBase.toUpperCase();
 
-    const variants = buildVariantList(kind, template.name, sku, template.basePrice, index);
-    if (variants.length === 0) {
-      throw new Error(`buildVariantList produced no variants for "${template.name}"`);
-    }
-
-    return {
-      name: template.name,
-      slug,
-      description: `${template.name} from ${template.brand}. Seeded catalog data for local development and testing.`,
-      brand: brandId,
-      category: categoryId,
-      specifications: [],
-      variants,
-      isFeatured: index % 7 === 0,
-      // Schema default is "draft" — overridden here so seeded products are
-      // actually visible through the buyer-facing (published-only) endpoints.
-      // Every product built here always has variants (see the throw above),
-      // satisfying the FR-CAT-043 publish guard (#102).
-      status: "published",
-    };
+    return buildProductFields(template, kind, categoryId, brandId, index, slug, sku);
   };
+}
+
+function uniqueValues(groups: readonly (readonly string[])[]): string[] {
+  return Array.from(new Set(groups.flat()));
+}
+
+function toAxisOptions(values: string[]): VariantAxisOption[] {
+  return values.map((value) => ({ label: value, value }));
+}
+
+// Derives a category's variant-axis definitions from the same `kind` that
+// already drives buildVariantList (Issue #106) — no separate seed data
+// needed, since the axis options are meant to roughly track what's actually
+// generated. Pure, no I/O; used by upsert.ts's upsertCategoryVariants.
+export function buildVariantAxesForKind(kind: VariantKind): VariantAxis[] {
+  const colorAxis: VariantAxis = {
+    name: "Color",
+    code: "color",
+    type: "color",
+    required: true,
+    options: toAxisOptions(uniqueValues(kind === "color" ? COLOR_TRIOS : COLOR_PAIRS)),
+  };
+
+  if (kind === "storage") {
+    return [
+      {
+        name: "Storage",
+        code: "storage",
+        type: "select",
+        required: true,
+        options: toAxisOptions(uniqueValues(STORAGE_PAIRS)),
+      },
+      colorAxis,
+    ];
+  }
+
+  if (kind === "config") {
+    return [
+      {
+        name: "Configuration",
+        code: "configuration",
+        type: "select",
+        required: true,
+        options: toAxisOptions(uniqueValues(CONFIG_PAIRS)),
+      },
+      colorAxis,
+    ];
+  }
+
+  // "color" kind — a single axis, matching buildVariantList's own single-axis case.
+  return [colorAxis];
 }
 
 export function buildSimpleImage(seedText: string): { url: string } {
