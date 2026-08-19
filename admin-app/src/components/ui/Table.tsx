@@ -5,6 +5,7 @@ export interface TableProps {
   minWidthClassName?: string;
   bordered?: boolean;
   isFetching?: boolean;
+  fillHeight?: boolean;
   children: ReactNode;
 }
 
@@ -12,25 +13,29 @@ export const Table = ({
   minWidthClassName,
   bordered = true,
   isFetching = false,
+  fillHeight = false,
   children,
 }: TableProps) => {
   return (
     <div
       className={cn(
         "relative",
-        bordered ? "overflow-x-auto rounded-lg border border-neutral-200" : "overflow-x-auto",
+        bordered && "rounded-lg border border-neutral-200",
+        fillHeight && "flex h-full min-h-0 flex-col",
       )}
     >
-      <table
-        aria-busy={isFetching}
-        className={cn(
-          "w-full border-collapse text-sm",
-          isFetching && "opacity-50 transition-opacity",
-          minWidthClassName,
-        )}
-      >
-        {children}
-      </table>
+      <div className={cn("overflow-x-auto", fillHeight && "min-h-0 flex-1 overflow-y-auto")}>
+        <table
+          aria-busy={isFetching}
+          className={cn(
+            "w-full border-collapse text-sm",
+            isFetching && "opacity-50 transition-opacity",
+            minWidthClassName,
+          )}
+        >
+          {children}
+        </table>
+      </div>
       {isFetching && (
         <div
           role="status"
@@ -47,20 +52,21 @@ export const Table = ({
 
 export interface TableHeadRowProps {
   variant?: "plain" | "shaded";
+  sticky?: boolean;
   children: ReactNode;
 }
 
-export const TableHeadRow = ({ variant = "plain", children }: TableHeadRowProps) => {
+export const TableHeadRow = ({ variant = "plain", sticky = false, children }: TableHeadRowProps) => {
   if (variant === "shaded") {
     return (
-      <thead className="bg-neutral-50 text-left">
+      <thead className={cn("bg-neutral-50 text-left", sticky && "sticky top-0 z-10")}>
         <tr className="border-b border-neutral-200">{children}</tr>
       </thead>
     );
   }
 
   return (
-    <thead>
+    <thead className={cn(sticky && "sticky top-0 z-10 bg-white")}>
       <tr className="border-b border-neutral-200 text-left text-xs font-semibold uppercase text-neutral-500">
         {children}
       </tr>

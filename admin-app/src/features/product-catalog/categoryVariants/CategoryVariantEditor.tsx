@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
 import { Button } from "@/components/ui/Button";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { AlertModal } from "@/components/ui/AlertModal";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import { ErrorState, LoadingState } from "@/components/ui/LoadingState";
 import { Table, TableHeadRow } from "@/components/ui/Table";
@@ -159,7 +159,7 @@ export const CategoryVariantEditor = ({ categoryId }: { categoryId: string }) =>
 
       {actionError && <InlineAlert>{actionError}</InlineAlert>}
 
-      <ConfirmDialog
+      <AlertModal
         open={Boolean(pendingDelete)}
         title="Delete variant axis"
         message={`Delete "${pendingDelete?.name}"? This can't be undone.`}

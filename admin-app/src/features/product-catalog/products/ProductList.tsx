@@ -28,7 +28,7 @@ export interface ProductListProps {
   lowStockOnly: boolean;
   onLowStockOnlyChange: (value: boolean) => void;
   sort: ProductSort | undefined;
-  onSortChange: (sort: ProductSort) => void;
+  onSortChange: (sort: ProductSort | undefined) => void;
   page: number;
   onPageChange: (page: number) => void;
 }

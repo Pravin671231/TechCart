@@ -5,7 +5,7 @@ export interface SortableHeaderProps<TSort extends string> {
   sortKeyAsc: TSort;
   sortKeyDesc: TSort;
   currentSort: TSort | undefined;
-  onSortChange: (sort: TSort) => void;
+  onSortChange: (sort: TSort | undefined) => void;
   align?: "left" | "right";
 }
 
@@ -20,11 +20,15 @@ export const SortableHeader = <TSort extends string>({
   const isActive = currentSort === sortKeyAsc || currentSort === sortKeyDesc;
   const isDesc = currentSort === sortKeyDesc;
 
+  function nextSort(): TSort | undefined {
+    if (currentSort === sortKeyAsc) return sortKeyDesc;
+    if (currentSort === sortKeyDesc) return undefined;
+    return sortKeyAsc;
+  }
+
   return (
     <th className={cn("px-3 py-2 font-medium text-neutral-500", align === "right" && "text-right")}>
-      <button
-        type="button"
-        onClick={() => onSortChange(currentSort === sortKeyAsc ? sortKeyDesc : sortKeyAsc)}
+      <button type="button" onClick={() => onSortChange(nextSort())}
         className={cn(
           "inline-flex items-center gap-1 hover:text-neutral-700",
           isActive && "text-neutral-900",

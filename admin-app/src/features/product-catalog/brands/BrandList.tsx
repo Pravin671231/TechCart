@@ -1,6 +1,6 @@
 import { Fragment, useState } from "react";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { AlertModal } from "@/components/ui/AlertModal";
 import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InlineAlert } from "@/components/ui/InlineAlert";
@@ -126,7 +126,7 @@ export const BrandList = ({ search, onSearchChange, onEdit }: BrandListProps) =>
         </div>
       )}
 
-      <ConfirmDialog
+      <AlertModal
         open={Boolean(pendingDelete)}
         title="Delete brand"
         message={`Delete "${pendingDelete?.name}"? This can't be undone.`}
@@ -141,3 +141,4 @@ export const BrandList = ({ search, onSearchChange, onEdit }: BrandListProps) =>
     </section>
   );
 };
+
