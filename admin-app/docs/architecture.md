@@ -26,14 +26,14 @@ src/
 │   └── mainRoutes.tsx          # MainRoutes: <Routes> tree — AppShell layout route rendering LandingPlaceholder at "/" plus {ProductCatalogRoutes()}
 ├── components/
 │   ├── ui/                     # generic reusable primitives, no domain semantics
+│   │   ├── AlertModal.tsx             # variant-aware modal (deleted/warning/confirm) gating delete-only actions — see AGENTS.md
 │   │   ├── Button.tsx             # cva() variants: primary/secondary/outline × sm/md
 │   │   ├── Card.tsx                 # cva() variants: padding × tone × dashed
-│   │   ├── ConfirmDialog.tsx          # controlled modal gating delete-only actions — see AGENTS.md
 │   │   ├── InlineAlert.tsx            # cn() only — single-branch VARIANT_CLASS map
 │   │   ├── LoadingState.tsx             # LoadingState + ErrorState, cn() only
-│   │   ├── Pagination.tsx                 # cn() only, no variant map
+│   │   ├── Pagination.tsx                 # three-zone layout (record range/windowed pages/optional page-size), cn() only
 │   │   ├── StatusBadge.tsx                  # cva() variants: tone × shape
-│   │   └── Table.tsx                          # Table + TableHeadRow + EmptyRow, cn() only
+│   │   └── Table.tsx                          # Table + TableHeadRow + EmptyRow, opt-in fillHeight/sticky mode, cn() only
 │   ├── form/                   # form-input controls
 │   │   ├── Checkbox.tsx           # cn() only
 │   │   ├── FormField.tsx            # TextField/TextAreaField/SelectField/ReadOnlyField — ReadOnlyField uses cva()
@@ -151,7 +151,7 @@ admin-app/
     ├── lib/utils.ts
     ├── app/{store/{authSlice.ts,store.ts,hooks.ts},api/{baseQuery.ts,baseApi.ts,api.types.ts,apiResponse.ts,apiError.ts,apiToast.ts,ENDPOINTS.ts}}
     ├── routes/mainRoutes.tsx
-    ├── components/{ui/{Button.tsx,Card.tsx,ConfirmDialog.tsx,InlineAlert.tsx,LoadingState.tsx,Pagination.tsx,StatusBadge.tsx,Table.tsx},form/{Checkbox.tsx,FormField.tsx,SearchInput.tsx},layout/{AppShell.tsx,Sidebar.tsx,SidebarItems.tsx,Header.tsx,Footer.tsx,MainSection.tsx,navItems.ts,PageHeader.tsx,TableLayout.tsx}}
+    ├── components/{ui/{AlertModal.tsx,Button.tsx,Card.tsx,InlineAlert.tsx,LoadingState.tsx,Pagination.tsx,StatusBadge.tsx,Table.tsx},form/{Checkbox.tsx,FormField.tsx,SearchInput.tsx},layout/{AppShell.tsx,Sidebar.tsx,SidebarItems.tsx,Header.tsx,Footer.tsx,MainSection.tsx,navItems.ts,PageHeader.tsx,TableLayout.tsx}}
     └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/{uploadsApi.ts,SingleImageUploader.tsx},product-catalog/{endpoints.ts,routePaths.ts,routes.tsx,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,statusPresentation.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx,productForm/{ProductFormPage.tsx,ProductForm.tsx,ProductImagesEditor.tsx,ProductSpecificationsFields.tsx,specificationValues.ts,ProductVariantsEditor.tsx}}},landing/LandingPlaceholder.tsx}
 ```
 
