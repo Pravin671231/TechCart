@@ -10,18 +10,102 @@ export type ProductTemplate = {
   basePrice: number; // INR — base variant's mrp; other variants step up from here
 };
 
+// Category-level specification *schema* seed data (Issue #106) — mirrors
+// categorySpecifications.model.ts's SpecificationField/SpecificationGroup
+// shape (a plain data mirror, not an import, so this file stays DB-agnostic
+// like the rest of data.ts). Deliberately variant-level concerns (storage
+// size, color, config) are excluded here — those stay on the category's
+// variant axes (derived from `kind` in generate.ts's
+// buildVariantAxesForKind), not duplicated as specification fields.
+export type SpecificationFieldTemplate = {
+  name: string;
+  type: "text" | "number" | "boolean" | "enum";
+  unit?: string;
+  options?: string[];
+  required: boolean;
+  filterable: boolean;
+};
+
+export type SpecificationGroupTemplate = {
+  groupName: string;
+  specifications: SpecificationFieldTemplate[];
+};
+
 // A single recursive shape for the whole tree: a node can hold its own
 // products directly (kind + products), have children, or both — e.g.
 // "Tablets" holds non-Apple tablets directly while also parenting "iPads".
 // Category depth stays at 1 level in the actual seeded data (matching
 // FR-CAT-014's real hierarchy limit), even though this type itself doesn't
-// enforce that.
+// enforce that. `specificationGroups` (Issue #106) is populated only on
+// nodes that also carry `kind`/`products` — a parent-only node like "Phones"
+// or "Audio" has no products of its own, so no specification schema either.
 export type CategoryNode = {
   name: string;
   kind?: VariantKind;
   products?: ProductTemplate[];
   children?: CategoryNode[];
+  specificationGroups?: SpecificationGroupTemplate[];
 };
+
+const PHONE_SPECS: SpecificationGroupTemplate[] = [
+  {
+    groupName: "Technical Specifications",
+    specifications: [
+      { name: "Screen Size", type: "number", unit: "inch", required: false, filterable: true },
+      { name: "Battery Capacity", type: "number", unit: "mAh", required: false, filterable: false },
+      { name: "Operating System", type: "enum", options: ["iOS", "Android"], required: true, filterable: true },
+      { name: "5G Support", type: "boolean", required: false, filterable: true },
+    ],
+  },
+];
+
+const LAPTOP_SPECS: SpecificationGroupTemplate[] = [
+  {
+    groupName: "Technical Specifications",
+    specifications: [
+      { name: "Processor", type: "text", required: false, filterable: true },
+      { name: "Screen Size", type: "number", unit: "inch", required: false, filterable: true },
+      { name: "Operating System", type: "enum", options: ["Windows", "macOS"], required: true, filterable: true },
+      { name: "Weight", type: "number", unit: "kg", required: false, filterable: false },
+    ],
+  },
+];
+
+const TABLET_SPECS: SpecificationGroupTemplate[] = [
+  {
+    groupName: "Technical Specifications",
+    specifications: [
+      { name: "Screen Size", type: "number", unit: "inch", required: false, filterable: true },
+      { name: "Operating System", type: "enum", options: ["iPadOS", "Android", "Windows"], required: true, filterable: true },
+      { name: "Battery Life", type: "number", unit: "hours", required: false, filterable: false },
+      { name: "Wi-Fi Only", type: "boolean", required: false, filterable: true },
+    ],
+  },
+];
+
+const HEADPHONE_SPECS: SpecificationGroupTemplate[] = [
+  {
+    groupName: "Technical Specifications",
+    specifications: [
+      { name: "Noise Cancellation", type: "boolean", required: false, filterable: true },
+      { name: "Battery Life", type: "number", unit: "hours", required: false, filterable: true },
+      { name: "Bluetooth Version", type: "text", required: false, filterable: false },
+      { name: "Form Factor", type: "enum", options: ["Over-Ear", "On-Ear"], required: false, filterable: true },
+    ],
+  },
+];
+
+const EARBUD_SPECS: SpecificationGroupTemplate[] = [
+  {
+    groupName: "Technical Specifications",
+    specifications: [
+      { name: "Noise Cancellation", type: "boolean", required: false, filterable: true },
+      { name: "Battery Life", type: "number", unit: "hours", required: false, filterable: true },
+      { name: "Water Resistance", type: "enum", options: ["None", "IPX4", "IPX5", "IPX7"], required: false, filterable: true },
+      { name: "Wireless Charging", type: "boolean", required: false, filterable: false },
+    ],
+  },
+];
 
 // Deduplicated — every brand referenced by any product template below
 // appears here exactly once, regardless of how many categories it sells in
@@ -64,6 +148,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
       {
         name: "iPhones",
         kind: "storage",
+        specificationGroups: PHONE_SPECS,
         products: [
           { name: "iPhone SE (3rd Gen)", brand: "Apple", basePrice: 43900 },
           { name: "iPhone 13", brand: "Apple", basePrice: 49900 },
@@ -81,6 +166,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
       {
         name: "Android Phones",
         kind: "storage",
+        specificationGroups: PHONE_SPECS,
         products: [
           { name: "Samsung Galaxy S24 Ultra", brand: "Samsung", basePrice: 129999 },
           { name: "Samsung Galaxy S24+", brand: "Samsung", basePrice: 99999 },
@@ -100,6 +186,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
   {
     name: "Laptops",
     kind: "config",
+    specificationGroups: LAPTOP_SPECS,
     products: [
       { name: "Dell XPS 13", brand: "Dell", basePrice: 99990 },
       { name: "Dell XPS 15", brand: "Dell", basePrice: 149990 },
@@ -117,6 +204,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
   {
     name: "Macs",
     kind: "config",
+    specificationGroups: LAPTOP_SPECS,
     products: [
       { name: "MacBook Air 13-inch (M2)", brand: "Apple", basePrice: 99900 },
       { name: "MacBook Air 13-inch (M3)", brand: "Apple", basePrice: 114900 },
@@ -134,6 +222,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
   {
     name: "Tablets",
     kind: "storage",
+    specificationGroups: TABLET_SPECS,
     products: [
       { name: "Samsung Galaxy Tab S9 Ultra", brand: "Samsung", basePrice: 108999 },
       { name: "Samsung Galaxy Tab S9+", brand: "Samsung", basePrice: 89999 },
@@ -151,6 +240,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
       {
         name: "iPads",
         kind: "storage",
+        specificationGroups: TABLET_SPECS,
         products: [
           { name: "iPad (9th Generation)", brand: "Apple", basePrice: 29900 },
           { name: "iPad (10th Generation)", brand: "Apple", basePrice: 34900 },
@@ -173,6 +263,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
       {
         name: "Headphones",
         kind: "color",
+        specificationGroups: HEADPHONE_SPECS,
         products: [
           { name: "Sony WH-1000XM5", brand: "Sony", basePrice: 29990 },
           { name: "Sony WH-CH720N", brand: "Sony", basePrice: 8990 },
@@ -190,6 +281,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
       {
         name: "Earbuds",
         kind: "color",
+        specificationGroups: EARBUD_SPECS,
         products: [
           { name: "Apple AirPods Pro (2nd Gen)", brand: "Apple", basePrice: 24900 },
           { name: "Apple AirPods (3rd Gen)", brand: "Apple", basePrice: 19900 },
@@ -207,6 +299,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
       {
         name: "Headsets",
         kind: "color",
+        specificationGroups: HEADPHONE_SPECS,
         products: [
           { name: "SteelSeries Arctis Nova Pro", brand: "SteelSeries", basePrice: 34999 },
           { name: "SteelSeries Arctis 7+", brand: "SteelSeries", basePrice: 17999 },
