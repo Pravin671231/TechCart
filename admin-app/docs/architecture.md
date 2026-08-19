@@ -39,10 +39,15 @@ src/
 │   │   ├── FormField.tsx            # TextField/TextAreaField/SelectField/ReadOnlyField — ReadOnlyField uses cva()
 │   │   └── SearchInput.tsx            # cn() only
 │   └── layout/                 # app chrome and page structure
-│       ├── AppShell.tsx           # responsive shell — desktop sidebar + mobile slide-out drawer, wraps every route via <Outlet />
-│       ├── SidebarNav.tsx           # nav link list (from navItems.ts) + logout, rendered by AppShell for both desktop and mobile
-│       ├── navItems.ts                # NAV_ITEMS: Dashboard/Products/Categories/Brands/Specifications/Variant types
-│       └── PageHeader.tsx               # cva() variants: size (lg/md), title + actions row
+│       ├── AppShell.tsx           # responsive shell — w-20/lg:w-50 icon rail + mobile slide-out drawer, wraps every route via <MainSection>'s <Outlet />
+│       ├── Sidebar.tsx              # composes Header(compact)+SidebarItems+Footer; variant: "rail" | "drawer"
+│       ├── SidebarItems.tsx           # NAV_ITEMS grouped list; rail layout shows a hover/focus tooltip at tablet icon-only width
+│       ├── Header.tsx                   # brand mark (icon + wordmark), shared by AppShell's mobile topbar and Sidebar
+│       ├── Footer.tsx                     # avatar/name/logout, static "Admin User" placeholder
+│       ├── MainSection.tsx                  # <Outlet /> wrapper
+│       ├── navItems.ts                        # NAV_ITEMS: Dashboard/Products/Categories/Brands/Specifications/Variant types, each with icon+group
+│       ├── PageHeader.tsx                        # cva() variants: size (lg/md); title + actions row + optional breadcrumbs
+│       └── TableLayout.tsx                          # PageHeader + search/filter row + table + pagination slot ("common table layout", not yet adopted by list pages)
 ├── config/
 │   └── env.ts                  # API_URL / ADMIN_API_BASE_URL, read from VITE_API_URL (falls back to http://localhost:4000)
 ├── lib/
@@ -146,7 +151,7 @@ admin-app/
     ├── lib/utils.ts
     ├── app/{store/{authSlice.ts,store.ts,hooks.ts},api/{baseQuery.ts,baseApi.ts,api.types.ts,apiResponse.ts,apiError.ts,apiToast.ts,ENDPOINTS.ts}}
     ├── routes/mainRoutes.tsx
-    ├── components/{ui/{Button.tsx,Card.tsx,ConfirmDialog.tsx,InlineAlert.tsx,LoadingState.tsx,Pagination.tsx,StatusBadge.tsx,Table.tsx},form/{Checkbox.tsx,FormField.tsx,SearchInput.tsx},layout/{AppShell.tsx,SidebarNav.tsx,navItems.ts,PageHeader.tsx}}
+    ├── components/{ui/{Button.tsx,Card.tsx,ConfirmDialog.tsx,InlineAlert.tsx,LoadingState.tsx,Pagination.tsx,StatusBadge.tsx,Table.tsx},form/{Checkbox.tsx,FormField.tsx,SearchInput.tsx},layout/{AppShell.tsx,Sidebar.tsx,SidebarItems.tsx,Header.tsx,Footer.tsx,MainSection.tsx,navItems.ts,PageHeader.tsx,TableLayout.tsx}}
     └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/{uploadsApi.ts,SingleImageUploader.tsx},product-catalog/{endpoints.ts,routePaths.ts,routes.tsx,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,statusPresentation.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx,productForm/{ProductFormPage.tsx,ProductForm.tsx,ProductImagesEditor.tsx,ProductSpecificationsFields.tsx,specificationValues.ts,ProductVariantsEditor.tsx}}},landing/LandingPlaceholder.tsx}
 ```
 
