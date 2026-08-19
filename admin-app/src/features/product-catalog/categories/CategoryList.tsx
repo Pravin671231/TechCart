@@ -2,6 +2,7 @@ import { Fragment, useState } from "react";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
+import { Pagination } from "@/components/ui/Pagination";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import { LoadingState } from "@/components/ui/LoadingState";
@@ -17,6 +18,8 @@ import type { CategoryListItem } from "./types";
 export interface CategoryListProps {
   search: string;
   onSearchChange: (value: string) => void;
+  page: number;
+  onPageChange: (page: number) => void;
   onEdit: (category: CategoryListItem) => void;
 }
 
@@ -43,13 +46,27 @@ function orderAsTree(categories: CategoryListItem[]): CategoryListItem[] {
   return ordered;
 }
 
-export const CategoryList = ({ search, onSearchChange, onEdit }: CategoryListProps) => {
+export const CategoryList = ({
+  search,
+  onSearchChange,
+  page,
+  onPageChange,
+  onEdit,
+}: CategoryListProps) => {
   const debouncedSearch = useDebouncedValue(search, 300);
   const {
-    data: categories = [],
+    data,
     isLoading,
     isFetching,
-  } = useGetCategoriesQuery(debouncedSearch ? { search: debouncedSearch } : undefined);
+  } = useGetCategoriesQuery({ search: debouncedSearch || undefined, page });
+  // The tree ordering/parent-name lookup below only sees the current page's
+  // slice, not every category — a child whose parent falls on a different
+  // page renders as an unindented "orphan" with no resolvable parent name.
+  // A known, accepted limitation of pairing pagination with a two-level
+  // hierarchy view; still strictly better than the previous silent
+  // hard-cap-at-20-with-no-pagination-at-all behavior.
+  const categories = data?.items ?? [];
+  const pagination = data?.pagination;
   const [deleteCategory, { isLoading: isDeleting }] = useDeleteCategoryMutation();
   const [updateCategoryStatus] = useUpdateCategoryStatusMutation();
   const [deleteGuard, setDeleteGuard] = useState<{ id: string; message: string } | null>(null);
@@ -158,6 +175,8 @@ export const CategoryList = ({ search, onSearchChange, onEdit }: CategoryListPro
           </Table>
         </div>
       )}
+
+      {pagination && <Pagination page={page} pagination={pagination} onPageChange={onPageChange} />}
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}

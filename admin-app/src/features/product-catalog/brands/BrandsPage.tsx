@@ -7,7 +7,9 @@ import { BrandList } from "./BrandList";
 import type { BrandListItem } from "./types";
 
 export const BrandsPage = () => {
-  const { filters, setFilter } = useListQueryState<{ search: string }>({ search: "" });
+  const { filters, setFilter, page, setPage } = useListQueryState<{ search: string }>({
+    search: "",
+  });
   const [selectedBrand, setSelectedBrand] = useState<BrandListItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -38,6 +40,8 @@ export const BrandsPage = () => {
         <BrandList
           search={filters.search}
           onSearchChange={(value) => setFilter("search", value)}
+          page={page}
+          onPageChange={setPage}
           onEdit={(brand) => {
             setIsCreating(false);
             setSelectedBrand(brand);

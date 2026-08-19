@@ -8,6 +8,10 @@ import type { BrandListItem } from "@/features/product-catalog/brands/types";
 
 const BASE = "http://localhost:4000/api/admin";
 
+function buildPagination(items: unknown[], page = 1, limit = 20) {
+  return { page, limit, total: items.length, totalPages: 1, hasNextPage: false };
+}
+
 function makeBrand(overrides: Partial<BrandListItem> = {}): BrandListItem {
   return {
     _id: "brand-1",
@@ -31,7 +35,7 @@ function setupBrandHandlers(initial: BrandListItem[]) {
       const filtered = search
         ? brands.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()))
         : brands;
-      return HttpResponse.json({ success: true, data: filtered });
+      return HttpResponse.json({ success: true, data: filtered, pagination: buildPagination(filtered) });
     }),
     http.post(`${BASE}/brands`, async ({ request }) => {
       const body = (await request.json()) as { name: string; description?: string };
@@ -173,7 +177,7 @@ describe("BrandsPage", () => {
       http.get(`${BASE}/brands`, ({ request }) => {
         const url = new URL(request.url);
         requestedSearches.push(url.searchParams.get("search"));
-        return HttpResponse.json({ success: true, data: [] });
+        return HttpResponse.json({ success: true, data: [], pagination: buildPagination([]) });
       }),
     );
 
@@ -204,7 +208,7 @@ describe("BrandsPage", () => {
         const data = search
           ? [makeBrand({ _id: "brand-2", name: "Zenith" })]
           : [makeBrand({ _id: "brand-1", name: "Acme" }), makeBrand({ _id: "brand-2", name: "Zenith" })];
-        return HttpResponse.json({ success: true, data });
+        return HttpResponse.json({ success: true, data, pagination: buildPagination(data) });
       }),
     );
 
@@ -256,5 +260,30 @@ describe("BrandsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByText("Nova")).toBeInTheDocument();
+  });
+
+  it("pages past the first page and renders the Pagination component from the response", async () => {
+    const requestedPages: (string | null)[] = [];
+    server.use(
+      http.get(`${BASE}/brands`, ({ request }) => {
+        const url = new URL(request.url);
+        requestedPages.push(url.searchParams.get("page"));
+        return HttpResponse.json({
+          success: true,
+          data: [makeBrand({ _id: "brand-1", name: "Acme" })],
+          pagination: { page: 1, limit: 20, total: 47, totalPages: 3, hasNextPage: true },
+        });
+      }),
+    );
+
+    renderWithStore(<BrandsPage />, { adminKey: "test-key" });
+    await screen.findByText("Acme");
+
+    expect(screen.getByText(/Showing 1–20 of 47/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next ›" }));
+
+    await waitFor(() => {
+      expect(requestedPages).toContain("2");
+    });
   });
 });

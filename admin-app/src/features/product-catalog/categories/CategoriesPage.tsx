@@ -8,11 +8,14 @@ import { CategoryList } from "./CategoryList";
 import type { CategoryListItem } from "./types";
 
 export const CategoriesPage = () => {
-  const { filters, setFilter } = useListQueryState<{ search: string }>({ search: "" });
+  const { filters, setFilter, page, setPage } = useListQueryState<{ search: string }>({
+    search: "",
+  });
   const [selectedCategory, setSelectedCategory] = useState<CategoryListItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
-  const { data: allCategories = [] } = useGetCategoriesQuery(undefined);
+  const { data: allCategoriesData } = useGetCategoriesQuery({ limit: 100 });
+  const allCategories = allCategoriesData?.items ?? [];
 
   const showForm = isCreating || selectedCategory !== null;
 
@@ -41,6 +44,8 @@ export const CategoriesPage = () => {
         <CategoryList
           search={filters.search}
           onSearchChange={(value) => setFilter("search", value)}
+          page={page}
+          onPageChange={setPage}
           onEdit={(category) => {
             setIsCreating(false);
             setSelectedCategory(category);

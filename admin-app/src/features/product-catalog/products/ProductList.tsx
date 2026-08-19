@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { Link } from "react-router";
 import { useGetBrandsQuery } from "@/features/product-catalog/brands/brandsApi";
 import { useGetCategoriesQuery } from "@/features/product-catalog/categories/categoriesApi";
 import { PRODUCT_CATALOG_ROUTES } from "@/features/product-catalog/routePaths";
-import { Checkbox } from "@/components/form/Checkbox";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { Pagination } from "@/components/ui/Pagination";
 import { SearchInput } from "@/components/form/SearchInput";
@@ -11,12 +9,7 @@ import { SortableHeader } from "@/components/ui/SortableHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { formatPrice } from "./money";
-import {
-  useGetProductsQuery,
-  useUpdateProductStatusMutation,
-  useUpdateProductStockMutation,
-} from "./productsApi";
+import { useGetProductsQuery, useUpdateProductStatusMutation } from "./productsApi";
 import { STATUS_LABEL, STATUS_TONE } from "./statusPresentation";
 import type { Product, ProductSort, ProductStatus } from "./types";
 
@@ -25,8 +18,6 @@ export interface ProductListProps {
   onSearchChange: (value: string) => void;
   status: ProductStatus | "";
   onStatusChange: (value: ProductStatus | "") => void;
-  lowStockOnly: boolean;
-  onLowStockOnlyChange: (value: boolean) => void;
   sort: ProductSort | undefined;
   onSortChange: (sort: ProductSort) => void;
   page: number;
@@ -38,8 +29,6 @@ export const ProductList = ({
   onSearchChange,
   status,
   onStatusChange,
-  lowStockOnly,
-  onLowStockOnlyChange,
   sort,
   onSortChange,
   page,
@@ -51,13 +40,12 @@ export const ProductList = ({
     sort,
     search: debouncedSearch || undefined,
     status: status || undefined,
-    lowStock: lowStockOnly,
   });
-  const { data: brands = [] } = useGetBrandsQuery(undefined);
-  const { data: categories = [] } = useGetCategoriesQuery(undefined);
+  const { data: brandsData } = useGetBrandsQuery({ limit: 100 });
+  const { data: categoriesData } = useGetCategoriesQuery({ limit: 100 });
+  const brands = brandsData?.items ?? [];
+  const categories = categoriesData?.items ?? [];
   const [updateStatus] = useUpdateProductStatusMutation();
-  const [updateStock] = useUpdateProductStockMutation();
-  const [stockDraft, setStockDraft] = useState<{ id: string; value: string } | null>(null);
 
   const brandNameById = new Map(brands.map((b) => [b._id, b.name]));
   const categoryNameById = new Map(categories.map((c) => [c._id, c.name]));
@@ -71,14 +59,6 @@ export const ProductList = ({
 
   async function handleRestore(product: Product) {
     await updateStatus({ id: product._id, status: "draft" }).unwrap();
-  }
-
-  async function handleSaveStock(product: Product) {
-    if (!stockDraft || stockDraft.id !== product._id) return;
-    const stock = Number(stockDraft.value);
-    if (!Number.isFinite(stock) || stock < 0) return;
-    await updateStock({ id: product._id, stock }).unwrap();
-    setStockDraft(null);
   }
 
   return (
@@ -106,17 +86,12 @@ export const ProductList = ({
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
-        <Checkbox
-          label="Low stock only"
-          checked={lowStockOnly}
-          onChange={(event) => onLowStockOnlyChange(event.target.checked)}
-        />
       </div>
 
       {isLoading ? (
         <LoadingState label="Loading…" spaced={false} />
       ) : (
-        <Table minWidthClassName="min-w-[900px]" isFetching={isFetching}>
+        <Table minWidthClassName="min-w-[700px]" isFetching={isFetching}>
           <TableHeadRow variant="shaded">
             <SortableHeader<ProductSort>
               label="Name"
@@ -125,125 +100,72 @@ export const ProductList = ({
               currentSort={sort}
               onSortChange={onSortChange}
             />
-            <th className="px-3 py-2 font-medium text-neutral-500">SKU</th>
             <th className="px-3 py-2 font-medium text-neutral-500">Brand</th>
             <th className="px-3 py-2 font-medium text-neutral-500">Category</th>
-            <SortableHeader<ProductSort>
-              label="Price"
-              sortKeyAsc="mrp"
-              sortKeyDesc="-mrp"
-              align="right"
-              currentSort={sort}
-              onSortChange={onSortChange}
-            />
-            <SortableHeader<ProductSort>
-              label="Stock"
-              sortKeyAsc="stock"
-              sortKeyDesc="-stock"
-              align="right"
-              currentSort={sort}
-              onSortChange={onSortChange}
-            />
+            <th className="px-3 py-2 text-right font-medium text-neutral-500">Variants</th>
             <th className="px-3 py-2 font-medium text-neutral-500">Status</th>
             <th className="px-3 py-2 font-medium text-neutral-500">Actions</th>
           </TableHeadRow>
           <tbody className="divide-y divide-neutral-100">
-            {products.map((product) => {
-              const isLowStock = product.stock <= product.lowStockThreshold;
-              const isEditingStock = stockDraft?.id === product._id;
-              return (
-                <tr key={product._id}>
-                  <td className="px-3 py-2 font-medium text-neutral-900">{product.name}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-neutral-500">{product.sku}</td>
-                  <td className="px-3 py-2">{brandNameById.get(product.brand) ?? "—"}</td>
-                  <td className="px-3 py-2">{categoryNameById.get(product.category) ?? "—"}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {formatPrice(product.sellingPrice)}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    {isEditingStock ? (
-                      <span className="inline-flex items-center gap-1">
-                        <input
-                          type="text"
-                          aria-label={`Stock for ${product.name}`}
-                          value={stockDraft.value}
-                          onChange={(event) =>
-                            setStockDraft({ id: product._id, value: event.target.value })
-                          }
-                          className="w-14 rounded-md border border-primary-300 px-1.5 py-0.5 text-right text-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => void handleSaveStock(product)}
-                          className="rounded-md bg-primary-600 px-1.5 py-0.5 text-[10px] font-medium text-white"
-                        >
-                          Save
-                        </button>
-                      </span>
-                    ) : (
+            {products.map((product) => (
+              <tr key={product._id}>
+                <td className="px-3 py-2 font-medium text-neutral-900">
+                  <Link
+                    to={PRODUCT_CATALOG_ROUTES.products.detail(product._id)}
+                    className="hover:underline"
+                  >
+                    {product.name}
+                  </Link>
+                </td>
+                <td className="px-3 py-2">{brandNameById.get(product.brand) ?? "—"}</td>
+                <td className="px-3 py-2">{categoryNameById.get(product.category) ?? "—"}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{product.variants.length}</td>
+                <td className="px-3 py-2">
+                  <StatusBadge tone={STATUS_TONE[product.status]}>
+                    {STATUS_LABEL[product.status]}
+                  </StatusBadge>
+                </td>
+                <td className="px-3 py-2 text-xs whitespace-nowrap text-neutral-500">
+                  <Link
+                    to={PRODUCT_CATALOG_ROUTES.products.detail(product._id)}
+                    className="text-primary-600 hover:underline"
+                  >
+                    View
+                  </Link>
+                  {" · "}
+                  <Link
+                    to={PRODUCT_CATALOG_ROUTES.products.edit(product._id)}
+                    className="text-primary-600 hover:underline"
+                  >
+                    Edit
+                  </Link>
+                  {product.status === "archived" ? (
+                    <>
+                      {" · "}
                       <button
                         type="button"
-                        onClick={() =>
-                          setStockDraft({ id: product._id, value: String(product.stock) })
-                        }
-                        className="tabular-nums hover:underline"
+                        onClick={() => void handleRestore(product)}
+                        className="text-primary-600 hover:underline"
                       >
-                        {product.stock}
-                        {isLowStock && (
-                          <span className="ml-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                            Low
-                          </span>
-                        )}
+                        Restore
                       </button>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <StatusBadge tone={STATUS_TONE[product.status]}>
-                      {STATUS_LABEL[product.status]}
-                    </StatusBadge>
-                  </td>
-                  <td className="px-3 py-2 text-xs whitespace-nowrap text-neutral-500">
-                    <Link
-                      to={PRODUCT_CATALOG_ROUTES.products.detail(product._id)}
-                      className="text-primary-600 hover:underline"
-                    >
-                      View
-                    </Link>
-                    {" · "}
-                    <Link
-                      to={PRODUCT_CATALOG_ROUTES.products.edit(product._id)}
-                      className="text-primary-600 hover:underline"
-                    >
-                      Edit
-                    </Link>
-                    {product.status === "archived" ? (
-                      <>
-                        {" · "}
-                        <button
-                          type="button"
-                          onClick={() => void handleRestore(product)}
-                          className="text-primary-600 hover:underline"
-                        >
-                          Restore
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        {" · "}
-                        <button
-                          type="button"
-                          onClick={() => void handleArchive(product)}
-                          className="text-primary-600 hover:underline"
-                        >
-                          Archive
-                        </button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-            {products.length === 0 && <EmptyRow colSpan={8} message="No products found." />}
+                    </>
+                  ) : (
+                    <>
+                      {" · "}
+                      <button
+                        type="button"
+                        onClick={() => void handleArchive(product)}
+                        className="text-primary-600 hover:underline"
+                      >
+                        Archive
+                      </button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {products.length === 0 && <EmptyRow colSpan={6} message="No products found." />}
           </tbody>
         </Table>
       )}

@@ -1,12 +1,14 @@
 import { api } from "@/app/api/baseApi";
-import { unwrapData } from "@/app/api/apiResponse";
+import { unwrapData, unwrapList } from "@/app/api/apiResponse";
 import { notifyApiError, notifyApiSuccess } from "@/app/api/apiToast";
-import type { ApiSuccessEnvelope } from "@/app/api/api.types";
+import type { ApiSuccessEnvelope, ApiSuccessListEnvelope, Pagination } from "@/app/api/api.types";
 import { PRODUCT_CATALOG_ENDPOINTS } from "../endpoints";
 import type { Category, CategoryListItem, CreateCategoryInput, UpdateCategoryInput } from "./types";
 
 export interface ListCategoriesParams {
   search?: string;
+  page?: number;
+  limit?: number;
 }
 
 export interface UpdateCategoryArgs {
@@ -21,12 +23,20 @@ export interface UpdateCategoryStatusArgs {
 
 export const categoriesApi = api.injectEndpoints({
   endpoints: (build) => ({
-    getCategories: build.query<CategoryListItem[], ListCategoriesParams | void>({
+    getCategories: build.query<
+      { items: CategoryListItem[]; pagination: Pagination },
+      ListCategoriesParams | void
+    >({
       query: (params) => ({
         url: PRODUCT_CATALOG_ENDPOINTS.categories.list,
-        params: params?.search ? { search: params.search } : undefined,
+        params: {
+          search: params?.search || undefined,
+          page: params?.page,
+          limit: params?.limit,
+        },
       }),
-      transformResponse: (response: ApiSuccessEnvelope<CategoryListItem[]>) => unwrapData(response),
+      transformResponse: (response: ApiSuccessListEnvelope<CategoryListItem>) =>
+        unwrapList(response),
       providesTags: ["Category"],
     }),
     createCategory: build.mutation<Category, CreateCategoryInput>({
