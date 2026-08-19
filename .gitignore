@@ -21,6 +21,8 @@ npm-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+*.tmp
+*.bak
 
 # Testing
 coverage/
