@@ -23,6 +23,8 @@ npm-debug.log*
 Thumbs.db
 *.tmp
 *.bak
+*.swp
+*.swo
 
 # Testing
 coverage/
