@@ -8,6 +8,10 @@ import type { CategoryListItem } from "@/features/product-catalog/categories/typ
 
 const BASE = "http://localhost:4000/api/admin";
 
+function buildPagination(items: unknown[], page = 1, limit = 20) {
+  return { page, limit, total: items.length, totalPages: 1, hasNextPage: false };
+}
+
 function makeCategory(overrides: Partial<CategoryListItem> = {}): CategoryListItem {
   return {
     _id: "cat-1",
@@ -36,7 +40,11 @@ function setupCategoryHandlers(
       const filtered = search
         ? categories.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
         : categories;
-      return HttpResponse.json({ success: true, data: filtered });
+      return HttpResponse.json({
+        success: true,
+        data: filtered,
+        pagination: buildPagination(filtered),
+      });
     }),
     http.post(`${BASE}/categories`, async ({ request }) => {
       const body = (await request.json()) as Record<string, unknown>;
@@ -257,7 +265,7 @@ describe("CategoriesPage", () => {
       http.get(`${BASE}/categories`, ({ request }) => {
         const url = new URL(request.url);
         requestedSearches.push(url.searchParams.get("search"));
-        return HttpResponse.json({ success: true, data: [] });
+        return HttpResponse.json({ success: true, data: [], pagination: buildPagination([]) });
       }),
     );
 
@@ -291,7 +299,7 @@ describe("CategoriesPage", () => {
               makeCategory({ _id: "cat-1", name: "Electronics" }),
               makeCategory({ _id: "cat-2", name: "Furniture", sortOrder: 2 }),
             ];
-        return HttpResponse.json({ success: true, data });
+        return HttpResponse.json({ success: true, data, pagination: buildPagination(data) });
       }),
     );
 
@@ -303,6 +311,31 @@ describe("CategoriesPage", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Updating…");
     await waitFor(() => {
       expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+  });
+
+  it("pages past the first page and renders the Pagination component from the response", async () => {
+    const requestedPages: (string | null)[] = [];
+    server.use(
+      http.get(`${BASE}/categories`, ({ request }) => {
+        const url = new URL(request.url);
+        requestedPages.push(url.searchParams.get("page"));
+        return HttpResponse.json({
+          success: true,
+          data: [makeCategory({ _id: "cat-1", name: "Electronics" })],
+          pagination: { page: 1, limit: 20, total: 33, totalPages: 2, hasNextPage: true },
+        });
+      }),
+    );
+
+    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    await screen.findByText("Electronics");
+
+    expect(screen.getByText(/Showing 1–20 of 33/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next ›" }));
+
+    await waitFor(() => {
+      expect(requestedPages).toContain("2");
     });
   });
 });

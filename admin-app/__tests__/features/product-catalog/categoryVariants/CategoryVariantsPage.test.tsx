@@ -32,6 +32,7 @@ function setupHandlers(initialAxes: VariantAxis[]) {
             updatedAt: "2026-01-01T00:00:00.000Z",
           },
         ],
+        pagination: { page: 1, limit: 100, total: 1, totalPages: 1, hasNextPage: false },
       }),
     ),
     http.get(`${BASE}/categories/:id/variant-types`, () =>

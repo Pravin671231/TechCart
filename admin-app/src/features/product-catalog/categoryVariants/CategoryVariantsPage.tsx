@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { CategoryVariantEditor } from "./CategoryVariantEditor";
 
 export const CategoryVariantsPage = () => {
-  const { data: categories = [] } = useGetCategoriesQuery(undefined);
+  const { data: categoriesData } = useGetCategoriesQuery({ limit: 100 });
+  const categories = categoriesData?.items ?? [];
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
   const categoryId = selectedCategoryId || categories[0]?._id || "";

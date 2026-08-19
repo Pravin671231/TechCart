@@ -8,9 +8,8 @@ import { BreadcrumbHeading } from "@/components/ui/BreadcrumbHeading";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { Checkbox } from "@/components/form/Checkbox";
-import { ReadOnlyField, SelectField, TextAreaField, TextField } from "@/components/form/FormField";
+import { SelectField, TextAreaField, TextField } from "@/components/form/FormField";
 import { InlineAlert } from "@/components/ui/InlineAlert";
-import { formatPrice } from "../money";
 import { useCreateProductMutation, useUpdateProductMutation } from "../productsApi";
 import type {
   CreateProductInput,
@@ -18,7 +17,6 @@ import type {
   ProductSpecificationGroup,
   UpdateProductInput,
 } from "../types";
-import { ProductImagesEditor, type UploadedImage } from "./ProductImagesEditor";
 import { ProductSpecificationsFields } from "./ProductSpecificationsFields";
 import { ProductVariantsEditor } from "./ProductVariantsEditor";
 import type { SpecificationValues } from "./specificationValues";
@@ -51,12 +49,6 @@ function initialSpecValues(product: Product | null): SpecificationValues {
   return values;
 }
 
-function computeSellingPreview(mrp: number, discount: number): number | null {
-  if (!Number.isFinite(mrp) || mrp <= 0) return null;
-  const clamped = Math.min(Math.max(Number.isFinite(discount) ? discount : 0, 0), 99);
-  return mrp - Math.floor((mrp * clamped) / 100);
-}
-
 function describeApiError(envelope: ReturnType<typeof getApiErrorEnvelope>): string | null {
   if (!envelope) return null;
   if (envelope.message) return envelope.message;
@@ -68,22 +60,16 @@ function describeApiError(envelope: ReturnType<typeof getApiErrorEnvelope>): str
 
 export const ProductForm = ({ product }: { product: Product | null }) => {
   const navigate = useNavigate();
-  const { data: brands = [] } = useGetBrandsQuery(undefined);
-  const { data: categories = [] } = useGetCategoriesQuery(undefined);
+  const { data: brandsData } = useGetBrandsQuery({ limit: 100 });
+  const { data: categoriesData } = useGetCategoriesQuery({ limit: 100 });
+  const brands = brandsData?.items ?? [];
+  const categories = categoriesData?.items ?? [];
 
   const [name, setName] = useState(product?.name ?? "");
-  const [sku, setSku] = useState(product?.sku ?? "");
   const [brand, setBrand] = useState(product?.brand ?? "");
   const [category, setCategory] = useState(product?.category ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
   const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false);
-  const [images, setImages] = useState<UploadedImage[]>([]);
-  const [mrp, setMrp] = useState(product ? String(product.mrp) : "");
-  const [discount, setDiscount] = useState(product ? String(product.discount) : "0");
-  const [stock, setStock] = useState(product ? String(product.stock) : "");
-  const [lowStockThreshold, setLowStockThreshold] = useState(
-    product ? String(product.lowStockThreshold) : "0",
-  );
   const [metaTitle, setMetaTitle] = useState(product?.metaTitle ?? "");
   const [metaDescription, setMetaDescription] = useState(product?.metaDescription ?? "");
   const [specValues, setSpecValues] = useState<SpecificationValues>(() =>
@@ -95,10 +81,6 @@ export const ProductForm = ({ product }: { product: Product | null }) => {
 
   const isSaving = isCreating || isUpdating;
   const saveErrorMessage = describeApiError(getApiErrorEnvelope(createError ?? updateError));
-
-  const mrpNum = Number(mrp);
-  const discountNum = discount === "" ? 0 : Number(discount);
-  const sellingPreview = computeSellingPreview(mrpNum, discountNum);
 
   const categoryOptions = categories.map((c) => {
     const parent = c.parentCategory
@@ -136,30 +118,18 @@ export const ProductForm = ({ product }: { product: Product | null }) => {
       brand,
       category,
       specifications,
-      mrp: Number(mrp),
-      discount: discount === "" ? 0 : Number(discount),
-      stock: Number(stock),
-      lowStockThreshold: lowStockThreshold === "" ? 0 : Number(lowStockThreshold),
       isFeatured,
       ...(metaTitle.trim() ? { metaTitle: metaTitle.trim() } : {}),
       ...(metaDescription.trim() ? { metaDescription: metaDescription.trim() } : {}),
     };
-    const imagesPayload = images.map((image) => ({
-      objectKey: image.objectKey,
-      alt: image.alt || undefined,
-      isPrimary: image.isPrimary,
-    }));
 
     try {
       if (product) {
-        const patch: UpdateProductInput = {
-          ...shared,
-          ...(images.length > 0 ? { images: imagesPayload } : {}),
-        };
+        const patch: UpdateProductInput = shared;
         await updateProduct({ id: product._id, patch }).unwrap();
         navigate(PRODUCT_CATALOG_ROUTES.products.detail(product._id));
       } else {
-        const input: CreateProductInput = { ...shared, sku: sku.trim(), images: imagesPayload };
+        const input: CreateProductInput = shared;
         const created = await createProduct(input).unwrap();
         navigate(PRODUCT_CATALOG_ROUTES.products.edit(created._id));
       }
@@ -189,17 +159,6 @@ export const ProductForm = ({ product }: { product: Product | null }) => {
               required
               value={name}
               onChange={(event) => setName(event.target.value)}
-            />
-            <TextField
-              id="product-sku"
-              label="SKU *"
-              type="text"
-              required
-              disabled={Boolean(product)}
-              value={sku}
-              onChange={(event) => setSku(event.target.value)}
-              className="font-mono text-xs"
-              hint={product ? "SKU is immutable after create." : undefined}
             />
             <SelectField
               id="product-brand"
@@ -245,94 +204,6 @@ export const ProductForm = ({ product }: { product: Product | null }) => {
               height="h-24"
             />
           </div>
-        </Card>
-
-        <Card>
-          <CardHeading spacing="mb-4">Images</CardHeading>
-          {product && product.images.length > 0 && (
-            <div className="mb-3">
-              <p className="mb-2 text-[11px] text-neutral-400">
-                Current images — upload a full new set below to replace them (the previous set is
-                fully replaced, not merged, since a stored image carries no re-editable identifier).
-              </p>
-              <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
-                {product.images.map((image, index) => (
-                  <img
-                    key={image.url + index}
-                    src={image.url}
-                    alt={image.alt ?? product.name}
-                    className="aspect-square w-full rounded-md border border-neutral-200 object-cover"
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-          <ProductImagesEditor
-            images={images}
-            onChange={setImages}
-            min={product ? 0 : 1}
-            max={8}
-            purpose="product-image"
-          />
-        </Card>
-
-        <Card>
-          <CardHeading spacing="mb-4">Pricing &amp; stock</CardHeading>
-          <div className="grid gap-4 sm:grid-cols-4">
-            <TextField
-              id="product-mrp"
-              label="MRP (₹) *"
-              type="number"
-              required
-              min={1}
-              value={mrp}
-              onChange={(event) => setMrp(event.target.value)}
-              className="tabular-nums"
-            />
-            <TextField
-              id="product-discount"
-              label="Discount %"
-              type="number"
-              min={0}
-              max={99}
-              value={discount}
-              onChange={(event) => setDiscount(event.target.value)}
-              className="tabular-nums"
-            />
-            <ReadOnlyField
-              label="Selling price"
-              bordered
-              size="sm"
-              value={
-                <span className="tabular-nums">
-                  {sellingPreview !== null ? formatPrice(sellingPreview) : "—"}
-                </span>
-              }
-            />
-            <TextField
-              id="product-stock"
-              label="Stock *"
-              type="number"
-              required
-              min={0}
-              value={stock}
-              onChange={(event) => setStock(event.target.value)}
-              className="tabular-nums"
-            />
-            <TextField
-              id="product-low-stock-threshold"
-              label="Low-stock threshold"
-              type="number"
-              min={0}
-              value={lowStockThreshold}
-              onChange={(event) => setLowStockThreshold(event.target.value)}
-              className="tabular-nums"
-            />
-          </div>
-          <p className="mt-3 text-[11px] text-neutral-400">
-            Selling price is read-only here: it is always recomputed server-side and a submitted
-            value is ignored.
-          </p>
         </Card>
 
         <Card>

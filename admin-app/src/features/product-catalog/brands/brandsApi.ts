@@ -1,12 +1,14 @@
 import { api } from "@/app/api/baseApi";
-import { unwrapData } from "@/app/api/apiResponse";
+import { unwrapData, unwrapList } from "@/app/api/apiResponse";
 import { notifyApiError, notifyApiSuccess } from "@/app/api/apiToast";
-import type { ApiSuccessEnvelope } from "@/app/api/api.types";
+import type { ApiSuccessEnvelope, ApiSuccessListEnvelope, Pagination } from "@/app/api/api.types";
 import { PRODUCT_CATALOG_ENDPOINTS } from "../endpoints";
 import type { Brand, BrandListItem, CreateBrandInput, UpdateBrandInput } from "./types";
 
 export interface ListBrandsParams {
   search?: string;
+  page?: number;
+  limit?: number;
 }
 
 export interface UpdateBrandArgs {
@@ -21,12 +23,19 @@ export interface UpdateBrandStatusArgs {
 
 export const brandsApi = api.injectEndpoints({
   endpoints: (build) => ({
-    getBrands: build.query<BrandListItem[], ListBrandsParams | void>({
+    getBrands: build.query<
+      { items: BrandListItem[]; pagination: Pagination },
+      ListBrandsParams | void
+    >({
       query: (params) => ({
         url: PRODUCT_CATALOG_ENDPOINTS.brands.list,
-        params: params?.search ? { search: params.search } : undefined,
+        params: {
+          search: params?.search || undefined,
+          page: params?.page,
+          limit: params?.limit,
+        },
       }),
-      transformResponse: (response: ApiSuccessEnvelope<BrandListItem[]>) => unwrapData(response),
+      transformResponse: (response: ApiSuccessListEnvelope<BrandListItem>) => unwrapList(response),
       providesTags: ["Brand"],
     }),
     createBrand: build.mutation<Brand, CreateBrandInput>({

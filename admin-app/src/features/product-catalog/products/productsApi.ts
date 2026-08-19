@@ -19,17 +19,11 @@ export interface ListProductsParams {
   sort?: ProductSort;
   search?: string;
   status?: ProductStatus;
-  lowStock?: boolean;
 }
 
 export interface UpdateProductStatusArgs {
   id: string;
   status: ProductStatus;
-}
-
-export interface UpdateProductStockArgs {
-  id: string;
-  stock: number;
 }
 
 export interface UpdateProductArgs {
@@ -54,23 +48,39 @@ const PRODUCT_STATUS_MESSAGE: Record<ProductStatus, string> = {
   archived: "Product archived.",
 };
 
+// Splits the UI's combined ProductSort ("name" | "-name" | ...) into the
+// two separate params the backend expects (Issue #104) — kept as a
+// translation at the request-building boundary so ProductList.tsx's
+// SortableHeader wiring didn't need to change shape for this issue.
+function toSortByOrderBy(sort: ProductSort | undefined): {
+  sortBy?: "createdAt" | "name";
+  orderBy?: "asc" | "desc";
+} {
+  if (!sort) return {};
+  const isDesc = sort.startsWith("-");
+  return { sortBy: (isDesc ? sort.slice(1) : sort) as "createdAt" | "name", orderBy: isDesc ? "desc" : "asc" };
+}
+
 export const productsApi = api.injectEndpoints({
   endpoints: (build) => ({
     getProducts: build.query<
       { items: Product[]; pagination: Pagination },
       ListProductsParams | void
     >({
-      query: (params) => ({
-        url: PRODUCT_CATALOG_ENDPOINTS.products.list,
-        params: {
-          page: params?.page,
-          limit: params?.limit,
-          sort: params?.sort,
-          search: params?.search || undefined,
-          status: params?.status,
-          lowStock: params?.lowStock ? "true" : undefined,
-        },
-      }),
+      query: (params) => {
+        const { sortBy, orderBy } = toSortByOrderBy(params?.sort);
+        return {
+          url: PRODUCT_CATALOG_ENDPOINTS.products.list,
+          params: {
+            page: params?.page,
+            limit: params?.limit,
+            sortBy,
+            orderBy,
+            search: params?.search || undefined,
+            status: params?.status,
+          },
+        };
+      },
       transformResponse: (response: ApiSuccessListEnvelope<Product>) => unwrapList(response),
       providesTags: ["Product"],
     }),
@@ -93,23 +103,6 @@ export const productsApi = api.injectEndpoints({
           notifyApiSuccess(PRODUCT_STATUS_MESSAGE[status]);
         } catch (err) {
           notifyApiError((err as { error: unknown }).error, "Unable to update product status.");
-        }
-      },
-    }),
-    updateProductStock: build.mutation<Product, UpdateProductStockArgs>({
-      query: ({ id, stock }) => ({
-        url: PRODUCT_CATALOG_ENDPOINTS.products.stock(id),
-        method: "PATCH",
-        body: { stock },
-      }),
-      transformResponse: (response: ApiSuccessEnvelope<Product>) => unwrapData(response),
-      invalidatesTags: ["Product"],
-      async onQueryStarted(_arg, { queryFulfilled }) {
-        try {
-          await queryFulfilled;
-          notifyApiSuccess("Stock updated.");
-        } catch (err) {
-          notifyApiError((err as { error: unknown }).error, "Unable to update stock.");
         }
       },
     }),
@@ -184,7 +177,6 @@ export const {
   useGetProductsQuery,
   useGetProductQuery,
   useUpdateProductStatusMutation,
-  useUpdateProductStockMutation,
   useCreateProductMutation,
   useUpdateProductMutation,
   useAddVariantMutation,
