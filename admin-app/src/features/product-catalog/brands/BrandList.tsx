@@ -1,6 +1,6 @@
 import { Fragment, useState } from "react";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { AlertModal } from "@/components/ui/AlertModal";
 import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -139,7 +139,7 @@ export const BrandList = ({
 
       {pagination && <Pagination page={page} pagination={pagination} onPageChange={onPageChange} />}
 
-      <ConfirmDialog
+      <AlertModal
         open={Boolean(pendingDelete)}
         title="Delete brand"
         message={`Delete "${pendingDelete?.name}"? This can't be undone.`}
@@ -154,3 +154,4 @@ export const BrandList = ({
     </section>
   );
 };
+
