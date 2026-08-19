@@ -20,8 +20,10 @@ function formatAttributes(attributes: { name: string; value: string }[]): string
 export const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const { data: product, isLoading, isError } = useGetProductQuery(id ?? "", { skip: !id });
-  const { data: brands = [] } = useGetBrandsQuery(undefined);
-  const { data: categories = [] } = useGetCategoriesQuery(undefined);
+  const { data: brandsData } = useGetBrandsQuery({ limit: 100 });
+  const { data: categoriesData } = useGetCategoriesQuery({ limit: 100 });
+  const brands = brandsData?.items ?? [];
+  const categories = categoriesData?.items ?? [];
   const [updateStatus, { isLoading: isChangingStatus }] = useUpdateProductStatusMutation();
 
   if (isLoading) return <LoadingState fullPage />;
@@ -39,8 +41,6 @@ export const ProductDetailPage = () => {
       ? `${parentCategory.name} › ${category.name}`
       : category.name
     : "—";
-
-  const primaryImage = product.images.find((image) => image.isPrimary) ?? product.images[0];
 
   async function handleStatusChange(status: ProductStatus) {
     await updateStatus({ id: product!._id, status }).unwrap();
@@ -78,96 +78,45 @@ export const ProductDetailPage = () => {
         <StatusBadge tone={STATUS_TONE[product.status]}>{STATUS_LABEL[product.status]}</StatusBadge>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card>
-          <CardHeading>Images</CardHeading>
-          {product.images.length === 0 ? (
-            <p className="text-sm text-neutral-400">No images.</p>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {product.images.map((image, index) => (
-                <div
-                  key={image.url + index}
-                  className={`flex aspect-square items-center justify-center rounded-md bg-neutral-50 text-[10px] text-neutral-500 ${
-                    image === primaryImage
-                      ? "border-2 border-primary-600"
-                      : "border border-neutral-200"
-                  }`}
-                >
-                  {image === primaryImage ? "Primary" : ""}
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeading>Details</CardHeading>
-          <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">Name</dt>
-              <dd className="text-neutral-900">{product.name}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">Slug</dt>
-              <dd className="font-mono text-xs text-neutral-800">{product.slug}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">SKU</dt>
-              <dd className="font-mono text-xs text-neutral-800">{product.sku}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">Brand</dt>
-              <dd className="text-neutral-900">{brandName}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">Category</dt>
-              <dd className="text-neutral-900">{categoryLabel}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">Featured</dt>
-              <dd className="text-neutral-900">{product.isFeatured ? "Yes" : "No"}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">MRP</dt>
-              <dd className="text-neutral-900">{formatPrice(product.mrp)}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">Discount</dt>
-              <dd className="text-neutral-900">{product.discount}%</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">Selling price</dt>
-              <dd className="font-medium text-neutral-900">
-                {formatPrice(product.sellingPrice)}{" "}
-                <span className="text-[11px] font-normal text-neutral-400">server-computed</span>
-              </dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">Stock</dt>
-              <dd className="text-neutral-900">{product.stock}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">Low-stock threshold</dt>
-              <dd className="text-neutral-900">{product.lowStockThreshold}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">Meta title</dt>
-              <dd className={product.metaTitle ? "text-neutral-900" : "text-neutral-400"}>
-                {product.metaTitle ?? "— falls back to name"}
-              </dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">Created by</dt>
-              <dd className="font-mono text-xs text-neutral-400">{product.createdBy ?? "null"}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-36 shrink-0 text-neutral-500">Updated by</dt>
-              <dd className="font-mono text-xs text-neutral-400">{product.updatedBy ?? "null"}</dd>
-            </div>
-          </dl>
-        </Card>
-      </div>
+      <Card>
+        <CardHeading>Details</CardHeading>
+        <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+          <div className="flex gap-2">
+            <dt className="w-36 shrink-0 text-neutral-500">Name</dt>
+            <dd className="text-neutral-900">{product.name}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="w-36 shrink-0 text-neutral-500">Slug</dt>
+            <dd className="font-mono text-xs text-neutral-800">{product.slug}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="w-36 shrink-0 text-neutral-500">Brand</dt>
+            <dd className="text-neutral-900">{brandName}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="w-36 shrink-0 text-neutral-500">Category</dt>
+            <dd className="text-neutral-900">{categoryLabel}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="w-36 shrink-0 text-neutral-500">Featured</dt>
+            <dd className="text-neutral-900">{product.isFeatured ? "Yes" : "No"}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="w-36 shrink-0 text-neutral-500">Meta title</dt>
+            <dd className={product.metaTitle ? "text-neutral-900" : "text-neutral-400"}>
+              {product.metaTitle ?? "— falls back to name"}
+            </dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="w-36 shrink-0 text-neutral-500">Created by</dt>
+            <dd className="font-mono text-xs text-neutral-400">{product.createdBy ?? "null"}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="w-36 shrink-0 text-neutral-500">Updated by</dt>
+            <dd className="font-mono text-xs text-neutral-400">{product.updatedBy ?? "null"}</dd>
+          </div>
+        </dl>
+      </Card>
 
       {product.specifications.length > 0 && (
         <Card className="mt-6">
@@ -203,7 +152,6 @@ export const ProductDetailPage = () => {
               <th className="px-3 py-2 text-right font-medium text-neutral-500">MRP</th>
               <th className="px-3 py-2 text-right font-medium text-neutral-500">Disc.</th>
               <th className="px-3 py-2 text-right font-medium text-neutral-500">Selling</th>
-              <th className="px-3 py-2 text-right font-medium text-neutral-500">Stock</th>
               <th className="px-3 py-2 font-medium text-neutral-500">Active</th>
             </TableHeadRow>
             <tbody className="divide-y divide-neutral-100">
@@ -216,7 +164,6 @@ export const ProductDetailPage = () => {
                   <td className="px-3 py-2 text-right font-medium tabular-nums text-neutral-900">
                     {formatPrice(variant.sellingPrice)}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">{variant.stock}</td>
                   <td className="px-3 py-2">
                     <StatusBadge tone={variant.active ? "success" : "neutral"}>
                       {variant.active ? "Yes" : "No"}

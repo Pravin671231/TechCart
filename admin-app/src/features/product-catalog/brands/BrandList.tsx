@@ -2,6 +2,7 @@ import { Fragment, useState } from "react";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
 import { AlertModal } from "@/components/ui/AlertModal";
 import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
+import { Pagination } from "@/components/ui/Pagination";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import { LoadingState } from "@/components/ui/LoadingState";
@@ -17,16 +18,26 @@ import type { BrandListItem } from "./types";
 export interface BrandListProps {
   search: string;
   onSearchChange: (value: string) => void;
+  page: number;
+  onPageChange: (page: number) => void;
   onEdit: (brand: BrandListItem) => void;
 }
 
-export const BrandList = ({ search, onSearchChange, onEdit }: BrandListProps) => {
+export const BrandList = ({
+  search,
+  onSearchChange,
+  page,
+  onPageChange,
+  onEdit,
+}: BrandListProps) => {
   const debouncedSearch = useDebouncedValue(search, 300);
   const {
-    data: brands = [],
+    data,
     isLoading,
     isFetching,
-  } = useGetBrandsQuery(debouncedSearch ? { search: debouncedSearch } : undefined);
+  } = useGetBrandsQuery({ search: debouncedSearch || undefined, page });
+  const brands = data?.items ?? [];
+  const pagination = data?.pagination;
   const [deleteBrand, { isLoading: isDeleting }] = useDeleteBrandMutation();
   const [updateBrandStatus] = useUpdateBrandStatusMutation();
   const [deleteGuard, setDeleteGuard] = useState<{ id: string; message: string } | null>(null);
@@ -125,6 +136,8 @@ export const BrandList = ({ search, onSearchChange, onEdit }: BrandListProps) =>
           </Table>
         </div>
       )}
+
+      {pagination && <Pagination page={page} pagination={pagination} onPageChange={onPageChange} />}
 
       <AlertModal
         open={Boolean(pendingDelete)}

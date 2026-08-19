@@ -103,7 +103,6 @@ const VariantForm = ({
   const [sku, setSku] = useState(variant?.sku ?? "");
   const [mrp, setMrp] = useState(variant ? String(variant.mrp) : "");
   const [discount, setDiscount] = useState(variant ? String(variant.discount) : "0");
-  const [stock, setStock] = useState(variant ? String(variant.stock) : "");
   const [weight, setWeight] = useState(variant?.weight !== undefined ? String(variant.weight) : "");
   const [active, setActive] = useState(variant?.active ?? true);
   const [images, setImages] = useState<UploadedImage[]>([]);
@@ -122,33 +121,35 @@ const VariantForm = ({
       .map((axis) => ({ name: axis.name, value: attributeValues[axis.code] ?? "" }))
       .filter((attribute) => attribute.value !== "");
 
-    const body = {
+    const imagesPayload = images.map((image) => ({
+      objectKey: image.objectKey,
+      alt: image.alt || undefined,
+      isPrimary: image.isPrimary,
+    }));
+
+    const shared = {
       sku: sku.trim(),
       attributes,
       mrp: Number(mrp),
       discount: discount === "" ? 0 : Number(discount),
-      stock: Number(stock),
       ...(weight !== "" ? { weight: Number(weight) } : {}),
-      ...(images.length > 0
-        ? {
-            images: images.map((image) => ({
-              objectKey: image.objectKey,
-              alt: image.alt || undefined,
-              isPrimary: image.isPrimary,
-            })),
-          }
-        : {}),
     };
 
     try {
       if (variant) {
+        // Editing an existing variant: only include images when new ones
+        // were uploaded, so the existing stored set is left untouched
+        // otherwise — images is optional on an update.
         await updateVariant({
           productId,
           variantId: variant._id,
-          patch: { ...body, active },
+          patch: { ...shared, ...(images.length > 0 ? { images: imagesPayload } : {}), active },
         }).unwrap();
       } else {
-        await addVariant({ productId, body }).unwrap();
+        // Adding a brand-new variant: images is always required now (#102 —
+        // no product gallery left to fall back to), so it's always present
+        // here, even if empty, rather than omitted.
+        await addVariant({ productId, body: { ...shared, images: imagesPayload } }).unwrap();
       }
       onDone();
     } catch {
@@ -200,15 +201,6 @@ const VariantForm = ({
           onChange={(event) => setDiscount(event.target.value)}
           className="bg-white tabular-nums"
         />
-        <TextField
-          id={`variant-stock-${variant?._id ?? "new"}`}
-          label="Stock *"
-          type="number"
-          required
-          value={stock}
-          onChange={(event) => setStock(event.target.value)}
-          className="bg-white tabular-nums"
-        />
       </div>
 
       <p className="mt-2 text-xs text-neutral-500">
@@ -238,10 +230,10 @@ const VariantForm = ({
         <ProductImagesEditor
           images={images}
           onChange={setImages}
-          min={0}
+          min={1}
           max={2}
           purpose="product-image"
-          label="Images 0–2 (falls back to the product's)"
+          label="Images 1–2"
         />
       </div>
 
@@ -311,8 +303,8 @@ export const ProductVariantsEditor = ({
             className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-200 p-3 text-sm text-neutral-500"
           >
             <span>
-              {formatAttributes(variant.attributes)} — {formatPrice(variant.sellingPrice)} · stock{" "}
-              {variant.stock} · {variant.active ? "active" : "inactive"}
+              {formatAttributes(variant.attributes)} — {formatPrice(variant.sellingPrice)} ·{" "}
+              {variant.active ? "active" : "inactive"}
             </span>
             <button
               type="button"

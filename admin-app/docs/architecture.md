@@ -91,8 +91,8 @@ src/
 │   │       ├── productsApi.ts                                # injectEndpoints: getProducts/getProduct/updateProductStatus/updateProductStock
 │   │       ├── types.ts                                         # Product (brand/category as raw ids, unpopulated) / ProductVariant / ProductSort
 │   │       ├── money.ts                                           # formatPrice() — Intl.NumberFormat("en-IN", {style:"currency",currency:"INR"})
-│   │       ├── ProductsPage.tsx                                     # routed at /products — owns search/status/lowStock/page state
-│   │       ├── ProductList.tsx                                        # table + inline stock quick-edit + archive/restore + pagination
+│   │       ├── ProductsPage.tsx                                     # routed at /products — owns search/status/sort/page state
+│   │       ├── ProductList.tsx                                        # table (Name/Brand/Category/Variants/Status) + archive/restore + pagination
 │   │       ├── ProductDetailPage.tsx                                    # routed at /products/:id — read-only, every field + all variants
 │   │       └── productForm/
 │   │           ├── ProductFormPage.tsx                                     # routed at /products/new and /products/:id/edit
@@ -140,7 +140,7 @@ admin-app/
 │           ├── categories/CategoriesPage.test.tsx               # tree render, all 4 hierarchy errors, combined delete-guard, status/search
 │           ├── categorySpecifications/CategorySpecificationsPage.test.tsx  # synthetic-empty render, full-replace PUT, each PATCH op, in-use guard (field + group)
 │           ├── categoryVariants/CategoryVariantsPage.test.tsx        # synthetic-empty render, full-replace PUT, unguarded deleteAxis, updateAxis toggle, options visibility
-│           ├── products/ProductsPage.test.tsx                          # list+resolved names, search/status/lowStock composition, stock quick-edit, archive/restore, detail view (all variants)
+│           ├── products/ProductsPage.test.tsx                          # list+resolved names, search/status composition, sortBy/orderBy, archive/restore, detail view (all variants)
 │           └── products/ProductForm.test.tsx                             # SKU disabled on edit, category-change re-fetch, create+upload flow, SPECIFICATION_VALIDATION_FAILED, add-variant
 └── src/
     ├── main.tsx

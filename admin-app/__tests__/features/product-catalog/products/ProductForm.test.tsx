@@ -52,23 +52,18 @@ const CATEGORY_B = {
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
 
+const LIST_PAGINATION = { page: 1, limit: 100, total: 1, totalPages: 1, hasNextPage: false };
+
 function makeProduct(overrides: Partial<Product> = {}): Product {
   return {
     _id: "p1",
     name: "Test Phone",
     slug: "test-phone",
-    sku: "TC-SP-0001",
     description: "A phone.",
     brand: "brand-1",
     category: "cat-a",
-    images: [{ url: "https://example.com/img.jpg", alt: "Test Phone", isPrimary: true }],
     specifications: [],
     variants: [],
-    mrp: 49900,
-    discount: 10,
-    sellingPrice: 44910,
-    stock: 128,
-    lowStockThreshold: 10,
     isFeatured: false,
     status: "published",
     createdBy: null,
@@ -93,10 +88,18 @@ function setupHandlers(
 
   server.use(
     http.get(`${BASE}/brands`, () =>
-      HttpResponse.json({ success: true, data: [{ _id: "brand-1", name: "Brand A", slug: "brand-a" }] }),
+      HttpResponse.json({
+        success: true,
+        data: [{ _id: "brand-1", name: "Brand A", slug: "brand-a" }],
+        pagination: LIST_PAGINATION,
+      }),
     ),
     http.get(`${BASE}/categories`, () =>
-      HttpResponse.json({ success: true, data: [CATEGORY_A, CATEGORY_B] }),
+      HttpResponse.json({
+        success: true,
+        data: [CATEGORY_A, CATEGORY_B],
+        pagination: LIST_PAGINATION,
+      }),
     ),
     http.get(`${BASE}/categories/:id/specifications`, ({ params }) => {
       specRequests.push(params.id as string);
@@ -181,7 +184,7 @@ function setupHandlers(
     }),
     http.post(`${BASE}/products/:id/variants`, async ({ params, request }) => {
       lastAddVariantBody = await request.json();
-      const body = lastAddVariantBody as { sku: string; attributes: unknown; mrp: number; discount?: number; stock: number };
+      const body = lastAddVariantBody as { sku: string; attributes: unknown; mrp: number; discount?: number };
       const product = products.find((p) => p._id === params.id);
       if (!product) {
         return HttpResponse.json({ success: false, code: "PRODUCT_NOT_FOUND", message: "Not found" }, { status: 404 });
@@ -194,7 +197,6 @@ function setupHandlers(
         mrp: body.mrp,
         discount: body.discount ?? 0,
         sellingPrice: body.mrp - Math.floor((body.mrp * (body.discount ?? 0)) / 100),
-        stock: body.stock,
         active: true,
       };
       const updated = { ...product, variants: [...product.variants, variant] };
@@ -230,22 +232,6 @@ describe("ProductForm", () => {
     expect(screen.getByText("Edit product")).toBeInTheDocument();
   });
 
-  it("disables the SKU field when editing an existing product", async () => {
-    setupHandlers({ products: [makeProduct()] });
-    renderProductsApp("/products/p1/edit");
-
-    const skuInput = await screen.findByDisplayValue("TC-SP-0001");
-    expect(skuInput).toBeDisabled();
-  });
-
-  it("does not disable SKU when creating a new product", async () => {
-    setupHandlers();
-    renderProductsApp("/products/new");
-
-    const skuInput = await screen.findByLabelText("SKU *");
-    expect(skuInput).not.toBeDisabled();
-  });
-
   it("re-fetches and re-renders the category's specification inputs when the category changes", async () => {
     const handlers = setupHandlers();
     renderProductsApp("/products/new");
@@ -264,24 +250,16 @@ describe("ProductForm", () => {
     });
   });
 
-  it("creates a product with an uploaded image and redirects to the edit route", async () => {
+  it("creates a product and redirects to the edit route", async () => {
     setupHandlers();
     renderProductsApp("/products/new");
 
     await userEvent.setup().type(await screen.findByLabelText("Name *"), "New Phone");
-    await userEvent.setup().type(screen.getByLabelText("SKU *"), "TC-NEW-0001");
     await screen.findByText("Brand A");
     fireEvent.change(screen.getByLabelText("Brand *"), { target: { value: "brand-1" } });
     await screen.findByText("Smartphones");
     fireEvent.change(screen.getByLabelText("Category *"), { target: { value: "cat-a" } });
     await userEvent.setup().type(screen.getByLabelText("Description *"), "A great new phone.");
-    fireEvent.change(screen.getByLabelText("MRP (₹) *"), { target: { value: "19900" } });
-    fireEvent.change(screen.getByLabelText("Stock *"), { target: { value: "10" } });
-
-    const file = new File(["binary"], "photo.jpg", { type: "image/jpeg" });
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    await userEvent.setup().upload(fileInput, file);
-    await screen.findByAltText("Product image preview");
 
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
@@ -301,19 +279,11 @@ describe("ProductForm", () => {
     renderProductsApp("/products/new");
 
     await userEvent.setup().type(await screen.findByLabelText("Name *"), "New Phone");
-    await userEvent.setup().type(screen.getByLabelText("SKU *"), "TC-NEW-0001");
     await screen.findByText("Brand A");
     fireEvent.change(screen.getByLabelText("Brand *"), { target: { value: "brand-1" } });
     await screen.findByText("Smartphones");
     fireEvent.change(screen.getByLabelText("Category *"), { target: { value: "cat-a" } });
     await userEvent.setup().type(screen.getByLabelText("Description *"), "A great new phone.");
-    fireEvent.change(screen.getByLabelText("MRP (₹) *"), { target: { value: "19900" } });
-    fireEvent.change(screen.getByLabelText("Stock *"), { target: { value: "10" } });
-
-    const file = new File(["binary"], "photo.jpg", { type: "image/jpeg" });
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    await userEvent.setup().upload(fileInput, file);
-    await screen.findByAltText("Product image preview");
 
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
@@ -326,8 +296,7 @@ describe("ProductForm", () => {
     const handlers = setupHandlers({ products: [makeProduct()] });
     renderProductsApp("/products/p1/edit");
 
-    await screen.findByDisplayValue("TC-SP-0001");
-    fireEvent.click(screen.getByRole("button", { name: "+ Add variant" }));
+    fireEvent.click(await screen.findByRole("button", { name: "+ Add variant" }));
 
     const addButton = await screen.findByRole("button", { name: "Add variant" });
     const variantForm = addButton.closest("form")!;
@@ -337,7 +306,6 @@ describe("ProductForm", () => {
       target: { value: "TC-SP-0001-128" },
     });
     fireEvent.change(within(variantForm).getByLabelText("MRP (₹) *"), { target: { value: "29900" } });
-    fireEvent.change(within(variantForm).getByLabelText("Stock *"), { target: { value: "15" } });
 
     fireEvent.click(addButton);
 

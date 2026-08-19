@@ -7,7 +7,6 @@ import type { ProductSort, ProductStatus } from "./types";
 interface ProductFilters {
   search: string;
   status: ProductStatus | "";
-  lowStockOnly: boolean;
   sort?: ProductSort;
 }
 
@@ -15,7 +14,6 @@ export const ProductsPage = () => {
   const { filters, setFilter, page, setPage } = useListQueryState<ProductFilters>({
     search: "",
     status: "",
-    lowStockOnly: false,
     sort: undefined,
   });
 
@@ -31,8 +29,6 @@ export const ProductsPage = () => {
         onSearchChange={(value) => setFilter("search", value)}
         status={filters.status}
         onStatusChange={(value) => setFilter("status", value)}
-        lowStockOnly={filters.lowStockOnly}
-        onLowStockOnlyChange={(value) => setFilter("lowStockOnly", value)}
         sort={filters.sort}
         onSortChange={(value) => setFilter("sort", value)}
         page={page}

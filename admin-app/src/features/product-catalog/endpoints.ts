@@ -19,7 +19,6 @@ export const PRODUCT_CATALOG_ENDPOINTS = {
     list: "/products",
     detail: (id: string) => `/products/${id}`,
     status: (id: string) => `/products/${id}/status`,
-    stock: (id: string) => `/products/${id}/stock`,
     variants: (productId: string) => `/products/${productId}/variants`,
     variant: (productId: string, variantId: string) =>
       `/products/${productId}/variants/${variantId}`,
