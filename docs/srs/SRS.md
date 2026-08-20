@@ -20,7 +20,8 @@
 | 0.7     | 2026-08-21 | Dashboard                                 | Spec drafted |
 | 0.8     | 2026-08-21 | Backend Non-Functional Requirements       | Spec drafted |
 | 0.9     | 2026-08-21 | Frontend Non-Functional Requirements      | Spec drafted |
-| 1.0     | —          | Final Consolidated System SRS             | Planned      |
+| 0.10    | 2026-08-21 | Inventory Management                      | Spec drafted |
+| 1.1     | —          | Final Consolidated System SRS             | Planned      |
 
 Each row above becomes "Complete" only once its feature has been specified, designed, implemented, and validated — see [Development Workflow](#5-development-workflow).
 
@@ -128,7 +129,8 @@ See the Technology Blueprint (§1.5). Summary: Next.js 16 (Buyer), React 19 + Vi
 | 6   | Dashboard              | Admin analytics + buyer account dashboard                                             | v0.7               | Spec drafted |
 | 7   | Backend NFRs           | Performance, scalability, security, DB, API, logging, error handling                  | v0.8               | Spec drafted |
 | 8   | Frontend NFRs          | UI performance, responsiveness, browser support, accessibility, UX, frontend security | v0.9               | Spec drafted |
-| 9   | Final Consolidated SRS | Full system document                                                                  | v1.0               | Not started  |
+| 9   | Inventory Management   | Per-warehouse stock tracking, admin inventory table, cart-driven stock allocation     | v0.10               | Spec drafted |
+| 10  | Final Consolidated SRS | Full system document                                                                  | v1.1                | Not started  |
 
 Detailed per-feature SRS documents will live alongside this file as they're written:
 
@@ -143,7 +145,8 @@ docs/srs/
     ├── 0.6-payments.md
     ├── 0.7-dashboard.md
     ├── 0.8-backend-nfr.md
-    └── 0.9-frontend-nfr.md
+    ├── 0.9-frontend-nfr.md
+    └── 0.10-inventory-management.md
 ```
 
 ---
@@ -163,7 +166,7 @@ Every feature document under `docs/srs/features/` follows this structure, so v0.
 9. **Dependencies** — other features or external services this one relies on.
 10. **Open Questions** — unresolved decisions, if any, at time of writing.
 
-Feature codes used in requirement IDs: `CAT`, `AUTH`, `CART`, `ORD`, `PAY`, `DASH`, `NFR-BE`, `NFR-FE`.
+Feature codes used in requirement IDs: `CAT`, `AUTH`, `CART`, `ORD`, `PAY`, `DASH`, `NFR-BE`, `NFR-FE`, `INV`.
 
 ---
 
@@ -196,9 +199,10 @@ A feature earns a row once its spec is drafted (step 2 of the workflow above); t
 | Shopping Cart   | [v0.4](features/0.4-shopping-cart.md) — `FR-CART-001`–`025`  | pending                                                                       | pending                                                                                                              | Spec drafted |
 | Orders          | [v0.5](features/0.5-orders.md) — `FR-ORD-001`–`033`          | pending                                                                       | pending                                                                                                              | Spec drafted |
 | Payments        | [v0.6](features/0.6-payments.md) — `FR-PAY-001`–`028`        | pending                                                                       | pending                                                                                                              | Spec drafted |
-| Dashboard       | [v0.7](features/0.7-dashboard.md) — `FR-DASH-001`–`022`      | pending                                                                       | pending                                                                                                              | Spec drafted |
+| Dashboard       | [v0.7](features/0.7-dashboard.md) — `FR-DASH-001`–`024`      | pending                                                                       | pending                                                                                                              | Spec drafted |
 | Backend NFRs    | [v0.8](features/0.8-backend-nfr.md) — `FR-NFR-BE-001`–`028`  | pending                                                                       | pending                                                                                                              | Spec drafted |
 | Frontend NFRs   | [v0.9](features/0.9-frontend-nfr.md) — `FR-NFR-FE-001`–`026` | pending                                                                       | pending                                                                                                              | Spec drafted |
+| Inventory Management | [v0.10](features/0.10-inventory-management.md) — `FR-INV-001`–`012` | pending                                                                  | pending                                                                                                              | Spec drafted |
 
 ---
 
