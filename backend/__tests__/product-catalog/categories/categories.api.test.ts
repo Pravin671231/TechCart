@@ -506,6 +506,8 @@ describe("GET /api/categories/:slug/products", () => {
               discount: 0,
               sellingPrice: 50000,
               active: true,
+              createdAt: new Date("2026-01-01T00:00:00.000Z"),
+              updatedAt: new Date("2026-01-01T00:00:00.000Z"),
             },
           ],
           isFeatured: false,

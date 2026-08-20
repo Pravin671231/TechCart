@@ -113,6 +113,8 @@ const productStub: ProductRecord = {
 
 // images is required (1-2), not optional/empty-default, since #102 removed
 // the parent product's own images fallback.
+const variantCreatedAt = new Date("2026-01-01T00:00:00.000Z");
+
 const existingVariant: ProductVariant = {
   _id: variantId,
   sku: "SKU-1-RED-L",
@@ -125,6 +127,8 @@ const existingVariant: ProductVariant = {
   discount: 0,
   sellingPrice: 51000,
   active: true,
+  createdAt: variantCreatedAt,
+  updatedAt: variantCreatedAt,
 };
 
 const otherExistingVariant: ProductVariant = {
@@ -139,6 +143,8 @@ const otherExistingVariant: ProductVariant = {
   discount: 0,
   sellingPrice: 51000,
   active: true,
+  createdAt: variantCreatedAt,
+  updatedAt: variantCreatedAt,
 };
 
 const productWithVariants: ProductRecord = {
@@ -164,6 +170,8 @@ const publicVariantStub: ProductVariant = {
   discount: 0,
   sellingPrice: 50000,
   active: true,
+  createdAt: variantCreatedAt,
+  updatedAt: variantCreatedAt,
 };
 
 // Same as publicProductStub but with one active variant, for tests that
@@ -648,6 +656,25 @@ describe("addVariant", () => {
     expect(added?._id).toBeDefined();
   });
 
+  // Issue #121: replaceVariants persists the whole array in one write, so a
+  // new variant's own fresh timestamps must not leak onto its untouched
+  // siblings — this was the actual bug (every variant reset to "now" on
+  // every write) the issue traced createdAt inconsistency to.
+  it("gives the new variant fresh timestamps without touching its siblings' original ones", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+    vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
+    vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
+
+    await addVariant(productId, baseAddVariantInput);
+
+    const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
+    const added = persisted?.[2];
+    expect(added?.createdAt).toEqual(added?.updatedAt);
+    expect(added?.createdAt).not.toEqual(variantCreatedAt);
+    expect(persisted?.[0]).toMatchObject({ createdAt: variantCreatedAt, updatedAt: variantCreatedAt });
+    expect(persisted?.[1]).toMatchObject({ createdAt: variantCreatedAt, updatedAt: variantCreatedAt });
+  });
+
   it("omits weight when not provided and includes it when provided", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
     vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
@@ -707,9 +734,31 @@ describe("updateVariant", () => {
 
     const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
     expect(persisted).toHaveLength(2);
-    expect(persisted?.[0]).toMatchObject({ ...existingVariant, active: false });
+    // updatedAt bumps on any edit (Issue #121) — checked separately below,
+    // not part of this exact-shape comparison.
+    expect(persisted?.[0]).toMatchObject({
+      ...existingVariant,
+      active: false,
+      updatedAt: expect.any(Date),
+    });
     // Never removed — the array length is unchanged, matching FR-CAT-040's
     // "variants are never hard-removed" rule.
+    expect(persisted?.[1]).toEqual(otherExistingVariant);
+  });
+
+  // Issue #121: an edit must never reset when a variant was first added —
+  // only updatedAt should move. This was the actual bug (replaceVariants
+  // resetting every variant's createdAt to "now" on every write) the issue
+  // traced createdAt inconsistency to.
+  it("keeps the edited variant's original createdAt but bumps its updatedAt, leaving its sibling untouched", async () => {
+    vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
+    vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
+
+    await updateVariant(productId, variantId, { active: false });
+
+    const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
+    expect(persisted?.[0]?.createdAt).toEqual(variantCreatedAt);
+    expect(persisted?.[0]?.updatedAt).not.toEqual(variantCreatedAt);
     expect(persisted?.[1]).toEqual(otherExistingVariant);
   });
 
