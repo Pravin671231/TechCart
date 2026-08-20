@@ -6,7 +6,6 @@ import { useGetProductBySlugQuery } from "@/features/products/api";
 import { formatPrice } from "@/features/products/money";
 import type { PublicProductVariant } from "@/features/products/types";
 import type { NormalizedApiError } from "@/store/api";
-import { AvailabilityBadge } from "./AvailabilityBadge";
 import { ProductDetailSkeleton } from "./ProductDetailSkeleton";
 import { ProductGallery } from "./ProductGallery";
 import { ProductNotFound } from "./ProductNotFound";
