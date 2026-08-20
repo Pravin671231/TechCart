@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { AppShell } from "@/components/layout/AppShell";
 import { StoreProvider } from "@/store/StoreProvider";
 
 const inter = Inter({
@@ -27,8 +28,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${plusJakartaSans.variable}`}>
-      <body>
-        <StoreProvider>{children}</StoreProvider>
+      <body className="flex min-h-screen flex-col bg-white text-neutral-600">
+        <StoreProvider>
+          <AppShell>{children}</AppShell>
+        </StoreProvider>
       </body>
     </html>
   );
