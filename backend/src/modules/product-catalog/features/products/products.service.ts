@@ -339,6 +339,10 @@ export async function addVariant(
   const images = await resolveVariantImages(input.images);
   const sellingPrice = computeSellingPrice(input.mrp, input.discount);
 
+  // Issue #121: explicit, since replaceVariants now goes through the raw
+  // driver (nothing implicitly stamps these anymore) — a genuinely new
+  // variant correctly gets "now" for both.
+  const now = new Date();
   const variant: ProductVariant = {
     _id: new Types.ObjectId(),
     sku: input.sku,
@@ -348,6 +352,8 @@ export async function addVariant(
     discount: input.discount,
     sellingPrice,
     active: true,
+    createdAt: now,
+    updatedAt: now,
   };
   if (input.weight !== undefined) variant.weight = input.weight;
 
@@ -396,6 +402,11 @@ export async function updateVariant(
   }
   if (input.weight !== undefined) updatedVariant.weight = input.weight;
   if (input.active !== undefined) updatedVariant.active = input.active;
+  // Issue #121: createdAt stays whatever the spread above already carried
+  // over from existingVariant (an edit never changes when a variant was
+  // first added) — only updatedAt bumps, and only because replaceVariants
+  // now goes through the raw driver, which stamps nothing implicitly.
+  updatedVariant.updatedAt = new Date();
 
   const updatedVariants = [...product.variants];
   updatedVariants[index] = updatedVariant;

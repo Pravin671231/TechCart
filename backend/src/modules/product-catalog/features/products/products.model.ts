@@ -51,6 +51,14 @@ export type ProductVariant = {
   sellingPrice: number;
   weight?: number;
   active: boolean;
+  // Always present at runtime via this subdocument schema's own
+  // `{timestamps:true}` below — previously untyped even though populated,
+  // since nothing read them until Issue #121 needed to preserve a variant's
+  // original createdAt across a replaceVariants() array replace (see
+  // products.repository.ts's replaceVariants for why a plain Mongoose $set
+  // can't be trusted to leave these alone on its own).
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export type ProductDocument = {

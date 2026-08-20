@@ -149,6 +149,43 @@ function priceSortStages(sort: "price_asc" | "price_desc"): Record<string, unkno
   ];
 }
 
+// Issue #121: "newest first" orders by the *primary variant's* createdAt,
+// not the product's own top-level createdAt — "primary variant" is defined
+// identically to selectDefaultVariant() (products.service.ts): the
+// lowest-sellingPrice *active* variant, reimplemented here in aggregation
+// syntax since that JS function can't run inside a MongoDB pipeline.
+// $sortArray needs MongoDB 5.2+ (confirmed available on this Atlas cluster,
+// 8.0). A product with no active variants (the same documented edge case
+// toPublicListItem's absent price/image fields already accept) gets a
+// missing sortCreatedAt, which a -1 sort places last — not specially
+// handled, consistent with how this codebase treats that edge case
+// elsewhere. Shared by both listPublicPaginated and searchPublicPaginated's
+// newest-fallback branch, same as priceSortStages already is.
+function newestSortStages(): Record<string, unknown>[] {
+  return [
+    {
+      $addFields: {
+        sortCreatedAt: {
+          $let: {
+            vars: {
+              primaryVariant: {
+                $first: {
+                  $sortArray: {
+                    input: { $filter: { input: "$variants", as: "v", cond: "$$v.active" } },
+                    sortBy: { sellingPrice: 1 },
+                  },
+                },
+              },
+            },
+            in: "$$primaryVariant.createdAt",
+          },
+        },
+      },
+    },
+    { $sort: { sortCreatedAt: -1 } },
+  ];
+}
+
 // Shared tail for every aggregation-based listing path below: pull the
 // $facet result apart, then populate brand/category manually — aggregation
 // doesn't run schema-level populate automatically the way .find().populate()
@@ -176,9 +213,11 @@ async function runFacetedAggregate(
 // categoryIds) share this one function; the Atlas Search case below is a
 // genuinely different query shape ($search must lead an aggregation
 // pipeline, incompatible with a plain .find()), not a variant of this.
-// A price sort is its own branch — it needs the aggregation-based
-// priceSortStages above, since a plain .find().sort() has no top-level
-// field to sort by (#102).
+// Always aggregation-based (Issue #121 removed the old plain
+// .find().sort({createdAt:-1}) path) — both price sorts and the
+// newest-first default need a computed-per-product sort key derived from
+// `variants`, since #102 left no top-level field on the product itself to
+// sort by directly.
 export async function listPublicPaginated(
   filter: PublicProductFilter,
   sort: PublicSort,
@@ -187,32 +226,18 @@ export async function listPublicPaginated(
   const query = buildMatchStage(filter);
   const skip = (page.page - 1) * page.limit;
 
-  if (isPriceSort(sort)) {
-    const pipeline = [
-      { $match: query },
-      ...priceSortStages(sort),
-      {
-        $facet: {
-          items: [{ $skip: skip }, { $limit: page.limit }],
-          totalCount: [{ $count: "count" }],
-        },
+  const sortStages = isPriceSort(sort) ? priceSortStages(sort) : newestSortStages();
+  const pipeline = [
+    { $match: query },
+    ...sortStages,
+    {
+      $facet: {
+        items: [{ $skip: skip }, { $limit: page.limit }],
+        totalCount: [{ $count: "count" }],
       },
-    ];
-    return runFacetedAggregate(pipeline);
-  }
-
-  const [items, total] = await Promise.all([
-    Product.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(page.limit)
-      .populate<{ brand: PopulatedRef }>("brand", "name slug")
-      .populate<{ category: PopulatedRef }>("category", "name slug")
-      .lean(),
-    Product.countDocuments(query),
-  ]);
-
-  return { items, total };
+    },
+  ];
+  return runFacetedAggregate(pipeline);
 }
 
 // FR-CAT-071/072: a variant-attribute or filterable-specification filter,
@@ -343,7 +368,7 @@ export async function searchPublicPaginated(
     if (isPriceSort(sort)) {
       itemsPipeline.push(...priceSortStages(sort));
     } else {
-      itemsPipeline.push({ $sort: { createdAt: -1 } });
+      itemsPipeline.push(...newestSortStages());
     }
   }
   itemsPipeline.push({ $skip: skip }, { $limit: page.limit });
@@ -392,11 +417,23 @@ export async function updateById(
 // whole array in one write. Kept separate from updateById/UpdateProductDoc
 // since products.controller.ts never accepts `variants` directly — only
 // addVariant/updateVariant in products.service.ts write through here.
+//
+// Issue #121: goes through the raw MongoDB driver (Product.collection),
+// deliberately bypassing Mongoose's schema casting — empirically confirmed
+// that Mongoose's own findByIdAndUpdate() re-stamps every variant's
+// createdAt/updatedAt to "now" on every $set of the whole array, even when
+// the caller supplies the original values and even with the top-level
+// `{timestamps:false}` update option set (that option only suppresses the
+// *document's* auto-timestamps, not the subdocument-array schema's own
+// casting-time defaulting). Going around Mongoose here means whatever
+// timestamps products.service.ts's addVariant/updateVariant put on each
+// variant are exactly what gets stored — nothing else touches them.
 export async function replaceVariants(
   id: Types.ObjectId,
   variants: ProductVariant[],
 ): Promise<ProductRecord | null> {
-  return Product.findByIdAndUpdate(id, { $set: { variants } }, { new: true }).lean();
+  await Product.collection.updateOne({ _id: id }, { $set: { variants, updatedAt: new Date() } });
+  return findById(id);
 }
 
 export type ProductListFilter = {

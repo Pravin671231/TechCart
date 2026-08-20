@@ -65,6 +65,7 @@ function buildVariantList(
   const makeVariant = (attrs: ProductVariantAttribute[], priceStep: number): ProductVariant => {
     variantOrdinal += 1;
     const mrp = basePrice + priceStep;
+    const now = new Date();
     return {
       _id: new Types.ObjectId(),
       sku: `${productSku}-V${variantOrdinal}`,
@@ -76,6 +77,12 @@ function buildVariantList(
       discount,
       sellingPrice: computeSellingPrice(mrp, discount),
       active: true,
+      // Genuine creation via Product.create() — Mongoose's own
+      // {timestamps:true} hook applies the real value here regardless (this
+      // is a normal document-save path, not the $set-based array replace
+      // Issue #121 found broken), so this just satisfies the type.
+      createdAt: now,
+      updatedAt: now,
     };
   };
 
