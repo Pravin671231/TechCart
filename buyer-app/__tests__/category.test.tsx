@@ -106,6 +106,10 @@ describe("CategoryContent", () => {
     expect(screen.getByText("Electronics")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Smartphones" })).toBeInTheDocument();
     expect(screen.getByText("RAM: 8GB")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Test Phone/ })).toHaveAttribute(
+      "href",
+      "/products/test-phone",
+    );
   });
 
   it("renders only the filterable specs a product has, with no placeholder padding", async () => {

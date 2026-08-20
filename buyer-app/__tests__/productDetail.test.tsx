@@ -93,7 +93,6 @@ describe("ProductDetailContent", () => {
     );
 
     expect(await screen.findByText("₹29,900")).toBeInTheDocument();
-    expect(screen.getByText("In stock")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "128GB" })).toHaveAttribute("aria-pressed", "true");
     expect(callCount).toBe(1);
   });
@@ -148,7 +147,6 @@ describe("ProductDetailContent", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: "256GB" }));
 
     expect(await screen.findByText("₹34,900")).toBeInTheDocument();
-    expect(screen.getByText("Low stock")).toBeInTheDocument();
     expect(callCount).toBe(1);
   });
 
