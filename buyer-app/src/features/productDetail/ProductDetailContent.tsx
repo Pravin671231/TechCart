@@ -147,7 +147,7 @@ export function ProductDetailContent({ slug }: { slug: string }) {
           </div>
 
           <p>
-            <AvailabilityBadge availability={displayed.availability} />
+            {/* <AvailabilityBadge availability={displayed.availability} /> */}
           </p>
 
           {product.hasVariants && (
