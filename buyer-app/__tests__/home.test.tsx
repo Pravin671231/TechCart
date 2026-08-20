@@ -65,6 +65,10 @@ describe("Home", () => {
 
     expect(await screen.findByText("Test Product")).toBeInTheDocument();
     expect(screen.getByText("₹49,900")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Test Product/ })).toHaveAttribute(
+      "href",
+      "/products/test-product",
+    );
   });
 
   it("renders the empty state on a successful empty response", async () => {

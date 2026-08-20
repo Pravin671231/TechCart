@@ -73,6 +73,10 @@ describe("SearchContent", () => {
 
     expect(screen.getByText("smartphon", { exact: false })).toBeInTheDocument();
     expect(await screen.findByText("Test Phone")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Test Phone/ })).toHaveAttribute(
+      "href",
+      "/products/test-phone",
+    );
   });
 
   it("defaults to relevance sort and sends the keyword as ?q=", async () => {
