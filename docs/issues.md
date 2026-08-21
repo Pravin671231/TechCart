@@ -418,3 +418,62 @@ Only the products admin list (`GET /api/admin/products`) currently supports pagi
 - `orderBy=none` returns results with no explicit sort applied
 - Existing `?search=` behavior on all three admin lists is unchanged
 
+### mock-ui — End-to-end wireframes (v0.2 fix + v0.3–v0.7, v0.10)
+
+Cross-cutting, not tied to a single milestone — mirrors how `mock-ui/` itself predated milestone tracking entirely before Issue #41 brought it under review. Unlike every `M<x>` backlog above, this section stays even after the issue is opened, following #41's own precedent for design/traceability work rather than the standard remove-on-open rule.
+
+#### mock-ui.1 — Fix v0.2 staleness, extend end-to-end through Dashboard + Inventory Management
+
+**Milestone:** none (cross-cutting)
+**Suggested branch:** feature/<TBD>-mock-ui-end-to-end
+**Labels:** documentation
+
+**Context**
+`mock-ui/` (static, unbuilt wireframes — `docs/architecture.md` §2) has had exactly 3 commits since it was created and covers only SRS v0.2 (Product Catalog): 4 `buyer-app` screens + 7 `admin-app` screens. It predates Issue #102's variant-only-pricing amendment, so 11 of its 17 files (`brand-kit.html`, `index.html`, `buyer-app/{home,category,product-detail,card-components}.html`, `admin-app/{table-component,product-list,product-form,product-detail}.html`, `README.md`) still show `stock`/low-stock columns and an availability badge that no longer exist anywhere in the real system.
+
+Since then, SRS v0.3–v0.7 (Authentication, Shopping Cart, Orders, Payments, Dashboard) and v0.10 (Inventory Management) have all been spec-drafted with their own §6 UI/UX Requirements, and none of those screens has a mock-ui counterpart. This issue fixes the v0.2 staleness and extends `mock-ui/` end-to-end — sign-in through checkout, payment, dashboard, and stock management — so a stakeholder can click through the entire buyer and admin flow, not just the catalog. It mirrors Issue #41's own precedent (verify + extend mock-ui, traced against the SRS) but sized to the full flow instead of one milestone.
+
+v0.10 reinstates a per-warehouse stock concept — the very thing the v0.2 fix below removes from the *catalog* screens. That's not a contradiction: v0.2's mocks drop stock because the product-catalog layer itself no longer carries it (Issue #102); v0.10 reintroduces it one layer down, surfaced only on its own Inventory screens and as a plain in-stock/out-of-stock signal elsewhere (product detail, cart) — never as a raw count on a catalog screen.
+
+**Tasks**
+
+_Fix — v0.2 staleness (11 files)_
+- [ ] Remove every `stock`/low-stock/availability-badge reference from `brand-kit.html`, `index.html`, `buyer-app/home.html`, `buyer-app/category.html`, `buyer-app/product-detail.html`, `buyer-app/card-components.html`, `admin-app/table-component.html`, `admin-app/product-list.html`, `admin-app/product-form.html`, `admin-app/product-detail.html`, and `README.md` — layout/tokens unchanged, only the stale fields go
+
+_Add — `buyer-app/` (8 new files)_
+- [ ] `sign-in.html` — Google / One Tap / email OTP, no password field (`FR-AUTH-001`–`008`)
+- [ ] `account-profile.html` — name/phone (`FR-AUTH-036`–`037`)
+- [ ] `addresses.html` — address book: add/edit/delete/set default (`FR-ORD-028`–`032`)
+- [ ] `cart.html` — line items, unavailable-line treatment, subtotal, plus an `INSUFFICIENT_STOCK` inline state (`FR-CART-010`–`018`, `FR-INV-010`)
+- [ ] `checkout.html` — address step, order summary, the real Razorpay payment step, not a placeholder (`FR-ORD-001`–`007`, `025`–`027`, `033`, `FR-PAY-001`–`008`)
+- [ ] `order-history.html` — paginated list (`FR-ORD-011`)
+- [ ] `order-detail.html` — status timeline, cancel button, embedded payment summary (`FR-ORD-012`–`014`, `FR-PAY-028`)
+- [ ] `account-home.html` — profile summary, 5 recent orders, lifetime spend (`FR-DASH-010`–`011`)
+- [ ] `product-detail.html` — add an "out of stock" badge state replacing Add to Cart on a zero-stock variant (`FR-INV-007`–`008`); land alongside the v0.2 fix pass on the same file
+
+_Add — `admin-app/` (8 new files)_
+- [ ] `sign-in.html` — password step then a mandatory OTP step (`FR-AUTH-009`–`018`)
+- [ ] `admin-users.html` — super-admin only: list, create, role/deactivate (`FR-AUTH-024`–`029`)
+- [ ] `account-settings.html` — change password (`FR-AUTH-038`–`039`)
+- [ ] `order-list.html` — status filter, search, pagination (`FR-ORD-017`)
+- [ ] `order-detail.html` — status advance, cancel-with-reason, refund action (`FR-ORD-018`–`020`, `FR-PAY-015`–`018`)
+- [ ] `dashboard.html` — role-scoped: order-manager/super-admin view (sales cards, revenue chart, top products) and catalog-manager view (catalog counts, out-of-stock count) as two states on one page, not two files (`FR-DASH-001`–`009`, `017`–`019`, `023`–`024`)
+- [ ] `inventory.html` — Product/SKU/Warehouse/Stock table, warehouse filter, keyword search, pagination, inline-editable stock cell (`FR-INV-004`–`006`)
+- [ ] `warehouses.html` — list + create form (`FR-INV-001`–`002`)
+- [ ] No `admin-app` cart screen — v0.4 has no admin surface (`docs/srs/features/0.4-shopping-cart.md` §7); note this explicitly rather than silently omitting it
+
+_Non-happy-path states_
+- [ ] Carry the existing house style (skeleton/empty/error on listings, distinct empty states, inline guard rejections) into every new screen — e.g. checkout's dropped-items notice, an expired/invalid-OTP state on both sign-in flows, the refund-disabled-with-no-captured-payment state, the empty inventory table
+
+_Traceability_
+- [ ] Extend `README.md`'s "Catalog screens — SRS v0.2" / "Traceability to SRS v0.2 §6" section pattern with one matching subsection per module (v0.3–v0.7, v0.10) — file/screen/key-requirements table plus a §6-requirement → `FR-<CODE>-*` → file table, exactly like the existing v0.2 ones
+- [ ] Update `index.html`'s link index to include every new page
+
+**Test Criteria**
+
+- None of the 17 original mock-ui files contains `stock`, `lowStock`, or an availability-badge reference after the fix pass
+- Every one of the 16 new files exists, is reachable from `index.html`, and is annotated inline with the `FR-<CODE>-*` IDs it renders
+- `README.md`'s traceability tables cover every §6 UI/UX bullet in `docs/srs/features/0.3-authentication.md` through `0.7-dashboard.md` and `0.10-inventory-management.md`
+- `dashboard.html` and `product-detail.html` each visibly show both of their two states (role-scoped views; in-stock vs. out-of-stock) without needing two separate files
+- Every page still opens directly via `file://` with no build step, matching the rest of `mock-ui/`
+
