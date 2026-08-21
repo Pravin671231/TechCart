@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { formatPrice } from "./money";
 import type { PublicProductListItem } from "./types";
 
@@ -33,23 +34,12 @@ export function ProductCard({ product }: { product: PublicProductListItem }) {
         </div>
         <div className="flex flex-col gap-1 p-3">
           <p className="text-sm text-neutral-700">{product.name}</p>
-          {product.discount > 0 ? (
-            <p className="flex flex-wrap items-baseline gap-1.5">
-              <span className="text-sm font-semibold text-neutral-900">
-                {formatPrice(product.sellingPrice)}
-              </span>
-              <span className="text-xs text-neutral-400 line-through">
-                {formatPrice(product.mrp)}
-              </span>
-              <span className="rounded-md bg-accent-100 px-1.5 py-0.5 text-[10px] font-medium text-accent-700">
-                {product.discount}% off
-              </span>
-            </p>
-          ) : (
-            <p className="text-sm font-semibold text-neutral-900">
-              {formatPrice(product.sellingPrice)}
-            </p>
-          )}
+          <PriceDisplay
+            price={formatPrice(product.sellingPrice)}
+            mrp={formatPrice(product.mrp)}
+            discount={product.discount}
+            size="sm"
+          />
         </div>
       </article>
     </Link>

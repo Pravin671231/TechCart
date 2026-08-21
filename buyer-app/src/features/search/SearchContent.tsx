@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { useSearchProductsQuery } from "@/features/products/api";
 import type { SearchProductFilters, SearchProductSort } from "@/features/products/types";
 import { ProductGrid } from "@/features/products/ProductGrid";
@@ -48,14 +49,14 @@ export function SearchContent({ q }: { q: string }) {
 
   if (q.length === 0) {
     return (
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6">
+      <PageContainer className="flex flex-col">
         <p className="text-sm text-neutral-500">Enter a search term to find products.</p>
-      </main>
+      </PageContainer>
     );
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6">
+    <PageContainer className="flex flex-col">
       <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
         Results for <span className="text-neutral-500">&ldquo;{q}&rdquo;</span>
       </h1>
@@ -89,6 +90,6 @@ export function SearchContent({ q }: { q: string }) {
           )}
         </section>
       </div>
-    </main>
+    </PageContainer>
   );
 }

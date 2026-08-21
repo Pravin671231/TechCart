@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { formatPrice } from "@/features/products/money";
 import type { PublicProductListItem } from "@/features/products/types";
 
@@ -45,21 +46,13 @@ export function CategoryProductCard({ product }: { product: PublicProductListIte
           )}
         </div>
         <div className="flex w-32 shrink-0 flex-col items-start gap-0.5 rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-right sm:w-40">
-          {product.discount > 0 ? (
-            <>
-              <p className="text-lg font-bold text-neutral-900">
-                {formatPrice(product.sellingPrice)}
-              </p>
-              <p className="text-xs text-neutral-400 line-through">{formatPrice(product.mrp)}</p>
-              <span className="rounded-md bg-accent-100 px-1.5 py-0.5 text-[10px] font-medium text-accent-700">
-                {product.discount}% off
-              </span>
-            </>
-          ) : (
-            <p className="text-lg font-bold text-neutral-900">
-              {formatPrice(product.sellingPrice)}
-            </p>
-          )}
+          <PriceDisplay
+            price={formatPrice(product.sellingPrice)}
+            mrp={formatPrice(product.mrp)}
+            discount={product.discount}
+            size="md"
+            stacked
+          />
         </div>
       </article>
     </Link>

@@ -22,8 +22,7 @@ src/
 │   │   ├── CategoryProductList.tsx  # row-list layout (flex column), parallel to products/ProductGrid but not the same shape
 │   │   ├── CategoryListSkeleton.tsx  # row-shaped loading state — products/ProductListSkeleton is grid-shaped, wrong for this page
 │   │   ├── CategoryFilterRail.tsx     # price/brand/in-stock/on-sale controls
-│   │   ├── CategoryBreadcrumb.tsx      # + resolveBreadcrumb(), resolves parent name via categories/ list
-│   │   └── CategoryNotFound.tsx         # distinct from products/ProductListError — a 404 isn't retriable
+│   │   └── CategoryBreadcrumb.tsx      # + resolveBreadcrumb(), resolves parent name via categories/ list
 │   ├── search/
 │   │   ├── SearchContent.tsx        # search screen: active-keyword heading+filter rail+grid+pagination, page/sort/filters state
 │   │   ├── SearchFilterRail.tsx      # category (single-select, two-level)+price+brand+in-stock/on-sale controls
@@ -35,7 +34,6 @@ src/
 │   │   ├── VariantSelector.tsx         # groups variants[] by attribute axis; pickVariant() resolves the active variant
 │   │   ├── ProductSpecifications.tsx    # grouped spec table, rendered verbatim (FR-CAT-063)
 │   │   ├── AvailabilityBadge.tsx         # in_stock/low_stock/out_of_stock pill
-│   │   ├── ProductNotFound.tsx            # PRODUCT_NOT_FOUND/INVALID_SLUG state — distinct from the generic error state
 │   │   └── ProductDetailSkeleton.tsx       # loading state
 │   ├── products/
 │   │   ├── types.ts                # PublicProductListItem, PublicProductDetail, etc. — matches backend exactly
@@ -45,7 +43,7 @@ src/
 │   │   ├── ProductGrid.tsx             # grid layout — used by home and search (category uses its own row list)
 │   │   ├── ProductListSkeleton.tsx      # grid-shaped loading state
 │   │   ├── ProductListEmpty.tsx          # shared empty state — reused as-is by category (search has its own, two-state version)
-│   │   ├── ProductListError.tsx           # shared error state + retry — reused as-is by category and search
+│   │   ├── ProductListError.tsx           # shared error state + retry, optional `message` override — reused by category/search as-is and by productDetail with custom copy
 │   │   ├── Pagination.tsx                  # shared pagination controls + describeRange() — reused as-is
 │   │   └── SortSelect.tsx                   # shared sort control (no relevance option) — reused as-is by home
 │   ├── categories/
@@ -61,10 +59,17 @@ src/
 │   ├── StoreProvider.tsx          # "use client" boundary wrapping <Provider>, mounted in layout.tsx
 │   └── hooks.ts                    # typed useAppDispatch/useAppSelector/useAppStore
 └── components/
-    └── layout/                    # Issue #122 — cross-route chrome, not feature-owned
-        ├── Header.tsx              # logo + static /search link, translated from mock-ui/buyer-app/
-        ├── Footer.tsx              # brand/links/social/payment columns, translated from mock-ui/buyer-app/
-        └── AppShell.tsx            # composes Header + {children} + Footer, mounted in layout.tsx
+    ├── layout/                    # Issue #122/#123 — cross-route chrome, not feature-owned
+    │   ├── Header.tsx              # logo + static /search link, translated from mock-ui/buyer-app/
+    │   ├── Footer.tsx              # brand/links/social/payment columns, translated from mock-ui/buyer-app/
+    │   ├── AppShell.tsx            # composes Header + {children} + Footer, mounted in layout.tsx
+    │   └── PageContainer.tsx        # Issue #123 — the `mx-auto max-w-7xl ...` page-shell <main> wrapper, reused by every screen-composition feature
+    └── ui/                        # Issue #123 — generic, feature-agnostic primitives, promoted only once reused by 2+ features
+        ├── PriceDisplay.tsx         # price+MRP+discount-badge — reused by products/ProductCard, category/CategoryProductCard, productDetail/ProductDetailContent
+        ├── NotFoundState.tsx         # message-driven "doesn't exist" card + back-to-home link — supersedes productDetail/ProductNotFound + category/CategoryNotFound
+        ├── Checkbox.tsx               # label-wrapped checkbox — reused by category/CategoryFilterRail + search/SearchFilterRail
+        ├── PriceRangeInput.tsx         # min/max price inputs incl. local state + blur/Enter commit — same two filter rails
+        └── SkeletonBox.tsx              # `animate-pulse bg-neutral-100` shimmer leaf, sizing/rounding via className — reused by all 3 skeleton components
 ```
 
 See `AGENTS.md` for the full app/ vs features/ vs store/ convention.
@@ -84,9 +89,10 @@ See `AGENTS.md` for the full app/ vs features/ vs store/ convention.
 - `src/app/search/page.tsx` (Issue #74 / M2.17) is the second dynamic-ish route (technically static path, dynamic query) — `searchParams` is a `Promise<{q?: string}>` in this Next version, `await`ed the same way `category/[slug]/page.tsx` awaits `params`; the route stays a thin async Server Component per the "app/ is routing only" convention.
 - `src/features/productDetail/` + `src/app/products/[slug]/page.tsx` (Issue #75 / M2.18, `FR-CAT-056`/`059`/`063`/`064`/`084`) is the third dynamic route, using the same `Promise<{slug}>` pattern as category's. `productsApi.getProductBySlug` (`src/features/products/api.ts`) hits `GET /api/products/:slug`; a `PRODUCT_NOT_FOUND` or `INVALID_SLUG` `error.code` renders `ProductNotFound`, any other error renders a generic retry state (mirroring `ProductListError`'s copy/shape inline, since a not-found page has no list to paginate/retry against in the same way). Per `FR-CAT-064`, selecting a variant never refetches: `VariantSelector` tracks `selectedAttributes` (one value per attribute axis, e.g. `{Storage: "256GB"}`) as component state, and `ProductDetailContent`'s `pickVariant()` resolves the matching entry in the already-cached response's `variants[]` array on every selection change — an exact-match-across-every-selected-axis variant when one exists, else the first variant sharing the most recently changed axis value, so the buy box always has something to display. The initial selection seeds from `defaultVariantId` (present only when at least one active variant exists, per `#35`'s `selectDefaultVariant()`), falling back to the first variant when the response has variants but no default id — a state that can't actually occur given backend's own invariants, kept only as a defensive fallback so `pickVariant()` never receives an empty selection with variants present. A variant with no images of its own already falls back to the parent's images server-side (`#35`'s `toPublicVariant()`); `ProductGallery` doesn't repeat that fallback client-side.
 - **Known limitation**: variant-attribute and filterable-spec-field filter _controls_ (e.g. "Colour", "RAM") shown in `mock-ui/buyer-app/category.html` are **not implemented**. `cardSpecifications` still renders correctly on each category row card (that data legitimately arrives per-product on every list response) — only the filter _controls_ for these two facets are cut. Verified directly: `categorySpecifications`/`categoryVariants` backend modules are genuinely admin-only (mounted only under the `X-Admin-Key`-gated `adminRouter`), so no buyer endpoint exposes a category's filterable field types, option lists, numeric bounds, or variant-axis/color-hex data. A real fix needs a new buyer-facing backend endpoint (e.g. `GET /api/categories/:slug/filters`) — tracked as a deliberate follow-up, not a silent gap.
-- **Product card navigation** (Issue #120): `ProductCard.tsx` and `CategoryProductCard.tsx` never had any navigation wired up — both rendered a plain `<article>` with no `<Link>`/`onClick`, matching `mock-ui/`'s own static (non-interactive) wireframes exactly, confirmed via `git log --follow` to be a genuine gap since each component's one and only commit, not a regression. Both now wrap their existing markup in a `next/link` `<Link href={`/products/${product.slug}`}>` — the whole card is the clickable region — reusing the same `next/link` pattern already established by `CategoryBreadcrumb`/`ProductNotFound`/`CategoryNotFound`. `PublicProductListItem.slug` already carried the needed data; no type or fetching changes.
+- **Product card navigation** (Issue #120): `ProductCard.tsx` and `CategoryProductCard.tsx` never had any navigation wired up — both rendered a plain `<article>` with no `<Link>`/`onClick`, matching `mock-ui/`'s own static (non-interactive) wireframes exactly, confirmed via `git log --follow` to be a genuine gap since each component's one and only commit, not a regression. Both now wrap their existing markup in a `next/link` `<Link href={`/products/${product.slug}`}>` — the whole card is the clickable region — reusing the same `next/link` pattern already established by `CategoryBreadcrumb`/`components/ui/NotFoundState`. `PublicProductListItem.slug` already carried the needed data; no type or fetching changes.
 - **Fonts and loading state** (Issue #119): `src/app/globals.css` previously pulled Inter/Plus Jakarta Sans via a render-blocking `@import url("https://fonts.googleapis.com/...")` — a synchronous cross-origin fetch blocking first paint, identified as the main fixable contributor to a reported ~10s initial load. `layout.tsx` now loads both via `next/font/google` (self-hosted, `display: "swap"`, `variable: "--font-inter"`/`"--font-jakarta"` applied to `<html>`); `globals.css` gained a second `@theme inline { ... }` block (separate from the color-token `@theme` block) mapping `--font-sans`/`--font-display` to `var(--font-inter)`/`var(--font-jakarta)` — `@theme inline`, not plain `@theme`, is required because the value references a runtime CSS variable rather than a static literal. Every existing `font-sans`/`font-display` Tailwind utility class keeps working unchanged. A new root `src/app/loading.tsx` (a plain Server Component, no `"use client"`) is the first `loading.js`-convention special file in the app — it auto-wraps every route below it (none of the four routes have their own nested `layout.tsx`) in a `<Suspense>` boundary, rendering a brand-token CSS spinner. It's an explicit placeholder for a future real branded GIF asset, not a finished design. **Deliberately out of scope**: converting the app's 100%-client-side RTK Query data-fetching pattern (every screen-composition feature is `"use client"` and fetches on mount) to server-side/RSC data fetching — the highest-impact fix for the reported load time, but a major re-architecture of the pattern set by Issues #71–75; left for a future issue.
 - **Header/Footer layout shell** (Issue #122): `src/components/layout/` is a new top-level directory, peer to `app/`/`features/`/`store/` — the first place for cross-route chrome rather than feature-owned code. `Header.tsx`/`Footer.tsx` are translated directly from `mock-ui/buyer-app/`'s own header/footer, confirmed byte-identical across all 4 page mocks (`home.html`/`category.html`/`search.html`/`product-detail.html`) via a direct diff, so there's exactly one shell to build, not per-route variants; `AppShell.tsx` composes `<Header/>{children}<Footer/>` and is mounted once in `src/app/layout.tsx`. All three stay Server Components (no `"use client"`) — static markup plus `next/link`, rendered from the already-Server-Component `layout.tsx`, so `StoreProvider` remains the app's one deliberate client boundary. The header's "Search products…" box is a static link to `/search`, not a functional input (confirmed via grep: no search-input feature exists anywhere in buyer-app yet — a separate, focused issue); the mock's Cart icon (hardcoded badge) and "All Categories ▾" dropdown are omitted outright, since neither has a real feature or route behind it (no cart in v0.2; no all-categories listing route, only `/category/[slug]`). Every other mock link with no real destination (footer's Customer Service links, social icons, Privacy Policy/Terms & Conditions) renders as a plain `<a href="#">`, not `next/link` — `next/link` is for real internal routes with prefetching, and these are wireframe placeholders the mock itself already treats as non-functional, not new behavior being invented. No new test file — matches the established precedent that layout-tier chrome (`layout.tsx` itself, `CategoryBreadcrumb`) has no dedicated unit tests; the existing screen tests render feature content directly via `<Provider>`, never through the real `layout.tsx`, so they're unaffected.
+- **Shared UI primitives** (Issue #123): `src/components/ui/` is a new sibling to `components/layout/` — genuinely feature-agnostic primitives extracted after a direct-code survey found 6 pieces of markup/logic duplicated across 2+ features (the bar this issue sets; nothing was moved speculatively). `PriceDisplay` (price/MRP/discount-badge, `size`+`stacked` props covering `ProductCard`'s row layout, `CategoryProductCard`'s stacked price box, and `ProductDetailContent`'s larger buy-box price) takes pre-formatted `price`/`mrp` **strings** rather than raw numbers specifically so `components/ui/` never imports from `src/features/*` — callers keep calling `features/products/money.ts`'s `formatPrice()` themselves, same as before. `NotFoundState` (message-driven) supersedes the byte-identical `productDetail/ProductNotFound.tsx`/`category/CategoryNotFound.tsx`, both deleted. `Checkbox` and `PriceRangeInput` (the latter owns the min/max local-input-state + blur/Enter commit logic, not just markup) replace duplicated code in `CategoryFilterRail`/`SearchFilterRail`. `SkeletonBox` replaces the repeated shimmer leaf across all 3 skeleton components, taking sizing/rounding via `className` since those vary per skeleton. `components/layout/PageContainer.tsx` replaces the repeated `mx-auto max-w-7xl ...` `<main>` wrapper across all 8 return sites in Home/Search/Category/ProductDetail — list screens pass `className="flex flex-col"`, ProductDetail doesn't (matching its pre-existing plain wrapper). One real bug fixed along the way: `ProductDetailContent`'s generic-error branch had hand-rolled a byte-for-byte copy of `ProductListError`'s markup with different copy ("Something went wrong loading **this product**." vs. "...loading **products**.") — `ProductListError` gained an optional `message` prop (default unchanged) so the correct per-context copy survives while the duplicate markup doesn't.
 
 ## Current file tree
 
@@ -113,13 +119,16 @@ buyer-app/
 └── src/
     ├── app/{layout.tsx,loading.tsx,page.tsx,globals.css,category/[slug]/page.tsx,search/page.tsx,products/[slug]/page.tsx}
     ├── features/home/HomeContent.tsx
-    ├── features/category/{CategoryContent,CategoryProductCard,CategoryProductList,CategoryListSkeleton,CategoryFilterRail,CategoryBreadcrumb,CategoryNotFound}.tsx
+    ├── features/category/{CategoryContent,CategoryProductCard,CategoryProductList,CategoryListSkeleton,CategoryFilterRail,CategoryBreadcrumb}.tsx
     ├── features/search/{SearchContent,SearchFilterRail,SearchSortSelect,SearchEmpty}.tsx
-    ├── features/productDetail/{ProductDetailContent,ProductGallery,VariantSelector,ProductSpecifications,AvailabilityBadge,ProductNotFound,ProductDetailSkeleton}.tsx
+    ├── features/productDetail/{ProductDetailContent,ProductGallery,VariantSelector,ProductSpecifications,AvailabilityBadge,ProductDetailSkeleton}.tsx
     ├── features/products/{types,api,money,ProductCard,ProductGrid,ProductListSkeleton,ProductListEmpty,ProductListError,Pagination,SortSelect}.ts(x)
     ├── features/categories/{types,api}.ts
     ├── features/brands/{types,api}.ts
-    └── store/{env.ts,api.ts,store.ts,StoreProvider.tsx,hooks.ts}
+    ├── store/{env.ts,api.ts,store.ts,StoreProvider.tsx,hooks.ts}
+    └── components/
+        ├── layout/{Header,Footer,AppShell,PageContainer}.tsx
+        └── ui/{PriceDisplay,NotFoundState,Checkbox,PriceRangeInput,SkeletonBox}.tsx
 ```
 
 ## Config

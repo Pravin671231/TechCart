@@ -1,7 +1,13 @@
-export function ProductListError({ onRetry }: { onRetry: () => void }) {
+export function ProductListError({
+  onRetry,
+  message = "Something went wrong loading products.",
+}: {
+  onRetry: () => void;
+  message?: string;
+}) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 p-12 text-center text-sm text-neutral-500">
-      <p>Something went wrong loading products.</p>
+      <p>{message}</p>
       <button
         type="button"
         onClick={onRetry}
