@@ -61,7 +61,7 @@ Solo/small-team developer(s) building and maintaining the system; this document 
 ### 1.5 References
 
 - Technology Blueprint (stack, versions, architecture decisions): published artifact, "E-Commerce Platform — Technology Blueprint" (2026-07-21).
-- `docs/milestone.md` — milestone-level roadmap (M0–M10) this document's Feature Index and Development Workflow (§5) execute against.
+- `docs/milestone.md` — milestone-level roadmap (M0–M11) this document's Feature Index and Development Workflow (§5) execute against.
 
 ---
 
@@ -196,12 +196,13 @@ A feature earns a row once its spec is drafted (step 2 of the workflow above); t
 | --------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
 | Product Catalog | [v0.2](features/0.2-product-catalog.md) — `FR-CAT-001`–`100` | [M2 - Product Catalog](https://github.com/Pravin671231/TechCart/milestone/3) | [#25](https://github.com/Pravin671231/TechCart/issues/25)–[#36](https://github.com/Pravin671231/TechCart/issues/36), [#102](https://github.com/Pravin671231/TechCart/issues/102) | Issues open |
 | Authentication  | [v0.3](features/0.3-authentication.md) — `FR-AUTH-001`–`045` | pending                                                                       | pending                                                                                                              | Spec drafted |
-| Shopping Cart   | [v0.4](features/0.4-shopping-cart.md) — `FR-CART-001`–`025`  | pending                                                                       | pending                                                                                                              | Spec drafted |
+| Shopping Cart   | [v0.4](features/0.4-shopping-cart.md) — `FR-CART-001`–`021`  | pending                                                                       | pending                                                                                                              | Spec drafted |
 | Orders          | [v0.5](features/0.5-orders.md) — `FR-ORD-001`–`033`          | pending                                                                       | pending                                                                                                              | Spec drafted |
 | Payments        | [v0.6](features/0.6-payments.md) — `FR-PAY-001`–`028`        | pending                                                                       | pending                                                                                                              | Spec drafted |
 | Dashboard       | [v0.7](features/0.7-dashboard.md) — `FR-DASH-001`–`024`      | pending                                                                       | pending                                                                                                              | Spec drafted |
 | Backend NFRs    | [v0.8](features/0.8-backend-nfr.md) — `FR-NFR-BE-001`–`028`  | pending                                                                       | pending                                                                                                              | Spec drafted |
 | Frontend NFRs   | [v0.9](features/0.9-frontend-nfr.md) — `FR-NFR-FE-001`–`026` | pending                                                                       | pending                                                                                                              | Spec drafted |
+| Inventory Management | [v0.10](features/0.10-inventory-management.md) — `FR-INV-001`–`012` | pending                                                                | pending                                                                                                              | Spec drafted |
 | Inventory Management | [v0.10](features/0.10-inventory-management.md) — `FR-INV-001`–`012` | pending                                                                  | pending                                                                                                              | Spec drafted |
 
 ---
