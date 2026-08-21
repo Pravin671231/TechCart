@@ -1,11 +1,11 @@
 # Issue Drafts
 
 **Project:** TechCart
-**Status:** M0 (Foundation), M1 (CI Pipeline), and M2 (Product Catalog) are all opened as real GitHub Issues — #1–#10, and #25–#36/#41/#71–#82/#102/#104 under [Milestone #3](https://github.com/Pravin671231/TechCart/milestone/3) respectively; M2 is Complete and tagged `v0.2.0`. M3–M11 (Authentication through Launch Readiness) are also now all opened as real GitHub Issues — #139–#197 across [Milestones #4–#12](https://github.com/Pravin671231/TechCart/milestones?state=open) — so every milestone's draft text has been removed from this file; see `docs/milestone.md` and `docs/srs/SRS.md` §6 for their roadmap-level and traceability records. The **Backlog** below holds only the M2 addendum, kept for reference following `M2.13`'s own precedent — every other milestone drafted here so far has had its section removed once opened.
+**Status:** M0 (Foundation), M1 (CI Pipeline), and M2 (Product Catalog) are all opened as real GitHub Issues — #1–#10, and #25–#36/#41/#71–#82/#102/#104 under [Milestone #3](https://github.com/Pravin671231/TechCart/milestone/3) respectively; M2 is Complete and tagged `v0.2.0`. M3–M11 (Authentication through Launch Readiness) are also now all opened as real GitHub Issues — #139–#197 across [Milestones #4–#12](https://github.com/Pravin671231/TechCart/milestones?state=open) — so every milestone's draft text has been removed from this file; see `docs/milestone.md` and `docs/srs/SRS.md` §6 for their roadmap-level and traceability records. The **Backlog** below holds the M2 addendum plus the cross-cutting `mock-ui` end-to-end wireframes issue (opened as [Issue #200](https://github.com/Pravin671231/TechCart/issues/200), no milestone) — both kept for reference following `M2.13`'s own precedent, since every other milestone drafted here so far has had its section removed once opened.
 
 This is where issues get drafted — full context, a build-order task checklist, and test criteria — before they're opened as real GitHub Issues. It sits between [docs/milestone.md](milestone.md) (which milestone/goal) and GitHub itself (which is the actual tracker once an issue is opened): draft it here, then `gh issue create` it, then work it via the branch/PR flow in [docs/srs/SRS.md](srs/SRS.md) §5. Once a milestone's issues are opened on GitHub, its draft section is removed from here — most recently for M3–M11 as of Issues #139–#197.
 
-**Scope of this file right now:** just the M2 addendum below. Every SRS feature version through v0.10 (Inventory Management) has its issues opened on GitHub; the next new Backlog section here will be v1.1 (Final Consolidated SRS / Launch Readiness's `FR`-numbered work, if any), once that version is itself spec-drafted per `SRS.md` §7's rule that v1.1 can't be honestly written until M3–M10 are actually implemented.
+**Scope of this file right now:** the M2 addendum and the `mock-ui` end-to-end issue below, both kept for reference rather than removed. Every SRS feature version through v0.10 (Inventory Management) has its issues opened on GitHub; the next new Backlog section here will be v1.1 (Final Consolidated SRS / Launch Readiness's `FR`-numbered work, if any), once that version is itself spec-drafted per `SRS.md` §7's rule that v1.1 can't be honestly written until M3–M10 are actually implemented.
 
 **Numbering:** within a drafted-but-unopened milestone, `M<x>.1`, `M<x>.2`, etc. are draft sequence numbers, not GitHub issue numbers. When an issue is actually opened (`gh issue create`), use the real assigned number for its branch: `feature/<real-issue-number>-<scope>`.
 
@@ -425,7 +425,7 @@ Cross-cutting, not tied to a single milestone — mirrors how `mock-ui/` itself 
 #### mock-ui.1 — Fix v0.2 staleness, extend end-to-end through Dashboard + Inventory Management
 
 **Milestone:** none (cross-cutting)
-**Suggested branch:** feature/<TBD>-mock-ui-end-to-end
+**Suggested branch:** feature/200-mock-ui-end-to-end
 **Labels:** documentation
 
 **Context**
