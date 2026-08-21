@@ -12,7 +12,7 @@
 | Version | Date       | Scope                                     | Status       |
 | ------- | ---------- | ----------------------------------------- | ------------ |
 | 0.1     | 2026-07-21 | Initial scope, structure, feature listing | Complete     |
-| 0.2     | 2026-07-28 | Product Catalog                           | Spec drafted |
+| 0.2     | 2026-07-28 | Product Catalog                           | Complete     |
 | 0.3     | 2026-08-20 | Authentication                            | Spec drafted |
 | 0.4     | 2026-08-21 | Shopping Cart                             | Spec drafted |
 | 0.5     | 2026-08-21 | Orders                                    | Spec drafted |
@@ -121,7 +121,7 @@ See the Technology Blueprint (§1.5). Summary: Next.js 16 (Buyer), React 19 + Vi
 
 | #   | Feature                | One-line description                                                                  | Target SRS Version | Status       |
 | --- | ---------------------- | ------------------------------------------------------------------------------------- | ------------------ | ------------ |
-| 1   | Product Catalog        | Product/category browsing, search, filtering, admin CRUD                              | v0.2               | Spec drafted |
+| 1   | Product Catalog        | Product/category browsing, search, filtering, admin CRUD                              | v0.2               | Complete     |
 | 2   | Authentication         | Buyer + admin auth, RBAC, session management                                          | v0.3               | Spec drafted |
 | 3   | Shopping Cart          | Guest + logged-in cart, persistence, sync                                             | v0.4               | Spec drafted |
 | 4   | Orders                 | Checkout capture, order lifecycle, history                                            | v0.5               | Spec drafted |
@@ -194,7 +194,7 @@ A feature earns a row once its spec is drafted (step 2 of the workflow above); t
 
 | Feature         | SRS Version                                                  | Milestone                                                                    | Issue(s)                                                                                                            | Status      |
 | --------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
-| Product Catalog | [v0.2](features/0.2-product-catalog.md) — `FR-CAT-001`–`100` | [M2 - Product Catalog](https://github.com/Pravin671231/TechCart/milestone/3) | [#25](https://github.com/Pravin671231/TechCart/issues/25)–[#36](https://github.com/Pravin671231/TechCart/issues/36), [#102](https://github.com/Pravin671231/TechCart/issues/102) | Issues open |
+| Product Catalog | [v0.2](features/0.2-product-catalog.md) — `FR-CAT-001`–`100` | [M2 - Product Catalog](https://github.com/Pravin671231/TechCart/milestone/3) | [#25](https://github.com/Pravin671231/TechCart/issues/25)–[#36](https://github.com/Pravin671231/TechCart/issues/36), [#41](https://github.com/Pravin671231/TechCart/issues/41), [#71](https://github.com/Pravin671231/TechCart/issues/71)–[#82](https://github.com/Pravin671231/TechCart/issues/82), [#102](https://github.com/Pravin671231/TechCart/issues/102), [#104](https://github.com/Pravin671231/TechCart/issues/104) | Complete (`v0.2.0`) |
 | Authentication  | [v0.3](features/0.3-authentication.md) — `FR-AUTH-001`–`045` | pending                                                                       | pending                                                                                                              | Spec drafted |
 | Shopping Cart   | [v0.4](features/0.4-shopping-cart.md) — `FR-CART-001`–`021`  | pending                                                                       | pending                                                                                                              | Spec drafted |
 | Orders          | [v0.5](features/0.5-orders.md) — `FR-ORD-001`–`033`          | pending                                                                       | pending                                                                                                              | Spec drafted |
