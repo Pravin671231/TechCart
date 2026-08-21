@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { NotFoundState } from "@/components/ui/NotFoundState";
+import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { useGetProductBySlugQuery } from "@/features/products/api";
 import { formatPrice } from "@/features/products/money";
+import { ProductListError } from "@/features/products/ProductListError";
 import type { PublicProductVariant } from "@/features/products/types";
 import type { NormalizedApiError } from "@/store/api";
 import { ProductDetailSkeleton } from "./ProductDetailSkeleton";
 import { ProductGallery } from "./ProductGallery";
-import { ProductNotFound } from "./ProductNotFound";
 import { ProductSpecifications } from "./ProductSpecifications";
 import { VariantSelector } from "./VariantSelector";
 
@@ -55,9 +58,9 @@ export function ProductDetailContent({ slug }: { slug: string }) {
 
   if (isLoading) {
     return (
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
+      <PageContainer>
         <ProductDetailSkeleton />
-      </main>
+      </PageContainer>
     );
   }
 
@@ -65,22 +68,13 @@ export function ProductDetailContent({ slug }: { slug: string }) {
     const code = (error as NormalizedApiError | undefined)?.code;
     const isNotFound = code === "PRODUCT_NOT_FOUND" || code === "INVALID_SLUG";
     return (
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
+      <PageContainer>
         {isNotFound ? (
-          <ProductNotFound />
+          <NotFoundState message="This product doesn't exist or is no longer available." />
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-12 text-center text-sm text-neutral-500">
-            <p>Something went wrong loading this product.</p>
-            <button
-              type="button"
-              onClick={refetch}
-              className="rounded-md border border-neutral-300 px-3 py-1.5 font-medium text-neutral-700 hover:bg-neutral-50"
-            >
-              Retry
-            </button>
-          </div>
+          <ProductListError onRetry={refetch} message="Something went wrong loading this product." />
         )}
-      </main>
+      </PageContainer>
     );
   }
 
@@ -97,7 +91,7 @@ export function ProductDetailContent({ slug }: { slug: string }) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
+    <PageContainer>
       <nav className="mb-6 text-sm text-neutral-500">
         <Link className="hover:text-primary-600" href="/">
           Home
@@ -128,21 +122,12 @@ export function ProductDetailContent({ slug }: { slug: string }) {
           </div>
 
           <div>
-            <p className="flex flex-wrap items-baseline gap-2">
-              <span className="text-2xl font-bold text-neutral-900">
-                {formatPrice(displayed.sellingPrice)}
-              </span>
-              {displayed.discount > 0 && (
-                <>
-                  <span className="text-sm text-neutral-400 line-through">
-                    {formatPrice(displayed.mrp)}
-                  </span>
-                  <span className="rounded-md bg-accent-100 px-2 py-0.5 text-xs font-medium text-accent-700">
-                    {displayed.discount}% off
-                  </span>
-                </>
-              )}
-            </p>
+            <PriceDisplay
+              price={formatPrice(displayed.sellingPrice)}
+              mrp={formatPrice(displayed.mrp)}
+              discount={displayed.discount}
+              size="lg"
+            />
           </div>
 
           <p>
@@ -172,6 +157,6 @@ export function ProductDetailContent({ slug }: { slug: string }) {
       </section>
 
       <ProductSpecifications groups={product.specifications} />
-    </main>
+    </PageContainer>
   );
 }

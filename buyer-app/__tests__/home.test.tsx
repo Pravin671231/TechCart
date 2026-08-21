@@ -71,6 +71,28 @@ describe("Home", () => {
     );
   });
 
+  it("renders the discount badge and strikethrough MRP for a product on sale", async () => {
+    server.use(
+      http.get(`${API_URL}/api/products`, () =>
+        HttpResponse.json(
+          listBody([makeProduct({ mrp: 49900, discount: 20, sellingPrice: 39920 })]),
+        ),
+      ),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { HomeContent } = await import("@/features/home/HomeContent");
+    render(
+      <Provider store={makeStore()}>
+        <HomeContent />
+      </Provider>,
+    );
+
+    expect(await screen.findByText("₹39,920")).toBeInTheDocument();
+    expect(screen.getByText("₹49,900")).toBeInTheDocument();
+    expect(screen.getByText("20% off")).toBeInTheDocument();
+  });
+
   it("renders the empty state on a successful empty response", async () => {
     server.use(http.get(`${API_URL}/api/products`, () => HttpResponse.json(listBody([]))));
 

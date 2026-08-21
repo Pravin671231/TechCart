@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { useGetProductsQuery } from "@/features/products/api";
 import type { ProductSort } from "@/features/products/types";
 import { ProductGrid } from "@/features/products/ProductGrid";
@@ -22,7 +23,7 @@ export function HomeContent() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6">
+    <PageContainer className="flex flex-col">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 pb-3">
         <p className="text-sm text-neutral-500">
           {data ? describeRange(data.pagination) : "Loading products…"}
@@ -43,6 +44,6 @@ export function HomeContent() {
       {data && data.pagination.totalPages > 1 && (
         <Pagination pagination={data.pagination} onPageChange={setPage} />
       )}
-    </main>
+    </PageContainer>
   );
 }

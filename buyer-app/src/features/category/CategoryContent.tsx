@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { NotFoundState } from "@/components/ui/NotFoundState";
 import { useGetCategoryProductsQuery } from "@/features/products/api";
 import type { CategoryProductFilters, ProductSort } from "@/features/products/types";
 import { ProductListEmpty } from "@/features/products/ProductListEmpty";
@@ -13,7 +15,6 @@ import type { NormalizedApiError } from "@/store/api";
 import { CategoryBreadcrumb, resolveBreadcrumb } from "./CategoryBreadcrumb";
 import { CategoryFilterRail } from "./CategoryFilterRail";
 import { CategoryListSkeleton } from "./CategoryListSkeleton";
-import { CategoryNotFound } from "./CategoryNotFound";
 import { CategoryProductList } from "./CategoryProductList";
 
 export function CategoryContent({ slug }: { slug: string }) {
@@ -45,16 +46,16 @@ export function CategoryContent({ slug }: { slug: string }) {
 
   if (isNotFound) {
     return (
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6">
-        <CategoryNotFound />
-      </main>
+      <PageContainer className="flex flex-col">
+        <NotFoundState message="This category doesn't exist or is no longer available." />
+      </PageContainer>
     );
   }
 
   const breadcrumb = resolveBreadcrumb(categories, slug);
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6">
+    <PageContainer className="flex flex-col">
       <CategoryBreadcrumb breadcrumb={breadcrumb} />
       <h1 className="mb-1 text-xl font-semibold tracking-tight text-neutral-900">
         {breadcrumb?.current.name ?? slug}
@@ -84,6 +85,6 @@ export function CategoryContent({ slug }: { slug: string }) {
           )}
         </section>
       </div>
-    </main>
+    </PageContainer>
   );
 }
