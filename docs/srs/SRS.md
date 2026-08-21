@@ -13,14 +13,15 @@
 | ------- | ---------- | ----------------------------------------- | ------------ |
 | 0.1     | 2026-07-21 | Initial scope, structure, feature listing | Complete     |
 | 0.2     | 2026-07-28 | Product Catalog                           | Spec drafted |
-| 0.3     | —          | Authentication                            | Planned      |
-| 0.4     | —          | Shopping Cart                             | Planned      |
-| 0.5     | —          | Orders                                    | Planned      |
-| 0.6     | —          | Payments                                  | Planned      |
-| 0.7     | —          | Dashboard                                 | Planned      |
-| 0.8     | —          | Backend Non-Functional Requirements       | Planned      |
-| 0.9     | —          | Frontend Non-Functional Requirements      | Planned      |
-| 1.0     | —          | Final Consolidated System SRS             | Planned      |
+| 0.3     | 2026-08-20 | Authentication                            | Spec drafted |
+| 0.4     | 2026-08-21 | Shopping Cart                             | Spec drafted |
+| 0.5     | 2026-08-21 | Orders                                    | Spec drafted |
+| 0.6     | 2026-08-21 | Payments                                  | Spec drafted |
+| 0.7     | 2026-08-21 | Dashboard                                 | Spec drafted |
+| 0.8     | 2026-08-21 | Backend Non-Functional Requirements       | Spec drafted |
+| 0.9     | 2026-08-21 | Frontend Non-Functional Requirements      | Spec drafted |
+| 0.10    | 2026-08-21 | Inventory Management                      | Spec drafted |
+| 1.1     | —          | Final Consolidated System SRS             | Planned      |
 
 Each row above becomes "Complete" only once its feature has been specified, designed, implemented, and validated — see [Development Workflow](#5-development-workflow).
 
@@ -121,14 +122,15 @@ See the Technology Blueprint (§1.5). Summary: Next.js 16 (Buyer), React 19 + Vi
 | #   | Feature                | One-line description                                                                  | Target SRS Version | Status       |
 | --- | ---------------------- | ------------------------------------------------------------------------------------- | ------------------ | ------------ |
 | 1   | Product Catalog        | Product/category browsing, search, filtering, admin CRUD                              | v0.2               | Spec drafted |
-| 2   | Authentication         | Buyer + admin auth, RBAC, session management                                          | v0.3               | Not started  |
-| 3   | Shopping Cart          | Guest + logged-in cart, persistence, sync                                             | v0.4               | Not started  |
-| 4   | Orders                 | Checkout capture, order lifecycle, history                                            | v0.5               | Not started  |
-| 5   | Payments               | Razorpay integration, verification, refunds                                           | v0.6               | Not started  |
-| 6   | Dashboard              | Admin analytics + buyer account dashboard                                             | v0.7               | Not started  |
-| 7   | Backend NFRs           | Performance, scalability, security, DB, API, logging, error handling                  | v0.8               | Not started  |
-| 8   | Frontend NFRs          | UI performance, responsiveness, browser support, accessibility, UX, frontend security | v0.9               | Not started  |
-| 9   | Final Consolidated SRS | Full system document                                                                  | v1.0               | Not started  |
+| 2   | Authentication         | Buyer + admin auth, RBAC, session management                                          | v0.3               | Spec drafted |
+| 3   | Shopping Cart          | Guest + logged-in cart, persistence, sync                                             | v0.4               | Spec drafted |
+| 4   | Orders                 | Checkout capture, order lifecycle, history                                            | v0.5               | Spec drafted |
+| 5   | Payments               | Razorpay integration, verification, refunds                                           | v0.6               | Spec drafted |
+| 6   | Dashboard              | Admin analytics + buyer account dashboard                                             | v0.7               | Spec drafted |
+| 7   | Backend NFRs           | Performance, scalability, security, DB, API, logging, error handling                  | v0.8               | Spec drafted |
+| 8   | Frontend NFRs          | UI performance, responsiveness, browser support, accessibility, UX, frontend security | v0.9               | Spec drafted |
+| 9   | Inventory Management   | Per-warehouse stock tracking, admin inventory table, cart-driven stock allocation     | v0.10               | Spec drafted |
+| 10  | Final Consolidated SRS | Full system document                                                                  | v1.1                | Not started  |
 
 Detailed per-feature SRS documents will live alongside this file as they're written:
 
@@ -143,7 +145,8 @@ docs/srs/
     ├── 0.6-payments.md
     ├── 0.7-dashboard.md
     ├── 0.8-backend-nfr.md
-    └── 0.9-frontend-nfr.md
+    ├── 0.9-frontend-nfr.md
+    └── 0.10-inventory-management.md
 ```
 
 ---
@@ -163,7 +166,7 @@ Every feature document under `docs/srs/features/` follows this structure, so v0.
 9. **Dependencies** — other features or external services this one relies on.
 10. **Open Questions** — unresolved decisions, if any, at time of writing.
 
-Feature codes used in requirement IDs: `CAT`, `AUTH`, `CART`, `ORD`, `PAY`, `DASH`, `NFR-BE`, `NFR-FE`.
+Feature codes used in requirement IDs: `CAT`, `AUTH`, `CART`, `ORD`, `PAY`, `DASH`, `NFR-BE`, `NFR-FE`, `INV`.
 
 ---
 
@@ -192,6 +195,14 @@ A feature earns a row once its spec is drafted (step 2 of the workflow above); t
 | Feature         | SRS Version                                                  | Milestone                                                                    | Issue(s)                                                                                                            | Status      |
 | --------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
 | Product Catalog | [v0.2](features/0.2-product-catalog.md) — `FR-CAT-001`–`100` | [M2 - Product Catalog](https://github.com/Pravin671231/TechCart/milestone/3) | [#25](https://github.com/Pravin671231/TechCart/issues/25)–[#36](https://github.com/Pravin671231/TechCart/issues/36), [#102](https://github.com/Pravin671231/TechCart/issues/102) | Issues open |
+| Authentication  | [v0.3](features/0.3-authentication.md) — `FR-AUTH-001`–`045` | pending                                                                       | pending                                                                                                              | Spec drafted |
+| Shopping Cart   | [v0.4](features/0.4-shopping-cart.md) — `FR-CART-001`–`025`  | pending                                                                       | pending                                                                                                              | Spec drafted |
+| Orders          | [v0.5](features/0.5-orders.md) — `FR-ORD-001`–`033`          | pending                                                                       | pending                                                                                                              | Spec drafted |
+| Payments        | [v0.6](features/0.6-payments.md) — `FR-PAY-001`–`028`        | pending                                                                       | pending                                                                                                              | Spec drafted |
+| Dashboard       | [v0.7](features/0.7-dashboard.md) — `FR-DASH-001`–`024`      | pending                                                                       | pending                                                                                                              | Spec drafted |
+| Backend NFRs    | [v0.8](features/0.8-backend-nfr.md) — `FR-NFR-BE-001`–`028`  | pending                                                                       | pending                                                                                                              | Spec drafted |
+| Frontend NFRs   | [v0.9](features/0.9-frontend-nfr.md) — `FR-NFR-FE-001`–`026` | pending                                                                       | pending                                                                                                              | Spec drafted |
+| Inventory Management | [v0.10](features/0.10-inventory-management.md) — `FR-INV-001`–`012` | pending                                                                  | pending                                                                                                              | Spec drafted |
 
 ---
 
