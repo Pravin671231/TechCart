@@ -6,6 +6,7 @@ import { mongodbAdapter } from "@better-auth/mongo-adapter";
 import { emailOTP, oneTap } from "better-auth/plugins";
 import { env } from "@/config/env";
 import { sendOtpEmail } from "@/externalService/resend";
+import { adminAuthPlugin } from "@/lib/adminAuthPlugin";
 
 const ADMIN_EMAIL_ON_BUYER_ROUTE_ERROR = {
   code: "GOOGLE_ACCOUNT_IS_ADMIN",
@@ -69,6 +70,23 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   trustedOrigins: env.CORS_ORIGINS.split(",").map((origin) => origin.trim()),
+  // Enabled only so admin.ts's credential accounts hash/verify consistently
+  // through Better Auth's own password utilities — the built-in
+  // /sign-up/email self-registration endpoint this would otherwise expose
+  // is explicitly disabled: buyers never have a password (FR-AUTH-004) and
+  // admin accounts are provisioned server-side only (FR-AUTH-024), never by
+  // public self-signup.
+  emailAndPassword: {
+    enabled: true,
+    disableSignUp: true,
+  },
+  session: {
+    // FR-AUTH-016's 30-day rolling ceiling — Better Auth's own default is
+    // 7 days. httpOnly/sameSite=lax are already the defaults; `secure` is
+    // already production-conditional by default and deliberately left
+    // alone here (forcing it on would break local dev over plain http).
+    expiresIn: 60 * 60 * 24 * 30,
+  },
   user: {
     modelName: "users",
     additionalFields: {
@@ -96,6 +114,7 @@ export const auth = betterAuth({
       },
     }),
     oneTap(),
+    adminAuthPlugin(),
   ],
   hooks: {
     before: rejectAdminEmailOnReturningOtpSignIn,
