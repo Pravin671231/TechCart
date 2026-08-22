@@ -20,14 +20,6 @@ vi.mock("@better-auth/core/social-providers", async (importOriginal) => {
   };
 });
 
-vi.mock("@better-auth/core/oauth2", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@better-auth/core/oauth2")>();
-  return {
-    ...actual,
-    validateAuthorizationCode: vi.fn(),
-  };
-});
-
 vi.mock("@/externalService/resend", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
@@ -42,7 +34,6 @@ let mongod: MongoMemoryReplSet;
 let mongoose: typeof mongooseType;
 let app: Express;
 let socialProviders: typeof import("@better-auth/core/social-providers");
-let oauth2: typeof import("@better-auth/core/oauth2");
 
 beforeAll(async () => {
   // A single-node replica set, not a plain standalone server — auth.ts
@@ -64,7 +55,6 @@ beforeAll(async () => {
   app = (appModule as unknown as { default: Express }).default;
 
   socialProviders = await import("@better-auth/core/social-providers");
-  oauth2 = await import("@better-auth/core/oauth2");
 }, 60000);
 
 afterAll(async () => {
@@ -81,6 +71,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
 });
 
 async function insertAdminUser(email: string, role = "super-admin") {
@@ -143,16 +134,38 @@ describe("Buyer passwordless authentication", () => {
 
   describe("Google OAuth (sign-in/social + callback, mocked token exchange)", () => {
     it("creates a buyer account via the OAuth callback", async () => {
-      vi.mocked(oauth2.validateAuthorizationCode).mockResolvedValue({
-        idToken: fakeGoogleIdToken({
-          sub: "google-sub-oauth-1",
-          email: "oauth-buyer@example.com",
-          email_verified: true,
-          name: "OAuth Buyer",
+      // The Google provider's token-exchange call is buried in a
+      // non-exported internal file (@better-auth/core's own
+      // ../oauth2/validate-authorization-code.mjs, imported by relative
+      // path, not through the @better-auth/core/oauth2 package subpath) —
+      // there's no module specifier available to vi.mock() here. Stubbing
+      // fetch at the actual wire boundary (Google's real token endpoint)
+      // sidesteps that entirely and is the more robust seam anyway.
+      const realFetch = globalThis.fetch;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+          const url = typeof input === "string" ? input : input.toString();
+          if (url.startsWith("https://oauth2.googleapis.com/token")) {
+            return new Response(
+              JSON.stringify({
+                access_token: "fake-access-token",
+                id_token: fakeGoogleIdToken({
+                  sub: "google-sub-oauth-1",
+                  email: "oauth-buyer@example.com",
+                  email_verified: true,
+                  name: "OAuth Buyer",
+                }),
+                token_type: "Bearer",
+                expires_in: 3600,
+                scope: "openid email profile",
+              }),
+              { status: 200, headers: { "content-type": "application/json" } },
+            );
+          }
+          return realFetch(input, init);
         }),
-        accessToken: "fake-access-token",
-        tokenType: "Bearer",
-      });
+      );
 
       const agent = request.agent(app);
 

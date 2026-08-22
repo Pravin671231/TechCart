@@ -57,6 +57,14 @@ const rejectAdminEmailOnReturningOtpSignIn = createAuthMiddleware(async (ctx) =>
 export const auth = betterAuth({
   database: mongodbAdapter(mongoose.connection.db!, {
     client: mongoose.connection.getClient(),
+    // Passing `client` defaults this to true, but @better-auth/mongo-adapter
+    // 1.7.1 has a real transaction-lifecycle bug (confirmed against a real
+    // single-node replica set in CI): it throws "Cannot call abortTransaction
+    // after calling commitTransaction" from inside handleOAuthUserInfo. This
+    // issue's account-creation flows have no multi-document atomicity
+    // requirement that needs it, so it stays off rather than working around
+    // a third-party bug.
+    transaction: false,
   }),
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
