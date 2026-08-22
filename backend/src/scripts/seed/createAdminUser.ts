@@ -9,11 +9,14 @@
 // The password credential is created through Better Auth's own server-side
 // `auth.api.signUpEmail` rather than a raw-driver insert, since only Better
 // Auth knows its own password-hash format — hand-rolling that would risk a
-// hash the real sign-in flow can't verify against. `disableSignUp: true` in
-// auth.ts only blocks the public HTTP /sign-up/email route; calling the
-// server-side `auth.api.*` method directly is unaffected by that flag (per
-// this codebase's best-known reading of better-auth@1.7.1 — confirm once
-// dependencies are installed, see the NOTE in auth.ts).
+// hash the real sign-in flow can't verify against. `disableSignUp` was tried
+// in auth.ts first but rejects `auth.api.signUpEmail` too (confirmed against
+// a real CI run: "Email and password sign up is not enabled" even for this
+// server-side call, not just the public HTTP route) — so sign-up stays
+// enabled, and the safety property this needed comes from auth.ts's
+// `rejectBuyerOnPasswordSignIn` hook instead: a self-registered account is
+// always role "buyer" and can never sign in with its password regardless of
+// how the credential was created.
 //
 // `role` and `twoFactorEnabled` aren't settable via signUpEmail's own input
 // (role is `input:false` in auth.ts's additionalFields, and twoFactorEnabled

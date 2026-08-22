@@ -58,14 +58,13 @@ const rejectAdminEmailOnReturningOtpSignIn = createAuthMiddleware(async (ctx) =>
 // — Better Auth's own /sign-in/email already returns one generic
 // INVALID_EMAIL_OR_PASSWORD for both cases by default, so no extra code is
 // needed for that half. This hook is the other half, FR-AUTH-030's "admin
-// sign-in is server-side enforced, not just a client-side route guard": a
-// buyer account structurally never has a password credential (buyers are
-// Google/OTP-only, `disableSignUp` below blocks public self-registration of
-// one), so this can't currently be triggered in practice — it's
-// defense-in-depth, not a gap-closer, should that ever change. Uses the
-// identical generic error a wrong password gets, so a buyer account with a
-// (hypothetical) leaked credential can't be distinguished from a wrong
-// password either.
+// sign-in is server-side enforced, not just a client-side route guard": public
+// sign-up (below) IS enabled, so a buyer account can end up with a password
+// credential of its own — this hook is what actually keeps that credential
+// inert, refusing any role:"buyer" account at the password-sign-in step
+// regardless of how its credential was created. Uses the identical generic
+// error a wrong password gets, so a buyer's password credential can't be
+// distinguished from a wrong password either.
 const INVALID_CREDENTIALS_ERROR = {
   code: "INVALID_EMAIL_OR_PASSWORD",
   message: "Invalid email or password.",
@@ -119,13 +118,18 @@ export const auth = betterAuth({
     },
   },
   // Admin-only credential type (Issue #140/M3.2, FR-AUTH-009). `disableSignUp`
-  // blocks the public POST /sign-up/email endpoint entirely — the only way a
-  // password credential gets created is `src/scripts/seed/createAdminUser.ts`
-  // calling `auth.api.signUpEmail` server-side, which bypasses the disabled
-  // HTTP route. Buyers never get a password credential through any path.
+  // was tried here first but rejected `auth.api.signUpEmail` too, not just
+  // the public HTTP route — createAdminUser.ts's server-side call needs
+  // sign-up enabled to create the seeded admin's password credential at all.
+  // Left enabled instead: a self-registered password account still always
+  // gets role "buyer" (additionalFields.role above is input:false, so a
+  // client can't set anything else), and `rejectBuyerOnPasswordSignIn` below
+  // already refuses any buyer-role account at the /sign-in/email step
+  // regardless of how its credential was created — so a publicly
+  // self-registered password credential is inert, never a route to a
+  // session, admin or otherwise.
   emailAndPassword: {
     enabled: true,
-    disableSignUp: true,
   },
   plugins: [
     emailOTP({
