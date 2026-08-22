@@ -46,6 +46,19 @@ beforeAll(async () => {
 
   const seedModule = await import("../../src/scripts/seed/createAdminUser.js");
   provisionAdminUser = seedModule.provisionAdminUser;
+
+  // TEMPORARY DIAGNOSTIC — two guessed endpoint paths (/forgot-password,
+  // /forget-password) both 404'd against real CI, and this sandbox has no
+  // network access to the real docs/source to verify the actual path.
+  // auth.api's own method names are an empirically-confirmed 1:1 mapping to
+  // real HTTP paths (signInEmail -> /sign-in/email, getSession ->
+  // /get-session, confirmed in #140) — log every password-reset-related key
+  // so the real path can be inferred from CI output. Remove once resolved.
+  const { auth: authInstance } = await import("../../src/lib/auth.js");
+  console.log(
+    "DIAGNOSTIC auth.api keys:",
+    Object.keys(authInstance.api).filter((k) => /password|reset|forg/i.test(k)),
+  );
 }, 60000);
 
 afterAll(async () => {
