@@ -15,7 +15,8 @@ app.use(corsMiddleware);
 // an explicit dependency here since Express 5 no longer bundles it.
 app.set("query parser", "extended");
 
-app.use(express.json());
+// express.json() lives inside routes/index.ts, not here — the auth module
+// mounted first there needs the raw, unparsed request body (#139).
 app.use(routes);
 
 app.use(notFoundHandler);
