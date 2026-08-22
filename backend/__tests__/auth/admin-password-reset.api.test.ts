@@ -12,11 +12,12 @@ import type mongooseType from "mongoose";
 // verbatim from that file's established convention.
 //
 // This suite exercises Better Auth's built-in emailAndPassword
-// reset-password support, configured in src/lib/auth.ts. Endpoint paths
-// (/forgot-password, /reset-password) and the sendResetPassword callback
-// signature were written without local package access to verify against —
-// same caveat #140 flagged for its own twoFactor config; expect this to
-// need the same kind of CI-driven adjustment if the real shape differs.
+// reset-password support, configured in src/lib/auth.ts. Endpoint paths and
+// the sendResetPassword callback signature were originally written without
+// local package access to verify against — the illustrative
+// /forgot-password name from the issue/SRS turned out to be wrong (real CI
+// 404), confirmed the actual path is /forget-password (Better Auth's own
+// spelling); /reset-password and the callback signature matched as written.
 vi.mock("@/externalService/resend", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
@@ -86,7 +87,7 @@ async function insertBuyer(email: string) {
 }
 
 async function requestForgotPassword(email: string) {
-  return request(app).post("/api/auth/forgot-password").send({ email });
+  return request(app).post("/api/auth/forget-password").send({ email });
 }
 
 async function captureResetToken(): Promise<string> {

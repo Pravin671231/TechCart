@@ -158,15 +158,17 @@ export const auth = betterAuth({
     // Admin self-service password recovery (Issue #141/M3.3,
     // FR-AUTH-019–022). FR-AUTH-021's 1-hour expiry.
     resetPasswordTokenExpiresIn: 3600,
-    // Called by Better Auth's own /forgot-password handler whenever the
-    // submitted email resolves to a real user — but only actually sends an
-    // email (and records the token below) for a non-buyer account. Buyers
-    // structurally never have a reason to reset a password they don't use
-    // for sign-in (rejectBuyerOnPasswordSignIn below), so this keeps their
-    // inbox free of a pointless reset link; either way Better Auth's own
-    // response to the /forgot-password caller is identical regardless of
-    // what this callback does, so FR-AUTH-019's no-enumeration guarantee is
-    // unaffected by this branch. Re-queries role via the raw driver (like
+    // Called by Better Auth's own /forget-password handler (its actual
+    // spelling — the SRS/issue's "/forgot-password" doesn't exist, confirmed
+    // via a real CI 404) whenever the submitted email resolves to a real
+    // user — but only actually sends an email (and records the token below)
+    // for a non-buyer account. Buyers structurally never have a reason to
+    // reset a password they don't use for sign-in
+    // (rejectBuyerOnPasswordSignIn below), so this keeps their inbox free of
+    // a pointless reset link; either way Better Auth's own response to the
+    // /forget-password caller is identical regardless of what this callback
+    // does, so FR-AUTH-019's no-enumeration guarantee is unaffected by this
+    // branch. Re-queries role via the raw driver (like
     // findExistingNonBuyer above) rather than trusting a `role` field on
     // this callback's own `user` param — additionalFields' presence there
     // isn't guaranteed by the installed package's types, and this repo
