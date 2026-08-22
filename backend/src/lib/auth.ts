@@ -91,13 +91,20 @@ const rejectBuyerOnPasswordSignIn = createAuthMiddleware(async (ctx) => {
 // Resolves the affected user via consumeResetToken (Issue #141's own
 // tracking collection, recorded at send time in sendResetPassword below) —
 // not by parsing Better Auth's internal `verification` record, whose exact
-// shape for this flow is unverified. Assumes an `after` hook only fires on
-// a successfully *completed* handler, not one that threw (mirroring how
-// `hooks.before`'s own APIError throws already bypass their target handler
-// entirely) — a documented, accepted risk if that assumption is wrong for
-// a token-valid-but-otherwise-rejected request (e.g. a weak new password):
-// this would revoke sessions without the password actually having changed.
-// Confirm via CI; add a dedicated test if this surfaces as a real gap.
+// shape for this flow is unverified.
+//
+// Runs in `hooks.before`, not `after`: an `after`-hook version (matching
+// on ctx.path, reading ctx.body.token the same way this one does) was tried
+// first and confirmed via real CI to never actually delete any session —
+// ctx.body in an `after` hook apparently isn't the original request body
+// the way it reliably is in `before` (proven repeatedly elsewhere in this
+// file: rejectBuyerOnPasswordSignIn, rejectAdminEmailOnReturningOtpSignIn).
+// Running this before the real handler means a token-valid-but-otherwise
+// -rejected request (e.g. a weak new password, if Better Auth validates
+// that after the token) would revoke sessions without the password having
+// actually changed — a documented, accepted risk, not chased further since
+// CI is the only ground truth available and the `after`-hook alternative
+// measurably didn't work at all.
 const revokeSessionsAfterPasswordReset = createAuthMiddleware(async (ctx) => {
   if (ctx.path !== "/reset-password") return;
   const token = (ctx.body as { token?: string } | undefined)?.token;
@@ -235,8 +242,6 @@ export const auth = betterAuth({
     before: createAuthMiddleware(async (ctx) => {
       await rejectAdminEmailOnReturningOtpSignIn(ctx);
       await rejectBuyerOnPasswordSignIn(ctx);
-    }),
-    after: createAuthMiddleware(async (ctx) => {
       await revokeSessionsAfterPasswordReset(ctx);
     }),
   },
