@@ -5,8 +5,17 @@ import { createAuthMiddleware } from "@better-auth/core/api";
 import { mongodbAdapter } from "@better-auth/mongo-adapter";
 import { emailOTP, oneTap } from "better-auth/plugins";
 import { env } from "@/config/env";
-import { sendOtpEmail } from "@/externalService/resend";
+import { sendOtpEmail, sendResetPasswordEmail } from "@/externalService/resend";
 import { adminAuthPlugin } from "@/lib/adminAuthPlugin";
+
+// The built-in /request-password-reset returns this exact shape whether or
+// not the email is registered (FR-AUTH-019) — shared as one literal so the
+// hooks.before short-circuit below (for a buyer email) can never drift out
+// of sync with Better Auth's own wording for the real "unregistered" case.
+const PASSWORD_RESET_REQUESTED_RESPONSE = {
+  status: true,
+  message: "If this email exists in our system, check your email for the reset link",
+};
 
 const ADMIN_EMAIL_ON_BUYER_ROUTE_ERROR = {
   code: "GOOGLE_ACCOUNT_IS_ADMIN",
@@ -35,23 +44,42 @@ async function rejectIfNonBuyerEmail(
   }
 }
 
-// `validateUserInfo` re-validates on every OAuth/One Tap sign-in (fresh
-// provider identity each time) and on first creation/linking for email-OTP,
-// but per Better Auth's own docs a *returning* email-OTP sign-in for an
-// already-existing account is not re-validated through this hook (it's a
-// "non-provider returning sign-in"). That's the one gap: an admin's email,
-// once it exists as a user record, could otherwise sign in a second time via
-// the buyer email-OTP route unchecked. The `hooks.before` matcher below
-// closes exactly that gap — it does not need to cover the OAuth/One Tap
-// paths, which `validateUserInfo` already re-checks unconditionally.
-const rejectAdminEmailOnReturningOtpSignIn = createAuthMiddleware(async (ctx) => {
-  if (ctx.path !== "/sign-in/email-otp" && ctx.path !== "/email-otp/send-verification-otp") {
+// Two unrelated guards share one `hooks.before` callback — Better Auth's
+// `BetterAuthOptions.hooks.before` takes exactly one `AuthMiddleware`, not
+// an array, so both live here keyed off `ctx.path`.
+const adminAuthGuards = createAuthMiddleware(async (ctx) => {
+  // `validateUserInfo` re-validates on every OAuth/One Tap sign-in (fresh
+  // provider identity each time) and on first creation/linking for
+  // email-OTP, but per Better Auth's own docs a *returning* email-OTP
+  // sign-in for an already-existing account is not re-validated through
+  // that hook (it's a "non-provider returning sign-in"). That's the one
+  // gap: an admin's email, once it exists as a user record, could
+  // otherwise sign in a second time via the buyer email-OTP route
+  // unchecked. This branch closes exactly that gap — it does not need to
+  // cover the OAuth/One Tap paths, which `validateUserInfo` already
+  // re-checks unconditionally.
+  if (ctx.path === "/sign-in/email-otp" || ctx.path === "/email-otp/send-verification-otp") {
+    const email = (ctx.body as { email?: string } | undefined)?.email;
+    if (email && (await findExistingNonBuyer(email))) {
+      throw new APIError("FORBIDDEN", ADMIN_EMAIL_ON_BUYER_ROUTE_ERROR);
+    }
     return;
   }
-  const email = (ctx.body as { email?: string } | undefined)?.email;
-  if (!email) return;
-  if (await findExistingNonBuyer(email)) {
-    throw new APIError("FORBIDDEN", ADMIN_EMAIL_ON_BUYER_ROUTE_ERROR);
+
+  // The built-in /request-password-reset doesn't check role at all — a
+  // buyer email would otherwise get a real reset token and a real email,
+  // and completing the flow would give them a password, contradicting the
+  // buyer-passwordless design (SRS v0.3). Short-circuit with the exact same
+  // response Better Auth's own handler returns for "not registered" so a
+  // buyer email is indistinguishable from an unregistered one — no token
+  // created, no email sent, and the real handler never runs (returning a
+  // response from `hooks.before` replaces the endpoint's own response
+  // entirely, confirmed from better-auth's dispatch.mjs).
+  if (ctx.path === "/request-password-reset") {
+    const email = (ctx.body as { email?: string } | undefined)?.email;
+    if (!email || !(await findExistingNonBuyer(email))) {
+      return ctx.json(PASSWORD_RESET_REQUESTED_RESPONSE);
+    }
   }
 });
 
@@ -79,6 +107,15 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,
+    // FR-AUTH-020/021 — the built-in /request-password-reset endpoint
+    // already enforces a 1-hour, single-use token (its own
+    // resetPasswordTokenExpiresIn default); this is only the delivery hook.
+    sendResetPassword: async ({ user, token }) => {
+      await sendResetPasswordEmail(user.email, token);
+    },
+    // FR-AUTH-022 — invalidate every existing session for that admin once
+    // a reset completes.
+    revokeSessionsOnPasswordReset: true,
   },
   session: {
     // FR-AUTH-016's 30-day rolling ceiling — Better Auth's own default is
@@ -117,7 +154,7 @@ export const auth = betterAuth({
     adminAuthPlugin(),
   ],
   hooks: {
-    before: rejectAdminEmailOnReturningOtpSignIn,
+    before: adminAuthGuards,
   },
   databaseHooks: {
     session: {
