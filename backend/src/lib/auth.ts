@@ -5,7 +5,8 @@ import { createAuthMiddleware } from "@better-auth/core/api";
 import { mongodbAdapter } from "@better-auth/mongo-adapter";
 import { bearer, emailOTP, oneTap, twoFactor } from "better-auth/plugins";
 import { env } from "@/config/env";
-import { sendOtpEmail } from "@/externalService/resend";
+import { sendOtpEmail, sendPasswordResetEmail } from "@/externalService/resend";
+import { recordResetToken, consumeResetToken } from "@/lib/passwordResetTokens";
 
 const ADMIN_EMAIL_ON_BUYER_ROUTE_ERROR = {
   code: "GOOGLE_ACCOUNT_IS_ADMIN",
@@ -82,6 +83,30 @@ const rejectBuyerOnPasswordSignIn = createAuthMiddleware(async (ctx) => {
   }
 });
 
+// FR-AUTH-022: completing a password reset must invalidate every existing
+// session for that admin. Built unconditionally rather than gated on
+// whether Better Auth's own /reset-password already does this by default
+// (unverified either way) — a harmless no-op deleteMany if it's already
+// empty, required regardless since this is a hard functional requirement.
+// Resolves the affected user via consumeResetToken (Issue #141's own
+// tracking collection, recorded at send time in sendResetPassword below) —
+// not by parsing Better Auth's internal `verification` record, whose exact
+// shape for this flow is unverified. Assumes an `after` hook only fires on
+// a successfully *completed* handler, not one that threw (mirroring how
+// `hooks.before`'s own APIError throws already bypass their target handler
+// entirely) — a documented, accepted risk if that assumption is wrong for
+// a token-valid-but-otherwise-rejected request (e.g. a weak new password):
+// this would revoke sessions without the password actually having changed.
+// Confirm via CI; add a dedicated test if this surfaces as a real gap.
+const revokeSessionsAfterPasswordReset = createAuthMiddleware(async (ctx) => {
+  if (ctx.path !== "/reset-password") return;
+  const token = (ctx.body as { token?: string } | undefined)?.token;
+  if (!token) return;
+  const userId = await consumeResetToken(token);
+  if (!userId) return;
+  await mongoose.connection.db!.collection("session").deleteMany({ userId });
+});
+
 export const auth = betterAuth({
   database: mongodbAdapter(mongoose.connection.db!, {
     client: mongoose.connection.getClient(),
@@ -130,6 +155,30 @@ export const auth = betterAuth({
   // session, admin or otherwise.
   emailAndPassword: {
     enabled: true,
+    // Admin self-service password recovery (Issue #141/M3.3,
+    // FR-AUTH-019–022). FR-AUTH-021's 1-hour expiry.
+    resetPasswordTokenExpiresIn: 3600,
+    // Called by Better Auth's own /forgot-password handler whenever the
+    // submitted email resolves to a real user — but only actually sends an
+    // email (and records the token below) for a non-buyer account. Buyers
+    // structurally never have a reason to reset a password they don't use
+    // for sign-in (rejectBuyerOnPasswordSignIn below), so this keeps their
+    // inbox free of a pointless reset link; either way Better Auth's own
+    // response to the /forgot-password caller is identical regardless of
+    // what this callback does, so FR-AUTH-019's no-enumeration guarantee is
+    // unaffected by this branch. Re-queries role via the raw driver (like
+    // findExistingNonBuyer above) rather than trusting a `role` field on
+    // this callback's own `user` param — additionalFields' presence there
+    // isn't guaranteed by the installed package's types, and this repo
+    // already has a proven-working raw-driver path for exactly this check.
+    sendResetPassword: async ({ user, url, token }) => {
+      const record = await mongoose.connection
+        .db!.collection<{ email: string; role?: string }>("users")
+        .findOne({ email: user.email });
+      if ((record?.role ?? "buyer") === "buyer") return;
+      await recordResetToken(token, user.id);
+      await sendPasswordResetEmail(user.email, url);
+    },
   },
   plugins: [
     emailOTP({
@@ -182,6 +231,9 @@ export const auth = betterAuth({
     before: createAuthMiddleware(async (ctx) => {
       await rejectAdminEmailOnReturningOtpSignIn(ctx);
       await rejectBuyerOnPasswordSignIn(ctx);
+    }),
+    after: createAuthMiddleware(async (ctx) => {
+      await revokeSessionsAfterPasswordReset(ctx);
     }),
   },
   databaseHooks: {
