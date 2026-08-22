@@ -5,7 +5,8 @@ import { createAuthMiddleware } from "@better-auth/core/api";
 import { mongodbAdapter } from "@better-auth/mongo-adapter";
 import { bearer, emailOTP, oneTap, twoFactor } from "better-auth/plugins";
 import { env } from "@/config/env";
-import { sendOtpEmail } from "@/externalService/resend";
+import { sendOtpEmail, sendPasswordResetEmail } from "@/externalService/resend";
+import { recordResetToken, consumeResetToken } from "@/lib/passwordResetTokens";
 
 const ADMIN_EMAIL_ON_BUYER_ROUTE_ERROR = {
   code: "GOOGLE_ACCOUNT_IS_ADMIN",
@@ -82,6 +83,47 @@ const rejectBuyerOnPasswordSignIn = createAuthMiddleware(async (ctx) => {
   }
 });
 
+// FR-AUTH-022: completing a password reset must invalidate every existing
+// session for that admin. Built unconditionally rather than gated on
+// whether Better Auth's own /reset-password already does this by default
+// (unverified either way) — a harmless no-op deleteMany if it's already
+// empty, required regardless since this is a hard functional requirement.
+// Resolves the affected user via consumeResetToken (Issue #141's own
+// tracking collection, recorded at send time in sendResetPassword below) —
+// not by parsing Better Auth's internal `verification` record, whose exact
+// shape for this flow is unverified.
+//
+// Runs in `hooks.before`, not `after`: an `after`-hook version (matching
+// on ctx.path, reading ctx.body.token the same way this one does) was tried
+// first and confirmed via real CI to never actually delete any session —
+// ctx.body in an `after` hook apparently isn't the original request body
+// the way it reliably is in `before` (proven repeatedly elsewhere in this
+// file: rejectBuyerOnPasswordSignIn, rejectAdminEmailOnReturningOtpSignIn).
+// Running this before the real handler means a token-valid-but-otherwise
+// -rejected request (e.g. a weak new password, if Better Auth validates
+// that after the token) would revoke sessions without the password having
+// actually changed — a documented, accepted risk, not chased further since
+// CI is the only ground truth available and the `after`-hook alternative
+// measurably didn't work at all.
+const revokeSessionsAfterPasswordReset = createAuthMiddleware(async (ctx) => {
+  if (ctx.path !== "/reset-password") return;
+  const token = (ctx.body as { token?: string } | undefined)?.token;
+  if (!token) return;
+  const userId = await consumeResetToken(token);
+  if (!userId) return;
+  // Matches both a plain string and an ObjectId-typed userId — this same
+  // file's own databaseHooks.session.create.after already had to convert a
+  // session's userId to ObjectId to query `users` by `_id`, evidence this
+  // codebase's Mongo documents aren't consistently one type or the other;
+  // querying `session`'s own userId field with only a plain string matched
+  // nothing in real CI, so this covers whichever the adapter actually uses.
+  const userIdVariants: unknown[] = [userId];
+  if (mongoose.isValidObjectId(userId)) {
+    userIdVariants.push(new mongoose.Types.ObjectId(userId));
+  }
+  await mongoose.connection.db!.collection("session").deleteMany({ userId: { $in: userIdVariants } });
+});
+
 export const auth = betterAuth({
   database: mongodbAdapter(mongoose.connection.db!, {
     client: mongoose.connection.getClient(),
@@ -130,6 +172,34 @@ export const auth = betterAuth({
   // session, admin or otherwise.
   emailAndPassword: {
     enabled: true,
+    // Admin self-service password recovery (Issue #141/M3.3,
+    // FR-AUTH-019–022). FR-AUTH-021's 1-hour expiry.
+    resetPasswordTokenExpiresIn: 3600,
+    // Called by Better Auth's own POST /request-password-reset handler (its
+    // actual method/path — neither the SRS/issue's "/forgot-password" nor
+    // the plausible-sounding "/forget-password" exist; confirmed via a real
+    // CI 404 on both, then a diagnostic listing Object.keys(auth.api) found
+    // the real method is `requestPasswordReset`) whenever the submitted
+    // email resolves to a real user — but only actually sends an email (and
+    // records the token below) for a non-buyer account. Buyers structurally
+    // never have a reason to reset a password they don't use for sign-in
+    // (rejectBuyerOnPasswordSignIn below), so this keeps their inbox free of
+    // a pointless reset link; either way Better Auth's own response to the
+    // caller is identical regardless of what this callback does, so
+    // FR-AUTH-019's no-enumeration guarantee is unaffected by this branch.
+    // Re-queries role via the raw driver (like
+    // findExistingNonBuyer above) rather than trusting a `role` field on
+    // this callback's own `user` param — additionalFields' presence there
+    // isn't guaranteed by the installed package's types, and this repo
+    // already has a proven-working raw-driver path for exactly this check.
+    sendResetPassword: async ({ user, url, token }) => {
+      const record = await mongoose.connection
+        .db!.collection<{ email: string; role?: string }>("users")
+        .findOne({ email: user.email });
+      if ((record?.role ?? "buyer") === "buyer") return;
+      await recordResetToken(token, user.id);
+      await sendPasswordResetEmail(user.email, url);
+    },
   },
   plugins: [
     emailOTP({
@@ -182,6 +252,7 @@ export const auth = betterAuth({
     before: createAuthMiddleware(async (ctx) => {
       await rejectAdminEmailOnReturningOtpSignIn(ctx);
       await rejectBuyerOnPasswordSignIn(ctx);
+      await revokeSessionsAfterPasswordReset(ctx);
     }),
   },
   databaseHooks: {
