@@ -23,6 +23,18 @@ export default defineConfig({
     include: ["src/**/tests/**/*.test.ts", "__tests__/**/*.test.ts"],
     testTimeout: 30000,
     hookTimeout: 30000,
+    // Vitest externalizes node_modules packages by default (loaded via
+    // Node's own require/import, bypassing Vite's SSR module graph) — a
+    // vi.mock() of a package only intercepts imports Vitest itself
+    // resolves. better-auth's plugins import Google token verification
+    // from @better-auth/core deep inside their own dist files, so those
+    // packages need to be inlined for __tests__/auth's mocks to actually
+    // reach them.
+    server: {
+      deps: {
+        inline: ["better-auth", "@better-auth/core", "@better-auth/mongo-adapter"],
+      },
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],

@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import type { Express } from "express";
-import type { MongoMemoryServer } from "mongodb-memory-server";
+import type { MongoMemoryReplSet } from "mongodb-memory-server";
 import type mongooseType from "mongoose";
 
 // This suite needs a real MongoDB instance — Better Auth's account-dedup
@@ -38,15 +38,18 @@ function fakeGoogleIdToken(claims: Record<string, unknown>): string {
   return `${header}.${payload}.fake-signature`;
 }
 
-let mongod: MongoMemoryServer;
+let mongod: MongoMemoryReplSet;
 let mongoose: typeof mongooseType;
 let app: Express;
 let socialProviders: typeof import("@better-auth/core/social-providers");
 let oauth2: typeof import("@better-auth/core/oauth2");
 
 beforeAll(async () => {
-  const { MongoMemoryServer } = await import("mongodb-memory-server");
-  mongod = await MongoMemoryServer.create();
+  // A single-node replica set, not a plain standalone server — auth.ts
+  // hands the adapter a MongoClient, so it defaults `transaction: true`,
+  // and MongoDB transactions require a replica set even for one node.
+  const { MongoMemoryReplSet } = await import("mongodb-memory-server");
+  mongod = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   process.env.MONGODB_URI = mongod.getUri();
 
   mongoose = (await import("mongoose")).default;
