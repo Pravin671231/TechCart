@@ -33,4 +33,12 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # mongodb-memory-server (backend/__tests__/auth, Issue #139) downloads
+      # its own MongoDB binary on first use — caching it keeps that off the
+      # critical path of every subsequent run.
+      - if: matrix.workspace == 'backend'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}
       - run: npm run test --workspace ${{ matrix.workspace }}
