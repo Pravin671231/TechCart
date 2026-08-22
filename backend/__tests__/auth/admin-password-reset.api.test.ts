@@ -14,10 +14,17 @@ import type mongooseType from "mongoose";
 // This suite exercises Better Auth's built-in emailAndPassword
 // reset-password support, configured in src/lib/auth.ts. Endpoint paths and
 // the sendResetPassword callback signature were originally written without
-// local package access to verify against — the illustrative
-// /forgot-password name from the issue/SRS turned out to be wrong (real CI
-// 404), confirmed the actual path is /forget-password (Better Auth's own
-// spelling); /reset-password and the callback signature matched as written.
+// local package access to verify against — both the issue/SRS's
+// illustrative "/forgot-password" and the plausible-sounding
+// "/forget-password" 404'd against real CI. A diagnostic logging
+// Object.keys(auth.api) revealed the real method is `requestPasswordReset`
+// (better-auth@1.7.1 apparently doesn't expose a link-based
+// "forget"/"forgot" password method at all — only requestPasswordReset,
+// requestPasswordResetEmailOTP, forgetPasswordEmailOTP for the OTP variant),
+// which maps to POST /request-password-reset per the same camelCase ->
+// kebab-case convention already confirmed for signInEmail -> /sign-in/email
+// and getSession -> /get-session. /reset-password and the sendResetPassword
+// callback signature both matched as originally written.
 vi.mock("@/externalService/resend", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
@@ -46,19 +53,6 @@ beforeAll(async () => {
 
   const seedModule = await import("../../src/scripts/seed/createAdminUser.js");
   provisionAdminUser = seedModule.provisionAdminUser;
-
-  // TEMPORARY DIAGNOSTIC — two guessed endpoint paths (/forgot-password,
-  // /forget-password) both 404'd against real CI, and this sandbox has no
-  // network access to the real docs/source to verify the actual path.
-  // auth.api's own method names are an empirically-confirmed 1:1 mapping to
-  // real HTTP paths (signInEmail -> /sign-in/email, getSession ->
-  // /get-session, confirmed in #140) — log every password-reset-related key
-  // so the real path can be inferred from CI output. Remove once resolved.
-  const { auth: authInstance } = await import("../../src/lib/auth.js");
-  console.log(
-    "DIAGNOSTIC auth.api keys:",
-    Object.keys(authInstance.api).filter((k) => /password|reset|forg/i.test(k)),
-  );
 }, 60000);
 
 afterAll(async () => {
@@ -100,7 +94,7 @@ async function insertBuyer(email: string) {
 }
 
 async function requestForgotPassword(email: string) {
-  return request(app).post("/api/auth/forget-password").send({ email });
+  return request(app).post("/api/auth/request-password-reset").send({ email });
 }
 
 async function captureResetToken(): Promise<string> {
@@ -136,6 +130,11 @@ describe("Admin password reset", () => {
       const registered = await requestForgotPassword(ADMIN_EMAIL);
       const unregistered = await requestForgotPassword("no-such-admin@example.com");
 
+      // Asserted explicitly, not just equality between the two — two
+      // matching 404s would otherwise pass this trivially without proving
+      // the endpoint actually works (this is exactly how the earlier wrong
+      // endpoint-path guesses slipped past this pair of tests undetected).
+      expect(registered.status).toBe(200);
       expect(registered.status).toBe(unregistered.status);
       expect(registered.body).toEqual(unregistered.body);
     });
@@ -147,6 +146,7 @@ describe("Admin password reset", () => {
       const buyerRes = await requestForgotPassword(buyerEmail);
       const unregistered = await requestForgotPassword("no-such-email@example.com");
 
+      expect(buyerRes.status).toBe(200);
       expect(buyerRes.status).toBe(unregistered.status);
       expect(buyerRes.body).toEqual(unregistered.body);
 
