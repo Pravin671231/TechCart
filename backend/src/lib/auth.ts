@@ -164,12 +164,12 @@ export const auth = betterAuth({
     // `role`/`status`) rather than through the plugin's interactive
     // enable-then-verify flow — every admin account is provisioned with 2FA
     // already mandatory, there's no "opt in" step for a human admin to skip.
-    // NOTE: the exact otpOptions shape/endpoint names below are this
-    // codebase's best-known reading of better-auth@1.7.1's twoFactor plugin,
-    // written without local package access to verify against (see the
-    // comment in createAdminUser.ts) — confirm against
-    // node_modules/better-auth/dist/plugins/two-factor's type defs once
-    // dependencies are installed, and adjust if the real shape differs.
+    // Config/endpoint shape (this otpOptions signature, POST /sign-in/email
+    // returning no session pre-OTP, POST /two-factor/send-otp + verify-otp)
+    // confirmed working end-to-end via __tests__/auth/admin-sign-in.api.test.ts
+    // against a real CI run — see that file's own header comment for the one
+    // surprise found along the way (the OTP verification record's identifier
+    // shape).
     twoFactor({
       otpOptions: {
         async sendOTP({ user, otp }) {

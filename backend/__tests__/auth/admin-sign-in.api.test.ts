@@ -12,15 +12,16 @@ import type mongooseType from "mongoose";
 // set before @/config/env is first evaluated, mocked sendOtpEmail) is copied
 // verbatim from that file's own established convention.
 //
-// CAVEAT: this suite exercises Better Auth's `twoFactor` plugin, configured
-// in src/lib/auth.ts against this codebase's best-known reading of
-// better-auth@1.7.1's API (endpoint paths, request/response shapes,
-// otpOptions callback signature) — written without local package access to
-// verify against (node_modules isn't installed in the environment this was
-// authored in, and outbound docs access was blocked). Run this suite for
-// real once dependencies are installed and adjust endpoint paths/assertions
-// to match the real plugin surface if it differs — see the NOTE comments in
-// src/lib/auth.ts and createAdminUser.ts.
+// This suite exercises Better Auth's `twoFactor` plugin, configured in
+// src/lib/auth.ts. The endpoint paths/payload shapes/otpOptions callback
+// signature were originally written without local package access to verify
+// against, then confirmed for real against CI: POST /api/auth/sign-in/email,
+// POST /api/auth/two-factor/send-otp, and POST /api/auth/two-factor/verify-otp
+// all work exactly as designed, including the two-factor-cookie state
+// persisted across an agent's calls and the single-use/wrong-code rejections.
+// One real surprise found this way: the plugin's OTP `verification` record's
+// `identifier` isn't a simple "contains the email" string, unlike the buyer
+// emailOTP flow's — see the "rejects an expired OTP" case below.
 vi.mock("@/externalService/resend", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
@@ -166,15 +167,17 @@ describe("Admin password + mandatory OTP sign-in", () => {
       await capturePasswordStep(agent);
       const otp = await sendAndCaptureOtp(agent);
 
-      // expiresIn is 600s, same emailOTP plugin instance the buyer flow uses
-      // — push the stored record's expiry into the past instead of faking
-      // the system clock, matching auth.api.test.ts's own convention.
+      // Push the stored record's expiry into the past instead of faking the
+      // system clock, matching auth.api.test.ts's own convention. Unlike the
+      // buyer emailOTP flow, confirmed against a real CI run that the
+      // twoFactor plugin's OTP `verification` identifier isn't a simple
+      // "contains the email" string (a $regex match on ADMIN_EMAIL found
+      // nothing, silently leaving expiresAt untouched) — beforeEach clears
+      // this collection per test, so updating every remaining record is
+      // safe and identifier-format-agnostic.
       await mongoose.connection
         .db!.collection("verification")
-        .updateMany(
-          { identifier: { $regex: ADMIN_EMAIL } },
-          { $set: { expiresAt: new Date(Date.now() - 1000) } },
-        );
+        .updateMany({}, { $set: { expiresAt: new Date(Date.now() - 1000) } });
 
       const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: otp });
       expect(verify.status).toBeGreaterThanOrEqual(400);
