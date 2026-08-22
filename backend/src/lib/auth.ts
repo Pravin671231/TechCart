@@ -111,7 +111,17 @@ const revokeSessionsAfterPasswordReset = createAuthMiddleware(async (ctx) => {
   if (!token) return;
   const userId = await consumeResetToken(token);
   if (!userId) return;
-  await mongoose.connection.db!.collection("session").deleteMany({ userId });
+  // Matches both a plain string and an ObjectId-typed userId — this same
+  // file's own databaseHooks.session.create.after already had to convert a
+  // session's userId to ObjectId to query `users` by `_id`, evidence this
+  // codebase's Mongo documents aren't consistently one type or the other;
+  // querying `session`'s own userId field with only a plain string matched
+  // nothing in real CI, so this covers whichever the adapter actually uses.
+  const userIdVariants: unknown[] = [userId];
+  if (mongoose.isValidObjectId(userId)) {
+    userIdVariants.push(new mongoose.Types.ObjectId(userId));
+  }
+  await mongoose.connection.db!.collection("session").deleteMany({ userId: { $in: userIdVariants } });
 });
 
 export const auth = betterAuth({
