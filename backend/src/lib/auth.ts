@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { APIError } from "better-auth";
 import { createAuthMiddleware } from "@better-auth/core/api";
 import { mongodbAdapter } from "@better-auth/mongo-adapter";
-import { bearer, emailOTP, oneTap } from "better-auth/plugins";
+import { bearer, emailOTP, oneTap, twoFactor } from "better-auth/plugins";
 import { env } from "@/config/env";
 import { sendOtpEmail } from "@/externalService/resend";
 
@@ -54,6 +54,34 @@ const rejectAdminEmailOnReturningOtpSignIn = createAuthMiddleware(async (ctx) =>
   }
 });
 
+// FR-AUTH-009/010: unknown email and wrong password must be indistinguishable
+// — Better Auth's own /sign-in/email already returns one generic
+// INVALID_EMAIL_OR_PASSWORD for both cases by default, so no extra code is
+// needed for that half. This hook is the other half, FR-AUTH-030's "admin
+// sign-in is server-side enforced, not just a client-side route guard": public
+// sign-up (below) IS enabled, so a buyer account can end up with a password
+// credential of its own — this hook is what actually keeps that credential
+// inert, refusing any role:"buyer" account at the password-sign-in step
+// regardless of how its credential was created. Uses the identical generic
+// error a wrong password gets, so a buyer's password credential can't be
+// distinguished from a wrong password either.
+const INVALID_CREDENTIALS_ERROR = {
+  code: "INVALID_EMAIL_OR_PASSWORD",
+  message: "Invalid email or password.",
+};
+
+const rejectBuyerOnPasswordSignIn = createAuthMiddleware(async (ctx) => {
+  if (ctx.path !== "/sign-in/email") return;
+  const email = (ctx.body as { email?: string } | undefined)?.email;
+  if (!email) return;
+  const existing = await mongoose.connection
+    .db!.collection<{ email: string; role?: string }>("users")
+    .findOne({ email });
+  if (existing && (existing.role ?? "buyer") === "buyer") {
+    throw new APIError("UNAUTHORIZED", INVALID_CREDENTIALS_ERROR);
+  }
+});
+
 export const auth = betterAuth({
   database: mongodbAdapter(mongoose.connection.db!, {
     client: mongoose.connection.getClient(),
@@ -89,6 +117,20 @@ export const auth = betterAuth({
       clientSecret: env.GOOGLE.CLIENT_SECRET,
     },
   },
+  // Admin-only credential type (Issue #140/M3.2, FR-AUTH-009). `disableSignUp`
+  // was tried here first but rejected `auth.api.signUpEmail` too, not just
+  // the public HTTP route — createAdminUser.ts's server-side call needs
+  // sign-up enabled to create the seeded admin's password credential at all.
+  // Left enabled instead: a self-registered password account still always
+  // gets role "buyer" (additionalFields.role above is input:false, so a
+  // client can't set anything else), and `rejectBuyerOnPasswordSignIn` below
+  // already refuses any buyer-role account at the /sign-in/email step
+  // regardless of how its credential was created — so a publicly
+  // self-registered password credential is inert, never a route to a
+  // session, admin or otherwise.
+  emailAndPassword: {
+    enabled: true,
+  },
   plugins: [
     emailOTP({
       expiresIn: 600,
@@ -110,11 +152,37 @@ export const auth = betterAuth({
     // response header on sign-in, which a client sends back as
     // `Authorization: Bearer <token>` — see betterAuthHandler.ts for the
     // header-forwarding fix this depends on, and cors.ts for the matching
-    // `exposedHeaders` config.
+    // `exposedHeaders` config. Registered once, globally — any session this
+    // instance establishes (buyer OR admin, including the two-factor verify
+    // step below) gets a bearer token automatically; admin-app is cross-domain
+    // from backend too, so this plugin already covers Issue #140's own
+    // FR-AUTH-015 cross-domain session requirement with no extra wiring.
     bearer(),
+    // Admin's mandatory second factor (Issue #140/M3.2, FR-AUTH-011–014).
+    // Requires emailAndPassword above. `twoFactorEnabled` is set directly on
+    // the user document by createAdminUser.ts (raw driver, same convention as
+    // `role`/`status`) rather than through the plugin's interactive
+    // enable-then-verify flow — every admin account is provisioned with 2FA
+    // already mandatory, there's no "opt in" step for a human admin to skip.
+    // Config/endpoint shape (this otpOptions signature, POST /sign-in/email
+    // returning no session pre-OTP, POST /two-factor/send-otp + verify-otp)
+    // confirmed working end-to-end via __tests__/auth/admin-sign-in.api.test.ts
+    // against a real CI run — see that file's own header comment for the one
+    // surprise found along the way (the OTP verification record's identifier
+    // shape).
+    twoFactor({
+      otpOptions: {
+        async sendOTP({ user, otp }) {
+          await sendOtpEmail(user.email, otp, "sign-in");
+        },
+      },
+    }),
   ],
   hooks: {
-    before: rejectAdminEmailOnReturningOtpSignIn,
+    before: createAuthMiddleware(async (ctx) => {
+      await rejectAdminEmailOnReturningOtpSignIn(ctx);
+      await rejectBuyerOnPasswordSignIn(ctx);
+    }),
   },
   databaseHooks: {
     session: {
