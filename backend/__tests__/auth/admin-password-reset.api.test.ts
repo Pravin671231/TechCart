@@ -99,11 +99,20 @@ async function requestForgotPassword(email: string) {
 
 async function captureResetToken(): Promise<string> {
   const { sendPasswordResetEmail } = await import("../../src/externalService/resend.js");
-  const url = (sendPasswordResetEmail as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1] as string;
-  expect(url).toBeTruthy();
-  const token = new URL(url).searchParams.get("token");
-  expect(token).toBeTruthy();
-  return token as string;
+  expect(sendPasswordResetEmail).toHaveBeenCalled();
+
+  // Read the token back from our own passwordResetTokens tracking
+  // collection (populated by sendResetPassword's recordResetToken call in
+  // auth.ts) rather than parsing it out of the mocked email's url argument
+  // — confirmed via real CI that Better Auth's reset url doesn't carry the
+  // token as a `?token=` query param the way this test originally assumed,
+  // and this repo's own tracking collection is the one thing whose shape is
+  // actually under our control.
+  const record = await mongoose.connection
+    .db!.collection<{ token: string }>("passwordresettokens")
+    .findOne({}, { sort: { _id: -1 } });
+  expect(record?.token).toBeTruthy();
+  return record!.token;
 }
 
 async function capturePasswordStep(agent: ReturnType<typeof request.agent>, password: string) {
