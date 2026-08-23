@@ -5,6 +5,7 @@ import { successResponse } from "@/utils/apiResponse";
 import { parseObjectId } from "@/utils/objectId";
 import { parseSlugParam } from "@/utils/routeParams";
 import { parseQuery } from "@/utils/parseQuery";
+import { requireActorId } from "@/utils/actor";
 import {
   createProduct,
   updateProduct,
@@ -111,32 +112,39 @@ const listQuerySchema = z.object({
 
 export async function createProductHandler(req: Request, res: Response): Promise<void> {
   const input = createProductSchema.parse(req.body);
-  const product = await createProduct({
-    name: input.name,
-    description: input.description,
-    brand: new Types.ObjectId(input.brand),
-    category: new Types.ObjectId(input.category),
-    specifications: input.specifications,
-    isFeatured: input.isFeatured,
-    metaTitle: input.metaTitle,
-    metaDescription: input.metaDescription,
-  });
+  const product = await createProduct(
+    {
+      name: input.name,
+      description: input.description,
+      brand: new Types.ObjectId(input.brand),
+      category: new Types.ObjectId(input.category),
+      specifications: input.specifications,
+      isFeatured: input.isFeatured,
+      metaTitle: input.metaTitle,
+      metaDescription: input.metaDescription,
+    },
+    requireActorId(req),
+  );
   res.status(201).json(successResponse(product));
 }
 
 export async function updateProductHandler(req: Request, res: Response): Promise<void> {
   const id = parseObjectId(req.params.id);
   const input = updateProductSchema.parse(req.body);
-  const product = await updateProduct(id, {
-    name: input.name,
-    description: input.description,
-    brand: input.brand !== undefined ? new Types.ObjectId(input.brand) : undefined,
-    category: input.category !== undefined ? new Types.ObjectId(input.category) : undefined,
-    specifications: input.specifications,
-    isFeatured: input.isFeatured,
-    metaTitle: input.metaTitle,
-    metaDescription: input.metaDescription,
-  });
+  const product = await updateProduct(
+    id,
+    {
+      name: input.name,
+      description: input.description,
+      brand: input.brand !== undefined ? new Types.ObjectId(input.brand) : undefined,
+      category: input.category !== undefined ? new Types.ObjectId(input.category) : undefined,
+      specifications: input.specifications,
+      isFeatured: input.isFeatured,
+      metaTitle: input.metaTitle,
+      metaDescription: input.metaDescription,
+    },
+    requireActorId(req),
+  );
   res.status(200).json(successResponse(product));
 }
 
@@ -170,14 +178,14 @@ export async function listProductsHandler(req: Request, res: Response): Promise<
 
 export async function deleteProductHandler(req: Request, res: Response): Promise<void> {
   const id = parseObjectId(req.params.id);
-  await deleteProduct(id);
+  await deleteProduct(id, requireActorId(req));
   res.status(200).json(successResponse(null));
 }
 
 export async function updateStatusHandler(req: Request, res: Response): Promise<void> {
   const id = parseObjectId(req.params.id);
   const input = updateStatusSchema.parse(req.body);
-  const product = await updateProductStatus(id, input.status);
+  const product = await updateProductStatus(id, input.status, requireActorId(req));
   res.status(200).json(successResponse(product));
 }
 
@@ -187,7 +195,7 @@ export async function updateStatusHandler(req: Request, res: Response): Promise<
 export async function addVariantHandler(req: Request, res: Response): Promise<void> {
   const productId = parseObjectId(req.params.id);
   const input = addVariantSchema.parse(req.body);
-  const product = await addVariant(productId, input);
+  const product = await addVariant(productId, input, requireActorId(req));
   res.status(201).json(successResponse(product));
 }
 
@@ -195,7 +203,7 @@ export async function updateVariantHandler(req: Request, res: Response): Promise
   const productId = parseObjectId(req.params.id);
   const variantId = parseObjectId(req.params.variantId);
   const input = updateVariantSchema.parse(req.body);
-  const product = await updateVariant(productId, variantId, input);
+  const product = await updateVariant(productId, variantId, input, requireActorId(req));
   res.status(200).json(successResponse(product));
 }
 

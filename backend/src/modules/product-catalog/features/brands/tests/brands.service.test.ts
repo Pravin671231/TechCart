@@ -37,6 +37,7 @@ import {
 
 const idA = new Types.ObjectId();
 const idB = new Types.ObjectId();
+const userId = new Types.ObjectId().toString();
 
 const brandA: BrandRecord = {
   _id: idA,
@@ -65,10 +66,10 @@ describe("createBrand", () => {
     vi.mocked(brandsRepository.slugExists).mockResolvedValue(false);
     vi.mocked(brandsRepository.create).mockResolvedValue(brandA);
 
-    await createBrand({ name: "Nova" });
+    await createBrand({ name: "Nova" }, userId);
 
     expect(brandsRepository.create).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Nova", slug: "nova" }),
+      expect.objectContaining({ name: "Nova", slug: "nova", createdBy: new Types.ObjectId(userId) }),
     );
   });
 
@@ -76,7 +77,7 @@ describe("createBrand", () => {
     vi.mocked(brandsRepository.slugExists).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     vi.mocked(brandsRepository.create).mockResolvedValue(brandA);
 
-    await createBrand({ name: "Nova" });
+    await createBrand({ name: "Nova" }, userId);
 
     expect(brandsRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({ slug: "nova-2" }),
@@ -87,10 +88,13 @@ describe("createBrand", () => {
     vi.mocked(brandsRepository.slugExists).mockResolvedValue(false);
     vi.mocked(brandsRepository.create).mockResolvedValue(brandA);
 
-    await createBrand({
-      name: "Nova",
-      logo: { objectKey: "brand-logo/abc.png", alt: "Nova logo" },
-    });
+    await createBrand(
+      {
+        name: "Nova",
+        logo: { objectKey: "brand-logo/abc.png", alt: "Nova logo" },
+      },
+      userId,
+    );
 
     expect(uploadsService.consumeImageKeys).toHaveBeenCalledWith(["brand-logo/abc.png"]);
     expect(brandsRepository.create).toHaveBeenCalledWith(
@@ -104,7 +108,7 @@ describe("createBrand", () => {
     vi.mocked(brandsRepository.slugExists).mockResolvedValue(false);
     vi.mocked(brandsRepository.create).mockResolvedValue(brandA);
 
-    await createBrand({ name: "Nova" });
+    await createBrand({ name: "Nova" }, userId);
 
     expect(uploadsService.consumeImageKeys).not.toHaveBeenCalled();
     const doc = vi.mocked(brandsRepository.create).mock.calls[0]?.[0];
@@ -116,10 +120,10 @@ describe("updateBrand", () => {
   it("updates only the provided fields and never touches the slug", async () => {
     vi.mocked(brandsRepository.updateById).mockResolvedValue({ ...brandA, name: "Nova Updated" });
 
-    await updateBrand(idA, { name: "Nova Updated" });
+    await updateBrand(idA, { name: "Nova Updated" }, userId);
 
     const patch = vi.mocked(brandsRepository.updateById).mock.calls[0]?.[1];
-    expect(patch).toEqual({ name: "Nova Updated" });
+    expect(patch).toEqual({ name: "Nova Updated", updatedBy: new Types.ObjectId(userId) });
     expect(patch).not.toHaveProperty("slug");
     expect(patch).not.toHaveProperty("description");
   });
@@ -127,7 +131,7 @@ describe("updateBrand", () => {
   it("consumes a new logo key and builds the url before persisting", async () => {
     vi.mocked(brandsRepository.updateById).mockResolvedValue(brandA);
 
-    await updateBrand(idA, { logo: { objectKey: "brand-logo/abc.png", alt: "Nova" } });
+    await updateBrand(idA, { logo: { objectKey: "brand-logo/abc.png", alt: "Nova" } }, userId);
 
     expect(uploadsService.consumeImageKeys).toHaveBeenCalledWith(["brand-logo/abc.png"]);
     const patch = vi.mocked(brandsRepository.updateById).mock.calls[0]?.[1];
@@ -137,7 +141,7 @@ describe("updateBrand", () => {
   it("throws BRAND_NOT_FOUND when the id doesn't match an existing brand", async () => {
     vi.mocked(brandsRepository.updateById).mockResolvedValue(null);
 
-    await expect(updateBrand(idA, { name: "X" })).rejects.toMatchObject({
+    await expect(updateBrand(idA, { name: "X" }, userId)).rejects.toMatchObject({
       statusCode: 404,
       code: "BRAND_NOT_FOUND",
     });
@@ -239,15 +243,18 @@ describe("updateBrandStatus", () => {
   it("sets the requested boolean status", async () => {
     vi.mocked(brandsRepository.updateById).mockResolvedValue({ ...brandA, status: false });
 
-    await updateBrandStatus(idA, false);
+    await updateBrandStatus(idA, false, userId);
 
-    expect(brandsRepository.updateById).toHaveBeenCalledWith(idA, { status: false });
+    expect(brandsRepository.updateById).toHaveBeenCalledWith(idA, {
+      status: false,
+      updatedBy: new Types.ObjectId(userId),
+    });
   });
 
   it("throws BRAND_NOT_FOUND when the id doesn't match any brand", async () => {
     vi.mocked(brandsRepository.updateById).mockResolvedValue(null);
 
-    await expect(updateBrandStatus(idA, false)).rejects.toMatchObject({
+    await expect(updateBrandStatus(idA, false, userId)).rejects.toMatchObject({
       statusCode: 404,
       code: "BRAND_NOT_FOUND",
     });
@@ -256,7 +263,7 @@ describe("updateBrandStatus", () => {
   it("never touches the product delete guard — no guard calls happen at all", async () => {
     vi.mocked(brandsRepository.updateById).mockResolvedValue({ ...brandA, status: false });
 
-    await updateBrandStatus(idA, false);
+    await updateBrandStatus(idA, false, userId);
 
     expect(productsRepository.countByBrand).not.toHaveBeenCalled();
   });

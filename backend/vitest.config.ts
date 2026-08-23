@@ -7,7 +7,6 @@ export default defineConfig({
     environment: "node",
     env: {
       MONGODB_URI: "mongodb://localhost:27017/techcart-test",
-      ADMIN_API_KEY: "test-admin-key",
       R2_ACCOUNT_ID: "test-account-id",
       R2_ACCESS_KEY_ID: "test-access-key-id",
       R2_SECRET_ACCESS_KEY: "test-secret-access-key",

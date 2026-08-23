@@ -4,6 +4,7 @@ import { z } from "zod";
 import { successResponse } from "@/utils/apiResponse";
 import { parseObjectId } from "@/utils/objectId";
 import { parseQuery } from "@/utils/parseQuery";
+import { requireActorId } from "@/utils/actor";
 import {
   createBrand,
   updateBrand,
@@ -48,14 +49,14 @@ const updateBrandSchema = z.object({
 
 export async function createBrandHandler(req: Request, res: Response): Promise<void> {
   const input = createBrandSchema.parse(req.body);
-  const brand = await createBrand(input);
+  const brand = await createBrand(input, requireActorId(req));
   res.status(201).json(successResponse(brand));
 }
 
 export async function updateBrandHandler(req: Request, res: Response): Promise<void> {
   const id = parseObjectId(req.params.id);
   const input = updateBrandSchema.parse(req.body);
-  const brand = await updateBrand(id, input);
+  const brand = await updateBrand(id, input, requireActorId(req));
   res.status(200).json(successResponse(brand));
 }
 
@@ -91,7 +92,7 @@ export async function deleteBrandHandler(req: Request, res: Response): Promise<v
 export async function updateBrandStatusHandler(req: Request, res: Response): Promise<void> {
   const id = parseObjectId(req.params.id);
   const input = updateStatusSchema.parse(req.body);
-  const brand = await updateBrandStatus(id, input.status);
+  const brand = await updateBrandStatus(id, input.status, requireActorId(req));
   res.status(200).json(successResponse(brand));
 }
 

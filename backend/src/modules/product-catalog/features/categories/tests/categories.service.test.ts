@@ -54,6 +54,7 @@ const idA = new Types.ObjectId();
 const idB = new Types.ObjectId();
 const idParent = new Types.ObjectId();
 const idGrandparent = new Types.ObjectId();
+const userId = new Types.ObjectId().toString();
 
 const categoryA: CategoryRecord = {
   _id: idA,
@@ -108,10 +109,14 @@ describe("createCategory", () => {
     vi.mocked(categoriesRepository.slugExists).mockResolvedValue(false);
     vi.mocked(categoriesRepository.create).mockResolvedValue(categoryA);
 
-    await createCategory({ name: "Electronics" });
+    await createCategory({ name: "Electronics" }, userId);
 
     expect(categoriesRepository.create).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Electronics", slug: "electronics" }),
+      expect.objectContaining({
+        name: "Electronics",
+        slug: "electronics",
+        createdBy: new Types.ObjectId(userId),
+      }),
     );
   });
 
@@ -121,7 +126,7 @@ describe("createCategory", () => {
       .mockResolvedValueOnce(false);
     vi.mocked(categoriesRepository.create).mockResolvedValue(categoryA);
 
-    await createCategory({ name: "Electronics" });
+    await createCategory({ name: "Electronics" }, userId);
 
     expect(categoriesRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({ slug: "electronics-2" }),
@@ -132,10 +137,13 @@ describe("createCategory", () => {
     vi.mocked(categoriesRepository.slugExists).mockResolvedValue(false);
     vi.mocked(categoriesRepository.create).mockResolvedValue(categoryA);
 
-    await createCategory({
-      name: "Electronics",
-      image: { objectKey: "category-image/abc.png", alt: "Electronics" },
-    });
+    await createCategory(
+      {
+        name: "Electronics",
+        image: { objectKey: "category-image/abc.png", alt: "Electronics" },
+      },
+      userId,
+    );
 
     expect(uploadsService.consumeImageKeys).toHaveBeenCalledWith(["category-image/abc.png"]);
     expect(categoriesRepository.create).toHaveBeenCalledWith(
@@ -149,7 +157,7 @@ describe("createCategory", () => {
     vi.mocked(categoriesRepository.slugExists).mockResolvedValue(false);
     vi.mocked(categoriesRepository.create).mockResolvedValue(categoryA);
 
-    await createCategory({ name: "Electronics" });
+    await createCategory({ name: "Electronics" }, userId);
 
     expect(uploadsService.consumeImageKeys).not.toHaveBeenCalled();
     const doc = vi.mocked(categoriesRepository.create).mock.calls[0]?.[0];
@@ -160,7 +168,7 @@ describe("createCategory", () => {
     vi.mocked(categoriesRepository.slugExists).mockResolvedValue(false);
     vi.mocked(categoriesRepository.create).mockResolvedValue(categoryA);
 
-    await createCategory({ name: "Electronics" });
+    await createCategory({ name: "Electronics" }, userId);
 
     expect(categoriesRepository.findById).not.toHaveBeenCalled();
   });
@@ -170,7 +178,7 @@ describe("createCategory", () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(null);
 
     await expect(
-      createCategory({ name: "Phones", parentCategory: idParent }),
+      createCategory({ name: "Phones", parentCategory: idParent }, userId),
     ).rejects.toMatchObject({
       statusCode: 404,
       code: "PARENT_CATEGORY_NOT_FOUND",
@@ -183,7 +191,7 @@ describe("createCategory", () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(deepParent);
 
     await expect(
-      createCategory({ name: "Phones", parentCategory: idParent }),
+      createCategory({ name: "Phones", parentCategory: idParent }, userId),
     ).rejects.toMatchObject({
       statusCode: 400,
       code: "PARENT_CATEGORY_TOO_DEEP",
@@ -196,7 +204,7 @@ describe("createCategory", () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(topLevelParent);
     vi.mocked(categoriesRepository.create).mockResolvedValue(categoryA);
 
-    await createCategory({ name: "Phones", parentCategory: idParent });
+    await createCategory({ name: "Phones", parentCategory: idParent }, userId);
 
     expect(categoriesRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({ parentCategory: idParent }),
@@ -208,17 +216,17 @@ describe("updateCategory", () => {
   it("updates only the provided fields and never touches the slug", async () => {
     vi.mocked(categoriesRepository.updateById).mockResolvedValue({ ...categoryA, name: "Updated" });
 
-    await updateCategory(idA, { name: "Updated" });
+    await updateCategory(idA, { name: "Updated" }, userId);
 
     const patch = vi.mocked(categoriesRepository.updateById).mock.calls[0]?.[1];
-    expect(patch).toEqual({ name: "Updated" });
+    expect(patch).toEqual({ name: "Updated", updatedBy: new Types.ObjectId(userId) });
     expect(patch).not.toHaveProperty("slug");
   });
 
   it("does not validate a parent when parentCategory is omitted", async () => {
     vi.mocked(categoriesRepository.updateById).mockResolvedValue(categoryA);
 
-    await updateCategory(idA, { name: "Updated" });
+    await updateCategory(idA, { name: "Updated" }, userId);
 
     expect(categoriesRepository.findById).not.toHaveBeenCalled();
     expect(categoriesRepository.countByParent).not.toHaveBeenCalled();
@@ -230,7 +238,7 @@ describe("updateCategory", () => {
       parentCategory: null,
     });
 
-    await updateCategory(idA, { parentCategory: null });
+    await updateCategory(idA, { parentCategory: null }, userId);
 
     const patch = vi.mocked(categoriesRepository.updateById).mock.calls[0]?.[1];
     expect(patch).toHaveProperty("parentCategory", null);
@@ -238,7 +246,7 @@ describe("updateCategory", () => {
   });
 
   it("rejects setting a category as its own parent", async () => {
-    await expect(updateCategory(idA, { parentCategory: idA })).rejects.toMatchObject({
+    await expect(updateCategory(idA, { parentCategory: idA }, userId)).rejects.toMatchObject({
       statusCode: 400,
       code: "INVALID_PARENT_CATEGORY",
     });
@@ -248,7 +256,7 @@ describe("updateCategory", () => {
   it("rejects a parentCategory that doesn't exist", async () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(null);
 
-    await expect(updateCategory(idA, { parentCategory: idParent })).rejects.toMatchObject({
+    await expect(updateCategory(idA, { parentCategory: idParent }, userId)).rejects.toMatchObject({
       statusCode: 404,
       code: "PARENT_CATEGORY_NOT_FOUND",
     });
@@ -258,7 +266,7 @@ describe("updateCategory", () => {
   it("rejects a parentCategory that itself already has a parent", async () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(deepParent);
 
-    await expect(updateCategory(idA, { parentCategory: idParent })).rejects.toMatchObject({
+    await expect(updateCategory(idA, { parentCategory: idParent }, userId)).rejects.toMatchObject({
       statusCode: 400,
       code: "PARENT_CATEGORY_TOO_DEEP",
     });
@@ -269,7 +277,7 @@ describe("updateCategory", () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(topLevelParent);
     vi.mocked(categoriesRepository.countByParent).mockResolvedValue(2);
 
-    await expect(updateCategory(idA, { parentCategory: idParent })).rejects.toMatchObject({
+    await expect(updateCategory(idA, { parentCategory: idParent }, userId)).rejects.toMatchObject({
       statusCode: 400,
       code: "CATEGORY_HAS_SUBCATEGORIES",
     });
@@ -282,7 +290,7 @@ describe("updateCategory", () => {
     vi.mocked(categoriesRepository.countByParent).mockResolvedValue(0);
     vi.mocked(categoriesRepository.updateById).mockResolvedValue(categoryA);
 
-    await updateCategory(idA, { parentCategory: idParent });
+    await updateCategory(idA, { parentCategory: idParent }, userId);
 
     const patch = vi.mocked(categoriesRepository.updateById).mock.calls[0]?.[1];
     expect(patch).toHaveProperty("parentCategory", idParent);
@@ -291,7 +299,7 @@ describe("updateCategory", () => {
   it("consumes a new image key and builds the url before persisting", async () => {
     vi.mocked(categoriesRepository.updateById).mockResolvedValue(categoryA);
 
-    await updateCategory(idA, { image: { objectKey: "category-image/abc.png", alt: "Home" } });
+    await updateCategory(idA, { image: { objectKey: "category-image/abc.png", alt: "Home" } }, userId);
 
     expect(uploadsService.consumeImageKeys).toHaveBeenCalledWith(["category-image/abc.png"]);
     const patch = vi.mocked(categoriesRepository.updateById).mock.calls[0]?.[1];
@@ -301,7 +309,7 @@ describe("updateCategory", () => {
   it("throws CATEGORY_NOT_FOUND when the id doesn't match an existing category", async () => {
     vi.mocked(categoriesRepository.updateById).mockResolvedValue(null);
 
-    await expect(updateCategory(idA, { name: "X" })).rejects.toMatchObject({
+    await expect(updateCategory(idA, { name: "X" }, userId)).rejects.toMatchObject({
       statusCode: 404,
       code: "CATEGORY_NOT_FOUND",
     });
@@ -520,15 +528,18 @@ describe("updateCategoryStatus", () => {
   it("sets the requested boolean status", async () => {
     vi.mocked(categoriesRepository.updateById).mockResolvedValue({ ...categoryA, status: false });
 
-    await updateCategoryStatus(idA, false);
+    await updateCategoryStatus(idA, false, userId);
 
-    expect(categoriesRepository.updateById).toHaveBeenCalledWith(idA, { status: false });
+    expect(categoriesRepository.updateById).toHaveBeenCalledWith(idA, {
+      status: false,
+      updatedBy: new Types.ObjectId(userId),
+    });
   });
 
   it("throws CATEGORY_NOT_FOUND when the id doesn't match any category", async () => {
     vi.mocked(categoriesRepository.updateById).mockResolvedValue(null);
 
-    await expect(updateCategoryStatus(idA, false)).rejects.toMatchObject({
+    await expect(updateCategoryStatus(idA, false, userId)).rejects.toMatchObject({
       statusCode: 404,
       code: "CATEGORY_NOT_FOUND",
     });
@@ -537,7 +548,7 @@ describe("updateCategoryStatus", () => {
   it("never touches the product/subcategory delete guard — no guard calls happen at all", async () => {
     vi.mocked(categoriesRepository.updateById).mockResolvedValue({ ...categoryA, status: false });
 
-    await updateCategoryStatus(idA, false);
+    await updateCategoryStatus(idA, false, userId);
 
     expect(productsRepository.countByCategory).not.toHaveBeenCalled();
     expect(categoriesRepository.countByParent).not.toHaveBeenCalled();

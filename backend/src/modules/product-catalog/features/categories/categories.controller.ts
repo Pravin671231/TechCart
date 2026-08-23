@@ -4,6 +4,7 @@ import { z } from "zod";
 import { successResponse } from "@/utils/apiResponse";
 import { parseObjectId } from "@/utils/objectId";
 import { parseQuery } from "@/utils/parseQuery";
+import { requireActorId } from "@/utils/actor";
 import {
   createCategory,
   updateCategory,
@@ -79,7 +80,7 @@ export async function createCategoryHandler(req: Request, res: Response): Promis
     sortOrder: input.sortOrder,
     metaTitle: input.metaTitle,
     metaDescription: input.metaDescription,
-  });
+  }, requireActorId(req));
   res.status(201).json(successResponse(category));
 }
 
@@ -94,7 +95,7 @@ export async function updateCategoryHandler(req: Request, res: Response): Promis
     sortOrder: input.sortOrder,
     metaTitle: input.metaTitle,
     metaDescription: input.metaDescription,
-  });
+  }, requireActorId(req));
   res.status(200).json(successResponse(category));
 }
 
@@ -130,7 +131,7 @@ export async function deleteCategoryHandler(req: Request, res: Response): Promis
 export async function updateCategoryStatusHandler(req: Request, res: Response): Promise<void> {
   const id = parseObjectId(req.params.id);
   const input = updateStatusSchema.parse(req.body);
-  const category = await updateCategoryStatus(id, input.status);
+  const category = await updateCategoryStatus(id, input.status, requireActorId(req));
   res.status(200).json(successResponse(category));
 }
 

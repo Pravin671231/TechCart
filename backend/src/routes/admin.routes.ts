@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { adminAuth } from "@/middleware/adminAuth";
 import { uploadsModule } from "@/modules/uploads/uploads.module";
 import { adminUsersModule } from "@/modules/adminUsers/adminUsers.module";
 import { brandsAdminModule } from "@/modules/product-catalog/features/brands/brands.module";
@@ -8,8 +7,12 @@ import { categorySpecificationsAdminModule } from "@/modules/product-catalog/fea
 import { categoryVariantsAdminModule } from "@/modules/product-catalog/features/categoryVariants/categoryVariants.module";
 import { productsAdminModule } from "@/modules/product-catalog/features/products/products.module";
 
+// Issue #143/M3.5 — the temporary X-Admin-Key guard (adminAuth.ts) that used
+// to be applied once here for the whole router is gone; every module below
+// now carries its own rbac(...) guard at its own router's mount (see e.g.
+// uploads.routes.ts, brands.admin.routes.ts) — the same convention
+// adminUsersModule already established in #142.
 const adminRouter = Router();
-adminRouter.use(adminAuth);
 
 adminRouter.use(uploadsModule.path, uploadsModule.router);
 adminRouter.use(adminUsersModule.path, adminUsersModule.router);

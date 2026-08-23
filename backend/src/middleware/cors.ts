@@ -18,7 +18,7 @@ export const corsMiddleware = cors({
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   // Authorization carries the Bearer session token (Issue #139) — omitting
   // it would fail preflight for every authenticated buyer request.
-  allowedHeaders: ["Content-Type", "X-Admin-Key", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   // set-auth-token carries the Bearer session token back on sign-in
   // (Better Auth's `bearer` plugin) — without exposing it explicitly, a
   // browser receives the header but cross-origin `fetch(...).headers.get()`

@@ -7,8 +7,8 @@ export const productsAdminModule = {
 };
 
 // Same two-mount-point shape as brands/categories: admin CRUD needs the
-// adminAuth guard (mounted under adminRouter), the public list/detail must
-// not have it (mounted directly on the root router). GET /api/categories/:slug/products
+// rbac guard (mounted at products.admin.routes.ts's own router), the public
+// list/detail must not have it (mounted directly on the root router). GET /api/categories/:slug/products
 // (FR-CAT-055) is the one buyer route that does NOT live under this module's
 // own path prefix — see categories.public.routes.ts's import of
 // listProductsByCategorySlugHandler for why.

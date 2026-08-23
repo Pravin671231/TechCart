@@ -171,7 +171,10 @@ function attributeSetKey(attributes: ProductVariantAttribute[]): string {
     .join("|");
 }
 
-export async function createProduct(input: CreateProductInput): Promise<ProductRecord> {
+export async function createProduct(
+  input: CreateProductInput,
+  userId: string,
+): Promise<ProductRecord> {
   await getBrandById(input.brand);
   await getCategoryById(input.category);
 
@@ -187,6 +190,7 @@ export async function createProduct(input: CreateProductInput): Promise<ProductR
     category: input.category,
     specifications: input.specifications,
     isFeatured: input.isFeatured,
+    createdBy: new Types.ObjectId(userId),
   };
   if (input.metaTitle !== undefined) doc.metaTitle = input.metaTitle;
   if (input.metaDescription !== undefined) doc.metaDescription = input.metaDescription;
@@ -203,6 +207,7 @@ export async function createProduct(input: CreateProductInput): Promise<ProductR
 export async function updateProduct(
   id: Types.ObjectId,
   input: UpdateProductInput,
+  userId: string,
 ): Promise<ProductRecord> {
   const existing = await findById(id);
   if (!existing) throw notFound(id);
@@ -216,7 +221,7 @@ export async function updateProduct(
     await validateProductSpecifications(effectiveCategory, effectiveSpecifications);
   }
 
-  const patch: UpdateProductDoc = {};
+  const patch: UpdateProductDoc = { updatedBy: new Types.ObjectId(userId) };
   if (input.name !== undefined) patch.name = input.name;
   if (input.description !== undefined) patch.description = input.description;
   if (input.brand !== undefined) patch.brand = input.brand;
@@ -263,6 +268,7 @@ export async function listProductsForAdmin(
 export async function updateProductStatus(
   id: Types.ObjectId,
   status: ProductStatus,
+  userId: string,
 ): Promise<ProductRecord> {
   if (status === "published") {
     const product = await findById(id);
@@ -270,7 +276,7 @@ export async function updateProductStatus(
     if (!product.variants.some((variant) => variant.active)) throw productHasNoVariants(id);
   }
 
-  const updated = await updateById(id, { status });
+  const updated = await updateById(id, { status, updatedBy: new Types.ObjectId(userId) });
   if (!updated) throw notFound(id);
   return updated;
 }
@@ -281,8 +287,8 @@ export async function updateProductStatus(
 // this is just updateProductStatus(id, "archived") under a delete-shaped
 // name; a nonexistent id 404s rather than silently no-opping, since there's
 // no "naturally zero" guard count to fall back on.
-export async function deleteProduct(id: Types.ObjectId): Promise<void> {
-  await updateProductStatus(id, "archived");
+export async function deleteProduct(id: Types.ObjectId, userId: string): Promise<void> {
+  await updateProductStatus(id, "archived", userId);
 }
 
 // Required, 1-2 images (#102) — no more empty-array short-circuit, since
@@ -325,6 +331,7 @@ async function assertVariantSkuAvailable(
 export async function addVariant(
   productId: Types.ObjectId,
   input: AddVariantInput,
+  userId: string,
 ): Promise<ProductRecord> {
   const product = await findById(productId);
   if (!product) throw notFound(productId);
@@ -357,7 +364,11 @@ export async function addVariant(
   };
   if (input.weight !== undefined) variant.weight = input.weight;
 
-  const updated = await replaceVariants(productId, [...product.variants, variant]);
+  const updated = await replaceVariants(
+    productId,
+    [...product.variants, variant],
+    new Types.ObjectId(userId),
+  );
   if (!updated) throw notFound(productId);
   return updated;
 }
@@ -369,6 +380,7 @@ export async function updateVariant(
   productId: Types.ObjectId,
   variantId: Types.ObjectId,
   input: UpdateVariantInput,
+  userId: string,
 ): Promise<ProductRecord> {
   const product = await findById(productId);
   if (!product) throw notFound(productId);
@@ -411,7 +423,7 @@ export async function updateVariant(
   const updatedVariants = [...product.variants];
   updatedVariants[index] = updatedVariant;
 
-  const updated = await replaceVariants(productId, updatedVariants);
+  const updated = await replaceVariants(productId, updatedVariants, new Types.ObjectId(userId));
   if (!updated) throw notFound(productId);
   return updated;
 }

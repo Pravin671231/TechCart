@@ -1,6 +1,16 @@
 import { Types } from "mongoose";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import type { Express } from "express";
+
+// Issue #143/M3.5 — every /api/admin/products route is now gated by
+// rbac.ts, which needs a real Better Auth session to resolve, not the old
+// X-Admin-Key header — see brands.api.test.ts's own header comment for the
+// full rationale. Public /api/products* routes are untouched, no session
+// needed.
+vi.mock("@/externalService/resend", () => ({
+  sendOtpEmail: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock("@/modules/product-catalog/features/products/products.repository", () => ({
   PRODUCT_SORT_FIELDS: ["createdAt", "name"],
@@ -52,8 +62,6 @@ vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
   };
 });
 
-import app from "@/app";
-import { env } from "@/config/env";
 import { AppError } from "@/utils/AppError";
 import type {
   ProductRecord,
@@ -63,6 +71,59 @@ import * as productsRepository from "@/modules/product-catalog/features/products
 import * as brandsService from "@/modules/product-catalog/features/brands/brands.service";
 import * as categoriesService from "@/modules/product-catalog/features/categories/categories.service";
 import * as categorySpecificationsService from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service";
+import {
+  bootstrapMemoryMongo,
+  teardownMemoryMongo,
+  signInFully,
+  authRequest,
+  type MemoryMongoContext,
+} from "../../testHelpers/adminSession";
+
+const CATALOG_MANAGER_EMAIL = "products-catalog-manager@example.com";
+const CATALOG_MANAGER_PASSWORD = "CatalogMgr!Pass1";
+const ORDER_MANAGER_EMAIL = "products-order-manager@example.com";
+const ORDER_MANAGER_PASSWORD = "OrderMgr!Pass1";
+
+let ctx: MemoryMongoContext;
+let app: Express;
+let token: string;
+let orderManagerToken: string;
+let catalogManagerId: string;
+
+beforeAll(async () => {
+  ctx = await bootstrapMemoryMongo();
+  app = ctx.app;
+
+  const { provisionAdminUser } = await import("../../../src/scripts/seed/createAdminUser.js");
+  await provisionAdminUser({
+    email: CATALOG_MANAGER_EMAIL,
+    password: CATALOG_MANAGER_PASSWORD,
+    name: "Products Catalog Manager Fixture",
+    role: "catalog-manager",
+  });
+  token = await signInFully(app, CATALOG_MANAGER_EMAIL, CATALOG_MANAGER_PASSWORD);
+
+  const catalogManagerDoc = await ctx.mongoose.connection
+    .db!.collection<{ _id: unknown; email: string }>("users")
+    .findOne({ email: CATALOG_MANAGER_EMAIL });
+  catalogManagerId = String(catalogManagerDoc!._id);
+
+  await provisionAdminUser({
+    email: ORDER_MANAGER_EMAIL,
+    password: ORDER_MANAGER_PASSWORD,
+    name: "Products Order Manager Fixture",
+    role: "order-manager",
+  });
+  orderManagerToken = await signInFully(app, ORDER_MANAGER_EMAIL, ORDER_MANAGER_PASSWORD);
+}, 60000);
+
+afterAll(async () => {
+  await teardownMemoryMongo(ctx);
+});
+
+function admin(method: "get" | "post" | "patch" | "delete", url: string) {
+  return authRequest(app, method, url, token);
+}
 
 const productId = new Types.ObjectId();
 const brandId = new Types.ObjectId();
@@ -158,9 +219,17 @@ afterEach(() => {
 });
 
 describe("POST /api/admin/products", () => {
-  it("rejects a request with no X-Admin-Key header", async () => {
+  it("rejects a request with no session at all", async () => {
     const res = await request(app).post("/api/admin/products").send(validBody);
     expect(res.status).toBe(401);
+  });
+
+  it("rejects a session with the wrong role (order-manager)", async () => {
+    const res = await authRequest(app, "post", "/api/admin/products", orderManagerToken).send(
+      validBody,
+    );
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("FORBIDDEN");
   });
 
   it("creates a product with just metadata, ignoring unknown fields like sku/mrp/stock", async () => {
@@ -169,10 +238,13 @@ describe("POST /api/admin/products", () => {
     vi.mocked(productsRepository.slugExists).mockResolvedValue(false);
     vi.mocked(productsRepository.create).mockResolvedValue(productStub);
 
-    const res = await request(app)
-      .post("/api/admin/products")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ ...validBody, sku: "IGNORED", mrp: 99900, stock: 10, images: [{ objectKey: "x" }] });
+    const res = await admin("post", "/api/admin/products").send({
+      ...validBody,
+      sku: "IGNORED",
+      mrp: 99900,
+      stock: 10,
+      images: [{ objectKey: "x" }],
+    });
 
     expect(res.status).toBe(201);
     const doc = vi.mocked(productsRepository.create).mock.calls[0]?.[0];
@@ -189,13 +261,22 @@ describe("POST /api/admin/products", () => {
     }
   });
 
+  it("stores the signed-in catalog-manager's real user id in createdBy", async () => {
+    vi.mocked(brandsService.getBrandById).mockResolvedValue(brandStub);
+    vi.mocked(categoriesService.getCategoryById).mockResolvedValue(categoryStub);
+    vi.mocked(productsRepository.slugExists).mockResolvedValue(false);
+    vi.mocked(productsRepository.create).mockResolvedValue(productStub);
+
+    await admin("post", "/api/admin/products").send(validBody);
+
+    const doc = vi.mocked(productsRepository.create).mock.calls[0]?.[0];
+    expect(doc?.createdBy?.toString()).toBe(catalogManagerId);
+  });
+
   it("rejects a request missing a required field", async () => {
     const { category: _category, ...withoutCategory } = validBody;
 
-    const res = await request(app)
-      .post("/api/admin/products")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send(withoutCategory);
+    const res = await admin("post", "/api/admin/products").send(withoutCategory);
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -207,10 +288,7 @@ describe("POST /api/admin/products", () => {
       new AppError(404, "BRAND_NOT_FOUND", "not found"),
     );
 
-    const res = await request(app)
-      .post("/api/admin/products")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send(validBody);
+    const res = await admin("post", "/api/admin/products").send(validBody);
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("BRAND_NOT_FOUND");
@@ -223,10 +301,7 @@ describe("POST /api/admin/products", () => {
       new AppError(400, "SPECIFICATION_VALIDATION_FAILED", "bad specs"),
     );
 
-    const res = await request(app)
-      .post("/api/admin/products")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send(validBody);
+    const res = await admin("post", "/api/admin/products").send(validBody);
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("SPECIFICATION_VALIDATION_FAILED");
@@ -242,10 +317,12 @@ describe("PATCH /api/admin/products/:id", () => {
       name: "New name",
     });
 
-    const res = await request(app)
-      .patch(`/api/admin/products/${productId.toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "New name", sku: "SHOULD-BE-IGNORED", mrp: 1, stock: 1 });
+    const res = await admin("patch", `/api/admin/products/${productId.toString()}`).send({
+      name: "New name",
+      sku: "SHOULD-BE-IGNORED",
+      mrp: 1,
+      stock: 1,
+    });
 
     expect(res.status).toBe(200);
     const patch = vi.mocked(productsRepository.updateById).mock.calls[0]?.[1];
@@ -265,10 +342,9 @@ describe("PATCH /api/admin/products/:id", () => {
   it("returns PRODUCT_NOT_FOUND for a nonexistent id", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(null);
 
-    const res = await request(app)
-      .patch(`/api/admin/products/${productId.toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "New name" });
+    const res = await admin("patch", `/api/admin/products/${productId.toString()}`).send({
+      name: "New name",
+    });
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("PRODUCT_NOT_FOUND");
@@ -281,10 +357,9 @@ describe("PATCH /api/admin/products/:id", () => {
       new AppError(400, "SPECIFICATION_VALIDATION_FAILED", "bad specs"),
     );
 
-    const res = await request(app)
-      .patch(`/api/admin/products/${productId.toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ category: new Types.ObjectId().toString() });
+    const res = await admin("patch", `/api/admin/products/${productId.toString()}`).send({
+      category: new Types.ObjectId().toString(),
+    });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("SPECIFICATION_VALIDATION_FAILED");
@@ -299,9 +374,7 @@ describe("GET /api/admin/products/:id", () => {
       status: "archived",
     });
 
-    const res = await request(app)
-      .get(`/api/admin/products/${productId.toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", `/api/admin/products/${productId.toString()}`);
 
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe("archived");
@@ -310,9 +383,7 @@ describe("GET /api/admin/products/:id", () => {
   it("returns PRODUCT_NOT_FOUND for a nonexistent id", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(null);
 
-    const res = await request(app)
-      .get(`/api/admin/products/${productId.toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", `/api/admin/products/${productId.toString()}`);
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("PRODUCT_NOT_FOUND");
@@ -326,7 +397,7 @@ describe("GET /api/admin/products", () => {
       total: 1,
     });
 
-    const res = await request(app).get("/api/admin/products").set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", "/api/admin/products");
 
     expect(res.status).toBe(200);
     expect(res.body.pagination).toEqual({
@@ -339,9 +410,7 @@ describe("GET /api/admin/products", () => {
   });
 
   it("clamps an oversized limit request", async () => {
-    const res = await request(app)
-      .get("/api/admin/products?limit=1000")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", "/api/admin/products?limit=1000");
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -353,9 +422,7 @@ describe("GET /api/admin/products", () => {
   it("passes the parsed sort field/order through to the repository", async () => {
     vi.mocked(productsRepository.listPaginated).mockResolvedValue({ items: [], total: 0 });
 
-    await request(app)
-      .get("/api/admin/products?sortBy=name&orderBy=desc")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    await admin("get", "/api/admin/products?sortBy=name&orderBy=desc");
 
     expect(productsRepository.listPaginated).toHaveBeenCalledWith(
       {},
@@ -367,9 +434,7 @@ describe("GET /api/admin/products", () => {
   it("passes sort: undefined to the repository when orderBy is none", async () => {
     vi.mocked(productsRepository.listPaginated).mockResolvedValue({ items: [], total: 0 });
 
-    await request(app)
-      .get("/api/admin/products?orderBy=none")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    await admin("get", "/api/admin/products?orderBy=none");
 
     expect(productsRepository.listPaginated).toHaveBeenCalledWith(
       {},
@@ -379,18 +444,14 @@ describe("GET /api/admin/products", () => {
   });
 
   it("rejects an unrecognized sortBy value", async () => {
-    const res = await request(app)
-      .get("/api/admin/products?sortBy=badfield")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", "/api/admin/products?sortBy=badfield");
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
   });
 
   it("rejects an unrecognized orderBy value", async () => {
-    const res = await request(app)
-      .get("/api/admin/products?orderBy=sideways")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", "/api/admin/products?orderBy=sideways");
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -399,9 +460,7 @@ describe("GET /api/admin/products", () => {
   it("passes the search term through to the repository", async () => {
     vi.mocked(productsRepository.listPaginated).mockResolvedValue({ items: [], total: 0 });
 
-    await request(app)
-      .get("/api/admin/products?search=SKU-1")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    await admin("get", "/api/admin/products?search=SKU-1");
 
     expect(productsRepository.listPaginated).toHaveBeenCalledWith(
       { search: "SKU-1", status: undefined },
@@ -413,9 +472,7 @@ describe("GET /api/admin/products", () => {
   it("composes search with a status filter without narrowing either incorrectly", async () => {
     vi.mocked(productsRepository.listPaginated).mockResolvedValue({ items: [], total: 0 });
 
-    await request(app)
-      .get("/api/admin/products?search=phone&status=published")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    await admin("get", "/api/admin/products?search=phone&status=published");
 
     expect(productsRepository.listPaginated).toHaveBeenCalledWith(
       { search: "phone", status: "published" },
@@ -425,9 +482,7 @@ describe("GET /api/admin/products", () => {
   });
 
   it("rejects an unrecognized status filter value", async () => {
-    const res = await request(app)
-      .get("/api/admin/products?status=deleted")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", "/api/admin/products?status=deleted");
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -441,21 +496,20 @@ describe("DELETE /api/admin/products/:id", () => {
       status: "archived",
     });
 
-    const res = await request(app)
-      .delete(`/api/admin/products/${productId.toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("delete", `/api/admin/products/${productId.toString()}`);
 
     expect(res.status).toBe(200);
     expect(res.body.data).toBeNull();
-    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, { status: "archived" });
+    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, {
+      status: "archived",
+      updatedBy: expect.any(Types.ObjectId),
+    });
   });
 
   it("returns PRODUCT_NOT_FOUND for a nonexistent id", async () => {
     vi.mocked(productsRepository.updateById).mockResolvedValue(null);
 
-    const res = await request(app)
-      .delete(`/api/admin/products/${productId.toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("delete", `/api/admin/products/${productId.toString()}`);
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("PRODUCT_NOT_FOUND");
@@ -463,7 +517,7 @@ describe("DELETE /api/admin/products/:id", () => {
 });
 
 describe("PATCH /api/admin/products/:id/status", () => {
-  it("rejects a request with no X-Admin-Key header", async () => {
+  it("rejects a request with no session at all", async () => {
     const res = await request(app)
       .patch(`/api/admin/products/${productId.toString()}/status`)
       .send({ status: "published" });
@@ -478,23 +532,26 @@ describe("PATCH /api/admin/products/:id/status", () => {
       status: "published",
     });
 
-    const res = await request(app)
-      .patch(`/api/admin/products/${productId.toString()}/status`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ status: "published" });
+    const res = await admin(
+      "patch",
+      `/api/admin/products/${productId.toString()}/status`,
+    ).send({ status: "published" });
 
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe("published");
-    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, { status: "published" });
+    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, {
+      status: "published",
+      updatedBy: expect.any(Types.ObjectId),
+    });
   });
 
   it("rejects publishing a product with zero variants with PRODUCT_HAS_NO_VARIANTS", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productStub);
 
-    const res = await request(app)
-      .patch(`/api/admin/products/${productId.toString()}/status`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ status: "published" });
+    const res = await admin(
+      "patch",
+      `/api/admin/products/${productId.toString()}/status`,
+    ).send({ status: "published" });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("PRODUCT_HAS_NO_VARIANTS");
@@ -507,33 +564,36 @@ describe("PATCH /api/admin/products/:id/status", () => {
       status: "archived",
     });
 
-    const res = await request(app)
-      .patch(`/api/admin/products/${productId.toString()}/status`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ status: "archived" });
+    const res = await admin(
+      "patch",
+      `/api/admin/products/${productId.toString()}/status`,
+    ).send({ status: "archived" });
 
     expect(res.status).toBe(200);
     expect(productsRepository.findById).not.toHaveBeenCalled();
-    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, { status: "archived" });
+    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, {
+      status: "archived",
+      updatedBy: expect.any(Types.ObjectId),
+    });
   });
 
   it("returns PRODUCT_NOT_FOUND for a nonexistent id when publishing", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(null);
 
-    const res = await request(app)
-      .patch(`/api/admin/products/${productId.toString()}/status`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ status: "published" });
+    const res = await admin(
+      "patch",
+      `/api/admin/products/${productId.toString()}/status`,
+    ).send({ status: "published" });
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("PRODUCT_NOT_FOUND");
   });
 
   it("rejects an unrecognized status value", async () => {
-    const res = await request(app)
-      .patch(`/api/admin/products/${productId.toString()}/status`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ status: "deleted" });
+    const res = await admin(
+      "patch",
+      `/api/admin/products/${productId.toString()}/status`,
+    ).send({ status: "deleted" });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -541,7 +601,7 @@ describe("PATCH /api/admin/products/:id/status", () => {
 });
 
 describe("POST /api/admin/products/:id/variants", () => {
-  it("rejects a request with no X-Admin-Key header", async () => {
+  it("rejects a request with no session at all", async () => {
     const res = await request(app)
       .post(`/api/admin/products/${productId.toString()}/variants`)
       .send(addVariantBody);
@@ -553,10 +613,10 @@ describe("POST /api/admin/products/:id/variants", () => {
     vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
     vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariant);
 
-    const res = await request(app)
-      .post(`/api/admin/products/${productId.toString()}/variants`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ ...addVariantBody, mrp: 60000, discount: 10 });
+    const res = await admin(
+      "post",
+      `/api/admin/products/${productId.toString()}/variants`,
+    ).send({ ...addVariantBody, mrp: 60000, discount: 10 });
 
     expect(res.status).toBe(201);
     const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
@@ -571,10 +631,10 @@ describe("POST /api/admin/products/:id/variants", () => {
   it("returns PRODUCT_NOT_FOUND for a nonexistent product", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(null);
 
-    const res = await request(app)
-      .post(`/api/admin/products/${productId.toString()}/variants`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send(addVariantBody);
+    const res = await admin(
+      "post",
+      `/api/admin/products/${productId.toString()}/variants`,
+    ).send(addVariantBody);
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("PRODUCT_NOT_FOUND");
@@ -583,10 +643,10 @@ describe("POST /api/admin/products/:id/variants", () => {
   it("rejects a variant sku already used by a sibling variant", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariant);
 
-    const res = await request(app)
-      .post(`/api/admin/products/${productId.toString()}/variants`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ ...addVariantBody, sku: existingVariant.sku });
+    const res = await admin(
+      "post",
+      `/api/admin/products/${productId.toString()}/variants`,
+    ).send({ ...addVariantBody, sku: existingVariant.sku });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("DUPLICATE_SKU");
@@ -597,37 +657,34 @@ describe("POST /api/admin/products/:id/variants", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariant);
     vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
 
-    const res = await request(app)
-      .post(`/api/admin/products/${productId.toString()}/variants`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({
-        ...addVariantBody,
-        sku: "SKU-1-UNIQUE",
-        attributes: [
-          { name: "Size", value: "L" },
-          { name: "Color", value: "Red" },
-        ],
-      });
+    const res = await admin("post", `/api/admin/products/${productId.toString()}/variants`).send({
+      ...addVariantBody,
+      sku: "SKU-1-UNIQUE",
+      attributes: [
+        { name: "Size", value: "L" },
+        { name: "Color", value: "Red" },
+      ],
+    });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("DUPLICATE_VARIANT_ATTRIBUTES");
   });
 
   it("rejects a non-positive mrp with a validation error", async () => {
-    const res = await request(app)
-      .post(`/api/admin/products/${productId.toString()}/variants`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ ...addVariantBody, mrp: 0 });
+    const res = await admin(
+      "post",
+      `/api/admin/products/${productId.toString()}/variants`,
+    ).send({ ...addVariantBody, mrp: 0 });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
   });
 
   it("rejects an empty attributes array", async () => {
-    const res = await request(app)
-      .post(`/api/admin/products/${productId.toString()}/variants`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ ...addVariantBody, attributes: [] });
+    const res = await admin(
+      "post",
+      `/api/admin/products/${productId.toString()}/variants`,
+    ).send({ ...addVariantBody, attributes: [] });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -636,10 +693,10 @@ describe("POST /api/admin/products/:id/variants", () => {
   it("rejects a request missing images — required since #102 removed the parent product's fallback", async () => {
     const { images: _images, ...withoutImages } = addVariantBody;
 
-    const res = await request(app)
-      .post(`/api/admin/products/${productId.toString()}/variants`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send(withoutImages);
+    const res = await admin(
+      "post",
+      `/api/admin/products/${productId.toString()}/variants`,
+    ).send(withoutImages);
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -656,10 +713,7 @@ describe("PATCH /api/admin/products/:id/variants/:variantId", () => {
       variants: [{ ...existingVariant, active: false }],
     });
 
-    const res = await request(app)
-      .patch(url)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ active: false });
+    const res = await admin("patch", url).send({ active: false });
 
     expect(res.status).toBe(200);
     const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
@@ -671,12 +725,10 @@ describe("PATCH /api/admin/products/:id/variants/:variantId", () => {
   it("returns VARIANT_NOT_FOUND for a variantId that isn't on this product", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariant);
 
-    const res = await request(app)
-      .patch(
-        `/api/admin/products/${productId.toString()}/variants/${new Types.ObjectId().toString()}`,
-      )
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ weight: 1 });
+    const res = await admin(
+      "patch",
+      `/api/admin/products/${productId.toString()}/variants/${new Types.ObjectId().toString()}`,
+    ).send({ weight: 1 });
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("VARIANT_NOT_FOUND");
@@ -685,20 +737,14 @@ describe("PATCH /api/admin/products/:id/variants/:variantId", () => {
   it("returns PRODUCT_NOT_FOUND for a nonexistent product", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(null);
 
-    const res = await request(app)
-      .patch(url)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ weight: 1 });
+    const res = await admin("patch", url).send({ weight: 1 });
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("PRODUCT_NOT_FOUND");
   });
 
   it("rejects a non-positive mrp when mrp is provided", async () => {
-    const res = await request(app)
-      .patch(url)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ mrp: 0 });
+    const res = await admin("patch", url).send({ mrp: 0 });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -706,7 +752,7 @@ describe("PATCH /api/admin/products/:id/variants/:variantId", () => {
 });
 
 describe("GET /api/products", () => {
-  it("requires no admin key and returns a paginated envelope", async () => {
+  it("requires no session and returns a paginated envelope", async () => {
     vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
       items: [publicProductStub],
       total: 1,
@@ -968,7 +1014,7 @@ describe("GET /api/products", () => {
 });
 
 describe("GET /api/products/:slug", () => {
-  it("requires no admin key and returns the full detail shape", async () => {
+  it("requires no session and returns the full detail shape", async () => {
     vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue(publicProductStub);
 
     const res = await request(app).get("/api/products/phone");

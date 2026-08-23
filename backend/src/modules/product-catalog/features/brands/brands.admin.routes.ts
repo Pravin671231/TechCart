@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { rbac, CATALOG_ADMIN_ROLES } from "@/middleware/rbac";
 import {
   createBrandHandler,
   deleteBrandHandler,
@@ -9,6 +10,7 @@ import {
 } from "./brands.controller";
 
 const router = Router();
+router.use(rbac(CATALOG_ADMIN_ROLES));
 
 router.get("/", listBrandsHandler);
 router.get("/:id", getBrandHandler);

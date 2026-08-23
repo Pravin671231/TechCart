@@ -1,6 +1,15 @@
 import { Types } from "mongoose";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import type { Express } from "express";
+
+// Issue #143/M3.5 — every route in this module is admin-only and now gated
+// by rbac.ts, which needs a real Better Auth session to resolve, not the
+// old X-Admin-Key header — see brands.api.test.ts's own header comment for
+// the full rationale.
+vi.mock("@/externalService/resend", () => ({
+  sendOtpEmail: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock("@/modules/product-catalog/features/categorySpecifications/categorySpecifications.repository", () => ({
   findByCategory: vi.fn(),
@@ -18,12 +27,46 @@ vi.mock("@/modules/product-catalog/features/products/products.repository", () =>
   countBySpecificationField: vi.fn(),
 }));
 
-import app from "@/app";
-import { env } from "@/config/env";
 import * as categorySpecificationsRepository from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.repository";
 import * as categoriesRepository from "@/modules/product-catalog/features/categories/categories.repository";
 import * as productsRepository from "@/modules/product-catalog/features/products/products.repository";
 import type { SpecificationGroup } from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.model";
+import {
+  bootstrapMemoryMongo,
+  teardownMemoryMongo,
+  signInFully,
+  authRequest,
+  type MemoryMongoContext,
+} from "../../testHelpers/adminSession";
+
+const CATALOG_MANAGER_EMAIL = "categoryspecs-catalog-manager@example.com";
+const CATALOG_MANAGER_PASSWORD = "CatalogMgr!Pass1";
+
+let ctx: MemoryMongoContext;
+let app: Express;
+let token: string;
+
+beforeAll(async () => {
+  ctx = await bootstrapMemoryMongo();
+  app = ctx.app;
+
+  const { provisionAdminUser } = await import("../../../src/scripts/seed/createAdminUser.js");
+  await provisionAdminUser({
+    email: CATALOG_MANAGER_EMAIL,
+    password: CATALOG_MANAGER_PASSWORD,
+    name: "Category Specs Catalog Manager Fixture",
+    role: "catalog-manager",
+  });
+  token = await signInFully(app, CATALOG_MANAGER_EMAIL, CATALOG_MANAGER_PASSWORD);
+}, 60000);
+
+afterAll(async () => {
+  await teardownMemoryMongo(ctx);
+});
+
+function admin(method: "get" | "put" | "patch", url: string) {
+  return authRequest(app, method, url, token);
+}
 
 const categoryId = new Types.ObjectId();
 const url = `/api/admin/categories/${categoryId.toString()}/specifications`;
@@ -44,7 +87,7 @@ afterEach(() => {
 });
 
 describe("GET /api/admin/categories/:id/specifications", () => {
-  it("rejects a request with no X-Admin-Key header", async () => {
+  it("rejects a request with no session at all", async () => {
     const res = await request(app).get(url);
     expect(res.status).toBe(401);
   });
@@ -52,7 +95,7 @@ describe("GET /api/admin/categories/:id/specifications", () => {
   it("returns 404 when the category doesn't exist", async () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(null);
 
-    const res = await request(app).get(url).set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", url);
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("CATEGORY_NOT_FOUND");
@@ -62,7 +105,7 @@ describe("GET /api/admin/categories/:id/specifications", () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(categoryStub);
     vi.mocked(categorySpecificationsRepository.findByCategory).mockResolvedValue(null);
 
-    const res = await request(app).get(url).set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", url);
 
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual({ category: categoryId.toString(), specificationGroups: [] });
@@ -85,7 +128,7 @@ describe("GET /api/admin/categories/:id/specifications", () => {
       specificationGroups: orderedGroups,
     });
 
-    const res = await request(app).get(url).set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", url);
 
     expect(res.status).toBe(200);
     expect(res.body.data.specificationGroups[0].specifications.map((f: { name: string }) => f.name)).toEqual([
@@ -115,7 +158,7 @@ describe("PUT /api/admin/categories/:id/specifications", () => {
       specificationGroups: body.specificationGroups,
     });
 
-    const res = await request(app).put(url).set("X-Admin-Key", env.ADMIN_API_KEY).send(body);
+    const res = await admin("put", url).send(body);
 
     expect(res.status).toBe(200);
     expect(categorySpecificationsRepository.replaceGroups).toHaveBeenCalledWith(
@@ -127,17 +170,14 @@ describe("PUT /api/admin/categories/:id/specifications", () => {
   it("rejects filterable: true on a text field", async () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(categoryStub);
 
-    const res = await request(app)
-      .put(url)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({
-        specificationGroups: [
-          {
-            groupName: "Display",
-            specifications: [{ name: "Resolution", type: "text", required: false, filterable: true }],
-          },
-        ],
-      });
+    const res = await admin("put", url).send({
+      specificationGroups: [
+        {
+          groupName: "Display",
+          specifications: [{ name: "Resolution", type: "text", required: false, filterable: true }],
+        },
+      ],
+    });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -156,10 +196,9 @@ describe("PUT /api/admin/categories/:id/specifications", () => {
       specificationGroups: [{ groupName: "Group", specifications: [field] }],
     });
 
-    const res = await request(app)
-      .put(url)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ specificationGroups: [{ groupName: "Group", specifications: [field] }] });
+    const res = await admin("put", url).send({
+      specificationGroups: [{ groupName: "Group", specifications: [field] }],
+    });
 
     expect(res.status).toBe(200);
   });
@@ -167,14 +206,11 @@ describe("PUT /api/admin/categories/:id/specifications", () => {
   it("rejects an enum field with no options", async () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(categoryStub);
 
-    const res = await request(app)
-      .put(url)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({
-        specificationGroups: [
-          { groupName: "Group", specifications: [{ name: "Color", type: "enum", required: false, filterable: false }] },
-        ],
-      });
+    const res = await admin("put", url).send({
+      specificationGroups: [
+        { groupName: "Group", specifications: [{ name: "Color", type: "enum", required: false, filterable: false }] },
+      ],
+    });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -183,15 +219,12 @@ describe("PUT /api/admin/categories/:id/specifications", () => {
   it("rejects duplicate group names in the payload", async () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(categoryStub);
 
-    const res = await request(app)
-      .put(url)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({
-        specificationGroups: [
-          { groupName: "Display", specifications: [] },
-          { groupName: "Display", specifications: [] },
-        ],
-      });
+    const res = await admin("put", url).send({
+      specificationGroups: [
+        { groupName: "Display", specifications: [] },
+        { groupName: "Display", specifications: [] },
+      ],
+    });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("DUPLICATE_SPECIFICATION_GROUP");
@@ -201,10 +234,7 @@ describe("PUT /api/admin/categories/:id/specifications", () => {
   it("returns 404 when the category doesn't exist", async () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(null);
 
-    const res = await request(app)
-      .put(url)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ specificationGroups: [] });
+    const res = await admin("put", url).send({ specificationGroups: [] });
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("CATEGORY_NOT_FOUND");
@@ -233,10 +263,11 @@ describe("PATCH /api/admin/categories/:id/specifications", () => {
       specificationGroups: [{ groupName: "Display", specifications: [] }],
     });
 
-    const res = await request(app)
-      .patch(url)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ op: "deleteField", groupName: "Display", name: "Screen Size" });
+    const res = await admin("patch", url).send({
+      op: "deleteField",
+      groupName: "Display",
+      name: "Screen Size",
+    });
 
     expect(res.status).toBe(200);
     expect(categorySpecificationsRepository.replaceGroups).toHaveBeenCalledWith(categoryId, [
@@ -253,10 +284,11 @@ describe("PATCH /api/admin/categories/:id/specifications", () => {
     });
     vi.mocked(productsRepository.countBySpecificationField).mockResolvedValue(5);
 
-    const res = await request(app)
-      .patch(url)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ op: "deleteField", groupName: "Display", name: "Screen Size" });
+    const res = await admin("patch", url).send({
+      op: "deleteField",
+      groupName: "Display",
+      name: "Screen Size",
+    });
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("SPECIFICATION_FIELD_IN_USE");
@@ -267,10 +299,7 @@ describe("PATCH /api/admin/categories/:id/specifications", () => {
   it("rejects a malformed operation body", async () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(categoryStub);
 
-    const res = await request(app)
-      .patch(url)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ op: "notARealOp" });
+    const res = await admin("patch", url).send({ op: "notARealOp" });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");

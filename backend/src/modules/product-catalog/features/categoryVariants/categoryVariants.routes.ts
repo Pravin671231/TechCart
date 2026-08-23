@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { rbac, CATALOG_ADMIN_ROLES } from "@/middleware/rbac";
 import {
   getVariantAxesHandler,
   putVariantAxesHandler,
@@ -10,6 +11,7 @@ import {
 // requirement as categorySpecifications.routes.ts. Without it, req.params.id
 // would be undefined on every request here.
 const router = Router({ mergeParams: true });
+router.use(rbac(CATALOG_ADMIN_ROLES));
 
 router.get("/", getVariantAxesHandler);
 router.put("/", putVariantAxesHandler);
