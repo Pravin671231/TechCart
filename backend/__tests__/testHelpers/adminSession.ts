@@ -83,6 +83,34 @@ export async function signInFully(app: Express, email: string, password: string)
   return token;
 }
 
+// Buyer counterpart to signInFully — email-OTP sign-in has no password/2FA
+// step (that's admin-only), just send -> read the OTP off the mocked
+// sendOtpEmail call -> verify. Requires the same
+// vi.mock("@/externalService/resend", ...) precondition as signInFully.
+// Added on Issue #144/M3.6's first buyer-facing auth test in this shared
+// helper file.
+export async function signInBuyer(app: Express, email: string): Promise<string> {
+  const send = await request(app)
+    .post("/api/auth/email-otp/send-verification-otp")
+    .send({ email, type: "sign-in" });
+  if (send.status !== 200) {
+    throw new Error(`email-otp/send-verification-otp failed: ${send.status}`);
+  }
+
+  const { sendOtpEmail } = await import("../../src/externalService/resend.js");
+  const otp = (sendOtpEmail as unknown as Mock).mock.calls.at(-1)?.[1] as string;
+  if (!otp) throw new Error("sendOtpEmail was never called — is it mocked in this test file?");
+
+  const verify = await request(app).post("/api/auth/sign-in/email-otp").send({ email, otp });
+  if (verify.status !== 200) {
+    throw new Error(`sign-in/email-otp failed: ${verify.status}`);
+  }
+
+  const token = verify.headers["set-auth-token"] as string;
+  if (!token) throw new Error("No set-auth-token header on the sign-in/email-otp response");
+  return token;
+}
+
 type Method = "get" | "post" | "patch" | "put" | "delete";
 
 export function authRequest(app: Express, method: Method, url: string, token: string) {

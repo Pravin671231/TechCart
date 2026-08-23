@@ -25,7 +25,12 @@ declare global {
 // literal array.
 export const CATALOG_ADMIN_ROLES = ["catalog-manager", "super-admin"] as const;
 
-export function rbac(roles: readonly AdminRole[]) {
+// Issue #144/M3.6 — widened from AdminRole-only so the identical guard also
+// covers the new buyer-only /api/account/profile routes, instead of a
+// parallel middleware duplicating this same session+role check.
+export type Role = AdminRole | "buyer";
+
+export function rbac(roles: readonly Role[]) {
   return async function rbacMiddleware(
     req: Request,
     _res: Response,
@@ -41,7 +46,7 @@ export function rbac(roles: readonly AdminRole[]) {
     // passing get-session tests, but the TS type auth.api.getSession()
     // infers for this server-side call may not statically include it.
     const user = session.user as typeof session.user & { role?: string };
-    if (!roles.includes(user.role as AdminRole)) {
+    if (!roles.includes(user.role as Role)) {
       next(
         new AppError(403, "FORBIDDEN", `This action requires one of: ${roles.join(", ")}.`),
       );
