@@ -87,8 +87,7 @@ async function signInFully(email: string, password: string): Promise<string> {
 }
 
 function adminRequest(method: "get" | "post" | "patch", url: string, token: string) {
-  return request(app)
-    [method](url)
+  return request(app)[method](url)
     .set("X-Admin-Key", env.ADMIN_API_KEY)
     .set("Authorization", `Bearer ${token}`);
 }
