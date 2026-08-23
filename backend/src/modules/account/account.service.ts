@@ -75,14 +75,32 @@ export async function changePassword(
     ? await sessionCollection().findOne({ token: currentToken })
     : null;
 
+  // TEMPORARY diagnostics (Issue #144) — three prior fix attempts all failed
+  // identically in real CI with no visibility into the actual `session`
+  // collection shape; this prints ground truth on the next CI run instead
+  // of guessing a fourth time. Removed once the real fix is confirmed.
+  console.log("[account.changePassword] diagnostics", {
+    userId,
+    hasAuthHeader: authHeader != null,
+    currentToken,
+    currentSessionDocFound: currentSessionDoc != null,
+    currentSessionDoc,
+    allSessionsForUserBefore: await sessionCollection().find({}).toArray(),
+  });
+
   try {
     await auth.api.changePassword({
       body: { currentPassword, newPassword },
       headers: buildFetchHeaders(req),
     });
-  } catch {
+  } catch (err) {
+    console.log("[account.changePassword] changePassword threw", err);
     throw new AppError(401, "INVALID_CURRENT_PASSWORD", "Current password is incorrect.");
   }
+
+  console.log("[account.changePassword] allSessionsForUserAfterChange", {
+    allSessions: await sessionCollection().find({}).toArray(),
+  });
 
   await revokeSessionsForUser(userId, currentToken);
 
@@ -92,4 +110,8 @@ export async function changePassword(
       await sessionCollection().insertOne(currentSessionDoc);
     }
   }
+
+  console.log("[account.changePassword] allSessionsForUserAfterRestore", {
+    allSessions: await sessionCollection().find({}).toArray(),
+  });
 }
