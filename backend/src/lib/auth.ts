@@ -249,9 +249,21 @@ export const auth = betterAuth({
   ],
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
-      await rejectAdminEmailOnReturningOtpSignIn(ctx);
-      await rejectBuyerOnPasswordSignIn(ctx);
-      await revokeSessionsAfterPasswordReset(ctx);
+      // Each of the three below is independently wrapped in its own
+      // createAuthMiddleware(...) purely for ctx-type convenience — none is
+      // ever registered as its own Better Auth hook, only called manually
+      // here. That wrapping makes each expect a slightly narrower context
+      // type than this outer hook's own ctx under exactOptionalPropertyTypes
+      // (request?: Request vs. request: Request | undefined) — a type-only
+      // mismatch, not a real behavioral difference, so a direct cast to each
+      // function's own declared parameter type resolves it.
+      await rejectAdminEmailOnReturningOtpSignIn(
+        ctx as Parameters<typeof rejectAdminEmailOnReturningOtpSignIn>[0],
+      );
+      await rejectBuyerOnPasswordSignIn(ctx as Parameters<typeof rejectBuyerOnPasswordSignIn>[0]);
+      await revokeSessionsAfterPasswordReset(
+        ctx as Parameters<typeof revokeSessionsAfterPasswordReset>[0],
+      );
     }),
   },
   databaseHooks: {

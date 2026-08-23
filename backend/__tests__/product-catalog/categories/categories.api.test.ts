@@ -108,8 +108,6 @@ describe("POST /api/admin/categories", () => {
       _id: id,
       sortOrder: 0,
       status: true,
-      createdBy: null,
-      updatedBy: null,
       ...doc,
     }));
 

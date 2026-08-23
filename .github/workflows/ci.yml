@@ -42,3 +42,27 @@ jobs:
           path: ~/.cache/mongodb-binaries
           key: mongodb-binaries-${{ runner.os }}
       - run: npm run test --workspace ${{ matrix.workspace }}
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: [backend, buyer-app, admin-app]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # buyer-app/src/store/env.ts throws at import time if these are unset,
+      # and `next build` statically evaluates pages that import it — dummy
+      # values are enough to prove the build itself compiles cleanly.
+      - if: matrix.workspace == 'buyer-app'
+        run: npm run build --workspace buyer-app
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: dummy-client-id
+      - if: matrix.workspace != 'buyer-app'
+        run: npm run build --workspace ${{ matrix.workspace }}

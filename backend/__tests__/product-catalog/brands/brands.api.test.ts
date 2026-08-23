@@ -89,8 +89,6 @@ describe("POST /api/admin/brands", () => {
     vi.mocked(brandsRepository.create).mockImplementation(async (doc) => ({
       _id: id,
       status: true,
-      createdBy: null,
-      updatedBy: null,
       ...doc,
     }));
 
@@ -111,15 +109,11 @@ describe("POST /api/admin/brands", () => {
       .mockImplementationOnce(async (doc) => ({
         _id: idA,
         status: true,
-        createdBy: null,
-        updatedBy: null,
         ...doc,
       }))
       .mockImplementationOnce(async (doc) => ({
         _id: idB,
         status: true,
-        createdBy: null,
-        updatedBy: null,
         ...doc,
       }));
 
