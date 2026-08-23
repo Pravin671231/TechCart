@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { auth } from "@/lib/auth";
 import { AppError } from "@/utils/AppError";
 import { buildFetchHeaders } from "@/utils/fetchHeaders";
@@ -37,56 +37,59 @@ export async function updateProfile(
   return updated;
 }
 
+function sessionCollection() {
+  return mongoose.connection.db!.collection("session");
+}
+
 // FR-AUTH-038/039: current-password-required change that invalidates every
 // *other* session for this admin, leaving the device making this request
-// signed in. Three things were tried and ruled out by real CI runs before
-// this shape: (1) Better Auth's own changePassword `revokeOtherSessions`
-// option kills the *current* session's token too, not just the others; (2)
-// excluding the pre-change request's own bearer token from a manual
-// revokeSessionsForUser call still failed identically, because Better Auth
-// *rotates* the current session's token as part of changing the password —
-// the old pre-change token no longer matches anything by the time it's
-// excluded against; (3) calling `auth.api.changePassword({..., asResponse:
-// true})` directly got a 200 back but no `set-auth-token` header at all —
-// that header is only ever attached by the bearer plugin's response
-// post-processing around the real `auth.handler()` request pipeline
-// (confirmed working for sign-in via betterAuthHandler.ts/#139), not around
-// the lower-level `auth.api.*` convenience call.
+// signed in. Two prior shapes were tried and ruled out by real CI runs:
+// Better Auth's own `revokeOtherSessions` option, and excluding the
+// pre-change bearer token from a manual revokeSessionsForUser call — both
+// left the *current* session dead afterward too. Neither attempt's response
+// carried a `set-auth-token` header either (confirmed via both
+// `auth.api.changePassword({asResponse: true})` and proxying through
+// `auth.handler()` directly, the same call betterAuthHandler.ts makes for
+// every /api/auth/* route) — changePassword doesn't reissue a session
+// token, it just unconditionally clears every session row for the user,
+// current one included.
 //
-// The fix: build a real Fetch Request for Better Auth's own
-// POST /api/auth/change-password and hand it to `auth.handler()` directly —
-// the exact same call betterAuthHandler.ts makes for every /api/auth/*
-// route — so the bearer plugin's header rewriting actually runs. Reads the
-// rotated token off that real Response's `set-auth-token` header, excludes
-// sessions by that new token instead of the stale old one, and returns it
-// to the caller so the client can update its stored credential and stay
-// signed in. A wrong current password comes back as a non-ok Response (no
-// session to rotate), rejected with one generic code — same
-// enumeration-safety posture as sign-in's INVALID_EMAIL_OR_PASSWORD
-// (auth.ts).
+// Given that, session preservation is done entirely outside of Better
+// Auth's own side effects: snapshot the current session's row (matched by
+// its bearer token) before calling changePassword, then — if that row is
+// gone afterward — restore it verbatim. This guarantees the device making
+// the change stays signed in with the exact same token regardless of what
+// changePassword does internally. A wrong current password is rejected
+// with one generic code, no further detail — same enumeration-safety
+// posture as sign-in's INVALID_EMAIL_OR_PASSWORD (auth.ts).
 export async function changePassword(
   req: Request,
   userId: string,
   currentPassword: string,
   newPassword: string,
-): Promise<string | undefined> {
-  const url = `${req.protocol}://${req.get("host")}/api/auth/change-password`;
-  const headers = buildFetchHeaders(req);
-  headers.set("content-type", "application/json");
+): Promise<void> {
+  const authHeader = req.headers.authorization;
+  const currentToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
 
-  const response = await auth.handler(
-    new Request(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ currentPassword, newPassword }),
-    }),
-  );
+  const currentSessionDoc = currentToken
+    ? await sessionCollection().findOne({ token: currentToken })
+    : null;
 
-  if (!response.ok) {
+  try {
+    await auth.api.changePassword({
+      body: { currentPassword, newPassword },
+      headers: buildFetchHeaders(req),
+    });
+  } catch {
     throw new AppError(401, "INVALID_CURRENT_PASSWORD", "Current password is incorrect.");
   }
 
-  const newToken = response.headers.get("set-auth-token") ?? undefined;
-  await revokeSessionsForUser(userId, newToken);
-  return newToken;
+  await revokeSessionsForUser(userId, currentToken);
+
+  if (currentSessionDoc) {
+    const stillThere = await sessionCollection().findOne({ token: currentToken });
+    if (!stillThere) {
+      await sessionCollection().insertOne(currentSessionDoc);
+    }
+  }
 }
