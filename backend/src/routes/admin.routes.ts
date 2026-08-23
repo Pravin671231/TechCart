@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { adminAuth } from "@/middleware/adminAuth";
 import { uploadsModule } from "@/modules/uploads/uploads.module";
+import { adminUsersModule } from "@/modules/adminUsers/adminUsers.module";
 import { brandsAdminModule } from "@/modules/product-catalog/features/brands/brands.module";
 import { categoriesAdminModule } from "@/modules/product-catalog/features/categories/categories.module";
 import { categorySpecificationsAdminModule } from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.module";
@@ -11,6 +12,7 @@ const adminRouter = Router();
 adminRouter.use(adminAuth);
 
 adminRouter.use(uploadsModule.path, uploadsModule.router);
+adminRouter.use(adminUsersModule.path, adminUsersModule.router);
 adminRouter.use(brandsAdminModule.path, brandsAdminModule.router);
 adminRouter.use(categoriesAdminModule.path, categoriesAdminModule.router);
 adminRouter.use(categorySpecificationsAdminModule.path, categorySpecificationsAdminModule.router);

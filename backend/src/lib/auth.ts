@@ -7,6 +7,7 @@ import { bearer, emailOTP, oneTap, twoFactor } from "better-auth/plugins";
 import { env } from "@/config/env";
 import { sendOtpEmail, sendPasswordResetEmail } from "@/externalService/resend";
 import { recordResetToken, consumeResetToken } from "@/lib/passwordResetTokens";
+import { revokeSessionsForUser } from "@/utils/sessions";
 
 const ADMIN_EMAIL_ON_BUYER_ROUTE_ERROR = {
   code: "GOOGLE_ACCOUNT_IS_ADMIN",
@@ -111,17 +112,15 @@ const revokeSessionsAfterPasswordReset = createAuthMiddleware(async (ctx) => {
   if (!token) return;
   const userId = await consumeResetToken(token);
   if (!userId) return;
-  // Matches both a plain string and an ObjectId-typed userId — this same
-  // file's own databaseHooks.session.create.after already had to convert a
-  // session's userId to ObjectId to query `users` by `_id`, evidence this
-  // codebase's Mongo documents aren't consistently one type or the other;
-  // querying `session`'s own userId field with only a plain string matched
-  // nothing in real CI, so this covers whichever the adapter actually uses.
-  const userIdVariants: unknown[] = [userId];
-  if (mongoose.isValidObjectId(userId)) {
-    userIdVariants.push(new mongoose.Types.ObjectId(userId));
-  }
-  await mongoose.connection.db!.collection("session").deleteMany({ userId: { $in: userIdVariants } });
+  // revokeSessionsForUser matches both a plain string and an ObjectId-typed
+  // userId — this same file's own databaseHooks.session.create.after
+  // already had to convert a session's userId to ObjectId to query `users`
+  // by `_id`, evidence this codebase's Mongo documents aren't consistently
+  // one type or the other; querying `session`'s own userId field with only
+  // a plain string matched nothing in real CI, so this covers whichever the
+  // adapter actually uses. Extracted to src/utils/sessions.ts on its second
+  // use (Issue #142's own deactivation path).
+  await revokeSessionsForUser(userId);
 });
 
 export const auth = betterAuth({
