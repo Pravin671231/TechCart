@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { successResponse } from "@/utils/apiResponse";
 import { requireActorId } from "@/utils/actor";
-import { getProfile, updateProfile, changePassword } from "./account.service";
+import { getProfile, updateProfile, changePassword, type UpdateProfileInput } from "./account.service";
 
 const updateProfileSchema = z
   .object({
@@ -24,7 +24,11 @@ export async function getProfileHandler(req: Request, res: Response): Promise<vo
 }
 
 export async function updateProfileHandler(req: Request, res: Response): Promise<void> {
-  const input = updateProfileSchema.parse(req.body);
+  const parsed = updateProfileSchema.parse(req.body);
+  const input: UpdateProfileInput = {
+    ...(parsed.name !== undefined ? { name: parsed.name } : {}),
+    ...(parsed.phone !== undefined ? { phone: parsed.phone } : {}),
+  };
   const profile = await updateProfile(requireActorId(req), input);
   res.status(200).json(successResponse(profile));
 }

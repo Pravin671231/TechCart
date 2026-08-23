@@ -8,6 +8,7 @@ import {
   createAdminUser,
   listAdminUsers,
   updateAdminUser,
+  type UpdateAdminUserInput,
 } from "./adminUsers.service";
 
 const ADMIN_ROLES = ["catalog-manager", "order-manager", "super-admin"] as const;
@@ -61,7 +62,11 @@ export async function listAdminUsersHandler(req: Request, res: Response): Promis
 
 export async function updateAdminUserHandler(req: Request, res: Response): Promise<void> {
   const id = parseObjectId(req.params.id);
-  const input = updateAdminUserSchema.parse(req.body);
+  const parsed = updateAdminUserSchema.parse(req.body);
+  const input: UpdateAdminUserInput = {
+    ...(parsed.role !== undefined ? { role: parsed.role } : {}),
+    ...(parsed.status !== undefined ? { status: parsed.status } : {}),
+  };
   const admin = await updateAdminUser(id, input, requireActorId(req));
   res.status(200).json(successResponse(admin));
 }
