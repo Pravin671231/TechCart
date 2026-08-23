@@ -64,5 +64,5 @@ Feature → Update SRS → Add to Milestone → Add to Issue → Implement Code
 
 ## Git conventions
 
-- Do not add a `Co-Authored-By: Claude` trailer to commit messages in this repository.
+- Never add a `Co-Authored-By`/`Co-authored-by` trailer (any casing) naming Claude/Anthropic, including any `noreply@anthropic.com` or `noreply@claude.com` email line, to commit messages in this repository. If a commit message is generated with one, strip it before committing.
 - Conventional Commits: `type(scope): message (Issue #N)` — types `feat, fix, test, chore, docs, refactor`; scopes `backend, buyer-app, admin-app, ci, infra`.
