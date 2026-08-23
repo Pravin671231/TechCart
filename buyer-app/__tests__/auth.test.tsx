@@ -2,10 +2,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { Provider } from "react-redux";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { makeStore } from "@/store/store";
 import { server } from "./mocks/server";
-import { SignInContent } from "@/features/auth/SignInContent";
-import { AuthStatus } from "@/components/layout/AuthStatus";
 
 const API_URL = "http://localhost:4000";
 
@@ -17,13 +14,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("Auth", () => {
-  let store: ReturnType<typeof makeStore>;
-
   beforeEach(() => {
     vi.resetModules();
     vi.stubEnv("NEXT_PUBLIC_API_URL", API_URL);
     vi.stubEnv("NEXT_PUBLIC_GOOGLE_CLIENT_ID", "test-client-id.apps.googleusercontent.com");
-    store = makeStore();
     localStorage.clear();
     mockPush.mockClear();
   });
@@ -35,6 +29,10 @@ describe("Auth", () => {
 
   describe("GoogleSignIn", () => {
     it("renders Google button container", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const store = makeStore();
+
       render(
         <Provider store={store}>
           <SignInContent />
@@ -48,6 +46,10 @@ describe("Auth", () => {
 
   describe("OtpSignIn", () => {
     it("renders email input initially", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const store = makeStore();
+
       render(
         <Provider store={store}>
           <SignInContent />
@@ -59,6 +61,10 @@ describe("Auth", () => {
     });
 
     it("sends OTP and shows code entry step", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const store = makeStore();
+
       server.use(
         http.post("*/api/auth/email-otp/send-verification-otp", () => {
           return HttpResponse.json({
@@ -86,6 +92,10 @@ describe("Auth", () => {
     });
 
     it("shows resend countdown after OTP send", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const store = makeStore();
+
       server.use(
         http.post("*/api/auth/email-otp/send-verification-otp", () => {
           return HttpResponse.json({
@@ -114,6 +124,10 @@ describe("Auth", () => {
     });
 
     it("verifies OTP and persists token, then redirects home", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const store = makeStore();
+
       server.use(
         http.post("*/api/auth/email-otp/send-verification-otp", () => {
           return HttpResponse.json({
@@ -178,6 +192,10 @@ describe("Auth", () => {
     });
 
     it("shows GOOGLE_ACCOUNT_IS_ADMIN error message", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const store = makeStore();
+
       server.use(
         http.get("*/api/auth/get-session", () => {
           return HttpResponse.json({
@@ -227,6 +245,10 @@ describe("Auth", () => {
     });
 
     it("shows OTP_INVALID error message", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const store = makeStore();
+
       server.use(
         http.get("*/api/auth/get-session", () => {
           return HttpResponse.json({
@@ -276,6 +298,10 @@ describe("Auth", () => {
     });
 
     it("shows OTP_EXPIRED error message", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const store = makeStore();
+
       server.use(
         http.get("*/api/auth/get-session", () => {
           return HttpResponse.json({
@@ -327,6 +353,10 @@ describe("Auth", () => {
 
   describe("AuthStatus", () => {
     it("renders sign-in link when not authenticated", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { AuthStatus } = await import("@/components/layout/AuthStatus");
+      const store = makeStore();
+
       server.use(
         http.get("*/api/auth/get-session", () => {
           return HttpResponse.json({
@@ -348,6 +378,10 @@ describe("Auth", () => {
     });
 
     it("renders user name and sign-out button when authenticated", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { AuthStatus } = await import("@/components/layout/AuthStatus");
+      const store = makeStore();
+
       server.use(
         http.get("*/api/auth/get-session", () => {
           return HttpResponse.json({
@@ -377,6 +411,10 @@ describe("Auth", () => {
     });
 
     it("sign out clears token and navigates home", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { AuthStatus } = await import("@/components/layout/AuthStatus");
+      const store = makeStore();
+
       localStorage.setItem("auth_token", "test_token");
       mockPush.mockClear();
 
