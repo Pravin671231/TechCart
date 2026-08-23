@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { auth } from "@/lib/auth";
+import { buildFetchHeaders } from "@/utils/fetchHeaders";
 
 // Headers this bridge always manages itself rather than copying verbatim:
 // `set-cookie` is forwarded separately via res.append (a single Headers
@@ -30,11 +31,7 @@ const MANAGED_RESPONSE_HEADERS = new Set(["set-cookie", "content-type", "content
 export async function betterAuthHandler(req: Request, res: Response): Promise<void> {
   const url = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
 
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value === undefined) continue;
-    headers.set(key, Array.isArray(value) ? value.join(", ") : value);
-  }
+  const headers = buildFetchHeaders(req);
 
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
   const request = new Request(url, {
