@@ -35,7 +35,12 @@ export async function list(
   sort: AdminUserListSort | undefined,
   page: AdminUserListPage,
 ): Promise<{ items: AdminUserRecord[]; total: number }> {
-  const mergedFilter = { ...filter, ...NON_BUYER_FILTER };
+  // NON_BUYER_FILTER spreads first so a caller-supplied `filter.role` (from
+  // the controller's own z.enum(ADMIN_ROLES) — already guaranteed to be one
+  // of the three admin roles) overrides the generic $in default instead of
+  // being clobbered by it; the reverse order silently discarded every
+  // ?role= filter, since both objects use the same `role` key.
+  const mergedFilter = { ...NON_BUYER_FILTER, ...filter };
   const skip = (page.page - 1) * page.limit;
   const cursor = usersCollection()
     .find(mergedFilter)
