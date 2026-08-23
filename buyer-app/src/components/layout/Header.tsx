@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthStatus } from "./AuthStatus";
 
 export function Header() {
   return (
@@ -29,6 +30,8 @@ export function Header() {
         >
           Search products…
         </Link>
+
+        <AuthStatus />
       </div>
     </header>
   );
