@@ -9,12 +9,12 @@ import type mongooseType from "mongoose";
 // @/config/env is first evaluated, mocked resend) copied verbatim from
 // admin-sign-in.api.test.ts/admin-password-reset.api.test.ts's established
 // convention — this suite needs the same real Better Auth session/user state
-// (requireRole.ts's auth.api.getSession call can't be trusted against a
-// mocked adapter either).
+// (rbac.ts's auth.api.getSession call can't be trusted against a mocked
+// adapter either).
 //
-// These routes sit behind BOTH the existing X-Admin-Key router guard
-// (adminAuth.ts, unchanged since #25) AND the new requireRole("super-admin")
-// session guard (#142) — every request below sends both.
+// These routes are gated by rbac(["super-admin"]) (src/middleware/rbac.ts)
+// — the X-Admin-Key router guard this file's own header comment originally
+// described (adminAuth.ts) was removed entirely by Issue #143/M3.5.
 vi.mock("@/externalService/resend", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
@@ -24,7 +24,6 @@ let mongod: MongoMemoryServer;
 let mongoose: typeof mongooseType;
 let app: Express;
 let provisionAdminUser: typeof import("../../src/scripts/seed/createAdminUser.js").provisionAdminUser;
-let env: typeof import("../../src/config/env.js").env;
 
 const SUPER_ADMIN_EMAIL = "super-admin-users@example.com";
 const SUPER_ADMIN_PASSWORD = "Sup3rSecret!Pass";
@@ -47,9 +46,6 @@ beforeAll(async () => {
 
   const seedModule = await import("../../src/scripts/seed/createAdminUser.js");
   provisionAdminUser = seedModule.provisionAdminUser;
-
-  const envModule = await import("../../src/config/env.js");
-  env = envModule.env;
 }, 60000);
 
 afterAll(async () => {
@@ -87,9 +83,7 @@ async function signInFully(email: string, password: string): Promise<string> {
 }
 
 function adminRequest(method: "get" | "post" | "patch", url: string, token: string) {
-  return request(app)[method](url)
-    .set("X-Admin-Key", env.ADMIN_API_KEY)
-    .set("Authorization", `Bearer ${token}`);
+  return request(app)[method](url).set("Authorization", `Bearer ${token}`);
 }
 
 let superAdminToken: string;
@@ -290,7 +284,7 @@ describe("Admin account provisioning", () => {
 
   describe("Role enforcement (super-admin only)", () => {
     it("rejects a request with no session at all", async () => {
-      const res = await request(app).get("/api/admin/users").set("X-Admin-Key", env.ADMIN_API_KEY);
+      const res = await request(app).get("/api/admin/users");
       expect(res.status).toBe(401);
     });
 

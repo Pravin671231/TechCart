@@ -72,6 +72,7 @@ const categoryId = new Types.ObjectId();
 const otherCategoryId = new Types.ObjectId();
 const variantId = new Types.ObjectId();
 const otherVariantId = new Types.ObjectId();
+const userId = new Types.ObjectId().toString();
 
 const brandStub: BrandRecord = {
   _id: brandId,
@@ -212,7 +213,7 @@ describe("createProduct", () => {
     vi.mocked(productsRepository.slugExists).mockResolvedValue(false);
     vi.mocked(productsRepository.create).mockResolvedValue(productStub);
 
-    await createProduct(baseCreateInput);
+    await createProduct(baseCreateInput, userId);
 
     expect(brandsService.getBrandById).toHaveBeenCalledWith(brandId);
     expect(categoriesService.getCategoryById).toHaveBeenCalledWith(categoryId);
@@ -227,7 +228,7 @@ describe("createProduct", () => {
       { groupName: "Display", values: [{ name: "Screen Size", value: 6.1 }] },
     ];
 
-    await createProduct({ ...baseCreateInput, specifications });
+    await createProduct({ ...baseCreateInput, specifications }, userId);
 
     expect(categorySpecificationsService.validateProductSpecifications).toHaveBeenCalledWith(
       categoryId,
@@ -245,7 +246,7 @@ describe("createProduct", () => {
       }),
     );
 
-    await expect(createProduct(baseCreateInput)).rejects.toMatchObject({
+    await expect(createProduct(baseCreateInput, userId)).rejects.toMatchObject({
       code: "SPECIFICATION_VALIDATION_FAILED",
     });
     expect(productsRepository.create).not.toHaveBeenCalled();
@@ -259,7 +260,7 @@ describe("createProduct", () => {
       .mockResolvedValueOnce(false);
     vi.mocked(productsRepository.create).mockResolvedValue(productStub);
 
-    await createProduct(baseCreateInput);
+    await createProduct(baseCreateInput, userId);
 
     expect(productsRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({ slug: "phone-2" }),
@@ -272,7 +273,7 @@ describe("createProduct", () => {
     vi.mocked(productsRepository.slugExists).mockResolvedValue(false);
     vi.mocked(productsRepository.create).mockResolvedValue(productStub);
 
-    await createProduct(baseCreateInput);
+    await createProduct(baseCreateInput, userId);
 
     const doc = vi.mocked(productsRepository.create).mock.calls[0]?.[0];
     for (const field of [
@@ -296,7 +297,7 @@ describe("createProduct", () => {
     vi.mocked(productsRepository.slugExists).mockResolvedValue(false);
     vi.mocked(productsRepository.create).mockResolvedValue(productStub);
 
-    await createProduct(baseCreateInput);
+    await createProduct(baseCreateInput, userId);
 
     const doc = vi.mocked(productsRepository.create).mock.calls[0]?.[0];
     expect(doc).not.toHaveProperty("metaTitle");
@@ -308,7 +309,7 @@ describe("updateProduct", () => {
   it("throws PRODUCT_NOT_FOUND when the product doesn't exist", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(null);
 
-    await expect(updateProduct(productId, { name: "New" })).rejects.toMatchObject({
+    await expect(updateProduct(productId, { name: "New" }, userId)).rejects.toMatchObject({
       statusCode: 404,
       code: "PRODUCT_NOT_FOUND",
     });
@@ -320,7 +321,7 @@ describe("updateProduct", () => {
     vi.mocked(productsRepository.updateById).mockResolvedValue(productStub);
     vi.mocked(brandsService.getBrandById).mockResolvedValue(brandStub);
 
-    await updateProduct(productId, { brand: brandId });
+    await updateProduct(productId, { brand: brandId }, userId);
 
     expect(brandsService.getBrandById).toHaveBeenCalledWith(brandId);
   });
@@ -330,7 +331,7 @@ describe("updateProduct", () => {
     vi.mocked(productsRepository.updateById).mockResolvedValue(productStub);
     vi.mocked(categoriesService.getCategoryById).mockResolvedValue(categoryStub);
 
-    await updateProduct(productId, { category: otherCategoryId });
+    await updateProduct(productId, { category: otherCategoryId }, userId);
 
     expect(categorySpecificationsService.validateProductSpecifications).toHaveBeenCalledWith(
       otherCategoryId,
@@ -345,7 +346,7 @@ describe("updateProduct", () => {
       { groupName: "Display", values: [{ name: "Screen Size", value: 6.1 }] },
     ];
 
-    await updateProduct(productId, { specifications });
+    await updateProduct(productId, { specifications }, userId);
 
     expect(categorySpecificationsService.validateProductSpecifications).toHaveBeenCalledWith(
       productStub.category,
@@ -357,7 +358,7 @@ describe("updateProduct", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productStub);
     vi.mocked(productsRepository.updateById).mockResolvedValue(productStub);
 
-    await updateProduct(productId, { name: "New name" });
+    await updateProduct(productId, { name: "New name" }, userId);
 
     expect(categorySpecificationsService.validateProductSpecifications).not.toHaveBeenCalled();
   });
@@ -372,7 +373,7 @@ describe("updateProduct", () => {
       }),
     );
 
-    await expect(updateProduct(productId, { category: otherCategoryId })).rejects.toMatchObject({
+    await expect(updateProduct(productId, { category: otherCategoryId }, userId)).rejects.toMatchObject({
       code: "SPECIFICATION_VALIDATION_FAILED",
     });
     expect(productsRepository.updateById).not.toHaveBeenCalled();
@@ -382,7 +383,7 @@ describe("updateProduct", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productStub);
     vi.mocked(productsRepository.updateById).mockResolvedValue(null);
 
-    await expect(updateProduct(productId, { name: "New" })).rejects.toMatchObject({
+    await expect(updateProduct(productId, { name: "New" }, userId)).rejects.toMatchObject({
       statusCode: 404,
       code: "PRODUCT_NOT_FOUND",
     });
@@ -499,16 +500,19 @@ describe("updateProductStatus", () => {
       status: "archived",
     });
 
-    await updateProductStatus(productId, "archived");
+    await updateProductStatus(productId, "archived", userId);
 
     expect(productsRepository.findById).not.toHaveBeenCalled();
-    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, { status: "archived" });
+    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, {
+      status: "archived",
+      updatedBy: new Types.ObjectId(userId),
+    });
   });
 
   it("throws PRODUCT_NOT_FOUND when the id doesn't match any product", async () => {
     vi.mocked(productsRepository.updateById).mockResolvedValue(null);
 
-    await expect(updateProductStatus(productId, "archived")).rejects.toMatchObject({
+    await expect(updateProductStatus(productId, "archived", userId)).rejects.toMatchObject({
       statusCode: 404,
       code: "PRODUCT_NOT_FOUND",
     });
@@ -523,17 +527,18 @@ describe("updateProductStatus", () => {
       status: "published",
     });
 
-    await updateProductStatus(productId, "published");
+    await updateProductStatus(productId, "published", userId);
 
     expect(productsRepository.updateById).toHaveBeenCalledWith(productId, {
       status: "published",
+      updatedBy: new Types.ObjectId(userId),
     });
   });
 
   it("rejects publishing with PRODUCT_HAS_NO_VARIANTS when the product has zero variants", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productStub);
 
-    await expect(updateProductStatus(productId, "published")).rejects.toMatchObject({
+    await expect(updateProductStatus(productId, "published", userId)).rejects.toMatchObject({
       statusCode: 400,
       code: "PRODUCT_HAS_NO_VARIANTS",
     });
@@ -549,7 +554,7 @@ describe("updateProductStatus", () => {
       ],
     });
 
-    await expect(updateProductStatus(productId, "published")).rejects.toMatchObject({
+    await expect(updateProductStatus(productId, "published", userId)).rejects.toMatchObject({
       statusCode: 400,
       code: "PRODUCT_HAS_NO_VARIANTS",
     });
@@ -559,7 +564,7 @@ describe("updateProductStatus", () => {
   it("throws PRODUCT_NOT_FOUND when publishing an id that doesn't match any product", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(null);
 
-    await expect(updateProductStatus(productId, "published")).rejects.toMatchObject({
+    await expect(updateProductStatus(productId, "published", userId)).rejects.toMatchObject({
       statusCode: 404,
       code: "PRODUCT_NOT_FOUND",
     });
@@ -570,15 +575,18 @@ describe("deleteProduct", () => {
   it("soft-deletes by flipping status to archived", async () => {
     vi.mocked(productsRepository.updateById).mockResolvedValue(productStub);
 
-    await deleteProduct(productId);
+    await deleteProduct(productId, userId);
 
-    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, { status: "archived" });
+    expect(productsRepository.updateById).toHaveBeenCalledWith(productId, {
+      status: "archived",
+      updatedBy: new Types.ObjectId(userId),
+    });
   });
 
   it("throws PRODUCT_NOT_FOUND when the id doesn't match any product", async () => {
     vi.mocked(productsRepository.updateById).mockResolvedValue(null);
 
-    await expect(deleteProduct(productId)).rejects.toMatchObject({
+    await expect(deleteProduct(productId, userId)).rejects.toMatchObject({
       statusCode: 404,
       code: "PRODUCT_NOT_FOUND",
     });
@@ -589,7 +597,7 @@ describe("addVariant", () => {
   it("throws PRODUCT_NOT_FOUND when the product doesn't exist", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(null);
 
-    await expect(addVariant(productId, baseAddVariantInput)).rejects.toMatchObject({
+    await expect(addVariant(productId, baseAddVariantInput, userId)).rejects.toMatchObject({
       statusCode: 404,
       code: "PRODUCT_NOT_FOUND",
     });
@@ -600,7 +608,7 @@ describe("addVariant", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
 
     await expect(
-      addVariant(productId, { ...baseAddVariantInput, sku: existingVariant.sku }),
+      addVariant(productId, { ...baseAddVariantInput, sku: existingVariant.sku }, userId),
     ).rejects.toMatchObject({ statusCode: 400, code: "DUPLICATE_SKU" });
     expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
   });
@@ -609,7 +617,7 @@ describe("addVariant", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
     vi.mocked(productsRepository.skuInUse).mockResolvedValue(true);
 
-    await expect(addVariant(productId, baseAddVariantInput)).rejects.toMatchObject({
+    await expect(addVariant(productId, baseAddVariantInput, userId)).rejects.toMatchObject({
       statusCode: 400,
       code: "DUPLICATE_SKU",
     });
@@ -630,7 +638,7 @@ describe("addVariant", () => {
           { name: "Size", value: "L" },
           { name: "Color", value: "Red" },
         ],
-      }),
+      }, userId),
     ).rejects.toMatchObject({ statusCode: 400, code: "DUPLICATE_VARIANT_ATTRIBUTES" });
     expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
   });
@@ -640,7 +648,7 @@ describe("addVariant", () => {
     vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
     vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
 
-    await addVariant(productId, { ...baseAddVariantInput, mrp: 60000, discount: 10 });
+    await addVariant(productId, { ...baseAddVariantInput, mrp: 60000, discount: 10 }, userId);
 
     const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
     expect(persisted).toHaveLength(3);
@@ -665,7 +673,7 @@ describe("addVariant", () => {
     vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
     vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
 
-    await addVariant(productId, baseAddVariantInput);
+    await addVariant(productId, baseAddVariantInput, userId);
 
     const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
     const added = persisted?.[2];
@@ -680,11 +688,11 @@ describe("addVariant", () => {
     vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
     vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
 
-    await addVariant(productId, baseAddVariantInput);
+    await addVariant(productId, baseAddVariantInput, userId);
     let added = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1]?.[2];
     expect(added).not.toHaveProperty("weight");
 
-    await addVariant(productId, { ...baseAddVariantInput, sku: "SKU-1-OTHER", weight: 1.5 });
+    await addVariant(productId, { ...baseAddVariantInput, sku: "SKU-1-OTHER", weight: 1.5 }, userId);
     added = vi.mocked(productsRepository.replaceVariants).mock.calls[1]?.[1]?.[2];
     expect(added).toHaveProperty("weight", 1.5);
   });
@@ -697,7 +705,7 @@ describe("addVariant", () => {
     vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
     vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
 
-    await addVariant(productId, baseAddVariantInput);
+    await addVariant(productId, baseAddVariantInput, userId);
 
     expect(uploadsService.validateImageCount).toHaveBeenCalledWith(baseAddVariantInput.images, {
       min: 1,
@@ -711,7 +719,7 @@ describe("updateVariant", () => {
   it("throws PRODUCT_NOT_FOUND when the product doesn't exist", async () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(null);
 
-    await expect(updateVariant(productId, variantId, { weight: 1.5 })).rejects.toMatchObject({
+    await expect(updateVariant(productId, variantId, { weight: 1.5 }, userId)).rejects.toMatchObject({
       statusCode: 404,
       code: "PRODUCT_NOT_FOUND",
     });
@@ -721,7 +729,7 @@ describe("updateVariant", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
 
     await expect(
-      updateVariant(productId, new Types.ObjectId(), { weight: 1.5 }),
+      updateVariant(productId, new Types.ObjectId(), { weight: 1.5 }, userId),
     ).rejects.toMatchObject({ statusCode: 404, code: "VARIANT_NOT_FOUND" });
     expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
   });
@@ -730,7 +738,7 @@ describe("updateVariant", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
     vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
 
-    await updateVariant(productId, variantId, { active: false });
+    await updateVariant(productId, variantId, { active: false }, userId);
 
     const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
     expect(persisted).toHaveLength(2);
@@ -754,7 +762,7 @@ describe("updateVariant", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
     vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
 
-    await updateVariant(productId, variantId, { active: false });
+    await updateVariant(productId, variantId, { active: false }, userId);
 
     const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
     expect(persisted?.[0]?.createdAt).toEqual(variantCreatedAt);
@@ -766,7 +774,7 @@ describe("updateVariant", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
     vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
 
-    await updateVariant(productId, variantId, { sku: existingVariant.sku, weight: 2 });
+    await updateVariant(productId, variantId, { sku: existingVariant.sku, weight: 2 }, userId);
 
     expect(productsRepository.skuInUse).not.toHaveBeenCalled();
   });
@@ -775,7 +783,7 @@ describe("updateVariant", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
 
     await expect(
-      updateVariant(productId, variantId, { sku: otherExistingVariant.sku }),
+      updateVariant(productId, variantId, { sku: otherExistingVariant.sku }, userId),
     ).rejects.toMatchObject({ statusCode: 400, code: "DUPLICATE_SKU" });
     expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
   });
@@ -785,7 +793,7 @@ describe("updateVariant", () => {
     vi.mocked(productsRepository.skuInUse).mockResolvedValue(false);
     vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
 
-    await updateVariant(productId, variantId, { sku: "SKU-1-RECODED" });
+    await updateVariant(productId, variantId, { sku: "SKU-1-RECODED" }, userId);
 
     expect(productsRepository.skuInUse).toHaveBeenCalledWith("SKU-1-RECODED", productId);
     const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
@@ -796,7 +804,7 @@ describe("updateVariant", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
 
     await expect(
-      updateVariant(productId, variantId, { attributes: otherExistingVariant.attributes }),
+      updateVariant(productId, variantId, { attributes: otherExistingVariant.attributes }, userId),
     ).rejects.toMatchObject({ statusCode: 400, code: "DUPLICATE_VARIANT_ATTRIBUTES" });
     expect(productsRepository.replaceVariants).not.toHaveBeenCalled();
   });
@@ -805,7 +813,7 @@ describe("updateVariant", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
     vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
 
-    await updateVariant(productId, variantId, { mrp: 60000 });
+    await updateVariant(productId, variantId, { mrp: 60000 }, userId);
 
     const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
     expect(persisted?.[0]).toMatchObject({
@@ -819,7 +827,7 @@ describe("updateVariant", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
     vi.mocked(productsRepository.replaceVariants).mockResolvedValue(productWithVariants);
 
-    await updateVariant(productId, variantId, { weight: 2 });
+    await updateVariant(productId, variantId, { weight: 2 }, userId);
 
     const persisted = vi.mocked(productsRepository.replaceVariants).mock.calls[0]?.[1];
     expect(persisted?.[0]).toMatchObject({
@@ -834,7 +842,7 @@ describe("updateVariant", () => {
     vi.mocked(productsRepository.findById).mockResolvedValue(productWithVariants);
     vi.mocked(productsRepository.replaceVariants).mockResolvedValue(null);
 
-    await expect(updateVariant(productId, variantId, { weight: 1 })).rejects.toMatchObject({
+    await expect(updateVariant(productId, variantId, { weight: 1 }, userId)).rejects.toMatchObject({
       statusCode: 404,
       code: "PRODUCT_NOT_FOUND",
     });

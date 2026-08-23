@@ -1,4 +1,4 @@
-import type { QueryFilter, Types } from "mongoose";
+import { Types, type QueryFilter } from "mongoose";
 import { AppError } from "@/utils/AppError";
 import { generateUniqueSlug } from "@/utils/slug";
 import { truncate } from "@/utils/text";
@@ -121,12 +121,15 @@ async function validateParentCategory(
   }
 }
 
-export async function createCategory(input: CreateCategoryInput): Promise<CategoryRecord> {
+export async function createCategory(
+  input: CreateCategoryInput,
+  userId: string,
+): Promise<CategoryRecord> {
   await validateParentCategory(input.parentCategory ?? null);
 
   const slug = await generateUniqueSlug(input.name, slugExists);
 
-  const doc: CreateCategoryDoc = { name: input.name, slug };
+  const doc: CreateCategoryDoc = { name: input.name, slug, createdBy: new Types.ObjectId(userId) };
   if (input.description !== undefined) doc.description = input.description;
   if (input.parentCategory !== undefined) doc.parentCategory = input.parentCategory;
   if (input.image) doc.image = await resolveImage(input.image);
@@ -144,12 +147,13 @@ export async function createCategory(input: CreateCategoryInput): Promise<Catego
 export async function updateCategory(
   id: Types.ObjectId,
   input: UpdateCategoryInput,
+  userId: string,
 ): Promise<CategoryRecord> {
   if (input.parentCategory !== undefined) {
     await validateParentCategory(input.parentCategory, id);
   }
 
-  const patch: UpdateCategoryDoc = {};
+  const patch: UpdateCategoryDoc = { updatedBy: new Types.ObjectId(userId) };
   if (input.name !== undefined) patch.name = input.name;
   if (input.description !== undefined) patch.description = input.description;
   if (input.parentCategory !== undefined) patch.parentCategory = input.parentCategory;
@@ -239,8 +243,9 @@ export async function listActiveSubcategoryIds(parentId: Types.ObjectId): Promis
 export async function updateCategoryStatus(
   id: Types.ObjectId,
   status: boolean,
+  userId: string,
 ): Promise<CategoryRecord> {
-  const updated = await updateById(id, { status });
+  const updated = await updateById(id, { status, updatedBy: new Types.ObjectId(userId) });
   if (!updated) throw notFound(id);
   return updated;
 }

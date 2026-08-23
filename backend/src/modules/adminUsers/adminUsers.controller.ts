@@ -3,7 +3,7 @@ import { z } from "zod";
 import { successResponse } from "@/utils/apiResponse";
 import { parseObjectId } from "@/utils/objectId";
 import { parseQuery } from "@/utils/parseQuery";
-import { AppError } from "@/utils/AppError";
+import { requireActorId } from "@/utils/actor";
 import {
   createAdminUser,
   listAdminUsers,
@@ -36,17 +36,6 @@ const listAdminUsersQuerySchema = z.object({
   status: z.coerce.boolean().optional(),
 });
 
-// req.adminUser is attached by requireRole (src/middleware/requireRole.ts),
-// mounted ahead of every handler in this module's own routes file — never
-// undefined by the time a handler runs.
-function requesterId(req: Request): string {
-  const id = req.adminUser?.id;
-  if (!id) {
-    throw new AppError(401, "UNAUTHENTICATED", "Sign in required.");
-  }
-  return id;
-}
-
 export async function createAdminUserHandler(req: Request, res: Response): Promise<void> {
   const input = createAdminUserSchema.parse(req.body);
   const admin = await createAdminUser(input);
@@ -73,6 +62,6 @@ export async function listAdminUsersHandler(req: Request, res: Response): Promis
 export async function updateAdminUserHandler(req: Request, res: Response): Promise<void> {
   const id = parseObjectId(req.params.id);
   const input = updateAdminUserSchema.parse(req.body);
-  const admin = await updateAdminUser(id, input, requesterId(req));
+  const admin = await updateAdminUser(id, input, requireActorId(req));
   res.status(200).json(successResponse(admin));
 }

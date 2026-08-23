@@ -1,4 +1,4 @@
-import type { QueryFilter, Types } from "mongoose";
+import { Types, type QueryFilter } from "mongoose";
 import { AppError } from "@/utils/AppError";
 import { generateUniqueSlug } from "@/utils/slug";
 import { buildPagination, type Pagination } from "@/utils/apiResponse";
@@ -57,10 +57,13 @@ async function resolveLogo(logo: {
   return logo.alt !== undefined ? { url, alt: logo.alt } : { url };
 }
 
-export async function createBrand(input: CreateBrandInput): Promise<BrandRecord> {
+export async function createBrand(
+  input: CreateBrandInput,
+  userId: string,
+): Promise<BrandRecord> {
   const slug = await generateUniqueSlug(input.name, slugExists);
 
-  const doc: CreateBrandDoc = { name: input.name, slug };
+  const doc: CreateBrandDoc = { name: input.name, slug, createdBy: new Types.ObjectId(userId) };
   if (input.description !== undefined) doc.description = input.description;
   if (input.logo) doc.logo = await resolveLogo(input.logo);
 
@@ -73,8 +76,9 @@ export async function createBrand(input: CreateBrandInput): Promise<BrandRecord>
 export async function updateBrand(
   id: Types.ObjectId,
   input: UpdateBrandInput,
+  userId: string,
 ): Promise<BrandRecord> {
-  const patch: UpdateBrandDoc = {};
+  const patch: UpdateBrandDoc = { updatedBy: new Types.ObjectId(userId) };
   if (input.name !== undefined) patch.name = input.name;
   if (input.description !== undefined) patch.description = input.description;
   if (input.logo !== undefined) patch.logo = await resolveLogo(input.logo);
@@ -126,8 +130,12 @@ export async function listBrandsForPublic(): Promise<PublicBrand[]> {
 // products, never looks at status — so a brand with products can be freely
 // deactivated (hidden from listBrandsForPublic immediately) without needing
 // to satisfy the guard first (FR-CAT-048).
-export async function updateBrandStatus(id: Types.ObjectId, status: boolean): Promise<BrandRecord> {
-  const updated = await updateById(id, { status });
+export async function updateBrandStatus(
+  id: Types.ObjectId,
+  status: boolean,
+  userId: string,
+): Promise<BrandRecord> {
+  const updated = await updateById(id, { status, updatedBy: new Types.ObjectId(userId) });
   if (!updated) throw notFound(id);
   return updated;
 }

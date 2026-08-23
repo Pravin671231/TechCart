@@ -1,6 +1,16 @@
 import { Types } from "mongoose";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import type { Express } from "express";
+
+// Issue #143/M3.5 — every /api/admin/categories route is now gated by
+// rbac.ts, which needs a real Better Auth session to resolve, not the old
+// X-Admin-Key header — see brands.api.test.ts's own header comment for the
+// full rationale. Public /api/categories* routes are untouched, no session
+// needed.
+vi.mock("@/externalService/resend", () => ({
+  sendOtpEmail: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock("@/modules/product-catalog/features/categories/categories.repository", () => ({
   CATEGORY_SORT_FIELDS: ["name", "sortOrder", "createdAt"],
@@ -47,10 +57,44 @@ vi.mock("@/modules/product-catalog/features/categoryVariants/categoryVariants.se
   deleteForCategory: vi.fn(),
 }));
 
-import app from "@/app";
-import { env } from "@/config/env";
 import * as categoriesRepository from "@/modules/product-catalog/features/categories/categories.repository";
 import * as productsRepository from "@/modules/product-catalog/features/products/products.repository";
+import {
+  bootstrapMemoryMongo,
+  teardownMemoryMongo,
+  signInFully,
+  authRequest,
+  type MemoryMongoContext,
+} from "../../testHelpers/adminSession";
+
+const CATALOG_MANAGER_EMAIL = "categories-catalog-manager@example.com";
+const CATALOG_MANAGER_PASSWORD = "CatalogMgr!Pass1";
+
+let ctx: MemoryMongoContext;
+let app: Express;
+let token: string;
+
+beforeAll(async () => {
+  ctx = await bootstrapMemoryMongo();
+  app = ctx.app;
+
+  const { provisionAdminUser } = await import("../../../src/scripts/seed/createAdminUser.js");
+  await provisionAdminUser({
+    email: CATALOG_MANAGER_EMAIL,
+    password: CATALOG_MANAGER_PASSWORD,
+    name: "Categories Catalog Manager Fixture",
+    role: "catalog-manager",
+  });
+  token = await signInFully(app, CATALOG_MANAGER_EMAIL, CATALOG_MANAGER_PASSWORD);
+}, 60000);
+
+afterAll(async () => {
+  await teardownMemoryMongo(ctx);
+});
+
+function admin(method: "get" | "post" | "patch" | "delete", url: string) {
+  return authRequest(app, method, url, token);
+}
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -69,10 +113,7 @@ describe("POST /api/admin/categories", () => {
       ...doc,
     }));
 
-    const res = await request(app)
-      .post("/api/admin/categories")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "Electronics" });
+    const res = await admin("post", "/api/admin/categories").send({ name: "Electronics" });
 
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({
@@ -81,7 +122,7 @@ describe("POST /api/admin/categories", () => {
     });
   });
 
-  it("rejects a request with no X-Admin-Key header", async () => {
+  it("rejects a request with no session at all", async () => {
     const res = await request(app).post("/api/admin/categories").send({ name: "Electronics" });
 
     expect(res.status).toBe(401);
@@ -89,10 +130,7 @@ describe("POST /api/admin/categories", () => {
   });
 
   it("rejects a request with no name", async () => {
-    const res = await request(app)
-      .post("/api/admin/categories")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({});
+    const res = await admin("post", "/api/admin/categories").send({});
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -114,10 +152,10 @@ describe("POST /api/admin/categories", () => {
       updatedBy: null,
     });
 
-    const res = await request(app)
-      .post("/api/admin/categories")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "Smartphones", parentCategory: parentId.toString() });
+    const res = await admin("post", "/api/admin/categories").send({
+      name: "Smartphones",
+      parentCategory: parentId.toString(),
+    });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("PARENT_CATEGORY_TOO_DEEP");
@@ -127,10 +165,7 @@ describe("POST /api/admin/categories", () => {
 
 describe("PATCH /api/admin/categories/:id", () => {
   it("rejects a malformed id", async () => {
-    const res = await request(app)
-      .patch("/api/admin/categories/not-an-id")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "X" });
+    const res = await admin("patch", "/api/admin/categories/not-an-id").send({ name: "X" });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("INVALID_ID");
@@ -139,10 +174,10 @@ describe("PATCH /api/admin/categories/:id", () => {
   it("returns 404 when the category doesn't exist", async () => {
     vi.mocked(categoriesRepository.updateById).mockResolvedValue(null);
 
-    const res = await request(app)
-      .patch(`/api/admin/categories/${new Types.ObjectId().toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "X" });
+    const res = await admin(
+      "patch",
+      `/api/admin/categories/${new Types.ObjectId().toString()}`,
+    ).send({ name: "X" });
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("CATEGORY_NOT_FOUND");
@@ -161,10 +196,9 @@ describe("PATCH /api/admin/categories/:id", () => {
       updatedBy: null,
     });
 
-    const res = await request(app)
-      .patch(`/api/admin/categories/${id.toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "Updated" });
+    const res = await admin("patch", `/api/admin/categories/${id.toString()}`).send({
+      name: "Updated",
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.data.name).toBe("Updated");
@@ -175,10 +209,9 @@ describe("PATCH /api/admin/categories/:id", () => {
   it("rejects clearing then re-parenting to itself", async () => {
     const id = new Types.ObjectId();
 
-    const res = await request(app)
-      .patch(`/api/admin/categories/${id.toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ parentCategory: id.toString() });
+    const res = await admin("patch", `/api/admin/categories/${id.toString()}`).send({
+      parentCategory: id.toString(),
+    });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("INVALID_PARENT_CATEGORY");
@@ -200,10 +233,9 @@ describe("PATCH /api/admin/categories/:id", () => {
     });
     vi.mocked(categoriesRepository.countByParent).mockResolvedValue(2);
 
-    const res = await request(app)
-      .patch(`/api/admin/categories/${id.toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ parentCategory: parentId.toString() });
+    const res = await admin("patch", `/api/admin/categories/${id.toString()}`).send({
+      parentCategory: parentId.toString(),
+    });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("CATEGORY_HAS_SUBCATEGORIES");
@@ -244,9 +276,7 @@ describe("GET /api/admin/categories", () => {
       new Map([[idA.toString(), 4]]),
     );
 
-    const res = await request(app)
-      .get("/api/admin/categories")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", "/api/admin/categories");
 
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual([
@@ -266,9 +296,7 @@ describe("GET /api/admin/categories", () => {
     vi.mocked(categoriesRepository.list).mockResolvedValue({ items: [], total: 0 });
     vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(new Map());
 
-    await request(app)
-      .get("/api/admin/categories?search=elec")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    await admin("get", "/api/admin/categories?search=elec");
 
     expect(categoriesRepository.list).toHaveBeenCalledWith(
       { $or: [{ name: { $regex: "elec", $options: "i" } }] },
@@ -281,9 +309,7 @@ describe("GET /api/admin/categories", () => {
     vi.mocked(categoriesRepository.list).mockResolvedValue({ items: [], total: 0 });
     vi.mocked(productsRepository.countByCategoryIds).mockResolvedValue(new Map());
 
-    await request(app)
-      .get("/api/admin/categories?page=2&limit=5&sortBy=sortOrder&orderBy=asc")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    await admin("get", "/api/admin/categories?page=2&limit=5&sortBy=sortOrder&orderBy=asc");
 
     expect(categoriesRepository.list).toHaveBeenCalledWith(
       {},
@@ -293,18 +319,14 @@ describe("GET /api/admin/categories", () => {
   });
 
   it("rejects an unrecognized sortBy value", async () => {
-    const res = await request(app)
-      .get("/api/admin/categories?sortBy=badfield")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", "/api/admin/categories?sortBy=badfield");
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
   });
 
   it("rejects an oversized limit", async () => {
-    const res = await request(app)
-      .get("/api/admin/categories?limit=1000")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", "/api/admin/categories?limit=1000");
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -315,9 +337,7 @@ describe("GET /api/admin/categories/:id", () => {
   it("returns 404 for a category that doesn't exist", async () => {
     vi.mocked(categoriesRepository.findById).mockResolvedValue(null);
 
-    const res = await request(app)
-      .get(`/api/admin/categories/${new Types.ObjectId().toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", `/api/admin/categories/${new Types.ObjectId().toString()}`);
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("CATEGORY_NOT_FOUND");
@@ -325,7 +345,7 @@ describe("GET /api/admin/categories/:id", () => {
 });
 
 describe("PATCH /api/admin/categories/:id/status", () => {
-  it("rejects a request with no X-Admin-Key header", async () => {
+  it("rejects a request with no session at all", async () => {
     const res = await request(app)
       .patch(`/api/admin/categories/${new Types.ObjectId().toString()}/status`)
       .send({ status: false });
@@ -345,14 +365,16 @@ describe("PATCH /api/admin/categories/:id/status", () => {
       updatedBy: null,
     });
 
-    const res = await request(app)
-      .patch(`/api/admin/categories/${id.toString()}/status`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ status: false });
+    const res = await admin("patch", `/api/admin/categories/${id.toString()}/status`).send({
+      status: false,
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe(false);
-    expect(categoriesRepository.updateById).toHaveBeenCalledWith(id, { status: false });
+    expect(categoriesRepository.updateById).toHaveBeenCalledWith(id, {
+      status: false,
+      updatedBy: expect.any(Types.ObjectId),
+    });
     expect(productsRepository.countByCategory).not.toHaveBeenCalled();
     expect(categoriesRepository.countByParent).not.toHaveBeenCalled();
   });
@@ -360,20 +382,20 @@ describe("PATCH /api/admin/categories/:id/status", () => {
   it("returns CATEGORY_NOT_FOUND for a nonexistent id", async () => {
     vi.mocked(categoriesRepository.updateById).mockResolvedValue(null);
 
-    const res = await request(app)
-      .patch(`/api/admin/categories/${new Types.ObjectId().toString()}/status`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ status: false });
+    const res = await admin(
+      "patch",
+      `/api/admin/categories/${new Types.ObjectId().toString()}/status`,
+    ).send({ status: false });
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("CATEGORY_NOT_FOUND");
   });
 
   it("rejects a non-boolean status", async () => {
-    const res = await request(app)
-      .patch(`/api/admin/categories/${new Types.ObjectId().toString()}/status`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ status: "inactive" });
+    const res = await admin(
+      "patch",
+      `/api/admin/categories/${new Types.ObjectId().toString()}/status`,
+    ).send({ status: "inactive" });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -385,9 +407,7 @@ describe("DELETE /api/admin/categories/:id", () => {
     vi.mocked(productsRepository.countByCategory).mockResolvedValue(3);
     vi.mocked(categoriesRepository.countByParent).mockResolvedValue(1);
 
-    const res = await request(app)
-      .delete(`/api/admin/categories/${new Types.ObjectId().toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("delete", `/api/admin/categories/${new Types.ObjectId().toString()}`);
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("CATEGORY_IN_USE");
@@ -400,9 +420,7 @@ describe("DELETE /api/admin/categories/:id", () => {
     vi.mocked(productsRepository.countByCategory).mockResolvedValue(0);
     vi.mocked(categoriesRepository.countByParent).mockResolvedValue(0);
 
-    const res = await request(app)
-      .delete(`/api/admin/categories/${new Types.ObjectId().toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("delete", `/api/admin/categories/${new Types.ObjectId().toString()}`);
 
     expect(res.status).toBe(200);
     expect(categoriesRepository.deleteById).toHaveBeenCalled();
@@ -410,7 +428,7 @@ describe("DELETE /api/admin/categories/:id", () => {
 });
 
 describe("GET /api/categories", () => {
-  it("requires no admin key, excludes inactive/admin fields, and applies the SEO fallback", async () => {
+  it("requires no session, excludes inactive/admin fields, and applies the SEO fallback", async () => {
     // Ordering itself (sortOrder asc, name asc) is enforced by
     // categories.repository.ts's listActive() query — unverifiable here
     // since the repository is mocked; this only confirms the service
@@ -449,7 +467,7 @@ describe("GET /api/categories", () => {
 });
 
 describe("GET /api/categories/search", () => {
-  it("requires no admin key and passes q through as the search term", async () => {
+  it("requires no session and passes q through as the search term", async () => {
     vi.mocked(categoriesRepository.listActive).mockResolvedValue([]);
 
     const res = await request(app).get("/api/categories/search?q=elec");
@@ -467,7 +485,7 @@ describe("GET /api/categories/search", () => {
 });
 
 describe("GET /api/categories/:slug/products", () => {
-  it("requires no admin key and scopes the listing to the category and its active subcategories", async () => {
+  it("requires no session and scopes the listing to the category and its active subcategories", async () => {
     const categoryId = new Types.ObjectId();
     const subcategoryId = new Types.ObjectId();
     const productId = new Types.ObjectId();

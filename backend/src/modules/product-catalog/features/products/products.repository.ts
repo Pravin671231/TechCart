@@ -24,9 +24,16 @@ export type CreateProductDoc = {
   isFeatured: boolean;
   metaTitle?: string;
   metaDescription?: string;
+  createdBy: Types.ObjectId;
 };
 
-export type UpdateProductDoc = Partial<CreateProductDoc> & { status?: ProductStatus };
+// updatedBy isn't part of CreateProductDoc (createdBy is set once, at
+// create) but every UpdateProductDoc write carries one (Issue #143/M3.5,
+// FR-AUTH-031-035).
+export type UpdateProductDoc = Partial<Omit<CreateProductDoc, "createdBy">> & {
+  status?: ProductStatus;
+  updatedBy: Types.ObjectId;
+};
 
 export async function create(doc: CreateProductDoc): Promise<ProductRecord> {
   const product = await Product.create(doc);
@@ -431,8 +438,12 @@ export async function updateById(
 export async function replaceVariants(
   id: Types.ObjectId,
   variants: ProductVariant[],
+  updatedBy: Types.ObjectId,
 ): Promise<ProductRecord | null> {
-  await Product.collection.updateOne({ _id: id }, { $set: { variants, updatedAt: new Date() } });
+  await Product.collection.updateOne(
+    { _id: id },
+    { $set: { variants, updatedAt: new Date(), updatedBy } },
+  );
   return findById(id);
 }
 

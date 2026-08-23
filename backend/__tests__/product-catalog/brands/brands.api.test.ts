@@ -1,6 +1,17 @@
 import { Types } from "mongoose";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import type { Express } from "express";
+
+// Issue #143/M3.5 — every /api/admin/brands route is now gated by rbac.ts,
+// which needs a real Better Auth session (auth.api.getSession) to resolve,
+// not the old X-Admin-Key header. Adopts the mongodb-memory-server harness
+// __tests__/auth/*/__tests__/adminUsers/* already use for exactly that
+// reason — brands/products.repository stay mocked below, same as before;
+// only session resolution touches a real DB.
+vi.mock("@/externalService/resend", () => ({
+  sendOtpEmail: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock("@/modules/product-catalog/features/brands/brands.repository", () => ({
   BRAND_SORT_FIELDS: ["name", "createdAt"],
@@ -28,10 +39,44 @@ vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
   };
 });
 
-import app from "@/app";
-import { env } from "@/config/env";
 import * as brandsRepository from "@/modules/product-catalog/features/brands/brands.repository";
 import * as productsRepository from "@/modules/product-catalog/features/products/products.repository";
+import {
+  bootstrapMemoryMongo,
+  teardownMemoryMongo,
+  signInFully,
+  authRequest,
+  type MemoryMongoContext,
+} from "../../testHelpers/adminSession";
+
+const CATALOG_MANAGER_EMAIL = "brands-catalog-manager@example.com";
+const CATALOG_MANAGER_PASSWORD = "CatalogMgr!Pass1";
+
+let ctx: MemoryMongoContext;
+let app: Express;
+let token: string;
+
+beforeAll(async () => {
+  ctx = await bootstrapMemoryMongo();
+  app = ctx.app;
+
+  const { provisionAdminUser } = await import("../../../src/scripts/seed/createAdminUser.js");
+  await provisionAdminUser({
+    email: CATALOG_MANAGER_EMAIL,
+    password: CATALOG_MANAGER_PASSWORD,
+    name: "Brands Catalog Manager Fixture",
+    role: "catalog-manager",
+  });
+  token = await signInFully(app, CATALOG_MANAGER_EMAIL, CATALOG_MANAGER_PASSWORD);
+}, 60000);
+
+afterAll(async () => {
+  await teardownMemoryMongo(ctx);
+});
+
+function admin(method: "get" | "post" | "patch" | "delete", url: string) {
+  return authRequest(app, method, url, token);
+}
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -49,10 +94,7 @@ describe("POST /api/admin/brands", () => {
       ...doc,
     }));
 
-    const res = await request(app)
-      .post("/api/admin/brands")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "Nova" });
+    const res = await admin("post", "/api/admin/brands").send({ name: "Nova" });
 
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({ success: true, data: { name: "Nova", slug: "nova" } });
@@ -81,20 +123,14 @@ describe("POST /api/admin/brands", () => {
         ...doc,
       }));
 
-    const first = await request(app)
-      .post("/api/admin/brands")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "Nova" });
-    const second = await request(app)
-      .post("/api/admin/brands")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "Nova" });
+    const first = await admin("post", "/api/admin/brands").send({ name: "Nova" });
+    const second = await admin("post", "/api/admin/brands").send({ name: "Nova" });
 
     expect(first.body.data.slug).toBe("nova");
     expect(second.body.data.slug).toBe("nova-2");
   });
 
-  it("rejects a request with no X-Admin-Key header", async () => {
+  it("rejects a request with no session at all", async () => {
     const res = await request(app).post("/api/admin/brands").send({ name: "Nova" });
 
     expect(res.status).toBe(401);
@@ -102,10 +138,7 @@ describe("POST /api/admin/brands", () => {
   });
 
   it("rejects a request with no name", async () => {
-    const res = await request(app)
-      .post("/api/admin/brands")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({});
+    const res = await admin("post", "/api/admin/brands").send({});
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -115,10 +148,7 @@ describe("POST /api/admin/brands", () => {
 
 describe("PATCH /api/admin/brands/:id", () => {
   it("rejects a malformed id", async () => {
-    const res = await request(app)
-      .patch("/api/admin/brands/not-an-id")
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "X" });
+    const res = await admin("patch", "/api/admin/brands/not-an-id").send({ name: "X" });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("INVALID_ID");
@@ -127,10 +157,10 @@ describe("PATCH /api/admin/brands/:id", () => {
   it("returns 404 when the brand doesn't exist", async () => {
     vi.mocked(brandsRepository.updateById).mockResolvedValue(null);
 
-    const res = await request(app)
-      .patch(`/api/admin/brands/${new Types.ObjectId().toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "X" });
+    const res = await admin(
+      "patch",
+      `/api/admin/brands/${new Types.ObjectId().toString()}`,
+    ).send({ name: "X" });
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("BRAND_NOT_FOUND");
@@ -147,10 +177,9 @@ describe("PATCH /api/admin/brands/:id", () => {
       updatedBy: null,
     });
 
-    const res = await request(app)
-      .patch(`/api/admin/brands/${id.toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ name: "Nova Updated" });
+    const res = await admin("patch", `/api/admin/brands/${id.toString()}`).send({
+      name: "Nova Updated",
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.data.name).toBe("Nova Updated");
@@ -175,7 +204,7 @@ describe("GET /api/admin/brands", () => {
     // job (no status filter in its $match), verified by reading that source.
     vi.mocked(productsRepository.countByBrandIds).mockResolvedValue(new Map([[idA.toString(), 2]]));
 
-    const res = await request(app).get("/api/admin/brands").set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", "/api/admin/brands");
 
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual([
@@ -195,7 +224,7 @@ describe("GET /api/admin/brands", () => {
     vi.mocked(brandsRepository.list).mockResolvedValue({ items: [], total: 0 });
     vi.mocked(productsRepository.countByBrandIds).mockResolvedValue(new Map());
 
-    await request(app).get("/api/admin/brands?search=nov").set("X-Admin-Key", env.ADMIN_API_KEY);
+    await admin("get", "/api/admin/brands?search=nov");
 
     expect(brandsRepository.list).toHaveBeenCalledWith(
       { $or: [{ name: { $regex: "nov", $options: "i" } }] },
@@ -208,9 +237,7 @@ describe("GET /api/admin/brands", () => {
     vi.mocked(brandsRepository.list).mockResolvedValue({ items: [], total: 0 });
     vi.mocked(productsRepository.countByBrandIds).mockResolvedValue(new Map());
 
-    await request(app)
-      .get("/api/admin/brands?page=2&limit=5&sortBy=name&orderBy=asc")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    await admin("get", "/api/admin/brands?page=2&limit=5&sortBy=name&orderBy=asc");
 
     expect(brandsRepository.list).toHaveBeenCalledWith(
       {},
@@ -220,18 +247,14 @@ describe("GET /api/admin/brands", () => {
   });
 
   it("rejects an unrecognized sortBy value", async () => {
-    const res = await request(app)
-      .get("/api/admin/brands?sortBy=badfield")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", "/api/admin/brands?sortBy=badfield");
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
   });
 
   it("rejects an oversized limit", async () => {
-    const res = await request(app)
-      .get("/api/admin/brands?limit=1000")
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", "/api/admin/brands?limit=1000");
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -242,9 +265,7 @@ describe("GET /api/admin/brands/:id", () => {
   it("returns 404 for a brand that doesn't exist", async () => {
     vi.mocked(brandsRepository.findById).mockResolvedValue(null);
 
-    const res = await request(app)
-      .get(`/api/admin/brands/${new Types.ObjectId().toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("get", `/api/admin/brands/${new Types.ObjectId().toString()}`);
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("BRAND_NOT_FOUND");
@@ -252,7 +273,7 @@ describe("GET /api/admin/brands/:id", () => {
 });
 
 describe("PATCH /api/admin/brands/:id/status", () => {
-  it("rejects a request with no X-Admin-Key header", async () => {
+  it("rejects a request with no session at all", async () => {
     const res = await request(app)
       .patch(`/api/admin/brands/${new Types.ObjectId().toString()}/status`)
       .send({ status: false });
@@ -270,34 +291,36 @@ describe("PATCH /api/admin/brands/:id/status", () => {
       updatedBy: null,
     });
 
-    const res = await request(app)
-      .patch(`/api/admin/brands/${id.toString()}/status`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ status: false });
+    const res = await admin("patch", `/api/admin/brands/${id.toString()}/status`).send({
+      status: false,
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe(false);
-    expect(brandsRepository.updateById).toHaveBeenCalledWith(id, { status: false });
+    expect(brandsRepository.updateById).toHaveBeenCalledWith(id, {
+      status: false,
+      updatedBy: expect.any(Types.ObjectId),
+    });
     expect(productsRepository.countByBrand).not.toHaveBeenCalled();
   });
 
   it("returns BRAND_NOT_FOUND for a nonexistent id", async () => {
     vi.mocked(brandsRepository.updateById).mockResolvedValue(null);
 
-    const res = await request(app)
-      .patch(`/api/admin/brands/${new Types.ObjectId().toString()}/status`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ status: false });
+    const res = await admin(
+      "patch",
+      `/api/admin/brands/${new Types.ObjectId().toString()}/status`,
+    ).send({ status: false });
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("BRAND_NOT_FOUND");
   });
 
   it("rejects a non-boolean status", async () => {
-    const res = await request(app)
-      .patch(`/api/admin/brands/${new Types.ObjectId().toString()}/status`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY)
-      .send({ status: "inactive" });
+    const res = await admin(
+      "patch",
+      `/api/admin/brands/${new Types.ObjectId().toString()}/status`,
+    ).send({ status: "inactive" });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -308,9 +331,7 @@ describe("DELETE /api/admin/brands/:id", () => {
   it("rejects deletion when the brand is referenced by even an archived-only product", async () => {
     vi.mocked(productsRepository.countByBrand).mockResolvedValue(1);
 
-    const res = await request(app)
-      .delete(`/api/admin/brands/${new Types.ObjectId().toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("delete", `/api/admin/brands/${new Types.ObjectId().toString()}`);
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("BRAND_IN_USE");
@@ -320,9 +341,7 @@ describe("DELETE /api/admin/brands/:id", () => {
   it("deletes when no products reference the brand", async () => {
     vi.mocked(productsRepository.countByBrand).mockResolvedValue(0);
 
-    const res = await request(app)
-      .delete(`/api/admin/brands/${new Types.ObjectId().toString()}`)
-      .set("X-Admin-Key", env.ADMIN_API_KEY);
+    const res = await admin("delete", `/api/admin/brands/${new Types.ObjectId().toString()}`);
 
     expect(res.status).toBe(200);
     expect(brandsRepository.deleteById).toHaveBeenCalled();
@@ -330,7 +349,7 @@ describe("DELETE /api/admin/brands/:id", () => {
 });
 
 describe("GET /api/brands", () => {
-  it("requires no admin key and excludes inactive brands and admin-only fields", async () => {
+  it("requires no session and excludes inactive brands and admin-only fields", async () => {
     const id = new Types.ObjectId();
     vi.mocked(brandsRepository.listActive).mockResolvedValue([
       { _id: id, name: "Nova", slug: "nova", status: true, createdBy: null, updatedBy: null },

@@ -16,14 +16,14 @@ describe("CORS", () => {
     expect(res.headers["access-control-allow-origin"]).toBeUndefined();
   });
 
-  it("allows the X-Admin-Key header on a preflight request", async () => {
+  it("allows the Authorization header on a preflight request", async () => {
     const res = await request(app)
       .options("/api/admin/brands")
       .set("Origin", "http://localhost:5173")
       .set("Access-Control-Request-Method", "GET")
-      .set("Access-Control-Request-Headers", "X-Admin-Key");
+      .set("Access-Control-Request-Headers", "Authorization");
 
     expect(res.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
-    expect(res.headers["access-control-allow-headers"]).toContain("X-Admin-Key");
+    expect(res.headers["access-control-allow-headers"]).toContain("Authorization");
   });
 });

@@ -13,12 +13,18 @@ export type CreateCategoryDoc = {
   sortOrder?: number;
   metaTitle?: string;
   metaDescription?: string;
+  createdBy: Types.ObjectId;
 };
 
 // status isn't part of CreateCategoryDoc — a category is always created
 // active (FR-CAT-046's toggle is a dedicated PATCH .../status path, #33, not
-// something set at create time).
-export type UpdateCategoryDoc = Partial<CreateCategoryDoc> & { status?: boolean };
+// something set at create time). updatedBy isn't part of CreateCategoryDoc
+// either (createdBy is set once, at create) but every UpdateCategoryDoc
+// write carries one (Issue #143/M3.5, FR-AUTH-031-035).
+export type UpdateCategoryDoc = Partial<Omit<CreateCategoryDoc, "createdBy">> & {
+  status?: boolean;
+  updatedBy: Types.ObjectId;
+};
 
 export async function create(doc: CreateCategoryDoc): Promise<CategoryRecord> {
   const category = await Category.create(doc);

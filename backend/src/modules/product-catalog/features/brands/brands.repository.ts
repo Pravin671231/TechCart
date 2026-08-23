@@ -8,12 +8,18 @@ export type CreateBrandDoc = {
   slug: string;
   logo?: BrandLogo;
   description?: string;
+  createdBy: Types.ObjectId;
 };
 
 // status isn't part of CreateBrandDoc — a brand is always created active
 // (FR-CAT-047's toggle is a dedicated PATCH .../status path, #33, not
-// something set at create time).
-export type UpdateBrandDoc = Partial<CreateBrandDoc> & { status?: boolean };
+// something set at create time). updatedBy isn't part of CreateBrandDoc
+// either (createdBy is set once, at create) but every UpdateBrandDoc write
+// carries one (Issue #143/M3.5, FR-AUTH-031-035).
+export type UpdateBrandDoc = Partial<Omit<CreateBrandDoc, "createdBy">> & {
+  status?: boolean;
+  updatedBy: Types.ObjectId;
+};
 
 export async function create(doc: CreateBrandDoc): Promise<BrandRecord> {
   const brand = await Brand.create(doc);

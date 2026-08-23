@@ -4,8 +4,9 @@ import type { Request } from "express";
 // object — Better Auth's server-side API (auth.handler, auth.api.getSession,
 // ...) speaks the Fetch API throughout, not Express's own header shape.
 // Extracted from betterAuthHandler.ts's original inline loop on its second
-// use (requireRole.ts), matching this codebase's established "extract on
-// second use" convention (buildPublicUrl, parseObjectId, truncate, ...).
+// use (originally requireRole.ts, #142; now rbac.ts, #143), matching this
+// codebase's established "extract on second use" convention (buildPublicUrl,
+// parseObjectId, truncate, ...).
 export function buildFetchHeaders(req: Request): Headers {
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
