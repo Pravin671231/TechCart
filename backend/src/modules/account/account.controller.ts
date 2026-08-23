@@ -31,6 +31,6 @@ export async function updateProfileHandler(req: Request, res: Response): Promise
 
 export async function changePasswordHandler(req: Request, res: Response): Promise<void> {
   const input = changePasswordSchema.parse(req.body);
-  await changePassword(req, input.currentPassword, input.newPassword);
+  await changePassword(req, requireActorId(req), input.currentPassword, input.newPassword);
   res.status(200).json(successResponse({ changed: true }));
 }

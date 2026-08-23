@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 import { auth } from "@/lib/auth";
 import { AppError } from "@/utils/AppError";
 import { buildFetchHeaders } from "@/utils/fetchHeaders";
+import { revokeSessionsForUser } from "@/utils/sessions";
 import * as accountRepository from "./account.repository";
 import type { UserProfileRecord } from "./account.repository";
 
@@ -38,24 +39,31 @@ export async function updateProfile(
 
 // FR-AUTH-038/039: current-password-required change that invalidates every
 // *other* session for this admin, leaving the one making this request
-// intact. `revokeOtherSessions` is Better Auth's own documented option on
-// changePassword — unverified against this repo's installed version until a
-// real CI run confirms it (same category of risk as
-// auth.api.requestPasswordReset's real name/shape, discovered the same way
-// in #141). A wrong current password is rejected with one generic code, no
+// intact. Better Auth's own changePassword `revokeOtherSessions` option was
+// tried first, but a real CI run showed it also kills the *current*
+// session's token, not just the others — so session exclusion is done
+// manually here instead: the request's own bearer token (its Authorization
+// header, the same token identifying `userId` via rbac.ts) is passed to
+// revokeSessionsForUser (src/utils/sessions.ts) as the one token to keep
+// alive. A wrong current password is rejected with one generic code, no
 // further detail — same enumeration-safety posture as sign-in's
 // INVALID_EMAIL_OR_PASSWORD (auth.ts).
 export async function changePassword(
   req: Request,
+  userId: string,
   currentPassword: string,
   newPassword: string,
 ): Promise<void> {
   try {
     await auth.api.changePassword({
-      body: { currentPassword, newPassword, revokeOtherSessions: true },
+      body: { currentPassword, newPassword },
       headers: buildFetchHeaders(req),
     });
   } catch {
     throw new AppError(401, "INVALID_CURRENT_PASSWORD", "Current password is incorrect.");
   }
+
+  const authHeader = req.headers.authorization;
+  const currentToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+  await revokeSessionsForUser(userId, currentToken);
 }

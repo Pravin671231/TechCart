@@ -5,10 +5,22 @@ import mongoose from "mongoose";
 // an ObjectId-typed userId, since a string-only match against `session`'s
 // own userId field found zero documents in real CI even when this exact
 // logic was confirmed running (see auth.ts's own comment on this).
-export async function revokeSessionsForUser(userId: string): Promise<void> {
+//
+// `excludeToken` (Issue #144/M3.6) keeps one specific session alive — the
+// one making the request, for admin change-password's "every *other*
+// session" requirement (FR-AUTH-039). Added instead of relying on Better
+// Auth's own changePassword `revokeOtherSessions` option: a real CI run
+// showed that option kills the *current* session's token too, not just the
+// others, so account.service.ts's changePassword calls this directly
+// afterward with the token off the request's own Authorization header.
+export async function revokeSessionsForUser(userId: string, excludeToken?: string): Promise<void> {
   const userIdVariants: unknown[] = [userId];
   if (mongoose.isValidObjectId(userId)) {
     userIdVariants.push(new mongoose.Types.ObjectId(userId));
   }
-  await mongoose.connection.db!.collection("session").deleteMany({ userId: { $in: userIdVariants } });
+  const filter: Record<string, unknown> = { userId: { $in: userIdVariants } };
+  if (excludeToken) {
+    filter.token = { $ne: excludeToken };
+  }
+  await mongoose.connection.db!.collection("session").deleteMany(filter);
 }
