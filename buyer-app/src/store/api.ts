@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
 import { NEXT_PUBLIC_API_URL } from "./env";
+import { getToken } from "@/features/auth/tokenStorage";
 
 export type NormalizedApiError = { code: string; message: string };
 
@@ -12,7 +13,7 @@ export type Pagination = {
   hasNextPage: boolean;
 };
 
-type EnvelopeMeta = { pagination?: Pagination };
+type EnvelopeMeta = { pagination?: Pagination; authToken?: string };
 
 type BackendErrorBody =
   | { success: false; code: string; message: string }
@@ -45,7 +46,18 @@ function normalizeError(error: FetchBaseQueryError): NormalizedApiError {
   };
 }
 
-const rawBaseQuery = fetchBaseQuery({ baseUrl: NEXT_PUBLIC_API_URL });
+const rawBaseQuery = fetchBaseQuery({
+  baseUrl: NEXT_PUBLIC_API_URL,
+  prepareHeaders: (headers) => {
+    if (typeof window !== "undefined") {
+      const token = getToken();
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+    }
+    return headers;
+  },
+});
 
 const baseQueryWithEnvelope: BaseQueryFn<
   string | FetchArgs,
@@ -61,15 +73,26 @@ const baseQueryWithEnvelope: BaseQueryFn<
   }
 
   const body = result.data as { success: true; data: unknown; pagination?: Pagination };
+  const meta: EnvelopeMeta = {};
+
+  if (body.pagination) {
+    meta.pagination = body.pagination;
+  }
+
+  const authToken = result.meta?.response?.headers.get("set-auth-token");
+  if (authToken) {
+    meta.authToken = authToken;
+  }
+
   return {
     data: body.data,
-    meta: body.pagination ? { pagination: body.pagination } : {},
+    meta,
   };
 };
 
 export const api = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithEnvelope,
-  tagTypes: ["Product", "Category"],
+  tagTypes: ["Product", "Category", "Session"],
   endpoints: () => ({}),
 });

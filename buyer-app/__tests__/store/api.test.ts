@@ -8,6 +8,7 @@ describe("api slice", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.stubEnv("NEXT_PUBLIC_API_URL", API_URL);
+    vi.stubEnv("NEXT_PUBLIC_GOOGLE_CLIENT_ID", "test-client-id.apps.googleusercontent.com");
   });
 
   afterEach(() => {
@@ -79,6 +80,6 @@ describe("api slice", () => {
 
   it("throws at import time when NEXT_PUBLIC_API_URL is missing", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", "");
-    await expect(import("@/store/env")).rejects.toThrow(/NEXT_PUBLIC_API_URL/);
+    await expect(import("@/store/env")).rejects.toThrow(/NEXT_PUBLIC_\*/);
   });
 });

@@ -76,6 +76,7 @@ describe("CategoryContent", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.stubEnv("NEXT_PUBLIC_API_URL", API_URL);
+    vi.stubEnv("NEXT_PUBLIC_GOOGLE_CLIENT_ID", "test-client-id.apps.googleusercontent.com");
   });
 
   afterEach(() => {

@@ -13,7 +13,6 @@
 // literal defaults so local dev still needs zero .env changes to exercise
 // the flow.
 import { connectDB, disconnectDB } from "@/config/db";
-import { provisionAdminUser } from "./createAdminUser";
 
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? "admin@techcart.dev";
 const SUPER_ADMIN_NAME = process.env.SUPER_ADMIN_NAME ?? "TechCart Super Admin";
@@ -22,6 +21,13 @@ const SUPER_ADMIN_ROLE = "super-admin" as const;
 
 export async function seedSuperAdmin(): Promise<void> {
   await connectDB();
+
+  // Dynamic import so createAdminUser.ts (which statically imports
+  // @/lib/auth) is only evaluated after the DB connection is open — a static
+  // top-level import here would freeze auth.ts's mongodbAdapter(mongoose
+  // .connection.db!, ...) on an undefined `db`, since imports resolve before
+  // this function body ever runs connectDB() above.
+  const { provisionAdminUser } = await import("./createAdminUser.js");
 
   const result = await provisionAdminUser({
     email: SUPER_ADMIN_EMAIL,
