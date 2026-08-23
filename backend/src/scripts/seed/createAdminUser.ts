@@ -28,6 +28,16 @@ import { auth } from "@/lib/auth";
 
 export type AdminRole = "catalog-manager" | "order-manager" | "super-admin";
 
+// Issue #144/M3.6 — shared runtime list for routes that accept "any admin
+// role" (change-password is the first; adminUsers.controller.ts/
+// .repository.ts each still keep their own pre-existing local copy of this
+// same literal, out of scope to consolidate here).
+export const ADMIN_ROLES = [
+  "catalog-manager",
+  "order-manager",
+  "super-admin",
+] as const satisfies readonly AdminRole[];
+
 export interface ProvisionAdminUserInput {
   email: string;
   password: string;
