@@ -135,21 +135,47 @@ Verifies the code from the previous step and signs in — creating a new `role: 
 
 ### Error cases
 
-**Wrong or already-used code:**
+**Wrong or already-used code** (confirmed against Better Auth's own `emailOTP` plugin source, `atomicVerifyOTP()`):
 
 ```
-400 Bad Request (or similar 4xx — exact status/code come from Better Auth's own emailOTP plugin)
+400 Bad Request
 ```
 
 ```json
 {
   "success": false,
-  "code": "AUTH_ERROR",
-  "message": "..."
+  "code": "INVALID_OTP",
+  "message": "Invalid OTP"
 }
 ```
 
-**Expired code (older than 10 minutes):** same shape as above.
+**Expired code (older than 10 minutes):**
+
+```
+400 Bad Request
+```
+
+```json
+{
+  "success": false,
+  "code": "OTP_EXPIRED",
+  "message": "OTP expired"
+}
+```
+
+**More than 3 wrong attempts against the same code** (`allowedAttempts` default):
+
+```
+403 Forbidden
+```
+
+```json
+{
+  "success": false,
+  "code": "TOO_MANY_ATTEMPTS",
+  "message": "Too many attempts"
+}
+```
 
 **Email belongs to an already-registered admin account:** identical `403 GOOGLE_ACCOUNT_IS_ADMIN` as the send-OTP step — this is the one gap `validateUserInfo`'s OAuth/One-Tap check doesn't cover on its own (a *returning* OTP sign-in for an already-existing account), closed by a dedicated `hooks.before` matcher in `src/lib/auth.ts`.
 
@@ -322,21 +348,49 @@ Copy `set-auth-token` (Response Headers tab) into the `admin_access_token` colle
 
 ### Error cases
 
+Confirmed against Better Auth's own `twoFactor` plugin source (`otp/index.mjs`) — no session is established in any of these cases:
+
 **Wrong code:**
 
 ```
-400/401 (exact status comes from Better Auth's own twoFactor plugin)
+401 Unauthorized
 ```
 
 ```json
 {
   "success": false,
-  "code": "AUTH_ERROR",
-  "message": "..."
+  "code": "INVALID_CODE",
+  "message": "Invalid code"
 }
 ```
 
-**Expired code** (older than the OTP's configured expiry) or **a reused/already-verified code**: same shape as above — no session is established in either case.
+**Expired code, or a reused/already-verified code** (both collapse to the same "no verification record found" check):
+
+```
+400 Bad Request
+```
+
+```json
+{
+  "success": false,
+  "code": "OTP_HAS_EXPIRED",
+  "message": "OTP has expired"
+}
+```
+
+**More than 5 wrong attempts against the same code** (`allowedAttempts` default):
+
+```
+400 Bad Request
+```
+
+```json
+{
+  "success": false,
+  "code": "TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE",
+  "message": "Too many attempts. Please request a new code."
+}
+```
 
 ---
 
@@ -446,17 +500,17 @@ Self-service recovery for an admin who forgets the password from the sign-in flo
 
 ### Error cases
 
-**Expired token** (1-hour expiry, `resetPasswordTokenExpiresIn: 3600`) or **an already-used token:**
+**Expired token** (1-hour expiry, `resetPasswordTokenExpiresIn: 3600`) or **an already-used token** (confirmed against Better Auth's own `resetPassword` endpoint source, `api/routes/password.mjs` — both collapse to the same "no verification record found" check):
 
 ```
-400/401 (exact status from Better Auth's own emailAndPassword plugin)
+400 Bad Request
 ```
 
 ```json
 {
   "success": false,
-  "code": "AUTH_ERROR",
-  "message": "..."
+  "code": "INVALID_TOKEN",
+  "message": "Invalid token"
 }
 ```
 
@@ -464,13 +518,20 @@ Self-service recovery for an admin who forgets the password from the sign-in flo
 
 ## Error Code Reference
 
-| Code                       | Status  | Where it comes from                                                                                  | Reachable via an existing endpoint? |
-| --------------------------- | ------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------- |
-| `GOOGLE_ACCOUNT_IS_ADMIN`   | 403     | `src/lib/auth.ts`'s `rejectIfNonBuyerEmail`/`rejectAdminEmailOnReturningOtpSignIn` — a buyer sign-in attempt (any method) on an email already registered as a non-buyer account | Yes                                   |
-| `INVALID_EMAIL_OR_PASSWORD` | 401     | `src/lib/auth.ts`'s `rejectBuyerOnPasswordSignIn`, or Better Auth's own `/sign-in/email` — wrong password, unknown email, or a `role:"buyer"` account, all indistinguishable | Yes                                   |
-| `AUTH_ERROR`                | varies  | `src/middleware/betterAuthHandler.ts`'s fallback — any Better Auth error whose own JSON body has no `code` key (e.g. wrong/expired/reused OTP, invalid/expired reset token) | Yes                                   |
+| Code                                  | Status  | Where it comes from                                                                                  | Reachable via an existing endpoint? |
+| -------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------- |
+| `GOOGLE_ACCOUNT_IS_ADMIN`              | 403     | `src/lib/auth.ts`'s `rejectIfNonBuyerEmail`/`rejectAdminEmailOnReturningOtpSignIn` — a buyer sign-in attempt (any method) on an email already registered as a non-buyer account | Yes                                   |
+| `INVALID_EMAIL_OR_PASSWORD`            | 401     | `src/lib/auth.ts`'s `rejectBuyerOnPasswordSignIn`, or Better Auth's own `/sign-in/email` — wrong password, unknown email, or a `role:"buyer"` account, all indistinguishable | Yes                                   |
+| `INVALID_OTP`                          | 400     | Better Auth's `emailOTP` plugin (`atomicVerifyOTP`) — buyer OTP verify, wrong or already-consumed code | Yes                                   |
+| `OTP_EXPIRED`                          | 400     | Better Auth's `emailOTP` plugin — buyer OTP verify, code older than its 10-minute expiry               | Yes                                   |
+| `TOO_MANY_ATTEMPTS`                    | 403     | Better Auth's `emailOTP` plugin — buyer OTP verify, more than 3 wrong attempts against the same code   | Yes                                   |
+| `INVALID_CODE`                         | 401     | Better Auth's `twoFactor` plugin's `otp` sub-plugin — admin OTP verify, wrong code                      | Yes                                   |
+| `OTP_HAS_EXPIRED`                      | 400     | Better Auth's `twoFactor` plugin — admin OTP verify, code expired or already consumed                  | Yes                                   |
+| `TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE`   | 400     | Better Auth's `twoFactor` plugin — admin OTP verify, more than 5 wrong attempts against the same code  | Yes                                   |
+| `INVALID_TOKEN`                        | 400     | Better Auth's `emailAndPassword` plugin (`resetPassword` endpoint) — reset token expired or already used | Yes                                   |
+| `AUTH_ERROR`                           | varies  | `src/middleware/betterAuthHandler.ts`'s fallback — any Better Auth error whose own JSON body has no `code` key, not otherwise enumerated above | Not directly — every error case this doc names above has a real, more specific code |
 
-Every other backend module's error contract (`VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR` — see [`uploads.api.md`](../product-catalog/uploads.api.md#error-code-reference)) is produced by this repo's own `errorHandler.ts`, which never runs for `/api/auth/*` — every response on this page instead comes from Better Auth's own handler, reshaped into `{success, code, message}` by `betterAuthHandler.ts`. That bridge always includes a `code`; when Better Auth's own error body doesn't supply one, it falls back to the generic `AUTH_ERROR` shown above rather than inventing a more specific one.
+Every code above except `AUTH_ERROR` was confirmed by reading the installed `better-auth`/`@better-auth/core` package source directly (`node_modules/better-auth/dist/plugins/{email-otp,two-factor}/`, `node_modules/better-auth/dist/api/routes/password.mjs`), not guessed — an earlier version of this doc labeled all of these generically as `AUTH_ERROR`, which was inaccurate. Every other backend module's error contract (`VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR` — see [`uploads.api.md`](../product-catalog/uploads.api.md#error-code-reference)) is produced by this repo's own `errorHandler.ts`, which never runs for `/api/auth/*` — every response on this page instead comes from Better Auth's own handler, reshaped into `{success, code, message}` by `betterAuthHandler.ts`. That bridge always includes a `code`; `AUTH_ERROR` is only ever a fallback for a genuinely code-less Better Auth error body, not a case this doc has otherwise named.
 
 ---
 
