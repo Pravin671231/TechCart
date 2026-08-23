@@ -38,32 +38,44 @@ export async function updateProfile(
 }
 
 // FR-AUTH-038/039: current-password-required change that invalidates every
-// *other* session for this admin, leaving the one making this request
-// intact. Better Auth's own changePassword `revokeOtherSessions` option was
-// tried first, but a real CI run showed it also kills the *current*
-// session's token, not just the others — so session exclusion is done
-// manually here instead: the request's own bearer token (its Authorization
-// header, the same token identifying `userId` via rbac.ts) is passed to
-// revokeSessionsForUser (src/utils/sessions.ts) as the one token to keep
-// alive. A wrong current password is rejected with one generic code, no
-// further detail — same enumeration-safety posture as sign-in's
+// *other* session for this admin, leaving the device making this request
+// signed in. Two things were tried and ruled out by real CI runs before
+// this shape: (1) Better Auth's own changePassword `revokeOtherSessions`
+// option kills the *current* session's token too, not just the others; (2)
+// excluding the pre-change request's own bearer token from a manual
+// revokeSessionsForUser call still failed identically — because Better Auth
+// *rotates* the current session's token as part of changing the password
+// (a new token value, same session), so the old pre-change token no longer
+// matches anything by the time it's excluded against.
+//
+// The fix: call changePassword with `asResponse: true` (the same "get the
+// real Web Response back" pattern betterAuthHandler.ts already uses for
+// every /api/auth/* route) to read the *new* rotated token off the
+// response's `set-auth-token` header (the bearer plugin sets this on every
+// session-establishing/rotating response, confirmed working end-to-end for
+// sign-in in #139/#140), exclude sessions by that new token instead of the
+// stale old one, and return it to the caller so the client can update its
+// stored credential and stay signed in. A wrong current password comes back
+// as a non-ok Response (no session to rotate), rejected with one generic
+// code — same enumeration-safety posture as sign-in's
 // INVALID_EMAIL_OR_PASSWORD (auth.ts).
 export async function changePassword(
   req: Request,
   userId: string,
   currentPassword: string,
   newPassword: string,
-): Promise<void> {
-  try {
-    await auth.api.changePassword({
-      body: { currentPassword, newPassword },
-      headers: buildFetchHeaders(req),
-    });
-  } catch {
+): Promise<string | undefined> {
+  const response = await auth.api.changePassword({
+    body: { currentPassword, newPassword },
+    headers: buildFetchHeaders(req),
+    asResponse: true,
+  });
+
+  if (!response.ok) {
     throw new AppError(401, "INVALID_CURRENT_PASSWORD", "Current password is incorrect.");
   }
 
-  const authHeader = req.headers.authorization;
-  const currentToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
-  await revokeSessionsForUser(userId, currentToken);
+  const newToken = response.headers.get("set-auth-token") ?? undefined;
+  await revokeSessionsForUser(userId, newToken);
+  return newToken;
 }

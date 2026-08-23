@@ -31,6 +31,14 @@ export async function updateProfileHandler(req: Request, res: Response): Promise
 
 export async function changePasswordHandler(req: Request, res: Response): Promise<void> {
   const input = changePasswordSchema.parse(req.body);
-  await changePassword(req, requireActorId(req), input.currentPassword, input.newPassword);
-  res.status(200).json(successResponse({ changed: true }));
+  const newToken = await changePassword(
+    req,
+    requireActorId(req),
+    input.currentPassword,
+    input.newPassword,
+  );
+  // The old bearer token this request authenticated with is rotated away by
+  // changePassword itself (account.service.ts) — the client must swap in
+  // this new token to stay signed in on this device.
+  res.status(200).json(successResponse({ changed: true, token: newToken }));
 }

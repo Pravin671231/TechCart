@@ -146,11 +146,22 @@ describe("Admin change-password (FR-AUTH-038/039)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+    const rotatedToken = res.body.data.token as string;
+    expect(rotatedToken).toBeTruthy();
 
-    const stillA = await request(app)
+    // The device making the change stays signed in, but changePassword
+    // itself rotates its session to a new token value (confirmed via real
+    // CI) — the pre-change tokenA is expected to stop working, the rotated
+    // token returned in the response is what stays alive.
+    const deadOldA = await request(app)
       .get("/api/auth/get-session")
       .set("Authorization", `Bearer ${tokenA}`);
-    expect(stillA.body.data?.user?.email).toBe(ADMIN_EMAIL);
+    expect(deadOldA.body.data ?? null).toBeFalsy();
+
+    const stillRotatedA = await request(app)
+      .get("/api/auth/get-session")
+      .set("Authorization", `Bearer ${rotatedToken}`);
+    expect(stillRotatedA.body.data?.user?.email).toBe(ADMIN_EMAIL);
 
     const deadB = await request(app)
       .get("/api/auth/get-session")
