@@ -30,7 +30,9 @@ export function AuthStatus() {
 
   return (
     <div className="flex items-center gap-4">
-      <span className="text-gray-700">{session.name}</span>
+      <Link href="/account" className="text-gray-700 hover:text-gray-900 font-medium">
+        {session.name}
+      </Link>
       <button
         onClick={handleSignOut}
         className="text-gray-700 hover:text-gray-900 font-medium"
