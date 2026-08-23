@@ -49,7 +49,8 @@ export function OtpSignIn() {
 
       if (code === "GOOGLE_ACCOUNT_IS_ADMIN") {
         setCodeError("This email is registered as an admin account. Please sign in as a buyer instead.");
-      } else if (code === "OTP_INVALID") {
+      } else if (code === "INVALID_OTP") {
+        // Better Auth's emailOTP plugin actually returns "INVALID_OTP", not "OTP_INVALID".
         setCodeError("The OTP you entered is invalid. Please try again.");
       } else if (code === "OTP_EXPIRED") {
         setCodeError("The OTP has expired. Please request a new one.");
@@ -65,8 +66,8 @@ export function OtpSignIn() {
       await sendOtp({ email }).unwrap();
       setResendCountdown(30);
     } catch (err) {
-      const error = err as { data: NormalizedApiError };
-      setCodeError(error.data?.message || "Failed to resend OTP. Please try again.");
+      const error = err as NormalizedApiError;
+      setCodeError(error?.message || "Failed to resend OTP. Please try again.");
     }
   };
 

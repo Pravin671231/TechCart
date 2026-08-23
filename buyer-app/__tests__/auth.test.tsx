@@ -244,7 +244,7 @@ describe("Auth", () => {
       });
     });
 
-    it("shows OTP_INVALID error message", async () => {
+    it("shows INVALID_OTP error message", async () => {
       const { makeStore } = await import("@/store/store");
       const { SignInContent } = await import("@/features/auth/SignInContent");
       const store = makeStore();
@@ -266,7 +266,7 @@ describe("Auth", () => {
           return HttpResponse.json(
             {
               success: false,
-              code: "OTP_INVALID",
+              code: "INVALID_OTP",
               message: "Invalid OTP",
             },
             { status: 400 }
@@ -295,6 +295,56 @@ describe("Auth", () => {
       await waitFor(() => {
         expect(screen.getByText(/OTP you entered is invalid/i)).toBeInTheDocument();
       });
+    });
+
+    it("shows a resend failure message distinct from the generic fallback", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const store = makeStore();
+
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+
+      let sendCount = 0;
+      server.use(
+        http.get("*/api/auth/get-session", () => {
+          return HttpResponse.json({ success: true, data: { user: null } });
+        }),
+        http.post("*/api/auth/email-otp/send-verification-otp", () => {
+          sendCount += 1;
+          if (sendCount === 1) {
+            return HttpResponse.json({ success: true, data: null });
+          }
+          return HttpResponse.json(
+            { success: false, code: "TOO_MANY_ATTEMPTS", message: "Too many attempts, try later" },
+            { status: 429 }
+          );
+        })
+      );
+
+      render(
+        <Provider store={store}>
+          <SignInContent />
+        </Provider>
+      );
+
+      const emailInput = screen.getByPlaceholderText(/you@example.com/i);
+      fireEvent.change(emailInput, { target: { value: "test@example.com" } });
+      fireEvent.click(screen.getByRole("button", { name: /send otp/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /resend in \d+s/i })).toBeInTheDocument();
+      });
+
+      await vi.advanceTimersByTimeAsync(30_000);
+
+      const resendButton = await screen.findByRole("button", { name: /^resend otp$/i });
+      fireEvent.click(resendButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/too many attempts, try later/i)).toBeInTheDocument();
+      });
+
+      vi.useRealTimers();
     });
 
     it("shows OTP_EXPIRED error message", async () => {
