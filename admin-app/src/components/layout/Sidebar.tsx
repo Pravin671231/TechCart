@@ -1,4 +1,6 @@
 import { cn } from "@/lib/utils";
+import { useGetSessionQuery } from "@/features/auth/api";
+import { isAdminRole } from "@/features/auth/adminRoles";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
 import { NAV_ITEMS } from "./navItems";
@@ -15,6 +17,18 @@ export interface SidebarProps {
 
 export const Sidebar = ({ onNavigate, variant = "rail" }: SidebarProps) => {
   const isRail = variant === "rail";
+  // Cached by RTK Query — RequireAuth has already resolved this exact
+  // session query before Sidebar (nested inside AppShell) ever mounts, so
+  // this is a free cache hit, not a new request or a loading flicker
+  // (Issue #149/M3.11). Role-gated items (e.g. "Admin Users") only render
+  // once the session's role is confirmed to include them, so they never
+  // flash for the wrong role even momentarily; items with no `roles` at
+  // all always render regardless of session load state.
+  const { data: session } = useGetSessionQuery();
+  const role = session?.role;
+  const items = NAV_ITEMS.filter(
+    (item) => !item.roles || (role !== undefined && isAdminRole(role) && item.roles.includes(role)),
+  );
 
   return (
     <>
@@ -26,7 +40,7 @@ export const Sidebar = ({ onNavigate, variant = "rail" }: SidebarProps) => {
       >
         <Header compact={isRail} />
       </div>
-      <SidebarItems items={NAV_ITEMS} onNavigate={onNavigate} layout={isRail ? "rail" : "list"} />
+      <SidebarItems items={items} onNavigate={onNavigate} layout={isRail ? "rail" : "list"} />
       <Footer onNavigate={onNavigate} variant={variant} />
     </>
   );

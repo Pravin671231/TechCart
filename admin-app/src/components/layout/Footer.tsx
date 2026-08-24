@@ -1,6 +1,6 @@
 import { LogOut } from "lucide-react";
-import { useNavigate } from "react-router";
-import { useSignOutMutation } from "@/features/auth/api";
+import { Link, useNavigate } from "react-router";
+import { useGetSessionQuery, useSignOutMutation } from "@/features/auth/api";
 import { cn } from "@/lib/utils";
 
 export interface FooterProps {
@@ -12,7 +12,13 @@ export interface FooterProps {
 export const Footer = ({ onNavigate, variant = "rail" }: FooterProps) => {
   const navigate = useNavigate();
   const [signOut] = useSignOutMutation();
+  // Cached — RequireAuth has already resolved this exact session query
+  // before Footer (nested inside AppShell) ever mounts, so this is a free
+  // cache hit (Issue #149/M3.11).
+  const { data: session } = useGetSessionQuery();
   const isRail = variant === "rail";
+  const displayName = session?.name ?? "Admin User";
+  const initial = displayName.charAt(0).toUpperCase() || "A";
 
   const handleLogout = async () => {
     await signOut();
@@ -24,10 +30,16 @@ export const Footer = ({ onNavigate, variant = "rail" }: FooterProps) => {
     <div className="mt-auto border-t border-neutral-200 p-2 lg:p-3">
       <div className={cn("flex items-center gap-2 rounded-md p-2", isRail && "flex-col lg:flex-row")}>
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
-          A
+          {initial}
         </span>
         <div className={cn("min-w-0 flex-1", isRail && "hidden lg:block")}>
-          <p className="truncate text-sm font-medium text-neutral-900">Admin User</p>
+          <Link
+            to="/account"
+            onClick={onNavigate}
+            className="block truncate text-sm font-medium text-neutral-900 hover:text-primary-600"
+          >
+            {displayName}
+          </Link>
         </div>
       </div>
       <button

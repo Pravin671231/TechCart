@@ -3,10 +3,14 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router";
+import { http, HttpResponse } from "msw";
+import { server } from "../../mocks/server";
 import { createStore } from "@/app/store/store";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableLayout } from "@/components/layout/TableLayout";
+
+const SESSION_URL = "http://localhost:4000/api/auth/get-session";
 
 function renderShell(initialPath = "/") {
   const testStore = createStore();
@@ -87,6 +91,29 @@ describe("AppShell / Sidebar", () => {
 
     fireEvent.blur(productsLinks[0]);
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
+
+  it("hides the role-gated 'Admin Users' nav item for a non-super-admin session (Issue #149/M3.11)", async () => {
+    renderShell("/");
+
+    await screen.findByRole("link", { name: "Dashboard" });
+    expect(screen.queryByRole("link", { name: "Admin Users" })).not.toBeInTheDocument();
+  });
+
+  it("shows the 'Admin Users' nav item once the session's role is super-admin", async () => {
+    server.use(
+      http.get(SESSION_URL, () =>
+        HttpResponse.json({
+          success: true,
+          data: { user: { id: "u1", name: "Super Admin", email: "sa@example.com", role: "super-admin" } },
+        }),
+      ),
+    );
+
+    renderShell("/");
+
+    const adminUsersLinks = await screen.findAllByRole("link", { name: "Admin Users" });
+    expect(adminUsersLinks[0]).toHaveAttribute("href", "/admin-users");
   });
 });
 
