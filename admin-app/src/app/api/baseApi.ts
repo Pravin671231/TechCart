@@ -11,6 +11,7 @@ export const api = createApi({
     "CategoryVariant",
     "Product",
     "Session",
+    "AdminUser",
   ],
   endpoints: () => ({}),
 });

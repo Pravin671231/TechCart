@@ -22,7 +22,7 @@ src/
 │       ├── apiToast.ts                       # notifyApiSuccess/notifyApiError — sonner toast bridge, used by every *Api.ts's onQueryStarted
 │       └── ENDPOINTS.ts                        # re-exports PRODUCT_CATALOG_ENDPOINTS from features/product-catalog/endpoints.ts
 ├── routes/
-│   └── mainRoutes.tsx          # MainRoutes: <Routes> tree — AppShell layout route rendering LandingPlaceholder at "/" plus {ProductCatalogRoutes()}
+│   └── mainRoutes.tsx          # MainRoutes: <Routes> tree — RequireAuth > [RequireRole("super-admin") > AppShell > /admin-users, AppShell > "/" + {ProductCatalogRoutes()} + /account] (Issue #149/M3.11)
 ├── components/
 │   ├── ui/                     # generic reusable primitives, no domain semantics
 │   │   ├── AlertModal.tsx             # variant-aware modal (deleted/warning/confirm) gating delete-only actions — see AGENTS.md
@@ -39,12 +39,12 @@ src/
 │   │   └── SearchInput.tsx            # cn() only
 │   └── layout/                 # app chrome and page structure
 │       ├── AppShell.tsx           # responsive shell — w-20/lg:w-50 icon rail + mobile slide-out drawer, wraps every route via <MainSection>'s <Outlet />
-│       ├── Sidebar.tsx              # composes Header(compact)+SidebarItems+Footer; variant: "rail" | "drawer"
+│       ├── Sidebar.tsx              # composes Header(compact)+SidebarItems+Footer; variant: "rail" | "drawer"; filters NAV_ITEMS by session role before rendering (Issue #149/M3.11)
 │       ├── SidebarItems.tsx           # NAV_ITEMS grouped list; rail layout shows a hover/focus tooltip at tablet icon-only width
 │       ├── Header.tsx                   # brand mark (icon + wordmark), shared by AppShell's mobile topbar and Sidebar
-│       ├── Footer.tsx                     # avatar/name/logout, static "Admin User" placeholder
+│       ├── Footer.tsx                     # avatar/name/logout, real signed-in session name/initial (Issue #149/M3.11), name links to /account
 │       ├── MainSection.tsx                  # <Outlet /> wrapper
-│       ├── navItems.ts                        # NAV_ITEMS: Dashboard/Products/Categories/Brands/Specifications/Variant types, each with icon+group
+│       ├── navItems.ts                        # NAV_ITEMS: Dashboard/Products/Categories/Brands/Specifications/Variant types/Admin Users, each with icon+group; optional roles?: AdminRole[] (Issue #149/M3.11)
 │       ├── PageHeader.tsx                        # cva() variants: size (lg/md); title + actions row + optional breadcrumbs
 │       └── TableLayout.tsx                          # PageHeader + search/filter row + table + pagination slot ("common table layout", not yet adopted by list pages)
 ├── config/
@@ -61,7 +61,17 @@ src/
 │   │   ├── OtpVerify.tsx                     # 6-digit code + 30s resend cooldown
 │   │   ├── SignInContent.tsx                   # owns the password/otp step state, redirects home once signed in
 │   │   ├── RequireAuth.tsx                       # route guard layout route — no session -> /sign-in, non-admin role -> NoAccess, else <Outlet/>
+│   │   ├── RequireRole.tsx                         # stricter guard, nested inside RequireAuth — no session -> /sign-in, role mismatch -> NoAccess, else <Outlet/> (Issue #149/M3.11)
 │   │   └── NoAccess.tsx                            # 403-equivalent state, with a sign-out action
+│   ├── adminUsers/              # super-admin-only account management (Issue #149/M3.11)
+│   │   ├── adminUsersApi.ts        # injectEndpoints: getAdminUsers/createAdminUser/updateAdminUser (relative /users URLs, tag "AdminUser")
+│   │   ├── types.ts                  # AdminUser / Create·UpdateAdminUserInput (reuses AdminRole from features/auth/adminRoles)
+│   │   ├── AdminUsersPage.tsx          # routed at /admin-users — list + create pane, no edit-form pane
+│   │   ├── AdminUserList.tsx             # table w/ inline role <select> + status toggle; own row (session.id === _id) renders plain text for both
+│   │   └── AdminUserForm.tsx               # create-only form — name/email/role, no password field
+│   ├── account/                 # self-service password change, any admin role (Issue #149/M3.11)
+│   │   ├── accountApi.ts           # changePassword mutation — absolute URL (${API_URL}/api/account/change-password), no cache tag
+│   │   └── AccountPage.tsx           # routed at /account — current/new/confirm fields, client-side mismatch check, INVALID_CURRENT_PASSWORD inline
 │   ├── uploads/
 │   │   ├── uploadsApi.ts            # presignUpload mutation + putFileToPresignedUrl (direct-to-R2 PUT), shared across features
 │   │   └── SingleImageUploader.tsx    # presign → PUT-to-R2 → preview, feature-agnostic (purpose param), used by both brands/ and categories/
@@ -139,8 +149,11 @@ admin-app/
 │   ├── mocks/{handlers.ts,server.ts}                # shared MSW server — default get-session/sign-out handlers (Issue #148/M3.10), extended by later feature tests
 │   ├── utils/renderWithStore.tsx                      # Provider-wrapped render helper using an isolated createStore()
 │   ├── store/api.test.ts                                # Authorization: Bearer header attach/omit (Issue #148/M3.10; no more authSlice test)
+│   ├── components/layout/Shell.test.tsx                   # AppShell/Sidebar/PageHeader/TableLayout; incl. nav role-gating cases (Issue #149/M3.11)
 │   └── features/
-│       ├── auth/{SignInContent.test.tsx,RequireAuth.test.tsx}  # password->OTP flow + every named error state; the guard's 3 branches
+│       ├── auth/{SignInContent.test.tsx,RequireAuth.test.tsx,RequireRole.test.tsx}  # password->OTP flow, RequireAuth's 3 branches, RequireRole's 3 branches (Issue #149/M3.11)
+│       ├── adminUsers/AdminUsersPage.test.tsx               # list/create(no password)/role-change/status-toggle/own-row guard (Issue #149/M3.11)
+│       ├── account/AccountPage.test.tsx                       # happy path/INVALID_CURRENT_PASSWORD/client-side mismatch (Issue #149/M3.11)
 │       └── product-catalog/                                # mirrors src/features/product-catalog/'s layout
 │           ├── brands/BrandsPage.test.tsx                     # list/create/edit/delete-guard/status-toggle/search/logo-upload
 │           ├── categories/CategoriesPage.test.tsx               # tree render, all 4 hierarchy errors, combined delete-guard, status/search
@@ -158,7 +171,7 @@ admin-app/
     ├── app/{store/{store.ts,hooks.ts},api/{baseQuery.ts,baseApi.ts,api.types.ts,apiResponse.ts,apiError.ts,apiToast.ts,ENDPOINTS.ts}}
     ├── routes/mainRoutes.tsx
     ├── components/{ui/{AlertModal.tsx,Button.tsx,Card.tsx,InlineAlert.tsx,LoadingState.tsx,Pagination.tsx,StatusBadge.tsx,Table.tsx},form/{Checkbox.tsx,FormField.tsx,SearchInput.tsx},layout/{AppShell.tsx,Sidebar.tsx,SidebarItems.tsx,Header.tsx,Footer.tsx,MainSection.tsx,navItems.ts,PageHeader.tsx,TableLayout.tsx}}
-    └── features/{auth/{api.ts,tokenStorage.ts,adminRoles.ts,describeAuthError.ts,PasswordSignIn.tsx,OtpVerify.tsx,SignInContent.tsx,RequireAuth.tsx,NoAccess.tsx},uploads/{uploadsApi.ts,SingleImageUploader.tsx},product-catalog/{endpoints.ts,routePaths.ts,routes.tsx,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,statusPresentation.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx,productForm/{ProductFormPage.tsx,ProductForm.tsx,ProductImagesEditor.tsx,ProductSpecificationsFields.tsx,specificationValues.ts,ProductVariantsEditor.tsx}}},landing/LandingPlaceholder.tsx}
+    └── features/{auth/{api.ts,tokenStorage.ts,adminRoles.ts,describeAuthError.ts,PasswordSignIn.tsx,OtpVerify.tsx,SignInContent.tsx,RequireAuth.tsx,RequireRole.tsx,NoAccess.tsx},adminUsers/{adminUsersApi.ts,types.ts,AdminUsersPage.tsx,AdminUserList.tsx,AdminUserForm.tsx},account/{accountApi.ts,AccountPage.tsx},uploads/{uploadsApi.ts,SingleImageUploader.tsx},product-catalog/{endpoints.ts,routePaths.ts,routes.tsx,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,statusPresentation.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx,productForm/{ProductFormPage.tsx,ProductForm.tsx,ProductImagesEditor.tsx,ProductSpecificationsFields.tsx,specificationValues.ts,ProductVariantsEditor.tsx}}},landing/LandingPlaceholder.tsx}
 ```
 
 ## Config
