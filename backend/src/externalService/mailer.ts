@@ -3,16 +3,32 @@ import { env } from "@/config/env";
 
 // Issue #242/M3.14 — replaces resend.ts outright: TechCart doesn't own a
 // verified sending domain, which Resend requires, so Mailtrap (no domain
-// verification needed) is now the sole email provider in every environment,
-// dev and production alike. Constructed once at module load — env.ts's own
-// Zod schema already requires all five MAILTRAP_* vars, so there's no
-// "avoid requiring it in prod" reason left to defer construction the way
-// the earlier dev-only design did.
-const transport: Transporter = nodemailer.createTransport({
-  host: env.MAILTRAP.HOST,
-  port: env.MAILTRAP.PORT,
-  auth: { user: env.MAILTRAP.USER, pass: env.MAILTRAP.PASS },
-});
+// verification needed) is the email provider in every environment, dev and
+// production alike.
+//
+// TEMPORARY — sending is currently disabled: real Mailtrap credentials
+// aren't configured yet, so env.ts's MAILTRAP_* fields were reverted from
+// #242's "all five required" back to optional, and sendEmail below
+// console.logs the content instead of actually dialing Mailtrap whenever
+// any of the five is missing. This is a short-lived local-dev workaround,
+// not a permanent design change — revert both this file and env.ts's
+// MAILTRAP_* fields back to required/always-send once real credentials are
+// available. Every OTP/reset-link code path is otherwise unchanged.
+const MAILTRAP_CONFIGURED = Boolean(
+  env.MAILTRAP.HOST && env.MAILTRAP.PORT && env.MAILTRAP.USER && env.MAILTRAP.PASS && env.MAILTRAP.FROM_EMAIL,
+);
+
+let transport: Transporter | undefined;
+
+function getTransport(): Transporter {
+  if (transport) return transport;
+  transport = nodemailer.createTransport({
+    host: env.MAILTRAP.HOST,
+    port: env.MAILTRAP.PORT,
+    auth: { user: env.MAILTRAP.USER, pass: env.MAILTRAP.PASS },
+  });
+  return transport;
+}
 
 type EmailContent = {
   to: string;
@@ -22,7 +38,14 @@ type EmailContent = {
 };
 
 async function sendEmail(content: EmailContent): Promise<void> {
-  await transport.sendMail({ from: env.MAILTRAP.FROM_EMAIL, ...content });
+  if (!MAILTRAP_CONFIGURED) {
+    console.log(
+      `[mailer: email sending temporarily disabled — MAILTRAP_* not configured] to=${content.to} subject="${content.subject}"\n${content.text}`,
+    );
+    return;
+  }
+
+  await getTransport().sendMail({ from: env.MAILTRAP.FROM_EMAIL, ...content });
 }
 
 export async function sendOtpEmail(email: string, otp: string, purpose: "sign-in"): Promise<void> {
