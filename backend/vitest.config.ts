@@ -21,8 +21,14 @@ export default defineConfig({
       BETTER_AUTH_URL: "http://localhost:4000",
       GOOGLE_CLIENT_ID: "test-google-client-id",
       GOOGLE_CLIENT_SECRET: "test-google-client-secret",
-      RESEND_API_KEY: "test-resend-api-key",
-      RESEND_FROM_EMAIL: "noreply@test.example",
+      // Never actually connected to — every test mocks
+      // "@/externalService/mailer" wholesale, same "dummy value, never
+      // dialed" reasoning as REDIS_URL above.
+      MAILTRAP_HOST: "test-mailtrap-host",
+      MAILTRAP_PORT: "2525",
+      MAILTRAP_USER: "test-mailtrap-user",
+      MAILTRAP_PASS: "test-mailtrap-pass",
+      MAILTRAP_FROM_EMAIL: "noreply@test.example",
     },
     include: ["src/**/tests/**/*.test.ts", "__tests__/**/*.test.ts"],
     setupFiles: ["./vitest.setup.ts"],

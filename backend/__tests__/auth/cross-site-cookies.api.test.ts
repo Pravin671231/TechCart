@@ -20,7 +20,7 @@ import type mongooseType from "mongoose";
 // file's module registry, so this override can't leak into any other
 // suite — every other file keeps resolving BETTER_AUTH_URL from
 // vitest.config.ts's shared test.env block untouched.
-vi.mock("@/externalService/resend", () => ({
+vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
 }));

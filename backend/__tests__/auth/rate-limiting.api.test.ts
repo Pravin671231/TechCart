@@ -34,7 +34,7 @@ import { signInBuyer, authRequest } from "../testHelpers/adminSession.js";
 // after every test, which is what keeps this suite from tripping on
 // *other* files' repeated sign-ins (see that file's own comment for why the
 // reset is global, not local to this file).
-vi.mock("@/externalService/resend", () => ({
+vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
 }));
@@ -152,7 +152,7 @@ describe("Auth rate limiting (Issue #145/M3.7)", () => {
       expect(last!.status).toBe(429);
       expect(last!.body).toMatchObject({ success: false, code: "RATE_LIMITED" });
 
-      const { sendPasswordResetEmail } = await import("../../src/externalService/resend.js");
+      const { sendPasswordResetEmail } = await import("../../src/externalService/mailer.js");
       // At most 3 of the 4 attempts could have gotten far enough to send —
       // the point is the 4th never does, not that none of the earlier ones did.
       expect((sendPasswordResetEmail as ReturnType<typeof vi.fn>).mock.calls.length).toBeLessThanOrEqual(3);
@@ -279,12 +279,15 @@ describe("FR-AUTH-045 error-code enumeration", () => {
       .post("/api/auth/sign-in/email")
       .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
     await agent2.post("/api/auth/two-factor/send-otp").send({});
-    const { sendOtpEmail } = await import("../../src/externalService/resend.js");
-    const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1] as string;
     await mongoose.connection
       .db!.collection("verification")
       .updateMany({}, { $set: { expiresAt: new Date(Date.now() - 1000) } });
-    const expiredOtp = await agent2.post("/api/auth/two-factor/verify-otp").send({ code: otp });
+    // Issue #242/M3.14 — auth.ts's databaseHooks.verification.create.before
+    // forces every 2fa-otp-* record's stored value to "123456:0" regardless
+    // of the real (random) emailed code, so "123456" is the code that would
+    // verify if not expired — submitting it here specifically exercises the
+    // expiry branch, not an incidental wrong-code rejection.
+    const expiredOtp = await agent2.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
     codes.otpExpired = expiredOtp.body.code;
 
     // 6. No session — rbac.ts's UNAUTHENTICATED on a protected admin route.

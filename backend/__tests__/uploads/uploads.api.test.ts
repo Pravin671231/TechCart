@@ -7,7 +7,7 @@ import type { Express } from "express";
 // X-Admin-Key header — see brands.api.test.ts's own header comment for the
 // full rationale. No-session now 401s as UNAUTHENTICATED (rbac.ts), not the
 // old adminAuth.ts's UNAUTHORIZED.
-vi.mock("@/externalService/resend", () => ({
+vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
 

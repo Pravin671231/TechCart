@@ -8,7 +8,7 @@ import type { Express } from "express";
 // the same real `users` collection Better Auth's own adapter owns, matching
 // __tests__/adminUsers/adminUsers.api.test.ts's identical "real DB, no mocks"
 // choice for this same collection.
-vi.mock("@/externalService/resend", () => ({
+vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
 

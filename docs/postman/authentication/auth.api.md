@@ -12,11 +12,11 @@ See [`../product-catalog/uploads.api.md`](../product-catalog/uploads.api.md) for
 
 ## Prerequisites
 
-Same as [`uploads.api.md`](../product-catalog/uploads.api.md#prerequisites): backend running (`npm run dev --workspace backend`), `backend/.env` filled in. This module additionally needs `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` set (`src/config/env.ts` refuses to boot without them, same "all required, validated at startup" behavior as the R2 vars).
+Same as [`uploads.api.md`](../product-catalog/uploads.api.md#prerequisites): backend running (`npm run dev --workspace backend`), `backend/.env` filled in. This module additionally needs `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MAILTRAP_HOST`, `MAILTRAP_PORT`, `MAILTRAP_USER`, `MAILTRAP_PASS`, `MAILTRAP_FROM_EMAIL` set (`src/config/env.ts` refuses to boot without them, same "all required, validated at startup" behavior as the R2 vars).
 
-**Email delivery is real**, via Resend (`src/externalService/resend.ts`) — the buyer/admin OTP codes and the password-reset link are actually emailed, not returned in any API response (`storeOTP: "hashed"` means the plaintext code isn't even in the database). To test the OTP/reset flows by hand in Postman without receiving real email, either point `RESEND_FROM_EMAIL`/your test inbox at something you can actually read, or watch the backend's own console — nothing in this repo echoes a code back to the HTTP response. This is a real, accepted limitation of testing this module by hand, not a documentation gap.
+**Buyer and admin sign-in/2FA OTP codes are fixed to `123456` in every environment, including production (Issue #242/M3.14)** — a deliberate, pre-launch-only tradeoff (not a real security posture), documented in `backend/CLAUDE.md`'s Authentication (Buyer)/(Admin) sections. Submitting `123456` at any OTP-verify step below always succeeds; **no real inbox access is needed to test those flows anymore.** The password-reset *link* (`POST /api/auth/request-password-reset`, below) is unaffected — that's still a real, random token, actually emailed via Mailtrap (`src/externalService/mailer.ts`), not returned in any API response. To read that link by hand in Postman, either point `MAILTRAP_FROM_EMAIL`/your test inbox at something you can actually read (Mailtrap's own sandbox inbox works directly, no domain verification needed), or watch the backend's own console — nothing in this repo echoes the reset link back to the HTTP response. This is a real, accepted limitation of testing the reset-link step by hand, not a documentation gap.
 
-**Fastest way to get a real admin account to sign in as:** `npm run seed:super-admin --workspace backend` (reads `SUPER_ADMIN_EMAIL`/`SUPER_ADMIN_NAME`/`SUPER_ADMIN_PASSWORD` from the environment, falling back to built-in defaults if unset — see [`adminUsers.api.md`](./adminUsers.api.md) for the alternative, API-driven provisioning path once you have one super-admin).
+**Fastest way to get a real admin account to sign in as:** `npm run seed:super-admin --workspace backend` (reads `SUPER_ADMIN_EMAIL`/`SUPER_ADMIN_NAME`/`SUPER_ADMIN_PASSWORD` from the environment — **all three required, no fallback**, since Issue #241/M3.13 — see [`adminUsers.api.md`](./adminUsers.api.md) for the alternative, API-driven provisioning path once you have one super-admin).
 
 ---
 
@@ -65,7 +65,7 @@ Requests a one-time sign-in code by email (`FR-AUTH-002`).
 }
 ```
 
-- The actual 6-digit code is emailed via Resend, not returned here — see [Prerequisites](#prerequisites).
+- The actual code is fixed to `123456` in every environment — submit that value at the verify step below, no need to check an inbox. See [Prerequisites](#prerequisites).
 - The code expires in **10 minutes** (`FR-AUTH-007`, `emailOTP({expiresIn: 600})`).
 
 ### Error cases
@@ -304,7 +304,7 @@ Dispatches the mandatory OTP email — only reachable after a valid password ste
 
 **Headers tab:** `Content-Type: application/json`. **Body:** `{}`.
 
-**Click Send. Expected response — `200 OK`:** `{"success": true, "data": {}}`. The code is emailed — see [Prerequisites](#prerequisites).
+**Click Send. Expected response — `200 OK`:** `{"success": true, "data": {}}`. The code is fixed to `123456` in every environment — submit that at `/two-factor/verify-otp`, no need to check an inbox. See [Prerequisites](#prerequisites).
 
 ---
 
@@ -470,7 +470,7 @@ Self-service recovery for an admin who forgets the password from the sign-in flo
 ```
 
 - **No-enumeration guarantee (`FR-AUTH-019`):** a registered admin's email, a registered buyer's email, and a completely unregistered email all get this exact `200`/`{}` response — try all three and compare. The email is only actually sent for a non-buyer (admin) account; a buyer submitting their own email here gets the identical response but no email, since buyers have no password to reset.
-- The reset link's token isn't parseable out of a real email in a Postman-only workflow — if you have server/log access, or control the inbox `RESEND_FROM_EMAIL`/the request delivers to, the emailed link carries it; otherwise this step is verifiable by response shape only, not a full round trip. (This repo's own test suite reads the token back from a private tracking collection instead of the email — not something available outside the codebase.)
+- The reset link's token isn't parseable out of a real email in a Postman-only workflow — if you have server/log access, or control the inbox `MAILTRAP_FROM_EMAIL`/the request delivers to (Mailtrap's own sandbox inbox works directly), the emailed link carries it; otherwise this step is verifiable by response shape only, not a full round trip. Unlike the sign-in/2FA OTP codes above, this token is still real/random, not fixed — password reset was out of scope for Issue #242/M3.14's fixed-OTP change. (This repo's own test suite reads the token back from a private tracking collection instead of the email — not something available outside the codebase.)
 
 ---
 

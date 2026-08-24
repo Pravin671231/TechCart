@@ -9,7 +9,7 @@ import type { Express } from "express";
 // __tests__/auth/*/__tests__/adminUsers/* already use for exactly that
 // reason — brands/products.repository stay mocked below, same as before;
 // only session resolution touches a real DB.
-vi.mock("@/externalService/resend", () => ({
+vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
 

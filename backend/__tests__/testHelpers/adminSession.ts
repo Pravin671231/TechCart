@@ -52,7 +52,7 @@ export async function clearAuthCollections(mongoose: typeof mongooseType): Promi
 }
 
 // Requires the calling test file to have already called
-// vi.mock("@/externalService/resend", () => ({ sendOtpEmail: vi.fn()... }))
+// vi.mock("@/externalService/mailer", () => ({ sendOtpEmail: vi.fn()... }))
 // — reads the OTP back off that mock's most recent call, same as every
 // other admin sign-in test in this codebase.
 export async function signInFully(app: Express, email: string, password: string): Promise<string> {
@@ -69,11 +69,19 @@ export async function signInFully(app: Express, email: string, password: string)
     throw new Error(`two-factor/send-otp failed: ${send.status}`);
   }
 
-  const { sendOtpEmail } = await import("../../src/externalService/resend.js");
-  const otp = (sendOtpEmail as unknown as Mock).mock.calls.at(-1)?.[1] as string;
-  if (!otp) throw new Error("sendOtpEmail was never called — is it mocked in this test file?");
+  // Issue #242/M3.14 — auth.ts's databaseHooks.verification.create.before
+  // now forces every 2fa-otp-* verification record's stored value to
+  // "123456:0" regardless of the real (random) code sendOtpEmail was
+  // actually called with, so submitting that captured code would never
+  // verify anymore. "123456" is the only value that ever succeeds now; the
+  // mock-call check stays as a sanity check that send-otp really triggered
+  // an email attempt.
+  const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+  if (!(sendOtpEmail as unknown as Mock).mock.calls.at(-1)) {
+    throw new Error("sendOtpEmail was never called — is it mocked in this test file?");
+  }
 
-  const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: otp });
+  const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
   if (verify.status !== 200) {
     throw new Error(`two-factor/verify-otp failed: ${verify.status}`);
   }
@@ -86,7 +94,7 @@ export async function signInFully(app: Express, email: string, password: string)
 // Buyer counterpart to signInFully — email-OTP sign-in has no password/2FA
 // step (that's admin-only), just send -> read the OTP off the mocked
 // sendOtpEmail call -> verify. Requires the same
-// vi.mock("@/externalService/resend", ...) precondition as signInFully.
+// vi.mock("@/externalService/mailer", ...) precondition as signInFully.
 // Added on Issue #144/M3.6's first buyer-facing auth test in this shared
 // helper file.
 export async function signInBuyer(app: Express, email: string): Promise<string> {
@@ -97,7 +105,7 @@ export async function signInBuyer(app: Express, email: string): Promise<string> 
     throw new Error(`email-otp/send-verification-otp failed: ${send.status}`);
   }
 
-  const { sendOtpEmail } = await import("../../src/externalService/resend.js");
+  const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
   const otp = (sendOtpEmail as unknown as Mock).mock.calls.at(-1)?.[1] as string;
   if (!otp) throw new Error("sendOtpEmail was never called — is it mocked in this test file?");
 
