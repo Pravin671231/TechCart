@@ -3,24 +3,37 @@ import request from "supertest";
 import type { Express } from "express";
 import type { MongoMemoryServer } from "mongodb-memory-server";
 import type mongooseType from "mongoose";
+import { signInBuyer, authRequest } from "../testHelpers/adminSession.js";
 
-// Issue #145/M3.7 (FR-AUTH-040–044) — five independently-triggerable
-// Redis-backed rate limiters. Two independent layers are exercised here
-// without the test needing to know which one actually fires for a given
-// request: Better Auth's own native per-request limiter (src/lib/auth.ts's
-// `rateLimit.customRules`, keyed by IP via `x-forwarded-for` — no
-// trustedProxies configured, so a single-value forwarded header is trusted
-// directly, confirmed against the installed better-auth@1.7.1 package's own
-// utils/ip.mjs) and this repo's own `enforceEmailRateLimits` hook (keyed by
-// email, for the three paths whose body carries one). Both funnel through
-// the same `RATE_LIMITED` code via betterAuthHandler.ts's fallback.
+// Issue #145/M3.7 (FR-AUTH-040–045) — rate limiting plus the FR-AUTH-045
+// error-code enumeration share one file/one mongodb-memory-server instance,
+// not two, deliberately: an earlier version split these into two separate
+// files, each with its own bootstrapMemoryMongo() bootstrap, and a real CI
+// run showed that pushing the total number of concurrent
+// mongodb-memory-server instances across the whole suite (11 pre-existing
+// files + 2 new ones) past whatever this runner can reliably handle caused
+// *widespread* ECONNREFUSED failures — not just in these two new files, but
+// in several pre-existing, untouched ones too (confirmed via the actual CI
+// job log: 13 failed suites, all mongodb-memory-server-based, on the run
+// that added these two files). Sharing one instance for both concerns here
+// keeps this issue's net-new concurrent-instance count at 1, not 2.
 //
-// Each `it` block below sets its own distinct `X-Forwarded-For` value so a
-// test's IP-keyed bucket can't bleed into another's — on top of
-// vitest.setup.ts's global `resetAllRateLimiters()` after every test, which
-// is what keeps this suite from tripping on *other* files' repeated
-// sign-ins (see that file's own comment for why the reset is global, not
-// local to this file).
+// Rate limiting itself exercises two independent layers without needing to
+// know which one actually fires for a given request: Better Auth's own
+// native per-request limiter (src/lib/auth.ts's `rateLimit.customRules`,
+// keyed by IP via `x-forwarded-for` — no trustedProxies configured, so a
+// single-value forwarded header is trusted directly, confirmed against the
+// installed better-auth@1.7.1 package's own utils/ip.mjs) and this repo's
+// own `enforceEmailRateLimits` hook (keyed by email, for the three paths
+// whose body carries one). Both funnel through the same `RATE_LIMITED` code
+// via betterAuthHandler.ts's fallback.
+//
+// Each rate-limiting `it` block below sets its own distinct
+// `X-Forwarded-For` value so a test's IP-keyed bucket can't bleed into
+// another's — on top of vitest.setup.ts's global `resetAllRateLimiters()`
+// after every test, which is what keeps this suite from tripping on
+// *other* files' repeated sign-ins (see that file's own comment for why the
+// reset is global, not local to this file).
 vi.mock("@/externalService/resend", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
@@ -213,5 +226,92 @@ describe("Auth rate limiting (Issue #145/M3.7)", () => {
       expect(last!.status).toBe(429);
       expect(last!.body).toMatchObject({ success: false, code: "RATE_LIMITED" });
     }, 20000);
+  });
+});
+
+describe("FR-AUTH-045 error-code enumeration", () => {
+  it("produces a distinct, stable code for every named category", async () => {
+    const codes: Record<string, string> = {};
+
+    // 1. Invalid credentials — src/lib/auth.ts's generic
+    // INVALID_EMAIL_OR_PASSWORD, shared by wrong-password and unknown-email.
+    const wrongPassword = await request(app)
+      .post("/api/auth/sign-in/email")
+      .send({ email: ADMIN_EMAIL, password: "wrong-password" });
+    codes.invalidCredentials = wrongPassword.body.code;
+
+    // 2. Account deactivated — enforceAccountNotDeactivated (Issue #145).
+    const deactivatedEmail = "deactivated-fixture@example.com";
+    await provisionAdminUser({
+      email: deactivatedEmail,
+      password: ADMIN_PASSWORD,
+      name: "Deactivated Fixture",
+      role: "catalog-manager",
+    });
+    await mongoose.connection
+      .db!.collection("users")
+      .updateOne({ email: deactivatedEmail }, { $set: { status: false } });
+    const deactivated = await request(app)
+      .post("/api/auth/sign-in/email")
+      .send({ email: deactivatedEmail, password: ADMIN_PASSWORD });
+    codes.accountDeactivated = deactivated.body.code;
+
+    // 3. OTP required — the password-only step's data.code (Issue #145,
+    // betterAuthHandler.ts's twoFactorRedirect stamping).
+    const agent = request.agent(app);
+    const passwordRes = await agent
+      .post("/api/auth/sign-in/email")
+      .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+    codes.otpRequired = passwordRes.body.data.code;
+
+    // 4. OTP invalid — admin twoFactor plugin, confirmed INVALID_CODE
+    // against the installed better-auth@1.7.1 package's own
+    // plugins/two-factor/error-code.mjs.
+    const sendOtp = await agent.post("/api/auth/two-factor/send-otp").send({});
+    expect(sendOtp.status).toBe(200);
+    const wrongOtp = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "000000" });
+    codes.otpInvalid = wrongOtp.body.code;
+
+    // 5. OTP expired — admin twoFactor plugin, confirmed OTP_HAS_EXPIRED
+    // (distinct from #4's INVALID_CODE) against the same installed package.
+    const agent2 = request.agent(app);
+    await agent2
+      .post("/api/auth/sign-in/email")
+      .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+    await agent2.post("/api/auth/two-factor/send-otp").send({});
+    const { sendOtpEmail } = await import("../../src/externalService/resend.js");
+    const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1] as string;
+    await mongoose.connection
+      .db!.collection("verification")
+      .updateMany({}, { $set: { expiresAt: new Date(Date.now() - 1000) } });
+    const expiredOtp = await agent2.post("/api/auth/two-factor/verify-otp").send({ code: otp });
+    codes.otpExpired = expiredOtp.body.code;
+
+    // 6. No session — rbac.ts's UNAUTHENTICATED on a protected admin route.
+    const noSession = await request(app).get("/api/admin/brands");
+    codes.unauthenticated = noSession.body.code;
+
+    // 7. Wrong role — rbac.ts's FORBIDDEN, a buyer session on an
+    // admin/catalog-manager-only route.
+    const buyerToken = await signInBuyer(app, "error-codes-buyer@example.com");
+    const wrongRole = await authRequest(app, "get", "/api/admin/brands", buyerToken);
+    codes.forbiddenRole = wrongRole.body.code;
+
+    // 8. Admin-email-on-buyer-route — src/lib/auth.ts's
+    // GOOGLE_ACCOUNT_IS_ADMIN, a buyer OTP request for a registered admin's
+    // email.
+    const adminOnBuyerRoute = await request(app)
+      .post("/api/auth/email-otp/send-verification-otp")
+      .send({ email: ADMIN_EMAIL, type: "sign-in" });
+    codes.adminEmailOnBuyerRoute = adminOnBuyerRoute.body.code;
+
+    for (const [category, code] of Object.entries(codes)) {
+      expect(code, `expected a real code for "${category}"`).toBeTruthy();
+    }
+
+    const distinctCodes = new Set(Object.values(codes));
+    expect(distinctCodes.size, `codes must be pairwise distinct: ${JSON.stringify(codes, null, 2)}`).toBe(
+      Object.keys(codes).length,
+    );
   });
 });
