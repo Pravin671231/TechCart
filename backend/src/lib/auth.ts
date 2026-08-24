@@ -7,6 +7,7 @@ import { bearer, emailOTP, oneTap, twoFactor } from "better-auth/plugins";
 import { env } from "@/config/env";
 import { sendOtpEmail, sendPasswordResetEmail } from "@/externalService/resend";
 import { recordResetToken, consumeResetToken } from "@/lib/passwordResetTokens";
+import { consumeEmailLimit, nativeIpRateLimitStorage, type EmailLimitGroup } from "@/lib/rateLimit";
 import { revokeSessionsForUser } from "@/utils/sessions";
 
 const ADMIN_EMAIL_ON_BUYER_ROUTE_ERROR = {
@@ -123,6 +124,73 @@ const revokeSessionsAfterPasswordReset = createAuthMiddleware(async (ctx) => {
   await revokeSessionsForUser(userId);
 });
 
+// Issue #145/M3.7, FR-AUTH-040/042/043's "per email" dimension — Better
+// Auth's own native rate limiter (the `rateLimit` option below) resolves
+// the real client IP and applies rules atomically before any handler runs,
+// but it has no per-email dimension at all. This is the second, independent
+// layer, applied here where ctx.body.email is already reliably available
+// (proven by every hook above) — runs first in the hooks.before chain below
+// so a rate-limited request never reaches the credential-check hooks.
+// `/two-factor/send-otp`/`/two-factor/verify-otp` (the rest of FR-AUTH-040's
+// "admin sign-in/OTP-verify" named limit and all of FR-AUTH-041's OTP-resend
+// limit) carry no email in their request body at all (just `{}`/`{code}` —
+// the pending 2FA challenge is resolved from a signed cookie inside their
+// own endpoint handlers, not exposed to this global pre-request hook) — IP-
+// only coverage via the native system is the documented, accepted scope for
+// those two paths, same treatment this codebase gives other infra-shaped
+// gaps.
+const EMAIL_RATE_LIMIT_GROUPS: Record<string, EmailLimitGroup> = {
+  "/sign-in/email": "admin-signin",
+  "/request-password-reset": "admin-forgot-password",
+  "/email-otp/send-verification-otp": "buyer-otp-request",
+};
+
+const enforceEmailRateLimits = createAuthMiddleware(async (ctx) => {
+  const group = EMAIL_RATE_LIMIT_GROUPS[ctx.path];
+  if (!group) return;
+  const email = (ctx.body as { email?: string } | undefined)?.email;
+  if (!email) return;
+  const { allowed, retryAfter } = await consumeEmailLimit(group, email);
+  if (!allowed) {
+    throw new APIError("TOO_MANY_REQUESTS", {
+      code: "RATE_LIMITED",
+      message: retryAfter
+        ? `Too many attempts. Try again in ${retryAfter} seconds.`
+        : "Too many attempts. Please try again later.",
+    });
+  }
+});
+
+// FR-AUTH-045's ACCOUNT_DEACTIVATED code had no enforcement anywhere in this
+// codebase before this issue — deactivating an admin (adminUsers.service.ts,
+// `status: false`) only revokes *existing* sessions (src/utils/sessions.ts),
+// it never blocked a fresh sign-in/OTP-request attempt from that account.
+// Covers the admin password step and both buyer OTP steps with one lookup,
+// reusing the same raw-driver pattern findExistingNonBuyer/
+// rejectBuyerOnPasswordSignIn above already use in this file.
+const ACCOUNT_DEACTIVATED_ERROR = {
+  code: "ACCOUNT_DEACTIVATED",
+  message: "This account has been deactivated.",
+};
+
+const enforceAccountNotDeactivated = createAuthMiddleware(async (ctx) => {
+  if (
+    ctx.path !== "/sign-in/email" &&
+    ctx.path !== "/sign-in/email-otp" &&
+    ctx.path !== "/email-otp/send-verification-otp"
+  ) {
+    return;
+  }
+  const email = (ctx.body as { email?: string } | undefined)?.email;
+  if (!email) return;
+  const existing = await mongoose.connection
+    .db!.collection<{ email: string; status?: boolean }>("users")
+    .findOne({ email });
+  if (existing && existing.status === false) {
+    throw new APIError("FORBIDDEN", ACCOUNT_DEACTIVATED_ERROR);
+  }
+});
+
 export const auth = betterAuth({
   database: mongodbAdapter(mongoose.connection.db!, {
     client: mongoose.connection.getClient(),
@@ -142,6 +210,33 @@ export const auth = betterAuth({
   // matcher accepts wildcard strings natively, so the same env-driven list
   // cors.ts uses is reused here verbatim as the single source of truth.
   trustedOrigins: env.CORS_ORIGINS.split(",").map((origin) => origin.trim()),
+  // Issue #145/M3.7 (FR-AUTH-040–044) — Better Auth's own native
+  // per-request rate limiter, not a hand-rolled Express-level one: it
+  // already resolves the real client IP (advanced.ipAddress, honoring
+  // x-forwarded-for) and applies rules atomically before any route handler
+  // runs (confirmed by reading the installed package's own
+  // api/rate-limiter/index.mjs — `/sign-in*`/`/two-factor/*` already carry
+  // built-in default/plugin rules; this only supplies the Redis-backed
+  // storage plus this issue's own literal-path window/max overrides). Keys
+  // are exact literal paths, not wildcards, so nearby paths this issue
+  // doesn't name (e.g. `/sign-in/social`, `/sign-in/email-otp`) keep
+  // whatever built-in default/plugin rule Better Auth already applies to
+  // them, untouched. `enabled: true` unconditionally, not gated on
+  // production — credential-stuffing exposure starts the moment these
+  // endpoints exist, per this issue's own framing.
+  rateLimit: {
+    enabled: true,
+    customStorage: nativeIpRateLimitStorage,
+    customRules: {
+      "/sign-in/email": { window: 900, max: 5 }, // FR-AUTH-040
+      "/two-factor/verify-otp": { window: 900, max: 5 }, // FR-AUTH-040
+      "/two-factor/send-otp": { window: 600, max: 3 }, // FR-AUTH-041
+      "/request-password-reset": { window: 3600, max: 3 }, // FR-AUTH-042
+      "/email-otp/send-verification-otp": { window: 600, max: 5 }, // FR-AUTH-043
+      "/callback/google": { window: 3600, max: 20 }, // FR-AUTH-044
+      "/one-tap/callback": { window: 3600, max: 20 }, // FR-AUTH-044
+    },
+  },
   user: {
     modelName: "users",
     additionalFields: {
@@ -257,6 +352,14 @@ export const auth = betterAuth({
       // (request?: Request vs. request: Request | undefined) — a type-only
       // mismatch, not a real behavioral difference, so a direct cast to each
       // function's own declared parameter type resolves it.
+      //
+      // enforceEmailRateLimits/enforceAccountNotDeactivated run first, ahead
+      // of the three pre-existing credential-check hooks below, so a
+      // rate-limited or deactivated-account request never reaches them.
+      await enforceEmailRateLimits(ctx as Parameters<typeof enforceEmailRateLimits>[0]);
+      await enforceAccountNotDeactivated(
+        ctx as Parameters<typeof enforceAccountNotDeactivated>[0],
+      );
       await rejectAdminEmailOnReturningOtpSignIn(
         ctx as Parameters<typeof rejectAdminEmailOnReturningOtpSignIn>[0],
       );

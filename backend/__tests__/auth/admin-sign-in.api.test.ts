@@ -157,6 +157,13 @@ describe("Admin password + mandatory OTP sign-in", () => {
       const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "000000" });
       expect(verify.status).toBeGreaterThanOrEqual(400);
       expect(verify.body.success).toBe(false);
+      // FR-AUTH-045 — confirmed against the installed better-auth@1.7.1
+      // package's own plugins/two-factor/error-code.mjs: the twoFactor
+      // plugin's own wrong-code error is INVALID_CODE, distinct from the
+      // buyer emailOTP plugin's INVALID_OTP (see auth.api.test.ts) — both
+      // being different values is fine, FR-AUTH-045 only requires each is
+      // internally stable, not cross-distinguishable from the other flow's.
+      expect(verify.body.code).toBe("INVALID_CODE");
 
       const session = await agent.get("/api/auth/get-session");
       expect(session.body.data ?? null).toBeFalsy();
@@ -182,6 +189,9 @@ describe("Admin password + mandatory OTP sign-in", () => {
       const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: otp });
       expect(verify.status).toBeGreaterThanOrEqual(400);
       expect(verify.body.success).toBe(false);
+      // FR-AUTH-045 — confirmed against the installed package's own
+      // error-code.mjs; distinct from the wrong-code case's INVALID_CODE.
+      expect(verify.body.code).toBe("OTP_HAS_EXPIRED");
     });
 
     it("rejects a reused OTP", async () => {
@@ -280,6 +290,43 @@ describe("Admin password + mandatory OTP sign-in", () => {
 
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(res.body.success).toBe(false);
+    });
+  });
+
+  describe("OTP required signal (Issue #145/M3.7, FR-AUTH-045)", () => {
+    it("stamps data.code=OTP_REQUIRED on the password-only response", async () => {
+      const agent = request.agent(app);
+      const passwordRes = await capturePasswordStep(agent);
+
+      expect(passwordRes.status).toBe(200);
+      expect(passwordRes.body.success).toBe(true);
+      expect(passwordRes.body.data.code).toBe("OTP_REQUIRED");
+    });
+  });
+
+  describe("Account deactivation (Issue #145/M3.7, FR-AUTH-045)", () => {
+    it("rejects the password step for a deactivated admin with ACCOUNT_DEACTIVATED", async () => {
+      const deactivatedEmail = "deactivated-admin@example.com";
+      await provisionAdminUser({
+        email: deactivatedEmail,
+        password: ADMIN_PASSWORD,
+        name: "Deactivated Admin Fixture",
+        role: "catalog-manager",
+      });
+      await mongoose.connection
+        .db!.collection("users")
+        .updateOne({ email: deactivatedEmail }, { $set: { status: false } });
+
+      const res = await request(app)
+        .post("/api/auth/sign-in/email")
+        .send({ email: deactivatedEmail, password: ADMIN_PASSWORD });
+
+      expect(res.status).toBeGreaterThanOrEqual(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.code).toBe("ACCOUNT_DEACTIVATED");
+
+      const { sendOtpEmail } = await import("../../src/externalService/resend.js");
+      expect(sendOtpEmail).not.toHaveBeenCalled();
     });
   });
 });

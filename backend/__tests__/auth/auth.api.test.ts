@@ -238,6 +238,9 @@ describe("Buyer passwordless authentication", () => {
       const second = await request(app).post("/api/auth/sign-in/email-otp").send({ email, otp });
       expect(second.status).toBeGreaterThanOrEqual(400);
       expect(second.body.success).toBe(false);
+      // FR-AUTH-045 — confirmed against the installed better-auth@1.7.1
+      // package's own plugins/email-otp/error-codes.mjs.
+      expect(second.body.code).toBe("INVALID_OTP");
     });
 
     it("rejects an expired OTP", async () => {
@@ -262,6 +265,9 @@ describe("Buyer passwordless authentication", () => {
       const res = await request(app).post("/api/auth/sign-in/email-otp").send({ email, otp });
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(res.body.success).toBe(false);
+      // FR-AUTH-045 — confirmed against the installed package's own
+      // error-codes.mjs; distinct from the reused-OTP case's INVALID_OTP.
+      expect(res.body.code).toBe("OTP_EXPIRED");
     });
 
     it("rejects a buyer OTP sign-in for an email already registered as an admin", async () => {
@@ -383,6 +389,32 @@ describe("Buyer passwordless authentication", () => {
 
       expect(res.status).toBe(200);
       expect(res.headers["access-control-expose-headers"]).toContain("set-auth-token");
+    });
+  });
+
+  describe("Account deactivation (Issue #145/M3.7, FR-AUTH-045)", () => {
+    it("rejects an OTP request for a deactivated buyer with ACCOUNT_DEACTIVATED", async () => {
+      const email = "deactivated-buyer@example.com";
+      await mongoose.connection.db!.collection("users").insertOne({
+        _id: new mongoose.Types.ObjectId(),
+        name: "Deactivated Buyer",
+        email,
+        emailVerified: true,
+        role: "buyer",
+        status: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const res = await request(app)
+        .post("/api/auth/email-otp/send-verification-otp")
+        .send({ email, type: "sign-in" });
+
+      expect(res.status).toBeGreaterThanOrEqual(400);
+      expect(res.body).toMatchObject({ success: false, code: "ACCOUNT_DEACTIVATED" });
+
+      const { sendOtpEmail } = await import("../../src/externalService/resend.js");
+      expect(sendOtpEmail).not.toHaveBeenCalled();
     });
   });
 });
