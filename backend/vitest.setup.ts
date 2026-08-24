@@ -1,5 +1,10 @@
 import { afterEach } from "vitest";
-import { resetAllRateLimiters } from "@/lib/rateLimit";
+// Relative import, not the `@/*` alias every other file in this workspace
+// uses — confirmed via a real CI failure that vite-tsconfig-paths doesn't
+// resolve path aliases for Vitest's `setupFiles` the way it does for actual
+// test files, so `@/lib/rateLimit` here throws a raw Node
+// ERR_MODULE_NOT_FOUND before any test even runs.
+import { resetAllRateLimiters } from "./src/lib/rateLimit";
 
 // Issue #145/M3.7 — without this, rate-limiter state (an in-process
 // RateLimiterMemory singleton under NODE_ENV=test) persists for the whole
