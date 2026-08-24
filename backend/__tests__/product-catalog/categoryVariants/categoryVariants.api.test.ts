@@ -7,7 +7,7 @@ import type { Express } from "express";
 // by rbac.ts, which needs a real Better Auth session to resolve, not the
 // old X-Admin-Key header — see brands.api.test.ts's own header comment for
 // the full rationale.
-vi.mock("@/externalService/resend", () => ({
+vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
 

@@ -22,7 +22,7 @@ import type mongooseType from "mongoose";
 // One real surprise found this way: the plugin's OTP `verification` record's
 // `identifier` isn't a simple "contains the email" string, unlike the buyer
 // emailOTP flow's — see the "rejects an expired OTP" case below.
-vi.mock("@/externalService/resend", () => ({
+vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -87,7 +87,7 @@ async function sendAndCaptureOtp(agent: ReturnType<typeof request.agent>): Promi
   const send = await agent.post("/api/auth/two-factor/send-otp").send({});
   expect(send.status).toBe(200);
 
-  const { sendOtpEmail } = await import("../../src/externalService/resend.js");
+  const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
   const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1] as string;
   expect(otp).toBeTruthy();
   return otp;
@@ -106,9 +106,14 @@ describe("Admin password + mandatory OTP sign-in", () => {
       const midFlowSession = await agent.get("/api/auth/get-session");
       expect(midFlowSession.body.data ?? null).toBeFalsy();
 
-      const otp = await sendAndCaptureOtp(agent);
+      await sendAndCaptureOtp(agent);
 
-      const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: otp });
+      // Issue #242/M3.14 — auth.ts's databaseHooks.verification.create.before
+      // now forces every 2fa-otp-* record's stored value to "123456:0"
+      // regardless of the real (random) code sendOtpEmail was actually
+      // called with (asserted inside sendAndCaptureOtp), so "123456" is the
+      // only value that verifies anymore.
+      const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
       expect(verify.status).toBe(200);
       expect(verify.body.success).toBe(true);
 
@@ -116,6 +121,24 @@ describe("Admin password + mandatory OTP sign-in", () => {
       expect(session.status).toBe(200);
       expect(session.body.data.user.email).toBe(ADMIN_EMAIL);
       expect(session.body.data.user.role).toBe("super-admin");
+    });
+
+    it("emails a real random code but still verifies against the fixed value (Issue #242/M3.14's documented asymmetry)", async () => {
+      const agent = request.agent(app);
+      await capturePasswordStep(agent);
+
+      const emailedOtp = await sendAndCaptureOtp(agent);
+      // Unlike the buyer flow (auth.api.test.ts), the twoFactor plugin has
+      // no generateOTP-style override, so the emailed code is still the
+      // real generateRandomString(6, "0-9") output — not the fixed value.
+      expect(emailedOtp).not.toBe("123456");
+      expect(emailedOtp).toMatch(/^\d{6}$/);
+
+      // Verification still only ever accepts "123456", regardless of what
+      // was actually emailed — databaseHooks.verification.create.before
+      // forces the stored value on every write.
+      const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
+      expect(verify.status).toBe(200);
     });
   });
 
@@ -143,7 +166,7 @@ describe("Admin password + mandatory OTP sign-in", () => {
         .send({ email: ADMIN_EMAIL, password: "not-the-password" });
 
       expect(res.status).toBeGreaterThanOrEqual(400);
-      const { sendOtpEmail } = await import("../../src/externalService/resend.js");
+      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
       expect(sendOtpEmail).not.toHaveBeenCalled();
     });
   });
@@ -172,7 +195,7 @@ describe("Admin password + mandatory OTP sign-in", () => {
     it("rejects an expired OTP", async () => {
       const agent = request.agent(app);
       await capturePasswordStep(agent);
-      const otp = await sendAndCaptureOtp(agent);
+      await sendAndCaptureOtp(agent);
 
       // Push the stored record's expiry into the past instead of faking the
       // system clock, matching auth.api.test.ts's own convention. Unlike the
@@ -186,7 +209,10 @@ describe("Admin password + mandatory OTP sign-in", () => {
         .db!.collection("verification")
         .updateMany({}, { $set: { expiresAt: new Date(Date.now() - 1000) } });
 
-      const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: otp });
+      // "123456" is the code that would verify if not expired (see the
+      // happy-path test's own comment) — submitting it here specifically
+      // exercises the expiry branch, not an incidental wrong-code rejection.
+      const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
       expect(verify.status).toBeGreaterThanOrEqual(400);
       expect(verify.body.success).toBe(false);
       // FR-AUTH-045 — confirmed against the installed package's own
@@ -197,9 +223,9 @@ describe("Admin password + mandatory OTP sign-in", () => {
     it("rejects a reused OTP", async () => {
       const agent = request.agent(app);
       await capturePasswordStep(agent);
-      const otp = await sendAndCaptureOtp(agent);
+      await sendAndCaptureOtp(agent);
 
-      const first = await agent.post("/api/auth/two-factor/verify-otp").send({ code: otp });
+      const first = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
       expect(first.status).toBe(200);
 
       // Restart the challenge (a fresh password step) and replay the
@@ -209,7 +235,7 @@ describe("Admin password + mandatory OTP sign-in", () => {
       await capturePasswordStep(secondAgent);
       const second = await secondAgent
         .post("/api/auth/two-factor/verify-otp")
-        .send({ code: otp });
+        .send({ code: "123456" });
 
       expect(second.status).toBeGreaterThanOrEqual(400);
       expect(second.body.success).toBe(false);
@@ -220,8 +246,8 @@ describe("Admin password + mandatory OTP sign-in", () => {
     it("rejects the session cookie after sign-out", async () => {
       const agent = request.agent(app);
       await capturePasswordStep(agent);
-      const otp = await sendAndCaptureOtp(agent);
-      await agent.post("/api/auth/two-factor/verify-otp").send({ code: otp });
+      await sendAndCaptureOtp(agent);
+      await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
 
       const beforeSignOut = await agent.get("/api/auth/get-session");
       expect(beforeSignOut.body.data.user.email).toBe(ADMIN_EMAIL);
@@ -238,8 +264,8 @@ describe("Admin password + mandatory OTP sign-in", () => {
     it("sets httpOnly/secure/sameSite=lax on the session cookie", async () => {
       const agent = request.agent(app);
       await capturePasswordStep(agent);
-      const otp = await sendAndCaptureOtp(agent);
-      const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: otp });
+      await sendAndCaptureOtp(agent);
+      const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
 
       const setCookie = verify.headers["set-cookie"];
       expect(setCookie).toBeTruthy();
@@ -255,8 +281,8 @@ describe("Admin password + mandatory OTP sign-in", () => {
     it("resolves the session from an Authorization header alone, no cookies", async () => {
       const agent = request.agent(app);
       await capturePasswordStep(agent);
-      const otp = await sendAndCaptureOtp(agent);
-      const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: otp });
+      await sendAndCaptureOtp(agent);
+      const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
 
       const token = verify.headers["set-auth-token"];
       expect(token).toBeTruthy();
@@ -325,7 +351,7 @@ describe("Admin password + mandatory OTP sign-in", () => {
       expect(res.body.success).toBe(false);
       expect(res.body.code).toBe("ACCOUNT_DEACTIVATED");
 
-      const { sendOtpEmail } = await import("../../src/externalService/resend.js");
+      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
       expect(sendOtpEmail).not.toHaveBeenCalled();
     });
   });

@@ -26,8 +26,15 @@ const envSchema = z.object({
   BETTER_AUTH_URL: z.string().min(1, "BETTER_AUTH_URL is required"),
   GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required"),
   GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
-  RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
-  RESEND_FROM_EMAIL: z.string().min(1, "RESEND_FROM_EMAIL is required"),
+  // Issue #242/M3.14 — Mailtrap is the sole email provider in every
+  // environment now (Resend removed outright), so all five are required,
+  // not optional (the earlier dev-only design's .optional() no longer
+  // applies).
+  MAILTRAP_HOST: z.string().min(1, "MAILTRAP_HOST is required"),
+  MAILTRAP_PORT: z.coerce.number(),
+  MAILTRAP_USER: z.string().min(1, "MAILTRAP_USER is required"),
+  MAILTRAP_PASS: z.string().min(1, "MAILTRAP_PASS is required"),
+  MAILTRAP_FROM_EMAIL: z.string().min(1, "MAILTRAP_FROM_EMAIL is required"),
 });
 
 const rawEnv = envSchema.parse(process.env);
@@ -51,8 +58,11 @@ export const env = {
     CLIENT_ID: rawEnv.GOOGLE_CLIENT_ID,
     CLIENT_SECRET: rawEnv.GOOGLE_CLIENT_SECRET,
   },
-  RESEND: {
-    API_KEY: rawEnv.RESEND_API_KEY,
-    FROM_EMAIL: rawEnv.RESEND_FROM_EMAIL,
+  MAILTRAP: {
+    HOST: rawEnv.MAILTRAP_HOST,
+    PORT: rawEnv.MAILTRAP_PORT,
+    USER: rawEnv.MAILTRAP_USER,
+    PASS: rawEnv.MAILTRAP_PASS,
+    FROM_EMAIL: rawEnv.MAILTRAP_FROM_EMAIL,
   },
 };

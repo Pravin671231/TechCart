@@ -25,7 +25,7 @@ import type mongooseType from "mongoose";
 // kebab-case convention already confirmed for signInEmail -> /sign-in/email
 // and getSession -> /get-session. /reset-password and the sendResetPassword
 // callback signature both matched as originally written.
-vi.mock("@/externalService/resend", () => ({
+vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
 }));
@@ -98,7 +98,7 @@ async function requestForgotPassword(email: string) {
 }
 
 async function captureResetToken(): Promise<string> {
-  const { sendPasswordResetEmail } = await import("../../src/externalService/resend.js");
+  const { sendPasswordResetEmail } = await import("../../src/externalService/mailer.js");
   expect(sendPasswordResetEmail).toHaveBeenCalled();
 
   // Read the token back from our own passwordResetTokens tracking
@@ -126,11 +126,15 @@ async function signInFully(agent: ReturnType<typeof request.agent>, password: st
   const send = await agent.post("/api/auth/two-factor/send-otp").send({});
   expect(send.status).toBe(200);
 
-  const { sendOtpEmail } = await import("../../src/externalService/resend.js");
-  const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1] as string;
-  expect(otp).toBeTruthy();
+  // Issue #242/M3.14 — auth.ts's databaseHooks.verification.create.before
+  // forces every 2fa-otp-* record's stored value to "123456:0" regardless
+  // of the real (random) emailed code, so "123456" is the only value that
+  // verifies anymore; the mock-call check stays as a sanity check that
+  // send-otp really triggered an email attempt.
+  const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+  expect((sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls.at(-1)).toBeTruthy();
 
-  return agent.post("/api/auth/two-factor/verify-otp").send({ code: otp });
+  return agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
 }
 
 describe("Admin password reset", () => {
@@ -159,7 +163,7 @@ describe("Admin password reset", () => {
       expect(buyerRes.status).toBe(unregistered.status);
       expect(buyerRes.body).toEqual(unregistered.body);
 
-      const { sendPasswordResetEmail } = await import("../../src/externalService/resend.js");
+      const { sendPasswordResetEmail } = await import("../../src/externalService/mailer.js");
       expect(sendPasswordResetEmail).not.toHaveBeenCalled();
     });
   });

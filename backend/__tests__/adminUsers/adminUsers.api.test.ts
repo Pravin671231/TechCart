@@ -15,7 +15,7 @@ import type mongooseType from "mongoose";
 // These routes are gated by rbac(["super-admin"]) (src/middleware/rbac.ts)
 // — the X-Admin-Key router guard this file's own header comment originally
 // described (adminAuth.ts) was removed entirely by Issue #143/M3.5.
-vi.mock("@/externalService/resend", () => ({
+vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
 }));
@@ -70,11 +70,15 @@ async function signInFully(email: string, password: string): Promise<string> {
   const send = await agent.post("/api/auth/two-factor/send-otp").send({});
   expect(send.status).toBe(200);
 
-  const { sendOtpEmail } = await import("../../src/externalService/resend.js");
-  const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1] as string;
-  expect(otp).toBeTruthy();
+  // Issue #242/M3.14 — auth.ts's databaseHooks.verification.create.before
+  // forces every 2fa-otp-* record's stored value to "123456:0" regardless
+  // of the real (random) emailed code, so "123456" is the only value that
+  // verifies anymore; the mock-call check stays as a sanity check that
+  // send-otp really triggered an email attempt.
+  const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+  expect((sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls.at(-1)).toBeTruthy();
 
-  const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: otp });
+  const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
   expect(verify.status).toBe(200);
 
   const token = verify.headers["set-auth-token"] as string;
@@ -133,7 +137,7 @@ describe("Admin account provisioning", () => {
       // password+OTP sign-in flow via a real reset-password link, never an
       // auto-established session or a caller-visible temporary password.
       expect(res.body.data.password).toBeUndefined();
-      const { sendPasswordResetEmail } = await import("../../src/externalService/resend.js");
+      const { sendPasswordResetEmail } = await import("../../src/externalService/mailer.js");
       expect(sendPasswordResetEmail).toHaveBeenCalled();
 
       const record = await mongoose.connection

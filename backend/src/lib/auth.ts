@@ -5,7 +5,7 @@ import { createAuthMiddleware } from "@better-auth/core/api";
 import { mongodbAdapter } from "@better-auth/mongo-adapter";
 import { bearer, emailOTP, oneTap, twoFactor } from "better-auth/plugins";
 import { env } from "@/config/env";
-import { sendOtpEmail, sendPasswordResetEmail } from "@/externalService/resend";
+import { sendOtpEmail, sendPasswordResetEmail } from "@/externalService/mailer";
 import { recordResetToken, consumeResetToken } from "@/lib/passwordResetTokens";
 import { consumeEmailLimit, nativeIpRateLimitStorage, type EmailLimitGroup } from "@/lib/rateLimit";
 import { revokeSessionsForUser } from "@/utils/sessions";
@@ -322,6 +322,18 @@ export const auth = betterAuth({
     emailOTP({
       expiresIn: 600,
       storeOTP: "hashed",
+      // Issue #242/M3.14 — fixed to a known default value in every
+      // environment, including production, so manual sign-in testing never
+      // needs real inbox access. Deliberate, explicit security tradeoff: a
+      // fixed OTP is a known, guessable constant, not a real secret — only
+      // acceptable at this pre-launch stage, not a posture to carry into a
+      // real production launch (see docs/srs/features/0.3-authentication.md's
+      // amendment note and this file's own security caveat). `storeOTP:
+      // "hashed"` above still hashes this fixed value deterministically, so
+      // the stored/verified code and the emailed code stay identical either
+      // way — no NODE_ENV gate, this plugin has no clean way to distinguish
+      // "trusted internal testing" from a real request.
+      generateOTP: () => "123456",
       sendVerificationOTP: async ({ email, otp, type }) => {
         if (type === "sign-in") {
           await sendOtpEmail(email, otp, "sign-in");
@@ -402,6 +414,41 @@ export const auth = betterAuth({
               { _id: new mongoose.Types.ObjectId(session.userId) },
               { $set: { lastSignInAt: new Date() } },
             );
+        },
+      },
+    },
+    // Issue #242/M3.14 — same fixed-OTP goal as emailOTP's generateOTP
+    // above, but the twoFactor plugin's otpOptions has no equivalent
+    // override anywhere in its public API (confirmed by reading the
+    // installed better-auth@1.7.1 source: OTPOptions is only
+    // period/digits/sendOTP/allowedAttempts/storeOTP, and its OTP
+    // generation — generateRandomString(opts.digits, "0-9") — is hardcoded
+    // with no injection point). This hook is the closest documented,
+    // supported alternative: the two-factor OTP is persisted to this same
+    // core `verification` collection under identifier `2fa-otp-${key}`,
+    // value format `${hashedCode}:0` (storeOTP defaults to "plain" here,
+    // i.e. unhashed, since twoFactor's own otpOptions below sets no
+    // storeOTP override) — so forcing `value` on write forces what
+    // verification compares against.
+    //
+    // Deliberate, documented asymmetry: this makes admin 2FA verification
+    // always accept "123456", but the code actually emailed by
+    // otpOptions.sendOTP below is still the real, random
+    // generateRandomString() output — sendOTP only ever receives the
+    // already-generated code to deliver it, with no way to intercept or
+    // rewrite it before send. The emailed code is therefore decorative and
+    // safe to ignore: submitting "123456" always verifies regardless of
+    // what the email actually shows. This still satisfies the issue's
+    // actual goal ("no need to read the inbox during manual testing")
+    // using only a documented Better Auth hook — no monkey-patching the
+    // library's internals. Same explicit, pre-launch-only security
+    // tradeoff as emailOTP's generateOTP override above.
+    verification: {
+      create: {
+        before: async (verification) => {
+          if (typeof verification.identifier === "string" && verification.identifier.startsWith("2fa-otp-")) {
+            return { data: { value: "123456:0" } };
+          }
         },
       },
     },
