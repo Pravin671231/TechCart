@@ -10,6 +10,7 @@
     "seed": "tsx src/scripts/seed/run.ts",
     "seed:upsert": "tsx src/scripts/seed/upsert.ts",
     "seed:super-admin": "tsx src/scripts/seed/superAdmin.ts",
+    "seed:users": "tsx src/scripts/seed/seedUsers.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

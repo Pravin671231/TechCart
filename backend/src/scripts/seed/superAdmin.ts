@@ -9,17 +9,31 @@
 // provisioning... exists"). Reads SUPER_ADMIN_EMAIL/SUPER_ADMIN_NAME/
 // SUPER_ADMIN_PASSWORD directly from process.env (not routed through the
 // global src/config/env.ts schema — this is CLI-only, ad hoc config, same
-// as every other seed script's own inputs), falling back to admin.ts's own
-// literal defaults so local dev still needs zero .env changes to exercise
-// the flow.
+// as every other seed script's own inputs).
+//
+// Issue #241/M3.13: these three vars are required, with no hardcoded
+// fallback — this is a real production-bootstrap script (unlike
+// seedUsers.ts's deliberately-hardcoded dev-fixture credentials), so a
+// missing var fails the run loudly rather than silently provisioning a
+// well-known default account, matching env.ts's own fail-fast convention.
 import { connectDB, disconnectDB } from "@/config/db";
 
-const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? "admin@techcart.dev";
-const SUPER_ADMIN_NAME = process.env.SUPER_ADMIN_NAME ?? "TechCart Super Admin";
-const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD ?? "TechCart@Admin123";
+const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL;
+const SUPER_ADMIN_NAME = process.env.SUPER_ADMIN_NAME;
+const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD;
 const SUPER_ADMIN_ROLE = "super-admin" as const;
 
 export async function seedSuperAdmin(): Promise<void> {
+  if (!SUPER_ADMIN_EMAIL || !SUPER_ADMIN_NAME || !SUPER_ADMIN_PASSWORD) {
+    const missing = [
+      !SUPER_ADMIN_EMAIL && "SUPER_ADMIN_EMAIL",
+      !SUPER_ADMIN_NAME && "SUPER_ADMIN_NAME",
+      !SUPER_ADMIN_PASSWORD && "SUPER_ADMIN_PASSWORD",
+    ].filter((name): name is string => Boolean(name));
+    console.error(`Missing required env var(s) for seed:super-admin: ${missing.join(", ")}`);
+    process.exit(1);
+  }
+
   await connectDB();
 
   // Dynamic import so createAdminUser.ts (which statically imports
@@ -41,9 +55,6 @@ export async function seedSuperAdmin(): Promise<void> {
       ? `Created super-admin account: ${result.email} (role: ${result.role})`
       : `Super-admin account already existed, role/2FA confirmed: ${result.email} (role: ${result.role})`,
   );
-  if (result.created && !process.env.SUPER_ADMIN_PASSWORD) {
-    console.log(`Password: ${SUPER_ADMIN_PASSWORD} (default — set SUPER_ADMIN_PASSWORD to override)`);
-  }
 
   await disconnectDB();
 }
