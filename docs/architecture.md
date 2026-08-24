@@ -157,6 +157,14 @@ Three separate environments, each with its own MongoDB Atlas cluster and Razorpa
 
 `backend` builds from `docker/Dockerfile.backend` wherever it lands on Render (see root `render.yaml`); `buyer-app` and `admin-app` are both Vercel-native and never build from a Dockerfile in any real environment — their own Dockerfiles exist solely for `docker-compose` local-dev parity with `backend` (root `docker-compose.yml`).
 
+### 7.1 Google OAuth Console configuration
+
+Fixes `Error 400: origin_mismatch` on buyer-app's Google sign-in — an undocumented operational gap this repo previously left implicit. Two separate fields in Google Cloud Console govern two separate parts of the Google sign-in flow, and both need real values before Google sign-in works against a real deployment:
+
+- **Authorized JavaScript origins** — needed for the client-side One Tap prompt and rendered "Sign in with Google" button (`buyer-app/src/features/auth/GoogleSignIn.tsx`'s `google.accounts.id.initialize()`/`.prompt()` calls). Must list buyer-app's exact serving origins, scheme + host + port, no path: local dev (`http://localhost:3000`) and buyer-app's real production URL (`https://<your-buyer-app-domain>` — substitute the real Vercel domain from the Vercel dashboard). Google does **not** support wildcards here, unlike this repo's own backend `CORS_ORIGINS`/`matchesOrigin` wildcard support (`docs/architecture.md` §6) — so ad hoc Vercel preview-deployment URLs will keep failing `origin_mismatch` unless each one is individually registered. Recommend testing Google sign-in against the production domain and localhost only, not preview deploys.
+- **Authorized redirect URIs** — a separate field, for the full-page-redirect OAuth flow (`GET /api/auth/callback/google`, Better Auth's own plugin-generated route): `<BETTER_AUTH_URL>/api/auth/callback/google`, pointing at the **backend's** Render URL, not buyer-app.
+- **Where to set both**: Google Cloud Console → APIs & Services → Credentials → the OAuth 2.0 Client ID matching `GOOGLE_CLIENT_ID` (backend) / `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (buyer-app) — the same client ID value is used by both env vars (public, not a secret; see `buyer-app/.env.example`'s own comment).
+
 ---
 
 ## 8. Conventions
