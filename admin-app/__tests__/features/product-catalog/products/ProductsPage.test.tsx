@@ -5,7 +5,6 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { delay, http, HttpResponse } from "msw";
 import { server } from "../../../mocks/server";
 import { createStore } from "@/app/store/store";
-import type { AuthState } from "@/app/store/authSlice";
 import { ProductsPage } from "@/features/product-catalog/products/ProductsPage";
 import { ProductDetailPage } from "@/features/product-catalog/products/ProductDetailPage";
 import type { Product } from "@/features/product-catalog/products/types";
@@ -14,7 +13,7 @@ const BASE = "http://localhost:4000/api/admin";
 const LOOKUP_PAGINATION = { page: 1, limit: 100, total: 1, totalPages: 1, hasNextPage: false };
 
 function renderProductsApp(initialPath = "/products") {
-  const testStore = createStore({ auth: { adminKey: "test-key" } as AuthState });
+  const testStore = createStore();
   return render(
     <Provider store={testStore}>
       <MemoryRouter initialEntries={[initialPath]}>

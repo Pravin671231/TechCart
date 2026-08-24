@@ -1,9 +1,16 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
-import { baseQueryWithAdminKeyGuard } from "./baseQuery";
+import { baseQuery } from "./baseQuery";
 
 export const api = createApi({
   reducerPath: "api",
-  baseQuery: baseQueryWithAdminKeyGuard,
-  tagTypes: ["Brand", "Category", "CategorySpecification", "CategoryVariant", "Product"],
+  baseQuery,
+  tagTypes: [
+    "Brand",
+    "Category",
+    "CategorySpecification",
+    "CategoryVariant",
+    "Product",
+    "Session",
+  ],
   endpoints: () => ({}),
 });

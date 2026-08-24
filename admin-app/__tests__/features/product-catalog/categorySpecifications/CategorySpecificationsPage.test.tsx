@@ -101,7 +101,7 @@ describe("CategorySpecificationsPage", () => {
   it("renders the synthetic empty state before any PUT, not an error", async () => {
     setupHandlers([]);
 
-    renderWithStore(<CategorySpecificationsPage />, { adminKey: "test-key" });
+    renderWithStore(<CategorySpecificationsPage />);
 
     expect(await screen.findByRole("button", { name: "Save schema" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "+ Add group" })).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe("CategorySpecificationsPage", () => {
 
   it("adds a group and field locally, then persists both via one full-replace PUT", async () => {
     const handlers = setupHandlers([]);
-    renderWithStore(<CategorySpecificationsPage />, { adminKey: "test-key" });
+    renderWithStore(<CategorySpecificationsPage />);
     await screen.findByRole("button", { name: "Save schema" });
 
     fireEvent.click(screen.getByRole("button", { name: "+ Add group" }));
@@ -134,7 +134,7 @@ describe("CategorySpecificationsPage", () => {
 
   it("renames a persisted group via PATCH renameGroup", async () => {
     const handlers = setupHandlers([{ groupName: "Display", specifications: [] }]);
-    renderWithStore(<CategorySpecificationsPage />, { adminKey: "test-key" });
+    renderWithStore(<CategorySpecificationsPage />);
 
     const groupNameInput = await screen.findByLabelText("Group name for Display");
     fireEvent.change(groupNameInput, { target: { value: "Screen" } });
@@ -159,7 +159,7 @@ describe("CategorySpecificationsPage", () => {
         ],
       },
     ]);
-    renderWithStore(<CategorySpecificationsPage />, { adminKey: "test-key" });
+    renderWithStore(<CategorySpecificationsPage />);
 
     const checkbox = await screen.findByLabelText("Filterable: Battery Capacity");
     fireEvent.click(checkbox);
@@ -191,7 +191,7 @@ describe("CategorySpecificationsPage", () => {
         },
       },
     );
-    renderWithStore(<CategorySpecificationsPage />, { adminKey: "test-key" });
+    renderWithStore(<CategorySpecificationsPage />);
 
     const nameInput = await screen.findByDisplayValue("RAM");
     const row = nameInput.closest("tr")!;
@@ -221,7 +221,7 @@ describe("CategorySpecificationsPage", () => {
         },
       },
     );
-    renderWithStore(<CategorySpecificationsPage />, { adminKey: "test-key" });
+    renderWithStore(<CategorySpecificationsPage />);
 
     await screen.findByDisplayValue("RAM");
     fireEvent.click(screen.getByRole("button", { name: "Delete group" }));

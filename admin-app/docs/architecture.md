@@ -8,14 +8,13 @@ Implementation-level detail for `admin-app/`. This is the concrete companion to 
 
 ```
 src/
-├── App.tsx                  # top-level composition root: Provider(store) > BrowserRouter > AdminKeyGate > MainRoutes, plus sibling <Toaster />
+├── App.tsx                  # top-level composition root: Provider(store) > BrowserRouter > MainRoutes, plus sibling <Toaster />
 ├── app/                      # Redux/RTK Query state only — two sibling subfolders
 │   ├── store/
-│   │   ├── authSlice.ts           # adminKey state, sessionStorage-backed
-│   │   ├── store.ts                 # configureStore + createStore() factory (for isolated test stores)
+│   │   ├── store.ts                 # configureStore + createStore() factory (for isolated test stores) — no auth slice (Issue #148/M3.10)
 │   │   └── hooks.ts                   # useAppDispatch/useAppSelector — typed react-redux hooks
 │   └── api/
-│       ├── baseQuery.ts            # fetchBaseQuery config + baseQueryWithAdminKeyGuard (401 → clearAdminKey)
+│       ├── baseQuery.ts            # fetchBaseQuery config — Authorization: Bearer <token> + credentials:"include" (Issue #148/M3.10)
 │       ├── baseApi.ts                # createApi instance (reducerPath, tagTypes) — every feature injectEndpoints into this
 │       ├── api.types.ts                # Pagination/ApiSuccessEnvelope/ApiSuccessListEnvelope/ApiErrorEnvelope types
 │       ├── apiResponse.ts                # unwrapData/unwrapList — success-response helpers
@@ -53,9 +52,16 @@ src/
 ├── lib/
 │   └── utils.ts                # cn() = twMerge(clsx(inputs)) — the required way to build any conditional/mergeable className app-wide
 ├── features/
-│   ├── adminKey/
-│   │   ├── AdminKeyGate.tsx        # blocks all routes until an admin key is set
-│   │   └── AdminKeyPrompt.tsx        # the key-entry form itself
+│   ├── auth/
+│   │   ├── api.ts                  # getSession/signInPassword/sendOtp/verifyOtp/signOut — injectEndpoints into the shared api instance
+│   │   ├── tokenStorage.ts           # bearer token in localStorage (set-auth-token response header)
+│   │   ├── adminRoles.ts               # ADMIN_ROLES/isAdminRole() — client-side mirror of backend's own list
+│   │   ├── describeAuthError.ts          # shared code -> message table for PasswordSignIn/OtpVerify
+│   │   ├── PasswordSignIn.tsx              # email+password form
+│   │   ├── OtpVerify.tsx                     # 6-digit code + 30s resend cooldown
+│   │   ├── SignInContent.tsx                   # owns the password/otp step state, redirects home once signed in
+│   │   ├── RequireAuth.tsx                       # route guard layout route — no session -> /sign-in, non-admin role -> NoAccess, else <Outlet/>
+│   │   └── NoAccess.tsx                            # 403-equivalent state, with a sign-out action
 │   ├── uploads/
 │   │   ├── uploadsApi.ts            # presignUpload mutation + putFileToPresignedUrl (direct-to-R2 PUT), shared across features
 │   │   └── SingleImageUploader.tsx    # presign → PUT-to-R2 → preview, feature-agnostic (purpose param), used by both brands/ and categories/
@@ -108,7 +114,7 @@ src/
 └── index.css                     # @import "tailwindcss";
 ```
 
-See `AGENTS.md` for the full `app/` vs `routes/` vs `features/` vs `components/` convention, its `cn()`/`class-variance-authority` styling section, and its Redux/RTK Query section for the `src/app/store/`, `src/app/api/`, and `src/features/adminKey/` internals.
+See `AGENTS.md` for the full `app/` vs `routes/` vs `features/` vs `components/` convention, its `cn()`/`class-variance-authority` styling section, and its "Session-based sign-in and route guard" section for the `src/app/store/`, `src/app/api/`, and `src/features/auth/` internals.
 
 ## Current file tree
 
@@ -129,12 +135,12 @@ admin-app/
 ├── CLAUDE.md                                 # @AGENTS.md (Claude Code import syntax)
 ├── docs/architecture.md                        # this file
 ├── __tests__/
-│   ├── app.test.tsx                              # renders src/App.tsx, seeds an admin key first, asserts placeholder content
-│   ├── mocks/{handlers.ts,server.ts}                # shared MSW server, extended by later feature tests
+│   ├── app.test.tsx                              # renders src/App.tsx against the default signed-in MSW session, asserts placeholder content
+│   ├── mocks/{handlers.ts,server.ts}                # shared MSW server — default get-session/sign-out handlers (Issue #148/M3.10), extended by later feature tests
 │   ├── utils/renderWithStore.tsx                      # Provider-wrapped render helper using an isolated createStore()
-│   ├── store/{authSlice.test.ts,api.test.ts}            # authSlice reducers + sessionStorage sync; X-Admin-Key header + 401 guard
+│   ├── store/api.test.ts                                # Authorization: Bearer header attach/omit (Issue #148/M3.10; no more authSlice test)
 │   └── features/
-│       ├── adminKey/AdminKeyGate.test.tsx                 # prompt-vs-children gating, key-submission round trip
+│       ├── auth/{SignInContent.test.tsx,RequireAuth.test.tsx}  # password->OTP flow + every named error state; the guard's 3 branches
 │       └── product-catalog/                                # mirrors src/features/product-catalog/'s layout
 │           ├── brands/BrandsPage.test.tsx                     # list/create/edit/delete-guard/status-toggle/search/logo-upload
 │           ├── categories/CategoriesPage.test.tsx               # tree render, all 4 hierarchy errors, combined delete-guard, status/search
@@ -149,10 +155,10 @@ admin-app/
     ├── vite-env.d.ts
     ├── config/env.ts
     ├── lib/utils.ts
-    ├── app/{store/{authSlice.ts,store.ts,hooks.ts},api/{baseQuery.ts,baseApi.ts,api.types.ts,apiResponse.ts,apiError.ts,apiToast.ts,ENDPOINTS.ts}}
+    ├── app/{store/{store.ts,hooks.ts},api/{baseQuery.ts,baseApi.ts,api.types.ts,apiResponse.ts,apiError.ts,apiToast.ts,ENDPOINTS.ts}}
     ├── routes/mainRoutes.tsx
     ├── components/{ui/{AlertModal.tsx,Button.tsx,Card.tsx,InlineAlert.tsx,LoadingState.tsx,Pagination.tsx,StatusBadge.tsx,Table.tsx},form/{Checkbox.tsx,FormField.tsx,SearchInput.tsx},layout/{AppShell.tsx,Sidebar.tsx,SidebarItems.tsx,Header.tsx,Footer.tsx,MainSection.tsx,navItems.ts,PageHeader.tsx,TableLayout.tsx}}
-    └── features/{adminKey/{AdminKeyGate.tsx,AdminKeyPrompt.tsx},uploads/{uploadsApi.ts,SingleImageUploader.tsx},product-catalog/{endpoints.ts,routePaths.ts,routes.tsx,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,statusPresentation.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx,productForm/{ProductFormPage.tsx,ProductForm.tsx,ProductImagesEditor.tsx,ProductSpecificationsFields.tsx,specificationValues.ts,ProductVariantsEditor.tsx}}},landing/LandingPlaceholder.tsx}
+    └── features/{auth/{api.ts,tokenStorage.ts,adminRoles.ts,describeAuthError.ts,PasswordSignIn.tsx,OtpVerify.tsx,SignInContent.tsx,RequireAuth.tsx,NoAccess.tsx},uploads/{uploadsApi.ts,SingleImageUploader.tsx},product-catalog/{endpoints.ts,routePaths.ts,routes.tsx,brands/{brandsApi.ts,types.ts,BrandsPage.tsx,BrandList.tsx,BrandForm.tsx},categories/{categoriesApi.ts,types.ts,CategoriesPage.tsx,CategoryList.tsx,CategoryForm.tsx},categorySpecifications/{categorySpecificationsApi.ts,types.ts,CategorySpecificationsPage.tsx,CategorySpecificationEditor.tsx,SpecificationGroupCard.tsx},categoryVariants/{categoryVariantsApi.ts,types.ts,CategoryVariantsPage.tsx,CategoryVariantEditor.tsx,VariantAxisRow.tsx},products/{productsApi.ts,types.ts,money.ts,statusPresentation.ts,ProductsPage.tsx,ProductList.tsx,ProductDetailPage.tsx,productForm/{ProductFormPage.tsx,ProductForm.tsx,ProductImagesEditor.tsx,ProductSpecificationsFields.tsx,specificationValues.ts,ProductVariantsEditor.tsx}}},landing/LandingPlaceholder.tsx}
 ```
 
 ## Config

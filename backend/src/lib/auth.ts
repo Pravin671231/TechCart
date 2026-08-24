@@ -191,7 +191,30 @@ const enforceAccountNotDeactivated = createAuthMiddleware(async (ctx) => {
   }
 });
 
+// Issue #148/M3.10 — admin-app (Vercel) is cross-domain from backend
+// (Render), exactly like buyer-app is. The *established* session already
+// survives that via the bearer plugin below, but the admin two-step
+// password->OTP challenge has an intermediate step with no bearer-token
+// equivalent: the `twoFactor` plugin's own pending-challenge cookie, which
+// carries "which sign-in does this OTP belong to" between /sign-in/email
+// and /two-factor/verify-otp. That cookie inherits `sameSite: "lax"` from
+// Better Auth's own cookie defaults (confirmed by reading the installed
+// package's createCookieGetter, cookies/index.mjs) — a Lax cookie is not
+// sent on a cross-site fetch, so this step would silently fail
+// (INVALID_TWO_FACTOR_COOKIE) in any real deployment despite passing both
+// Supertest (its agent resends cookies unconditionally, no SameSite
+// enforcement) and local dev (localhost:5173->localhost:4000 is same-site
+// by spec — port doesn't affect "site"). Gated on BETTER_AUTH_URL being
+// https, mirroring the same package's own useSecureCookies protocol-sniff,
+// so this is a no-op in dev/test (BETTER_AUTH_URL is http there) and only
+// engages against a real deployment — SameSite=None requires Secure, which
+// requires HTTPS to actually be stored by a browser at all.
+const isCrossSiteDeployment = env.BETTER_AUTH_URL.startsWith("https://");
+
 export const auth = betterAuth({
+  advanced: isCrossSiteDeployment
+    ? { defaultCookieAttributes: { sameSite: "none", secure: true } }
+    : undefined,
   database: mongodbAdapter(mongoose.connection.db!, {
     client: mongoose.connection.getClient(),
     // Passing `client` defaults this to true, but @better-auth/mongo-adapter

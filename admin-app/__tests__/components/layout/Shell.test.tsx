@@ -4,13 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { createStore } from "@/app/store/store";
-import type { AuthState } from "@/app/store/authSlice";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableLayout } from "@/components/layout/TableLayout";
 
 function renderShell(initialPath = "/") {
-  const testStore = createStore({ auth: { adminKey: "test-key" } as AuthState });
+  const testStore = createStore();
   return {
     store: testStore,
     ...render(
@@ -21,6 +20,7 @@ function renderShell(initialPath = "/") {
               <Route path="/" element={<div>Home content</div>} />
               <Route path="/products" element={<div>Products content</div>} />
             </Route>
+            <Route path="/sign-in" element={<div>Sign-in content</div>} />
           </Routes>
         </MemoryRouter>
       </Provider>,
@@ -54,14 +54,14 @@ describe("AppShell / Sidebar", () => {
     expect(screen.queryByLabelText("Navigation")).not.toBeInTheDocument();
   });
 
-  it("logs out and clears the admin key", async () => {
+  it("logs out and navigates to sign-in", async () => {
     const user = userEvent.setup();
-    const { store } = renderShell("/");
+    renderShell("/");
 
     const logoutButtons = screen.getAllByRole("button", { name: "Logout" });
     await user.click(logoutButtons[0]);
 
-    expect(store.getState().auth.adminKey).toBeNull();
+    expect(await screen.findByText("Sign-in content")).toBeInTheDocument();
   });
 
   it("shows a tooltip naming the item on hover and hides it on unhover", async () => {

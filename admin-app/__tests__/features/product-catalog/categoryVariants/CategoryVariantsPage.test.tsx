@@ -72,7 +72,7 @@ describe("CategoryVariantsPage", () => {
   it("renders the synthetic empty state before any PUT", async () => {
     setupHandlers([]);
 
-    renderWithStore(<CategoryVariantsPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoryVariantsPage />);
 
     expect(await screen.findByRole("button", { name: "Save axes" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "+ Add axis" })).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe("CategoryVariantsPage", () => {
 
   it("adds an axis locally, then persists it via one full-replace PUT", async () => {
     const handlers = setupHandlers([]);
-    renderWithStore(<CategoryVariantsPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoryVariantsPage />);
     await screen.findByRole("button", { name: "Save axes" });
 
     fireEvent.click(screen.getByRole("button", { name: "+ Add axis" }));
@@ -101,7 +101,7 @@ describe("CategoryVariantsPage", () => {
     const handlers = setupHandlers([
       { name: "Colour", code: "color", type: "color", required: true, options: [{ label: "Black", value: "#000" }] },
     ]);
-    renderWithStore(<CategoryVariantsPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoryVariantsPage />);
 
     await screen.findByDisplayValue("Colour");
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
@@ -118,7 +118,7 @@ describe("CategoryVariantsPage", () => {
     const handlers = setupHandlers([
       { name: "Bundle Size", code: "bundle", type: "number", required: false },
     ]);
-    renderWithStore(<CategoryVariantsPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoryVariantsPage />);
 
     const checkbox = await screen.findByLabelText("Required: Bundle Size");
     fireEvent.click(checkbox);
@@ -135,7 +135,7 @@ describe("CategoryVariantsPage", () => {
 
   it("hides the options editor for text and number axis types", async () => {
     setupHandlers([{ name: "Engraving", code: "engraving", type: "text", required: false }]);
-    renderWithStore(<CategoryVariantsPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoryVariantsPage />);
 
     await screen.findByDisplayValue("Engraving");
     expect(screen.getByText("— not used for text")).toBeInTheDocument();

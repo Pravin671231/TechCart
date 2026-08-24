@@ -85,7 +85,7 @@ describe("BrandsPage", () => {
       makeBrand({ _id: "brand-2", name: "Zenith", productCount: 3 }),
     ]);
 
-    renderWithStore(<BrandsPage />, { adminKey: "test-key" });
+    renderWithStore(<BrandsPage />);
 
     expect(await screen.findByText("Acme")).toBeInTheDocument();
     expect(screen.getByText("Zenith")).toBeInTheDocument();
@@ -95,7 +95,7 @@ describe("BrandsPage", () => {
   it("creates a new brand", async () => {
     setupBrandHandlers([makeBrand({ _id: "brand-1", name: "Acme" })]);
 
-    renderWithStore(<BrandsPage />, { adminKey: "test-key" });
+    renderWithStore(<BrandsPage />);
     await screen.findByText("Acme");
 
     fireEvent.click(screen.getByRole("button", { name: "+ New brand" }));
@@ -108,7 +108,7 @@ describe("BrandsPage", () => {
   it("edits an existing brand", async () => {
     setupBrandHandlers([makeBrand({ _id: "brand-1", name: "Acme" })]);
 
-    renderWithStore(<BrandsPage />, { adminKey: "test-key" });
+    renderWithStore(<BrandsPage />);
     await screen.findByText("Acme");
 
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -124,7 +124,7 @@ describe("BrandsPage", () => {
   it("shows the blocked-delete guard inline instead of a generic error", async () => {
     setupBrandHandlers([makeBrand({ _id: "brand-1", name: "Acme", productCount: 3 })]);
 
-    renderWithStore(<BrandsPage />, { adminKey: "test-key" });
+    renderWithStore(<BrandsPage />);
     await screen.findByText("Acme");
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
@@ -140,7 +140,7 @@ describe("BrandsPage", () => {
   it("toggles brand status", async () => {
     setupBrandHandlers([makeBrand({ _id: "brand-1", name: "Acme", status: true })]);
 
-    renderWithStore(<BrandsPage />, { adminKey: "test-key" });
+    renderWithStore(<BrandsPage />);
     const statusButton = await screen.findByRole("button", { name: "Active" });
 
     fireEvent.click(statusButton);
@@ -156,7 +156,7 @@ describe("BrandsPage", () => {
       makeBrand({ _id: "brand-2", name: "Zenith" }),
     ]);
 
-    renderWithStore(<BrandsPage />, { adminKey: "test-key" });
+    renderWithStore(<BrandsPage />);
     await screen.findByText("Acme");
 
     fireEvent.change(screen.getByLabelText("Search brands"), { target: { value: "zen" } });
@@ -181,7 +181,7 @@ describe("BrandsPage", () => {
       }),
     );
 
-    renderWithStore(<BrandsPage />, { adminKey: "test-key" });
+    renderWithStore(<BrandsPage />);
     await waitFor(() => expect(requestedSearches.length).toBeGreaterThan(0));
     const requestsBeforeTyping = requestedSearches.length;
 
@@ -212,7 +212,7 @@ describe("BrandsPage", () => {
       }),
     );
 
-    renderWithStore(<BrandsPage />, { adminKey: "test-key" });
+    renderWithStore(<BrandsPage />);
     await screen.findByText("Acme");
 
     fireEvent.change(screen.getByLabelText("Search brands"), { target: { value: "zen" } });
@@ -240,7 +240,7 @@ describe("BrandsPage", () => {
       http.put("https://mock-r2.local/signed-put", () => new HttpResponse(null, { status: 200 })),
     );
 
-    renderWithStore(<BrandsPage />, { adminKey: "test-key" });
+    renderWithStore(<BrandsPage />);
     await screen.findByText("Acme");
 
     fireEvent.click(screen.getByRole("button", { name: "+ New brand" }));
@@ -276,7 +276,7 @@ describe("BrandsPage", () => {
       }),
     );
 
-    renderWithStore(<BrandsPage />, { adminKey: "test-key" });
+    renderWithStore(<BrandsPage />);
     await screen.findByText("Acme");
 
     expect(screen.getByText(/Showing 1–20 of 47/)).toBeInTheDocument();

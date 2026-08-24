@@ -1,39 +1,22 @@
 import { fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import type {
-  BaseQueryFn,
-  FetchArgs,
-  FetchBaseQueryError,
-} from "@reduxjs/toolkit/query/react";
 import { ADMIN_API_BASE_URL } from "@/config/env";
-import { clearAdminKey, type AuthState } from "@/app/store/authSlice";
+import { getToken } from "@/features/auth/tokenStorage";
 
-const rawBaseQuery = fetchBaseQuery({
+// Issue #148/M3.10 — replaces the X-Admin-Key prompt entirely with real
+// Better Auth sessions. `credentials: "include"` is needed only for the
+// brief cross-site two-factor pending-challenge cookie window between
+// POST /sign-in/email and POST /two-factor/verify-otp (see backend's
+// src/lib/auth.ts for the matching SameSite=None/Secure cookie fix) —
+// every other request here is authenticated purely via the bearer token
+// below, cookies are otherwise unused.
+export const baseQuery = fetchBaseQuery({
   baseUrl: ADMIN_API_BASE_URL,
-  prepareHeaders: (headers, { getState }) => {
-    const { adminKey } = (getState() as { auth: AuthState }).auth;
-
-    if (adminKey) {
-      headers.set("X-Admin-Key", adminKey);
+  credentials: "include",
+  prepareHeaders: (headers) => {
+    const token = getToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
     }
-
     return headers;
   },
 });
-
-export const baseQueryWithAdminKeyGuard: BaseQueryFn<
-  string | FetchArgs,
-  unknown,
-  FetchBaseQueryError
-> = async (args, apiCtx, extraOptions) => {
-  console.log("➡️ API request:", args);
-
-  const result = await rawBaseQuery(args, apiCtx, extraOptions);
-
-  console.log("⬅️ API response:", result);
-
-  if (result.error?.status === 401) {
-    apiCtx.dispatch(clearAdminKey());
-  }
-
-  return result;
-};
