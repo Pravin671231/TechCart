@@ -1,21 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import App from "@/App";
-import { store } from "@/app/store/store";
-import { clearAdminKey, setAdminKey } from "@/app/store/authSlice";
 
 describe("App", () => {
-  beforeEach(() => {
-    store.dispatch(setAdminKey("test-admin-key"));
-  });
-
-  afterEach(() => {
-    store.dispatch(clearAdminKey());
-  });
-
-  it("renders the placeholder landing route", () => {
+  it("renders the placeholder landing route once signed in", async () => {
     render(<App />);
-    expect(screen.getByRole("heading", { level: 1, name: "TechCart Admin" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "TechCart Admin" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Admin console coming soon.")).toBeInTheDocument();
   });
 });

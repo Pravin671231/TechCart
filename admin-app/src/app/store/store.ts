@@ -1,9 +1,12 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
-import authReducer from "./authSlice";
 import { api } from "@/app/api/baseApi";
 
+// Issue #148/M3.10 — the `auth` slice (adminKey/sessionStorage) is gone
+// entirely; auth state now lives purely in RTK Query's own cache
+// (`getSession`, tag "Session") since there's nothing else to track
+// client-side beyond the bearer token itself (tokenStorage.ts, outside
+// Redux).
 const rootReducer = combineReducers({
-  auth: authReducer,
   [api.reducerPath]: api.reducer,
 });
 

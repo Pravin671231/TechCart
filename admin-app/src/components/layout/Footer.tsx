@@ -1,6 +1,6 @@
 import { LogOut } from "lucide-react";
-import { useAppDispatch } from "@/app/store/hooks";
-import { clearAdminKey } from "@/app/store/authSlice";
+import { useNavigate } from "react-router";
+import { useSignOutMutation } from "@/features/auth/api";
 import { cn } from "@/lib/utils";
 
 export interface FooterProps {
@@ -10,8 +10,15 @@ export interface FooterProps {
 }
 
 export const Footer = ({ onNavigate, variant = "rail" }: FooterProps) => {
-  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const [signOut] = useSignOutMutation();
   const isRail = variant === "rail";
+
+  const handleLogout = async () => {
+    await signOut();
+    onNavigate?.();
+    navigate("/sign-in", { replace: true });
+  };
 
   return (
     <div className="mt-auto border-t border-neutral-200 p-2 lg:p-3">
@@ -26,10 +33,7 @@ export const Footer = ({ onNavigate, variant = "rail" }: FooterProps) => {
       <button
         type="button"
         aria-label="Logout"
-        onClick={() => {
-          dispatch(clearAdminKey());
-          onNavigate?.();
-        }}
+        onClick={handleLogout}
         className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-neutral-200 px-2 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50 lg:px-3"
       >
         <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />

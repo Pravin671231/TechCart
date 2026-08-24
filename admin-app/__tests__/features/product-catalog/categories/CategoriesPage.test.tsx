@@ -105,7 +105,7 @@ describe("CategoriesPage", () => {
       makeCategory({ _id: "cat-2", name: "Smartphones", parentCategory: "cat-1", sortOrder: 1 }),
     ]);
 
-    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoriesPage />);
 
     await screen.findByText("↳ Smartphones");
 
@@ -119,7 +119,7 @@ describe("CategoriesPage", () => {
   it("creates a new root category", async () => {
     setupCategoryHandlers([makeCategory({ _id: "cat-1", name: "Electronics" })]);
 
-    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoriesPage />);
     await screen.findByText("Electronics");
 
     fireEvent.click(screen.getByRole("button", { name: "+ New category" }));
@@ -138,7 +138,7 @@ describe("CategoriesPage", () => {
       },
     });
 
-    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoriesPage />);
     await screen.findByText("Electronics");
 
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -156,7 +156,7 @@ describe("CategoriesPage", () => {
       },
     });
 
-    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoriesPage />);
     await screen.findByText("Electronics");
 
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -175,7 +175,7 @@ describe("CategoriesPage", () => {
       },
     });
 
-    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoriesPage />);
     await screen.findByText("Electronics");
 
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -195,7 +195,7 @@ describe("CategoriesPage", () => {
       },
     });
 
-    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoriesPage />);
     await screen.findByText("Electronics");
 
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -212,7 +212,7 @@ describe("CategoriesPage", () => {
       makeCategory({ _id: "cat-2", name: "Smartphones", parentCategory: "cat-1" }),
     ]);
 
-    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoriesPage />);
     await screen.findByText("↳ Smartphones");
 
     const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
@@ -228,7 +228,7 @@ describe("CategoriesPage", () => {
   it("toggles category status", async () => {
     setupCategoryHandlers([makeCategory({ _id: "cat-1", name: "Electronics", status: true })]);
 
-    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoriesPage />);
     const statusButton = await screen.findByRole("button", { name: "Active" });
 
     fireEvent.click(statusButton);
@@ -244,7 +244,7 @@ describe("CategoriesPage", () => {
       makeCategory({ _id: "cat-2", name: "Furniture", sortOrder: 2 }),
     ]);
 
-    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoriesPage />);
     await screen.findByText("Electronics");
 
     fireEvent.change(screen.getByLabelText("Search categories"), { target: { value: "furn" } });
@@ -269,7 +269,7 @@ describe("CategoriesPage", () => {
       }),
     );
 
-    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoriesPage />);
     await waitFor(() => expect(requestedSearches.length).toBeGreaterThan(0));
     const requestsBeforeTyping = requestedSearches.length;
 
@@ -303,7 +303,7 @@ describe("CategoriesPage", () => {
       }),
     );
 
-    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoriesPage />);
     await screen.findByText("Electronics");
 
     fireEvent.change(screen.getByLabelText("Search categories"), { target: { value: "fur" } });
@@ -328,7 +328,7 @@ describe("CategoriesPage", () => {
       }),
     );
 
-    renderWithStore(<CategoriesPage />, { adminKey: "test-key" });
+    renderWithStore(<CategoriesPage />);
     await screen.findByText("Electronics");
 
     expect(screen.getByText(/Showing 1–20 of 33/)).toBeInTheDocument();

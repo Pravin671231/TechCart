@@ -6,7 +6,6 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { http, HttpResponse } from "msw";
 import { server } from "../../../mocks/server";
 import { createStore } from "@/app/store/store";
-import type { AuthState } from "@/app/store/authSlice";
 import { ProductsPage } from "@/features/product-catalog/products/ProductsPage";
 import { ProductDetailPage } from "@/features/product-catalog/products/ProductDetailPage";
 import { ProductFormPage } from "@/features/product-catalog/products/productForm/ProductFormPage";
@@ -15,7 +14,7 @@ import type { Product } from "@/features/product-catalog/products/types";
 const BASE = "http://localhost:4000/api/admin";
 
 function renderProductsApp(initialPath: string) {
-  const testStore = createStore({ auth: { adminKey: "test-key" } as AuthState });
+  const testStore = createStore();
   return render(
     <Provider store={testStore}>
       <MemoryRouter initialEntries={[initialPath]}>
