@@ -28,6 +28,14 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
   RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
   RESEND_FROM_EMAIL: z.string().min(1, "RESEND_FROM_EMAIL is required"),
+  // Optional — only consumed in non-production (see externalService/resend.ts).
+  // Not .min(1)-required so existing dev setups/CI don't need to change;
+  // resend.ts's own runtime check enforces these when the Mailtrap path is
+  // actually used.
+  MAILTRAP_HOST: z.string().optional(),
+  MAILTRAP_PORT: z.coerce.number().optional(),
+  MAILTRAP_USER: z.string().optional(),
+  MAILTRAP_PASS: z.string().optional(),
 });
 
 const rawEnv = envSchema.parse(process.env);
@@ -54,5 +62,11 @@ export const env = {
   RESEND: {
     API_KEY: rawEnv.RESEND_API_KEY,
     FROM_EMAIL: rawEnv.RESEND_FROM_EMAIL,
+  },
+  MAILTRAP: {
+    HOST: rawEnv.MAILTRAP_HOST,
+    PORT: rawEnv.MAILTRAP_PORT,
+    USER: rawEnv.MAILTRAP_USER,
+    PASS: rawEnv.MAILTRAP_PASS,
   },
 };
