@@ -7,6 +7,11 @@ export default defineConfig({
     environment: "node",
     env: {
       MONGODB_URI: "mongodb://localhost:27017/techcart-test",
+      // Never actually connected to — src/lib/rateLimit.ts skips
+      // constructing a real ioredis client under NODE_ENV=test and uses
+      // RateLimiterMemory instead. Present only so env.ts's zod schema (which
+      // requires REDIS_URL like every other var) is satisfied.
+      REDIS_URL: "redis://localhost:6379",
       R2_ACCOUNT_ID: "test-account-id",
       R2_ACCESS_KEY_ID: "test-access-key-id",
       R2_SECRET_ACCESS_KEY: "test-secret-access-key",
@@ -20,6 +25,7 @@ export default defineConfig({
       RESEND_FROM_EMAIL: "noreply@test.example",
     },
     include: ["src/**/tests/**/*.test.ts", "__tests__/**/*.test.ts"],
+    setupFiles: ["./vitest.setup.ts"],
     // mongodb-memory-server's binary download + startup (__tests__/auth)
     // blows past Vitest's 5s default.
     testTimeout: 30000,
