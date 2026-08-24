@@ -26,6 +26,21 @@ vi.mock("@/externalService/resend", () => ({
   sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Same mock auth.api.test.ts already established for #139's own One
+// Tap/OAuth tests — without it, the OAuth-callback rate-limit case below
+// would send its 20 allowed requests' garbage idToken to Google's *real*
+// token-verification endpoint, a real outbound network call this sandboxed
+// CI environment cannot reliably complete (confirmed the hard way: an
+// earlier version of this file without this mock stalled the whole `test
+// (backend)` CI job for 20+ minutes rather than failing fast).
+vi.mock("@better-auth/core/social-providers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@better-auth/core/social-providers")>();
+  return {
+    ...actual,
+    verifyGoogleIdToken: vi.fn().mockRejectedValue(new Error("invalid token")),
+  };
+});
+
 let mongod: MongoMemoryServer;
 let mongoose: typeof mongooseType;
 let app: Express;
