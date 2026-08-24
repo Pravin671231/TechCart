@@ -26,15 +26,16 @@ const envSchema = z.object({
   BETTER_AUTH_URL: z.string().min(1, "BETTER_AUTH_URL is required"),
   GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required"),
   GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
-  // Issue #242/M3.14 — Mailtrap is the sole email provider in every
-  // environment now (Resend removed outright), so all five are required,
-  // not optional (the earlier dev-only design's .optional() no longer
-  // applies).
-  MAILTRAP_HOST: z.string().min(1, "MAILTRAP_HOST is required"),
-  MAILTRAP_PORT: z.coerce.number(),
-  MAILTRAP_USER: z.string().min(1, "MAILTRAP_USER is required"),
-  MAILTRAP_PASS: z.string().min(1, "MAILTRAP_PASS is required"),
-  MAILTRAP_FROM_EMAIL: z.string().min(1, "MAILTRAP_FROM_EMAIL is required"),
+  // TEMPORARY (see mailer.ts's own header comment) — reverted from
+  // Issue #242/M3.14's "all five required" back to optional so the backend
+  // boots without real Mailtrap credentials configured. Revert this back to
+  // .min(1)-required once real credentials are available; this is a
+  // short-lived local-dev workaround, not a permanent design change.
+  MAILTRAP_HOST: z.string().optional(),
+  MAILTRAP_PORT: z.coerce.number().optional(),
+  MAILTRAP_USER: z.string().optional(),
+  MAILTRAP_PASS: z.string().optional(),
+  MAILTRAP_FROM_EMAIL: z.string().optional(),
 });
 
 const rawEnv = envSchema.parse(process.env);
