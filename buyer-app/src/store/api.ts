@@ -66,7 +66,33 @@ const baseQueryWithEnvelope: BaseQueryFn<
   object,
   EnvelopeMeta
 > = async (args, api, extraOptions) => {
+  // Issue #253 — dev-only request/response logging. `process.env.NODE_ENV`
+  // is statically replaced at build time, so Next's production minifier
+  // dead-code-eliminates this branch entirely; no headers are logged.
+  const label = typeof args === "string" ? `GET ${args}` : `${args.method ?? "GET"} ${args.url}`;
+
+  if (process.env.NODE_ENV !== "production") {
+    console.groupCollapsed(`[RTK Query] ${label}`);
+    console.log("request", args);
+
+    if (typeof args !== "string" && args.body !== undefined) {
+      console.log("mutation input (copy for Postman):");
+      console.log(JSON.stringify(args.body, null, 2));
+    }
+  }
+
   const result = await rawBaseQuery(args, api, extraOptions);
+
+  if (process.env.NODE_ENV !== "production") {
+    console.log("response", result.error ?? result.data);
+    console.groupEnd();
+
+    setTimeout(() => {
+      console.groupCollapsed(`[RTK Query] cache snapshot — after ${label}`);
+      console.log((api.getState() as Record<string, unknown>).api);
+      console.groupEnd();
+    }, 0);
+  }
 
   if (result.error) {
     return { error: normalizeError(result.error) };
