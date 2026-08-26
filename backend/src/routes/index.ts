@@ -1,6 +1,6 @@
 import express, { Router } from "express";
-import { accountModule } from "@/modules/account/account.module";
-import { authModule } from "@/modules/auth/auth.module";
+import { accountModule } from "@/modules/authentication/account/account.module";
+import { authModule } from "@/modules/authentication/auth/auth.module";
 import { healthModule } from "@/modules/health/health.module";
 import { brandsPublicModule } from "@/modules/product-catalog/features/brands/brands.module";
 import { categoriesPublicModule } from "@/modules/product-catalog/features/categories/categories.module";

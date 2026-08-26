@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useGetSessionQuery, useSignOutMutation } from "@/features/auth/api";
+import { useGetSessionQuery, useSignOutMutation } from "@/features/authentication/auth/api";
 
 export function AuthStatus() {
   const { data: session } = useGetSessionQuery();

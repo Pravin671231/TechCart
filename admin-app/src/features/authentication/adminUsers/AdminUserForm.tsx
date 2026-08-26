@@ -3,7 +3,7 @@ import { getApiErrorEnvelope } from "@/app/api/apiError";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { TextField, SelectField } from "@/components/form/FormField";
-import { ADMIN_ROLES, type AdminRole } from "@/features/auth/adminRoles";
+import { ADMIN_ROLES, type AdminRole } from "@/features/authentication/auth/adminRoles";
 import { useCreateAdminUserMutation } from "./adminUsersApi";
 
 export interface AdminUserFormProps {

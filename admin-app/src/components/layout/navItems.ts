@@ -9,7 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import { PRODUCT_CATALOG_ROUTES } from "@/features/product-catalog/routePaths";
-import type { AdminRole } from "@/features/auth/adminRoles";
+import type { AdminRole } from "@/features/authentication/auth/adminRoles";
 
 export interface NavItem {
   to: string;

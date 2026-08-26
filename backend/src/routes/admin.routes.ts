@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { uploadsModule } from "@/modules/uploads/uploads.module";
-import { adminUsersModule } from "@/modules/adminUsers/adminUsers.module";
+import { adminUsersModule } from "@/modules/authentication/adminUsers/adminUsers.module";
 import { brandsAdminModule } from "@/modules/product-catalog/features/brands/brands.module";
 import { categoriesAdminModule } from "@/modules/product-catalog/features/categories/categories.module";
 import { categorySpecificationsAdminModule } from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.module";

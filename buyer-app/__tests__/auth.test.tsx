@@ -30,7 +30,7 @@ describe("Auth", () => {
   describe("GoogleSignIn", () => {
     it("renders Google button container", async () => {
       const { makeStore } = await import("@/store/store");
-      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
       const store = makeStore();
 
       render(
@@ -47,7 +47,7 @@ describe("Auth", () => {
   describe("OtpSignIn", () => {
     it("renders email input initially", async () => {
       const { makeStore } = await import("@/store/store");
-      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
       const store = makeStore();
 
       render(
@@ -62,7 +62,7 @@ describe("Auth", () => {
 
     it("sends OTP and shows code entry step", async () => {
       const { makeStore } = await import("@/store/store");
-      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
       const store = makeStore();
 
       server.use(
@@ -93,7 +93,7 @@ describe("Auth", () => {
 
     it("shows resend countdown after OTP send", async () => {
       const { makeStore } = await import("@/store/store");
-      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
       const store = makeStore();
 
       server.use(
@@ -125,7 +125,7 @@ describe("Auth", () => {
 
     it("verifies OTP and persists token, then redirects home", async () => {
       const { makeStore } = await import("@/store/store");
-      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
       const store = makeStore();
 
       server.use(
@@ -193,7 +193,7 @@ describe("Auth", () => {
 
     it("shows GOOGLE_ACCOUNT_IS_ADMIN error message", async () => {
       const { makeStore } = await import("@/store/store");
-      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
       const store = makeStore();
 
       server.use(
@@ -246,7 +246,7 @@ describe("Auth", () => {
 
     it("shows INVALID_OTP error message", async () => {
       const { makeStore } = await import("@/store/store");
-      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
       const store = makeStore();
 
       server.use(
@@ -299,7 +299,7 @@ describe("Auth", () => {
 
     it("shows a resend failure message distinct from the generic fallback", async () => {
       const { makeStore } = await import("@/store/store");
-      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
       const store = makeStore();
 
       vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -349,7 +349,7 @@ describe("Auth", () => {
 
     it("shows OTP_EXPIRED error message", async () => {
       const { makeStore } = await import("@/store/store");
-      const { SignInContent } = await import("@/features/auth/SignInContent");
+      const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
       const store = makeStore();
 
       server.use(

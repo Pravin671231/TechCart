@@ -28,7 +28,7 @@ vi.mock("@/externalService/mailer", () => ({
 let mongod: MongoMemoryServer;
 let mongoose: typeof mongooseType;
 let app: Express;
-let provisionAdminUser: typeof import("../../src/scripts/seed/createAdminUser.js").provisionAdminUser;
+let provisionAdminUser: typeof import("../../../src/scripts/seed/createAdminUser.js").provisionAdminUser;
 
 const ADMIN_EMAIL = "cross-site-cookie-admin@example.com";
 const ADMIN_PASSWORD = "Sup3rSecret!Pass";
@@ -41,13 +41,13 @@ beforeAll(async () => {
   process.env.MONGODB_URI = mongod.getUri();
 
   mongoose = (await import("mongoose")).default;
-  const { connectDB } = await import("../../src/config/db.js");
+  const { connectDB } = await import("../../../src/config/db.js");
   await connectDB();
 
-  const appModule = await import("../../src/app.js");
+  const appModule = await import("../../../src/app.js");
   app = (appModule as unknown as { default: Express }).default;
 
-  const seedModule = await import("../../src/scripts/seed/createAdminUser.js");
+  const seedModule = await import("../../../src/scripts/seed/createAdminUser.js");
   provisionAdminUser = seedModule.provisionAdminUser;
 
   await provisionAdminUser({

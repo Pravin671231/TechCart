@@ -1,4 +1,4 @@
-import { AccountContent } from "@/features/account/AccountContent";
+import { AccountContent } from "@/features/authentication/account/AccountContent";
 
 export const metadata = {
   title: "My Account",

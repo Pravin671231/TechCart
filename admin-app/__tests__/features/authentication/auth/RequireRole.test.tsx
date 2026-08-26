@@ -3,21 +3,21 @@ import { render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { http, HttpResponse } from "msw";
-import { server } from "../../mocks/server";
+import { server } from "../../../mocks/server";
 import { createStore } from "@/app/store/store";
-import { RequireAuth } from "@/features/auth/RequireAuth";
+import { RequireRole } from "@/features/authentication/auth/RequireRole";
 
 const SESSION_URL = "http://localhost:4000/api/auth/get-session";
 
-function renderProtected() {
+function renderSuperAdminOnly() {
   const testStore = createStore();
   return render(
     <Provider store={testStore}>
-      <MemoryRouter initialEntries={["/protected"]}>
+      <MemoryRouter initialEntries={["/admin-users"]}>
         <Routes>
           <Route path="/sign-in" element={<div>Sign-in content</div>} />
-          <Route element={<RequireAuth />}>
-            <Route path="/protected" element={<div>Protected content</div>} />
+          <Route element={<RequireRole role="super-admin" />}>
+            <Route path="/admin-users" element={<div>Admin users content</div>} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -25,43 +25,45 @@ function renderProtected() {
   );
 }
 
-describe("RequireAuth", () => {
-  it("redirects to sign-in when there is no session (401 case)", async () => {
+describe("RequireRole", () => {
+  it("redirects to sign-in when there is no session", async () => {
     server.use(http.get(SESSION_URL, () => HttpResponse.json({ success: true, data: { user: null } })));
 
-    renderProtected();
+    renderSuperAdminOnly();
 
     expect(await screen.findByText("Sign-in content")).toBeInTheDocument();
   });
 
-  it("renders a no-access state when the session's role isn't an admin role (403 case)", async () => {
+  it("renders a no-access state when the session's role doesn't match", async () => {
     server.use(
       http.get(SESSION_URL, () =>
         HttpResponse.json({
           success: true,
-          data: { user: { id: "u1", name: "Buyer", email: "buyer@example.com", role: "buyer" } },
+          data: {
+            user: { id: "u1", name: "Catalog Manager", email: "cm@example.com", role: "catalog-manager" },
+          },
         }),
       ),
     );
 
-    renderProtected();
+    renderSuperAdminOnly();
 
     expect(await screen.findByRole("heading", { name: "No access" })).toBeInTheDocument();
-    expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
+    expect(screen.queryByText("Admin users content")).not.toBeInTheDocument();
   });
 
-  it("renders the protected content when the session has an admin role", async () => {
+  it("renders the protected content when the session's role matches", async () => {
     server.use(
       http.get(SESSION_URL, () =>
         HttpResponse.json({
           success: true,
-          data: { user: { id: "u1", name: "Admin", email: "admin@example.com", role: "catalog-manager" } },
+          data: { user: { id: "u1", name: "Super Admin", email: "sa@example.com", role: "super-admin" } },
         }),
       ),
     );
 
-    renderProtected();
+    renderSuperAdminOnly();
 
-    expect(await screen.findByText("Protected content")).toBeInTheDocument();
+    expect(await screen.findByText("Admin users content")).toBeInTheDocument();
   });
 });

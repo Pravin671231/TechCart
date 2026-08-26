@@ -24,7 +24,7 @@ const MANAGED_RESPONSE_HEADERS = new Set(["set-cookie", "content-type", "content
 // the JSON-response branch, which is exactly what made the bearer-token fix
 // invisible until deployed the first time this feature shipped.
 //
-// Wired in via src/modules/auth/ (auth.routes.ts/auth.module.ts), the same
+// Wired in via src/modules/authentication/auth/ (auth.routes.ts/auth.module.ts), the same
 // {path, router} module shape every other route uses — mounted first in
 // routes/index.ts, ahead of that file's own express.json(), since Better
 // Auth needs the unparsed request body/stream.

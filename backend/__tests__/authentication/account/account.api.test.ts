@@ -20,7 +20,7 @@ import {
   signInBuyer,
   authRequest,
   type MemoryMongoContext,
-} from "../testHelpers/adminSession";
+} from "../../testHelpers/adminSession";
 
 const ADMIN_EMAIL = "account-admin@example.com";
 const ADMIN_PASSWORD = "OriginalPass!123";
@@ -28,13 +28,13 @@ const BUYER_EMAIL = "account-buyer@example.com";
 
 let ctx: MemoryMongoContext;
 let app: Express;
-let provisionAdminUser: typeof import("../../src/scripts/seed/createAdminUser.js").provisionAdminUser;
+let provisionAdminUser: typeof import("../../../src/scripts/seed/createAdminUser.js").provisionAdminUser;
 
 beforeAll(async () => {
   ctx = await bootstrapMemoryMongo();
   app = ctx.app;
 
-  const seedModule = await import("../../src/scripts/seed/createAdminUser.js");
+  const seedModule = await import("../../../src/scripts/seed/createAdminUser.js");
   provisionAdminUser = seedModule.provisionAdminUser;
 }, 60000);
 

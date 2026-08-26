@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-import { useGetSessionQuery } from "@/features/auth/api";
-import { isAdminRole } from "@/features/auth/adminRoles";
+import { useGetSessionQuery } from "@/features/authentication/auth/api";
+import { isAdminRole } from "@/features/authentication/auth/adminRoles";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
 import { NAV_ITEMS } from "./navItems";

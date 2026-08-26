@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useGetSessionQuery } from "@/features/auth/api";
+import { useGetSessionQuery } from "@/features/authentication/auth/api";
 import { useGetProfileQuery } from "./api";
 import { ProfileForm } from "./ProfileForm";
 

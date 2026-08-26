@@ -46,7 +46,7 @@ describe("Account profile", () => {
     );
 
     const { makeStore } = await import("@/store/store");
-    const { AccountContent } = await import("@/features/account/AccountContent");
+    const { AccountContent } = await import("@/features/authentication/account/AccountContent");
     const store = makeStore();
 
     render(
@@ -72,7 +72,7 @@ describe("Account profile", () => {
     );
 
     const { makeStore } = await import("@/store/store");
-    const { AccountContent } = await import("@/features/account/AccountContent");
+    const { AccountContent } = await import("@/features/authentication/account/AccountContent");
     const store = makeStore();
 
     render(
@@ -106,7 +106,7 @@ describe("Account profile", () => {
     );
 
     const { makeStore } = await import("@/store/store");
-    const { AccountContent } = await import("@/features/account/AccountContent");
+    const { AccountContent } = await import("@/features/authentication/account/AccountContent");
     const store = makeStore();
 
     render(
@@ -147,7 +147,7 @@ describe("Account profile", () => {
     );
 
     const { makeStore } = await import("@/store/store");
-    const { AccountContent } = await import("@/features/account/AccountContent");
+    const { AccountContent } = await import("@/features/authentication/account/AccountContent");
     const store = makeStore();
 
     render(

@@ -33,7 +33,7 @@ vi.mock("@/externalService/mailer", () => ({
 let mongod: MongoMemoryServer;
 let mongoose: typeof mongooseType;
 let app: Express;
-let provisionAdminUser: typeof import("../../src/scripts/seed/createAdminUser.js").provisionAdminUser;
+let provisionAdminUser: typeof import("../../../src/scripts/seed/createAdminUser.js").provisionAdminUser;
 
 const ADMIN_EMAIL = "admin-reset@example.com";
 const ADMIN_PASSWORD = "Sup3rSecret!Pass";
@@ -45,13 +45,13 @@ beforeAll(async () => {
   process.env.MONGODB_URI = mongod.getUri();
 
   mongoose = (await import("mongoose")).default;
-  const { connectDB } = await import("../../src/config/db.js");
+  const { connectDB } = await import("../../../src/config/db.js");
   await connectDB();
 
-  const appModule = await import("../../src/app.js");
+  const appModule = await import("../../../src/app.js");
   app = (appModule as unknown as { default: Express }).default;
 
-  const seedModule = await import("../../src/scripts/seed/createAdminUser.js");
+  const seedModule = await import("../../../src/scripts/seed/createAdminUser.js");
   provisionAdminUser = seedModule.provisionAdminUser;
 }, 60000);
 
@@ -98,7 +98,7 @@ async function requestForgotPassword(email: string) {
 }
 
 async function captureResetToken(): Promise<string> {
-  const { sendPasswordResetEmail } = await import("../../src/externalService/mailer.js");
+  const { sendPasswordResetEmail } = await import("../../../src/externalService/mailer.js");
   expect(sendPasswordResetEmail).toHaveBeenCalled();
 
   // Read the token back from our own passwordResetTokens tracking
@@ -131,7 +131,7 @@ async function signInFully(agent: ReturnType<typeof request.agent>, password: st
   // of the real (random) emailed code, so "123456" is the only value that
   // verifies anymore; the mock-call check stays as a sanity check that
   // send-otp really triggered an email attempt.
-  const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+  const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
   expect((sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls.at(-1)).toBeTruthy();
 
   return agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
@@ -163,7 +163,7 @@ describe("Admin password reset", () => {
       expect(buyerRes.status).toBe(unregistered.status);
       expect(buyerRes.body).toEqual(unregistered.body);
 
-      const { sendPasswordResetEmail } = await import("../../src/externalService/mailer.js");
+      const { sendPasswordResetEmail } = await import("../../../src/externalService/mailer.js");
       expect(sendPasswordResetEmail).not.toHaveBeenCalled();
     });
   });
