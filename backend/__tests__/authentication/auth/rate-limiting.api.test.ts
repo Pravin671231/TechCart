@@ -3,7 +3,7 @@ import request from "supertest";
 import type { Express } from "express";
 import type { MongoMemoryServer } from "mongodb-memory-server";
 import type mongooseType from "mongoose";
-import { signInBuyer, authRequest } from "../testHelpers/adminSession.js";
+import { signInBuyer, authRequest } from "../../testHelpers/adminSession.js";
 
 // Issue #145/M3.7 (FR-AUTH-040–045) — rate limiting plus the FR-AUTH-045
 // error-code enumeration share one file/one mongodb-memory-server instance,
@@ -57,7 +57,7 @@ vi.mock("@better-auth/core/social-providers", async (importOriginal) => {
 let mongod: MongoMemoryServer;
 let mongoose: typeof mongooseType;
 let app: Express;
-let provisionAdminUser: typeof import("../../src/scripts/seed/createAdminUser.js").provisionAdminUser;
+let provisionAdminUser: typeof import("../../../src/scripts/seed/createAdminUser.js").provisionAdminUser;
 
 const ADMIN_EMAIL = "rate-limit-admin@example.com";
 const ADMIN_PASSWORD = "Sup3rSecret!Pass";
@@ -68,13 +68,13 @@ beforeAll(async () => {
   process.env.MONGODB_URI = mongod.getUri();
 
   mongoose = (await import("mongoose")).default;
-  const { connectDB } = await import("../../src/config/db.js");
+  const { connectDB } = await import("../../../src/config/db.js");
   await connectDB();
 
-  const appModule = await import("../../src/app.js");
+  const appModule = await import("../../../src/app.js");
   app = (appModule as unknown as { default: Express }).default;
 
-  const seedModule = await import("../../src/scripts/seed/createAdminUser.js");
+  const seedModule = await import("../../../src/scripts/seed/createAdminUser.js");
   provisionAdminUser = seedModule.provisionAdminUser;
 }, 60000);
 
@@ -152,7 +152,7 @@ describe("Auth rate limiting (Issue #145/M3.7)", () => {
       expect(last!.status).toBe(429);
       expect(last!.body).toMatchObject({ success: false, code: "RATE_LIMITED" });
 
-      const { sendPasswordResetEmail } = await import("../../src/externalService/mailer.js");
+      const { sendPasswordResetEmail } = await import("../../../src/externalService/mailer.js");
       // At most 3 of the 4 attempts could have gotten far enough to send —
       // the point is the 4th never does, not that none of the earlier ones did.
       expect((sendPasswordResetEmail as ReturnType<typeof vi.fn>).mock.calls.length).toBeLessThanOrEqual(3);

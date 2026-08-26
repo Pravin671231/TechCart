@@ -4,8 +4,8 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { SearchInput } from "@/components/form/SearchInput";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { useGetSessionQuery } from "@/features/auth/api";
-import { ADMIN_ROLES } from "@/features/auth/adminRoles";
+import { useGetSessionQuery } from "@/features/authentication/auth/api";
+import { ADMIN_ROLES } from "@/features/authentication/auth/adminRoles";
 import { useGetAdminUsersQuery, useUpdateAdminUserMutation } from "./adminUsersApi";
 import type { AdminUser } from "./types";
 

@@ -1,6 +1,6 @@
 import { LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router";
-import { useGetSessionQuery, useSignOutMutation } from "@/features/auth/api";
+import { useGetSessionQuery, useSignOutMutation } from "@/features/authentication/auth/api";
 import { cn } from "@/lib/utils";
 
 export interface FooterProps {

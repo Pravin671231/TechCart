@@ -1,4 +1,4 @@
-import { SignInContent } from "@/features/auth/SignInContent";
+import { SignInContent } from "@/features/authentication/auth/SignInContent";
 
 export const metadata = {
   title: "Sign In",

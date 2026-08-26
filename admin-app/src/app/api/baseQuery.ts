@@ -6,7 +6,7 @@ import type {
   FetchBaseQueryMeta,
 } from "@reduxjs/toolkit/query/react";
 import { ADMIN_API_BASE_URL } from "@/config/env";
-import { getToken } from "@/features/auth/tokenStorage";
+import { getToken } from "@/features/authentication/auth/tokenStorage";
 
 // Issue #148/M3.10 — replaces the X-Admin-Key prompt entirely with real
 // Better Auth sessions. `credentials: "include"` is needed only for the

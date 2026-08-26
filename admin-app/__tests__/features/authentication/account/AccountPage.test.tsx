@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { server } from "../../mocks/server";
-import { renderWithStore } from "../../utils/renderWithStore";
-import { AccountPage } from "@/features/account/AccountPage";
+import { server } from "../../../mocks/server";
+import { renderWithStore } from "../../../utils/renderWithStore";
+import { AccountPage } from "@/features/authentication/account/AccountPage";
 
 const CHANGE_PASSWORD_URL = "http://localhost:4000/api/account/change-password";
 

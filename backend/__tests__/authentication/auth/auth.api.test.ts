@@ -47,14 +47,14 @@ beforeAll(async () => {
   process.env.MONGODB_URI = mongod.getUri();
 
   mongoose = (await import("mongoose")).default;
-  const { connectDB } = await import("../../src/config/db.js");
+  const { connectDB } = await import("../../../src/config/db.js");
   await connectDB();
 
   // TS's dynamic-`import()` typing for a CJS-emitted module (this workspace
   // is `"type": "commonjs"`) doesn't narrow to the named `default` export
   // the way a static import does — cast past it rather than chase the
   // ESM/CJS interop gap further.
-  const appModule = await import("../../src/app.js");
+  const appModule = await import("../../../src/app.js");
   app = (appModule as unknown as { default: Express }).default;
 
   socialProviders = await import("@better-auth/core/social-providers");
@@ -210,7 +210,7 @@ describe("Buyer passwordless authentication", () => {
 
       // storeOTP: "hashed" means the plaintext code never sits in the DB —
       // the real code was only ever handed to the mocked sendOtpEmail call.
-      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
       expect(otp).toBeTruthy();
       // Issue #242/M3.14 — auth.ts's emailOTP({generateOTP: () => "123456"})
@@ -232,7 +232,7 @@ describe("Buyer passwordless authentication", () => {
         .post("/api/auth/email-otp/send-verification-otp")
         .send({ email, type: "sign-in" });
 
-      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
 
       const first = await request(app).post("/api/auth/sign-in/email-otp").send({ email, otp });
@@ -252,7 +252,7 @@ describe("Buyer passwordless authentication", () => {
         .post("/api/auth/email-otp/send-verification-otp")
         .send({ email, type: "sign-in" });
 
-      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
 
       // expiresIn is 600s (FR-AUTH-007) — push the stored verification
@@ -283,7 +283,7 @@ describe("Buyer passwordless authentication", () => {
       expect(send.status).toBe(403);
       expect(send.body).toMatchObject({ success: false, code: "GOOGLE_ACCOUNT_IS_ADMIN" });
 
-      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
       expect(sendOtpEmail).not.toHaveBeenCalled();
     });
   });
@@ -308,7 +308,7 @@ describe("Buyer passwordless authentication", () => {
         .send({ email, type: "sign-in" });
       expect(send.status).toBe(200);
 
-      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
 
       const otpRes = await request(app).post("/api/auth/sign-in/email-otp").send({ email, otp });
@@ -327,7 +327,7 @@ describe("Buyer passwordless authentication", () => {
         .post("/api/auth/email-otp/send-verification-otp")
         .send({ email, type: "sign-in" });
 
-      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
 
       const res = await request(app)
@@ -358,7 +358,7 @@ describe("Buyer passwordless authentication", () => {
         .post("/api/auth/email-otp/send-verification-otp")
         .send({ email, type: "sign-in" });
 
-      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
 
       const signIn = await request(app).post("/api/auth/sign-in/email-otp").send({ email, otp });
@@ -382,7 +382,7 @@ describe("Buyer passwordless authentication", () => {
         .post("/api/auth/email-otp/send-verification-otp")
         .send({ email, type: "sign-in" });
 
-      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
 
       const res = await request(app)
@@ -416,7 +416,7 @@ describe("Buyer passwordless authentication", () => {
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(res.body).toMatchObject({ success: false, code: "ACCOUNT_DEACTIVATED" });
 
-      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
       expect(sendOtpEmail).not.toHaveBeenCalled();
     });
   });

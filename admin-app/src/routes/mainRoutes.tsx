@@ -2,11 +2,11 @@ import { Route, Routes } from "react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { LandingPlaceholder } from "@/features/landing/LandingPlaceholder";
 import { ProductCatalogRoutes } from "@/features/product-catalog/routes";
-import { RequireAuth } from "@/features/auth/RequireAuth";
-import { RequireRole } from "@/features/auth/RequireRole";
-import { SignInContent } from "@/features/auth/SignInContent";
-import { AdminUsersPage } from "@/features/adminUsers/AdminUsersPage";
-import { AccountPage } from "@/features/account/AccountPage";
+import { RequireAuth } from "@/features/authentication/auth/RequireAuth";
+import { RequireRole } from "@/features/authentication/auth/RequireRole";
+import { SignInContent } from "@/features/authentication/auth/SignInContent";
+import { AdminUsersPage } from "@/features/authentication/adminUsers/AdminUsersPage";
+import { AccountPage } from "@/features/authentication/account/AccountPage";
 
 export const MainRoutes = () => {
   return (

@@ -65,7 +65,7 @@ src/
 │   │   └── NoAccess.tsx                            # 403-equivalent state, with a sign-out action
 │   ├── adminUsers/              # super-admin-only account management (Issue #149/M3.11)
 │   │   ├── adminUsersApi.ts        # injectEndpoints: getAdminUsers/createAdminUser/updateAdminUser (relative /users URLs, tag "AdminUser")
-│   │   ├── types.ts                  # AdminUser / Create·UpdateAdminUserInput (reuses AdminRole from features/auth/adminRoles)
+│   │   ├── types.ts                  # AdminUser / Create·UpdateAdminUserInput (reuses AdminRole from features/authentication/auth/adminRoles)
 │   │   ├── AdminUsersPage.tsx          # routed at /admin-users — list + create pane, no edit-form pane
 │   │   ├── AdminUserList.tsx             # table w/ inline role <select> + status toggle; own row (session.id === _id) renders plain text for both
 │   │   └── AdminUserForm.tsx               # create-only form — name/email/role, no password field
@@ -124,7 +124,7 @@ src/
 └── index.css                     # @import "tailwindcss";
 ```
 
-See `AGENTS.md` for the full `app/` vs `routes/` vs `features/` vs `components/` convention, its `cn()`/`class-variance-authority` styling section, and its "Session-based sign-in and route guard" section for the `src/app/store/`, `src/app/api/`, and `src/features/auth/` internals.
+See `AGENTS.md` for the full `app/` vs `routes/` vs `features/` vs `components/` convention, its `cn()`/`class-variance-authority` styling section, and its "Session-based sign-in and route guard" section for the `src/app/store/`, `src/app/api/`, and `src/features/authentication/auth/` internals.
 
 ## Current file tree
 

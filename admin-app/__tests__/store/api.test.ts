@@ -3,7 +3,7 @@ import { http, HttpResponse } from "msw";
 import { server } from "../mocks/server";
 import { api } from "@/app/api/baseApi";
 import { createStore } from "@/app/store/store";
-import { setToken, clearToken } from "@/features/auth/tokenStorage";
+import { setToken, clearToken } from "@/features/authentication/auth/tokenStorage";
 
 const PING_URL = "http://localhost:4000/api/admin/ping";
 

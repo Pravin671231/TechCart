@@ -3,10 +3,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { http, HttpResponse } from "msw";
-import { server } from "../../mocks/server";
+import { server } from "../../../mocks/server";
 import { createStore } from "@/app/store/store";
-import { SignInContent } from "@/features/auth/SignInContent";
-import { clearToken, getToken } from "@/features/auth/tokenStorage";
+import { SignInContent } from "@/features/authentication/auth/SignInContent";
+import { clearToken, getToken } from "@/features/authentication/auth/tokenStorage";
 
 const BASE = "http://localhost:4000/api/auth";
 
