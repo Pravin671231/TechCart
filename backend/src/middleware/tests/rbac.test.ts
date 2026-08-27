@@ -1,11 +1,12 @@
 import type { NextFunction, Request, Response } from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/auth", () => ({
-  auth: { api: { getSession: vi.fn() } },
+vi.mock("@/lib/session", () => ({
+  extractSessionToken: vi.fn(),
+  verifySessionToken: vi.fn(),
 }));
 
-import { auth } from "@/lib/auth";
+import { extractSessionToken, verifySessionToken } from "@/lib/session";
 import { rbac, CATALOG_ADMIN_ROLES } from "../rbac";
 
 function mockRequest(): Request {
@@ -20,8 +21,35 @@ afterEach(() => {
 });
 
 describe("rbac", () => {
-  it("401s with UNAUTHENTICATED when there is no session at all", async () => {
-    vi.mocked(auth.api.getSession).mockResolvedValue(null);
+  it("401s with UNAUTHENTICATED when the request carries no session token", async () => {
+    vi.mocked(extractSessionToken).mockReturnValue(null);
+    const req = mockRequest();
+
+    await rbac(["super-admin"])(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({ statusCode: 401, code: "UNAUTHENTICATED" }),
+    );
+    expect(verifySessionToken).not.toHaveBeenCalled();
+    expect(req.user).toBeUndefined();
+  });
+
+  it("401s with UNAUTHENTICATED when the token is invalid", async () => {
+    vi.mocked(extractSessionToken).mockReturnValue("bad.token");
+    vi.mocked(verifySessionToken).mockResolvedValue({ ok: false, reason: "invalid_token" });
+    const req = mockRequest();
+
+    await rbac(["super-admin"])(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({ statusCode: 401, code: "UNAUTHENTICATED" }),
+    );
+    expect(req.user).toBeUndefined();
+  });
+
+  it("401s with UNAUTHENTICATED when the session is expired or revoked", async () => {
+    vi.mocked(extractSessionToken).mockReturnValue("stale.token");
+    vi.mocked(verifySessionToken).mockResolvedValue({ ok: false, reason: "session_expired" });
     const req = mockRequest();
 
     await rbac(["super-admin"])(req, res, next);
@@ -33,9 +61,12 @@ describe("rbac", () => {
   });
 
   it("403s with FORBIDDEN when the session's role isn't in the allowed list", async () => {
-    vi.mocked(auth.api.getSession).mockResolvedValue({
-      session: {} as never,
-      user: { id: "user-1", role: "order-manager" } as never,
+    vi.mocked(extractSessionToken).mockReturnValue("good.token");
+    vi.mocked(verifySessionToken).mockResolvedValue({
+      ok: true,
+      userId: "user-1",
+      role: "order-manager",
+      jti: "jti-1",
     });
     const req = mockRequest();
 
@@ -48,9 +79,12 @@ describe("rbac", () => {
   });
 
   it("attaches req.user and calls next() with no error when the role is allowed", async () => {
-    vi.mocked(auth.api.getSession).mockResolvedValue({
-      session: {} as never,
-      user: { id: "user-1", role: "catalog-manager" } as never,
+    vi.mocked(extractSessionToken).mockReturnValue("good.token");
+    vi.mocked(verifySessionToken).mockResolvedValue({
+      ok: true,
+      userId: "user-1",
+      role: "catalog-manager",
+      jti: "jti-1",
     });
     const req = mockRequest();
 
@@ -61,9 +95,12 @@ describe("rbac", () => {
   });
 
   it("accepts any role named in a multi-role allow-list", async () => {
-    vi.mocked(auth.api.getSession).mockResolvedValue({
-      session: {} as never,
-      user: { id: "user-2", role: "super-admin" } as never,
+    vi.mocked(extractSessionToken).mockReturnValue("good.token");
+    vi.mocked(verifySessionToken).mockResolvedValue({
+      ok: true,
+      userId: "user-2",
+      role: "super-admin",
+      jti: "jti-2",
     });
     const req = mockRequest();
 

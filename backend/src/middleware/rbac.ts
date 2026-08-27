@@ -1,7 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { auth } from "@/lib/auth";
 import { extractSessionToken, verifySessionToken } from "@/lib/session";
-import { buildFetchHeaders } from "@/utils/fetchHeaders";
 import { AppError } from "@/utils/AppError";
 import type { AdminRole } from "@/scripts/seed/createAdminUser";
 
@@ -9,8 +7,13 @@ import type { AdminRole } from "@/scripts/seed/createAdminUser";
 // for every /api/admin/* route. Generalizes requireRole.ts (#142/M3.4, which
 // this file replaces) from a single role to an allow-list, since catalog
 // routes need "catalog-manager OR super-admin" rather than one exact role.
-// auth.api.getSession({headers}) is already proven working end-to-end
-// against real CI via #142 — no new unverified Better Auth surface here.
+//
+// Issue #260/M3.22 — the guard now resolves the session solely through the
+// custom engine (src/lib/session.ts, Issue #257–259). The Better Auth
+// fallback #258 left in place for a still-Better-Auth-backed admin session
+// is gone: since #259 every admin session is issued by issueSession(), so
+// there is nothing left for that branch to catch, and this was the last
+// runtime consumer of src/lib/auth.ts.
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
@@ -37,44 +40,29 @@ export function rbac(roles: readonly Role[]) {
     _res: Response,
     next: NextFunction,
   ): Promise<void> {
-    // Issue #258/M3.20 — try the new session engine first (what a buyer
-    // signed in through Google/OTP now carries); fall back to Better Auth
-    // below for a still-Better-Auth-backed admin session. Additive only —
-    // the Better Auth branch beneath this is unchanged from before this
-    // issue. Only rbac(["buyer"]) (the /api/account/profile guard) actually
-    // takes this branch today; no buyer ever holds a token the catalog
-    // admin routes' rbac(CATALOG_ADMIN_ROLES) would accept regardless.
-    const newEngineToken = extractSessionToken(req);
-    if (newEngineToken) {
-      const result = await verifySessionToken(newEngineToken);
-      if (result.ok) {
-        if (!roles.includes(result.role as Role)) {
-          next(new AppError(403, "FORBIDDEN", `This action requires one of: ${roles.join(", ")}.`));
-          return;
-        }
-        req.user = { id: result.userId, role: result.role };
-        next();
-        return;
-      }
-    }
-
-    const session = await auth.api.getSession({ headers: buildFetchHeaders(req) });
-    if (!session?.user) {
+    const token = extractSessionToken(req);
+    if (!token) {
       next(new AppError(401, "UNAUTHENTICATED", "Sign in required."));
       return;
     }
-    // `role` is a custom additionalFields entry (auth.ts) — its runtime
-    // presence on a session's user is already proven by #139/#140's own
-    // passing get-session tests, but the TS type auth.api.getSession()
-    // infers for this server-side call may not statically include it.
-    const user = session.user as typeof session.user & { role?: string };
-    if (!roles.includes(user.role as Role)) {
+
+    // A malformed/forged token and an expired-or-revoked session both reject
+    // as 401 — verifySessionToken deliberately doesn't distinguish them
+    // (see src/lib/session.ts).
+    const result = await verifySessionToken(token);
+    if (!result.ok) {
+      next(new AppError(401, "UNAUTHENTICATED", "Sign in required."));
+      return;
+    }
+
+    if (!roles.includes(result.role as Role)) {
       next(
         new AppError(403, "FORBIDDEN", `This action requires one of: ${roles.join(", ")}.`),
       );
       return;
     }
-    req.user = { id: user.id, role: user.role };
+
+    req.user = { id: result.userId, role: result.role };
     next();
   };
 }
