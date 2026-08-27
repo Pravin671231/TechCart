@@ -112,6 +112,23 @@ export async function consumeEmailLimit(
   return consume(`email:${group}`, email.toLowerCase(), config.points, config.duration);
 }
 
+// Issue #258/M3.20 — the IP half of FR-AUTH-043/044 for the two buyer routes
+// that used to be covered by Better Auth's own native customRules (auth.ts)
+// before those paths were intercepted by hand-rolled routes ahead of the
+// Better Auth catch-all. That native per-request limiter never runs for a
+// path it no longer receives, so these two rules are replicated here.
+export type IpLimitGroup = "buyer-google-signin" | "buyer-otp-request";
+
+const IP_LIMIT_CONFIG: Record<IpLimitGroup, { points: number; duration: number }> = {
+  "buyer-google-signin": { points: 20, duration: 3600 }, // FR-AUTH-044 — was auth.ts's "/one-tap/callback" rule
+  "buyer-otp-request": { points: 5, duration: 600 }, // FR-AUTH-043 (IP half) — was auth.ts's "/email-otp/send-verification-otp" rule
+};
+
+export async function consumeIpLimit(group: IpLimitGroup, ip: string): Promise<ConsumeResult> {
+  const config = IP_LIMIT_CONFIG[group];
+  return consume(`ip:${group}`, ip, config.points, config.duration);
+}
+
 // Test-only: clears every limiter's in-process state between tests so
 // Supertest suites sharing one loopback IP/one fixture email don't bleed
 // rate-limit state across `it` blocks. Wired globally in vitest.setup.ts.

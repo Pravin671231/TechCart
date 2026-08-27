@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { auth } from "@/lib/auth";
+import { extractSessionToken, verifySessionToken } from "@/lib/session";
 import { buildFetchHeaders } from "@/utils/fetchHeaders";
 import { AppError } from "@/utils/AppError";
 import type { AdminRole } from "@/scripts/seed/createAdminUser";
@@ -36,6 +37,27 @@ export function rbac(roles: readonly Role[]) {
     _res: Response,
     next: NextFunction,
   ): Promise<void> {
+    // Issue #258/M3.20 — try the new session engine first (what a buyer
+    // signed in through Google/OTP now carries); fall back to Better Auth
+    // below for a still-Better-Auth-backed admin session. Additive only —
+    // the Better Auth branch beneath this is unchanged from before this
+    // issue. Only rbac(["buyer"]) (the /api/account/profile guard) actually
+    // takes this branch today; no buyer ever holds a token the catalog
+    // admin routes' rbac(CATALOG_ADMIN_ROLES) would accept regardless.
+    const newEngineToken = extractSessionToken(req);
+    if (newEngineToken) {
+      const result = await verifySessionToken(newEngineToken);
+      if (result.ok) {
+        if (!roles.includes(result.role as Role)) {
+          next(new AppError(403, "FORBIDDEN", `This action requires one of: ${roles.join(", ")}.`));
+          return;
+        }
+        req.user = { id: result.userId, role: result.role };
+        next();
+        return;
+      }
+    }
+
     const session = await auth.api.getSession({ headers: buildFetchHeaders(req) });
     if (!session?.user) {
       next(new AppError(401, "UNAUTHENTICATED", "Sign in required."));
