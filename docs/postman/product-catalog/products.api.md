@@ -10,7 +10,7 @@ A step-by-step guide to testing the Product core CRUD, pricing, and variant endp
 
 ## Prerequisites
 
-Same as [`uploads.api.md`](./uploads.api.md#prerequisites): backend running (`npm run dev --workspace backend`), `backend/.env` filled in, `admin_api_key` collection variable set.
+Same as [`uploads.api.md`](./uploads.api.md#prerequisites): backend running (`npm run dev --workspace backend`), `backend/.env` filled in, and an `admin_access_token` collection variable set from [`../authentication/auth.api.md`](../authentication/auth.api.md#one-time-postman-setup)'s admin sign-in (password + OTP, as a `catalog-manager` or `super-admin`).
 
 **Required setup, in order** — a product can't exist without these:
 
@@ -36,7 +36,7 @@ Creates a product — just its metadata. The slug is auto-generated from `name`.
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -90,7 +90,7 @@ Content-Type: application/json
 
 ### Error cases
 
-**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`, same shape as every other admin endpoint.
+**Missing or invalid bearer token:** `401 UNAUTHENTICATED` (or `403 FORBIDDEN` for a valid session whose role isn't `catalog-manager`/`super-admin`) — same shape as every other admin endpoint.
 
 **Missing a required field (e.g. `category`):**
 
@@ -155,7 +155,7 @@ Updates any editable field. All fields optional — send only what's changing.
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -188,7 +188,7 @@ Fetches a single product by id, at **any** status (`draft`, `published`, or `arc
 | URL    | `{{base_url}}/api/admin/products/{{product_id}}` |
 | Name   | `Get Product (Admin)`                            |
 
-**Headers tab:** `X-Admin-Key: {{admin_api_key}}`. No body.
+**Headers tab:** `Authorization: Bearer {{admin_access_token}}`. No body.
 
 **Click Send. Expected response — `200 OK`:** same shape as create's response, full field set.
 
@@ -230,7 +230,7 @@ Lists products at **any** status, paginated and sortable (`FR-CAT-005`) — the 
 | URL    | `{{base_url}}/api/admin/products` |
 | Name   | `List Products (Admin)`           |
 
-**Headers tab:** `X-Admin-Key: {{admin_api_key}}`. No body.
+**Headers tab:** `Authorization: Bearer {{admin_access_token}}`. No body.
 
 **Query params (all optional):**
 
@@ -331,7 +331,7 @@ Soft-deletes a product — flips `status` to `"archived"`; the document is **nev
 | URL    | `{{base_url}}/api/admin/products/{{product_id}}` |
 | Name   | `Delete Product`                                 |
 
-**Headers tab:** `X-Admin-Key: {{admin_api_key}}`. No body.
+**Headers tab:** `Authorization: Bearer {{admin_access_token}}`. No body.
 
 **Click Send. Expected response — `200 OK`:**
 
@@ -368,7 +368,7 @@ Sets the product's status directly to any of the three states (`FR-CAT-045`) —
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -389,7 +389,7 @@ Content-Type: application/json
 
 ### Error cases
 
-**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`.
+**Missing or invalid bearer token:** `401 UNAUTHENTICATED`.
 
 **Nonexistent id:** same `PRODUCT_NOT_FOUND` shape as `GET :id` above.
 
@@ -438,7 +438,7 @@ Adds a sellable variant to a product — its own SKU, attribute combination, pri
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -508,7 +508,7 @@ Content-Type: application/json
 
 ### Error cases
 
-**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`.
+**Missing or invalid bearer token:** `401 UNAUTHENTICATED`.
 
 **Nonexistent product id:** same `PRODUCT_NOT_FOUND` shape as `GET :id` above.
 
@@ -591,7 +591,7 @@ Updates any variant field, or deactivates it by setting `active: false` — a so
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -611,7 +611,7 @@ Content-Type: application/json
 
 ### Error cases
 
-**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`.
+**Missing or invalid bearer token:** `401 UNAUTHENTICATED`.
 
 **Nonexistent product id:** same `PRODUCT_NOT_FOUND` shape as `GET :id` above.
 
@@ -639,7 +639,7 @@ Content-Type: application/json
 
 ## `GET /api/products`
 
-Lists **published-only** products, paginated (`FR-CAT-054`). The first buyer-facing endpoint in this API — no `X-Admin-Key` header, and every response strips `status`/`createdBy`/`updatedBy` (`FR-CAT-095`). There is no `stock`/`lowStockThreshold`/`availability` anywhere in this system to strip (Issue #102) — every catalog entry is treated as always orderable.
+Lists **published-only** products, paginated (`FR-CAT-054`). The first buyer-facing endpoint in this API — no auth header, and every response strips `status`/`createdBy`/`updatedBy` (`FR-CAT-095`). There is no `stock`/`lowStockThreshold`/`availability` anywhere in this system to strip (Issue #102) — every catalog entry is treated as always orderable.
 
 | Field  | Value                       |
 | ------ | ----------------------------- |
@@ -838,7 +838,7 @@ No headers required, no body.
 
 ## Error Code Reference
 
-Product-specific codes, in addition to the ones already documented in [`uploads.api.md`](./uploads.api.md#error-code-reference) (`UNAUTHORIZED`, `VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR`, `OBJECT_KEY_NOT_ISSUED`, `IMAGE_COUNT_OUT_OF_BOUNDS`), [`brands.api.md`](./brands.api.md#error-code-reference) (`INVALID_ID`, `BRAND_NOT_FOUND`), [`categories.api.md`](./categories.api.md#error-code-reference) (`CATEGORY_NOT_FOUND`), and [`categorySpecifications.api.md`](./categorySpecifications.api.md#error-code-reference):
+Product-specific codes, in addition to the ones already documented in [`uploads.api.md`](./uploads.api.md#error-code-reference) (`UNAUTHENTICATED`, `FORBIDDEN`, `VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR`, `OBJECT_KEY_NOT_ISSUED`, `IMAGE_COUNT_OUT_OF_BOUNDS`), [`brands.api.md`](./brands.api.md#error-code-reference) (`INVALID_ID`, `BRAND_NOT_FOUND`), [`categories.api.md`](./categories.api.md#error-code-reference) (`CATEGORY_NOT_FOUND`), and [`categorySpecifications.api.md`](./categorySpecifications.api.md#error-code-reference):
 
 | Code                              | Status | Where it comes from                                                                                                                                                                                       | Reachable via an existing endpoint?                                       |
 | ---------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
@@ -863,4 +863,4 @@ Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-
 
 This document is a snapshot of Issues #31, #32, #33 (status endpoint), #34 (`search`/`status` filtering), #35 (buyer browsing), #36 (buyer filtering/sorting/card content), and #102 (SRS v0.2 amendment — variant-only pricing, folded into this same doc) — this is the full Product Catalog API (M2 + the #102 amendment) for this entity.
 
-No real authentication exists yet either (v0.3) — the `X-Admin-Key` header is explicitly a temporary placeholder, not a long-term design.
+Admin authentication is real session + RBAC — send `Authorization: Bearer <token>` from an admin sign-in (`src/middleware/rbac.ts`), see [`../authentication/auth.api.md`](../authentication/auth.api.md). The former `X-Admin-Key` placeholder was removed by Issue #143/M3.5.

@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing admin account provisioning in Postman.
 
-**Scope:** this document covers Issue #142 (M3.4 — admin account provisioning, `FR-AUTH-024`–`029`): a super-admin can create, list, and update further admin accounts over REST. Admin-only, no public/buyer surface — every route below requires a real session for a `role: "super-admin"` account (`rbac(["super-admin"])`, `src/middleware/rbac.ts`), not just any admin role. See [`../../../backend/CLAUDE.md`](../../../backend/CLAUDE.md)'s Admin Account Provisioning section for full implementation detail.
+**Scope:** this document covers admin account provisioning (`FR-AUTH-024`–`029`): a super-admin can create, list, and update further admin accounts over REST. Admin-only, no public/buyer surface — every route below requires a real session for a `role: "super-admin"` account (`rbac(["super-admin"])`, `src/middleware/rbac.ts`), resolved from TechCart's custom session engine (Better Auth was removed in Issues #258–#261; the routes and shapes here were unaffected). See [`../../../backend/CLAUDE.md`](../../../backend/CLAUDE.md)'s Admin Account Provisioning section for full implementation detail.
 
 ---
 
@@ -12,7 +12,7 @@ Same as [`../product-catalog/uploads.api.md`](../product-catalog/uploads.api.md#
 
 You need a real **super-admin** session before anything here works:
 
-1. Run `npm run seed:super-admin --workspace backend` once (reads `SUPER_ADMIN_EMAIL`/`SUPER_ADMIN_NAME`/`SUPER_ADMIN_PASSWORD` from the environment, with built-in defaults if unset) to get a real `role: "super-admin"` account into the database.
+1. Run `npm run seed:super-admin --workspace backend` once (reads `SUPER_ADMIN_EMAIL`/`SUPER_ADMIN_NAME`/`SUPER_ADMIN_PASSWORD` from the environment — **all three required, no fallback** since Issue #241/M3.13; the script exits non-zero naming whichever is missing) to get a real `role: "super-admin"` account into the database.
 2. Complete [`auth.api.md`](./auth.api.md#admin-sign-in-password--mandatory-otp)'s full password + OTP sign-in flow as that account.
 3. Confirm `admin_access_token` (the collection variable [`auth.api.md`](./auth.api.md#one-time-postman-setup) sets up) holds that super-admin's bearer token — every request below sends `Authorization: Bearer {{admin_access_token}}`.
 

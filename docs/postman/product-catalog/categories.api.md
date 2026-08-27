@@ -2,13 +2,13 @@
 
 A step-by-step guide to testing the Category management endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #28 (M2.4 — Category management, `FR-CAT-014`–`022`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-046`, `048` for this entity), Issue #34 (M2.10 — Admin search, `FR-CAT-051` for this entity), Issue #35 (M2.11 — Buyer browsing, `FR-CAT-055`, `066` for this entity), and Issue #36 (M2.12 — Buyer filtering & sorting, `FR-CAT-070`–`076`, `092` for this entity's `:slug/products` route): the five admin CRUD endpoints under `/api/admin/categories`, the status-toggle endpoint, `search` on the admin list, the public `GET /api/categories`, `GET /api/categories/search`, and `GET /api/categories/:slug/products` (this last one returns *product* data and shares the full buyer filter/sort surface — see [`products.api.md`](./products.api.md), the module its controller actually lives in). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup (`base_url`, `admin_api_key` variables); see [`brands.api.md`](./brands.api.md) for the sibling entity this module closely mirrors. This doc assumes collection setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #28 (M2.4 — Category management, `FR-CAT-014`–`022`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-046`, `048` for this entity), Issue #34 (M2.10 — Admin search, `FR-CAT-051` for this entity), Issue #35 (M2.11 — Buyer browsing, `FR-CAT-055`, `066` for this entity), and Issue #36 (M2.12 — Buyer filtering & sorting, `FR-CAT-070`–`076`, `092` for this entity's `:slug/products` route): the five admin CRUD endpoints under `/api/admin/categories`, the status-toggle endpoint, `search` on the admin list, the public `GET /api/categories`, `GET /api/categories/search`, and `GET /api/categories/:slug/products` (this last one returns *product* data and shares the full buyer filter/sort surface — see [`products.api.md`](./products.api.md), the module its controller actually lives in). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup (`base_url` variable); the admin routes here send `Authorization: Bearer {{admin_access_token}}` from [`../authentication/auth.api.md`](../authentication/auth.api.md)'s admin sign-in. See [`brands.api.md`](./brands.api.md) for the sibling entity this module closely mirrors. This doc assumes collection setup is already done and reuses the same collection.
 
 ---
 
 ## Prerequisites
 
-Same as [`uploads.api.md`](./uploads.api.md#prerequisites): backend running (`npm run dev --workspace backend`), `backend/.env` filled in, `admin_api_key` collection variable set. A category's `image` field is optional and, if you want to test it, requires first getting an `objectKey` from `POST /api/admin/uploads/presign` or `POST /api/admin/uploads/direct` with `"purpose": "category-image"` (see that doc) — a category create/update rejects any `objectKey` that wasn't actually issued by one of those two endpoints.
+Same as [`uploads.api.md`](./uploads.api.md#prerequisites): backend running (`npm run dev --workspace backend`), `backend/.env` filled in, and an `admin_access_token` collection variable set from [`../authentication/auth.api.md`](../authentication/auth.api.md#one-time-postman-setup)'s admin sign-in (password + OTP, as a `catalog-manager` or `super-admin`). A category's `image` field is optional and, if you want to test it, requires first getting an `objectKey` from `POST /api/admin/uploads/presign` or `POST /api/admin/uploads/direct` with `"purpose": "category-image"` (see that doc) — a category create/update rejects any `objectKey` that wasn't actually issued by one of those two endpoints.
 
 **Optional collection variables:** add `category_id` and `parent_category_id` (leave both empty) so you can paste created categories' `_id`s into them and reuse `{{category_id}}`/`{{parent_category_id}}` across the requests below — you'll need two categories to exercise the hierarchy behavior (a top-level one to use as a parent, and a second one to assign it to).
 
@@ -55,7 +55,7 @@ Creates a category. The slug is auto-generated from `name` server-side, same as 
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -113,7 +113,7 @@ Paste the returned `_id` into `category_id` (this becomes your top-level `parent
 
 ### Error cases
 
-**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`, same shape as every other admin endpoint (see [Error Code Reference](#error-code-reference)).
+**Missing or invalid bearer token:** `401 UNAUTHENTICATED` (or `403 FORBIDDEN` for a valid session whose role isn't `catalog-manager`/`super-admin`) — same shape as every other admin endpoint (see [Error Code Reference](#error-code-reference)).
 
 **Missing `name`:**
 
@@ -184,7 +184,7 @@ Updates `name`, `description`, `parentCategory`, `image`, `sortOrder`, `metaTitl
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -258,7 +258,7 @@ Toggles the category's boolean `status` (`FR-CAT-046`) — active/inactive, not 
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -276,7 +276,7 @@ Content-Type: application/json
 
 ### Error cases
 
-**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`.
+**Missing or invalid bearer token:** `401 UNAUTHENTICATED`.
 
 **Nonexistent id:** same `CATEGORY_NOT_FOUND` shape as `GET :id` above.
 
@@ -308,7 +308,7 @@ Lists every category, any status, each with its `parentCategory` and its product
 | URL    | `{{base_url}}/api/admin/categories`  |
 | Name   | `List Categories (Admin)`            |
 
-**Headers tab:** `X-Admin-Key: {{admin_api_key}}`. No body.
+**Headers tab:** `Authorization: Bearer {{admin_access_token}}`. No body.
 
 **Query params (all optional):**
 
@@ -372,7 +372,7 @@ Fetches a single category by id, any status.
 | URL    | `{{base_url}}/api/admin/categories/{{category_id}}`    |
 | Name   | `Get Category (Admin)`                                 |
 
-**Headers tab:** `X-Admin-Key: {{admin_api_key}}`.
+**Headers tab:** `Authorization: Bearer {{admin_access_token}}`.
 
 **Click Send. Expected response — `200 OK`:** same shape as a single item from the list above, minus `productCount`.
 
@@ -414,7 +414,7 @@ Deletes a category — but only if it has **zero** products directly assigned to
 | URL    | `{{base_url}}/api/admin/categories/{{category_id}}`    |
 | Name   | `Delete Category`                                      |
 
-**Headers tab:** `X-Admin-Key: {{admin_api_key}}`. No body.
+**Headers tab:** `Authorization: Bearer {{admin_access_token}}`. No body.
 
 **Click Send. Expected response — `200 OK`:**
 
@@ -459,7 +459,7 @@ Deletes a category — but only if it has **zero** products directly assigned to
 
 ## `GET /api/categories`
 
-Public, buyer-facing category list — active categories only, ordered, display fields only. No `X-Admin-Key` needed.
+Public, buyer-facing category list — active categories only, ordered, display fields only. No auth header needed.
 
 | Field  | Value                       |
 | ------ | ------------------------------ |
@@ -576,7 +576,7 @@ No headers, no body. **Every filter/sort param `GET /api/products` accepts also 
 
 ## Error Code Reference
 
-Category-specific codes, in addition to the ones already documented in [`uploads.api.md`](./uploads.api.md#error-code-reference) (`UNAUTHORIZED`, `VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR`, `OBJECT_KEY_NOT_ISSUED`) and [`brands.api.md`](./brands.api.md#error-code-reference) (`INVALID_ID`):
+Category-specific codes, in addition to the ones already documented in [`uploads.api.md`](./uploads.api.md#error-code-reference) (`UNAUTHENTICATED`, `FORBIDDEN`, `VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR`, `OBJECT_KEY_NOT_ISSUED`) and [`brands.api.md`](./brands.api.md#error-code-reference) (`INVALID_ID`):
 
 | Code                         | Status | Where it comes from                                                                                                                                                     | Reachable via an existing endpoint?                                         |
 | ---------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
@@ -599,4 +599,4 @@ Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-
 
 This document is a snapshot of Issue #28 (plus #33's status endpoint, #34's `search` param, #35's `/search`+`/:slug/products` routes, and #36's filter/sort surface on `/:slug/products`, folded into this same doc) — this is the full Product Catalog API (M2) for this entity; M2 closed with #36. Category-governed specifications (`#29`) is now covered in [`categorySpecifications.api.md`](./categorySpecifications.api.md), category-governed variant types (`#30`) in [`categoryVariants.api.md`](./categoryVariants.api.md) — together they cover both halves of `DELETE`'s cascade clause — and product core CRUD plus product variants (`#31`, `#32`) in [`products.api.md`](./products.api.md), which also completes `DELETE`'s product half of the `CATEGORY_IN_USE` guard above.
 
-No real authentication exists yet either (v0.3) — the `X-Admin-Key` header is explicitly a temporary placeholder, not a long-term design.
+Admin authentication is real session + RBAC — send `Authorization: Bearer <token>` from an admin sign-in (`src/middleware/rbac.ts`), see [`../authentication/auth.api.md`](../authentication/auth.api.md). The former `X-Admin-Key` placeholder was removed by Issue #143/M3.5.

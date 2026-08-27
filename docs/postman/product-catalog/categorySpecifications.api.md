@@ -8,7 +8,7 @@ A step-by-step guide to testing the Category Specifications endpoints in Postman
 
 ## Prerequisites
 
-Same as [`uploads.api.md`](./uploads.api.md#prerequisites): backend running (`npm run dev --workspace backend`), `backend/.env` filled in, `admin_api_key` collection variable set.
+Same as [`uploads.api.md`](./uploads.api.md#prerequisites): backend running (`npm run dev --workspace backend`), `backend/.env` filled in, and an `admin_access_token` collection variable set from [`../authentication/auth.api.md`](../authentication/auth.api.md#one-time-postman-setup)'s admin sign-in (password + OTP, as a `catalog-manager` or `super-admin`).
 
 **Required collection variable:** add `category_id` (or reuse the one from [`categories.api.md`](./categories.api.md#prerequisites)) — every request here is scoped to an existing category via `:id` in the URL. Create a category first via `POST /api/admin/categories` if you don't already have one.
 
@@ -24,7 +24,7 @@ Reads a category's current specification schema.
 | URL    | `{{base_url}}/api/admin/categories/{{category_id}}/specifications` |
 | Name   | `Get Category Specifications`                                  |
 
-**Headers tab:** `X-Admin-Key: {{admin_api_key}}`. No body.
+**Headers tab:** `Authorization: Bearer {{admin_access_token}}`. No body.
 
 **Click Send. Expected response — `200 OK`** (before any schema has been defined):
 
@@ -82,7 +82,7 @@ Defines or fully replaces the schema — every group and field, in one request, 
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -116,7 +116,7 @@ Content-Type: application/json
 
 ### Error cases
 
-**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`, same shape as every other admin endpoint.
+**Missing or invalid bearer token:** `401 UNAUTHENTICATED` (or `403 FORBIDDEN` for a valid session whose role isn't `catalog-manager`/`super-admin`) — same shape as every other admin endpoint.
 
 **`filterable: true` on a `"text"` field:**
 
@@ -183,7 +183,7 @@ Targeted updates — rename or delete a group, replace or delete a single field 
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -308,7 +308,7 @@ Removes the field. **Guarded** — rejected if any product references it (see be
 
 ## Error Code Reference
 
-Codes specific to this resource, in addition to the ones already documented in [`uploads.api.md`](./uploads.api.md#error-code-reference) (`UNAUTHORIZED`, `VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR`) and [`brands.api.md`](./brands.api.md#error-code-reference) (`INVALID_ID`):
+Codes specific to this resource, in addition to the ones already documented in [`uploads.api.md`](./uploads.api.md#error-code-reference) (`UNAUTHENTICATED`, `FORBIDDEN`, `VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR`) and [`brands.api.md`](./brands.api.md#error-code-reference) (`INVALID_ID`):
 
 | Code                          | Status | Where it comes from                                                                        | Reachable via an existing endpoint?                    |
 | ------------------------------ | ------ | --------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
@@ -335,4 +335,4 @@ This document is a snapshot of Issue #29 — not the full Product Catalog API. C
 - Buyer browsing/search/inventory visibility (`#35`)
 - Buyer filtering, sorting, and card content (`#36`) — this is where `filterable` fields actually become buyer-facing facets and card content
 
-No real authentication exists yet either (v0.3) — the `X-Admin-Key` header is explicitly a temporary placeholder, not a long-term design.
+Admin authentication is real session + RBAC — send `Authorization: Bearer <token>` from an admin sign-in (`src/middleware/rbac.ts`), see [`../authentication/auth.api.md`](../authentication/auth.api.md). The former `X-Admin-Key` placeholder was removed by Issue #143/M3.5.

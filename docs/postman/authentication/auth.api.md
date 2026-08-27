@@ -2,9 +2,9 @@
 
 A step-by-step guide to testing buyer and admin sign-in, session, and password-reset endpoints in Postman.
 
-**Scope:** this document covers Issue #139 (M3.1 — buyer passwordless authentication, `FR-AUTH-001`–`008`, `046`), Issue #140 (M3.2 — admin password + mandatory OTP sign-in, `FR-AUTH-009`–`018`, `030`), and Issue #141 (M3.3 — admin self-service password reset, `FR-AUTH-019`–`022`). Every route below rides Better Auth's own handler (`src/lib/auth.ts`), mounted as a catch-all at `/api/auth/*` and bridged into this repo's `{success, data}` / `{success, code, message}` contract by `src/middleware/betterAuthHandler.ts` — see [`../../../backend/CLAUDE.md`](../../../backend/CLAUDE.md)'s Authentication (Buyer)/(Admin)/Admin Password Reset sections for full implementation detail.
+**Scope:** this document covers buyer passwordless authentication (`FR-AUTH-001`–`008`, `046`), admin password + mandatory OTP sign-in (`FR-AUTH-009`–`018`, `030`), and admin self-service password reset (`FR-AUTH-019`–`022`). Every `/api/auth/*` route is hand-rolled on TechCart's own custom session/OTP engine (`src/modules/authentication/auth/{routes,controller,service,repository}.ts` on top of `src/lib/{session,jwt,otp,googleAuth,password,adminChallenge}.ts`) — Better Auth was replaced entirely by Issues #258–#261/M3.19–23, and `src/lib/auth.ts` / `src/middleware/betterAuthHandler.ts` no longer exist. See [`../../../backend/CLAUDE.md`](../../../backend/CLAUDE.md)'s Authentication (Buyer)/(Admin)/Admin Password Reset sections for full implementation detail. Every request/response shape below was cross-checked against `backend/__tests__/authentication/**` (Supertest suites that boot the real Express app + a real in-memory MongoDB), verified against Issue #264/M3.26.
 
-**Bearer token, not just a cookie.** `buyer-app` (Vercel) and `backend` (Render) are separate domains with no shared parent domain, so a cross-site cookie doesn't reliably survive a real deployed `fetch` — Safari blocks third-party cookies outright. Every sign-in response below also returns a `set-auth-token` response header (Better Auth's `bearer` plugin); a client resends that value as `Authorization: Bearer <token>` on every later request. This doc documents the bearer-token flow as the primary path, since it's what actually works cross-domain and what `buyer-app`/`admin-app` use — the cookie session still gets set too, and Postman's own cookie jar will carry it automatically between requests made from the same collection/agent against `localhost`, but that's a same-origin convenience, not the mechanism this system depends on.
+**Bearer token, not just a cookie.** `buyer-app` (Vercel) and `backend` (Render) are separate domains with no shared parent domain, so a cross-site cookie doesn't reliably survive a real deployed `fetch` — Safari blocks third-party cookies outright. Every sign-in response below also returns a `set-auth-token` response header (`src/lib/session.ts` issues the session as both a cookie and this header); a client resends that value as `Authorization: Bearer <token>` on every later request. This doc documents the bearer-token flow as the primary path, since it's what actually works cross-domain and what `buyer-app`/`admin-app` use — the cookie session still gets set too, and Postman's own cookie jar will carry it automatically between requests made from the same collection/agent against `localhost`, but that's a same-origin convenience, not the mechanism this system depends on.
 
 See [`../product-catalog/uploads.api.md`](../product-catalog/uploads.api.md) for `GET /health` and the general collection setup this doc assumes is already done.
 
@@ -12,7 +12,7 @@ See [`../product-catalog/uploads.api.md`](../product-catalog/uploads.api.md) for
 
 ## Prerequisites
 
-Same as [`uploads.api.md`](../product-catalog/uploads.api.md#prerequisites): backend running (`npm run dev --workspace backend`), `backend/.env` filled in. This module additionally needs `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MAILTRAP_HOST`, `MAILTRAP_PORT`, `MAILTRAP_USER`, `MAILTRAP_PASS`, `MAILTRAP_FROM_EMAIL` set (`src/config/env.ts` refuses to boot without them, same "all required, validated at startup" behavior as the R2 vars).
+Same as [`uploads.api.md`](../product-catalog/uploads.api.md#prerequisites): backend running (`npm run dev --workspace backend`), `backend/.env` filled in. This module additionally needs `JWT_SECRET` (≥32 chars — the sole token-signing secret), `APP_BASE_URL` (the backend's own public URL; `https://` there switches the session/2FA cookies to `SameSite=None; Secure`), `REDIS_URL` (Upstash Redis-protocol string, for the auth rate limiters), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MAILTRAP_HOST`, `MAILTRAP_PORT`, `MAILTRAP_USER`, `MAILTRAP_PASS`, `MAILTRAP_FROM_EMAIL` set (`src/config/env.ts` refuses to boot without them, same "all required, validated at startup" behavior as the R2 vars). `BETTER_AUTH_SECRET`/`BETTER_AUTH_URL` no longer exist — Issue #261/M3.23 removed them (`APP_BASE_URL` is the rename of the latter).
 
 **Buyer and admin sign-in/2FA OTP codes are fixed to `123456` in every environment, including production (Issue #242/M3.14)** — a deliberate, pre-launch-only tradeoff (not a real security posture), documented in `backend/CLAUDE.md`'s Authentication (Buyer)/(Admin) sections. Submitting `123456` at any OTP-verify step below always succeeds; **no real inbox access is needed to test those flows anymore.** The password-reset *link* (`POST /api/auth/request-password-reset`, below) is unaffected — that's still a real, random token, actually emailed via Mailtrap (`src/externalService/mailer.ts`), not returned in any API response. To read that link by hand in Postman, either point `MAILTRAP_FROM_EMAIL`/your test inbox at something you can actually read (Mailtrap's own sandbox inbox works directly, no domain verification needed), or watch the backend's own console — nothing in this repo echoes the reset link back to the HTTP response. This is a real, accepted limitation of testing the reset-link step by hand, not a documentation gap.
 
@@ -29,7 +29,7 @@ Beyond `uploads.api.md`'s `base_url` variable, add two more **empty** collection
 | `buyer_access_token`  | _(leave empty)_  | _(paste a buyer sign-in response's `set-auth-token`)_ |
 | `admin_access_token`  | _(leave empty)_  | _(paste an admin sign-in response's `set-auth-token`)_|
 
-There's no Postman test script wiring these up automatically — same "pure manual walkthrough, no exported collection" convention every file in this folder follows. After each sign-in call below that returns a `set-auth-token` header, copy its value into the matching variable by hand (Postman's response pane's **Headers** tab shows it) so [`adminUsers.api.md`](./adminUsers.api.md) and [`account.api.md`](./account.api.md) can reuse it.
+There's no Postman test script wiring these up automatically — same "pure manual walkthrough, no exported collection" convention every file in this folder follows. After each sign-in call below that returns a `set-auth-token` header, copy its value into the matching variable by hand (Postman's response pane's **Headers** tab shows it). `admin_access_token` is what [`adminUsers.api.md`](./adminUsers.api.md), [`account.api.md`](./account.api.md), and every `../product-catalog/*.api.md` admin request send as `Authorization: Bearer {{admin_access_token}}`; a session token expires on a rolling 30-day window, so re-run the admin sign-in to refresh it if requests start returning `401 UNAUTHENTICATED`.
 
 ---
 
@@ -61,12 +61,12 @@ Requests a one-time sign-in code by email (`FR-AUTH-002`).
 ```json
 {
   "success": true,
-  "data": {}
+  "data": null
 }
 ```
 
 - The actual code is fixed to `123456` in every environment — submit that value at the verify step below, no need to check an inbox. See [Prerequisites](#prerequisites).
-- The code expires in **10 minutes** (`FR-AUTH-007`, `emailOTP({expiresIn: 600})`).
+- The code expires in **10 minutes** (`FR-AUTH-007`, `src/lib/otp.ts`'s `OTP_TTL_MS`).
 
 ### Error cases
 
@@ -84,7 +84,7 @@ Requests a one-time sign-in code by email (`FR-AUTH-002`).
 }
 ```
 
-(Despite the code's name, this same check guards the buyer email-OTP send/verify paths too, not just Google sign-in — see [Error Code Reference](#error-code-reference).)
+(Despite the code's name, `auth.service.ts`'s `rejectIfNonBuyer` guards every buyer sign-in path — email-OTP send **and** verify, and One Tap — not just Google sign-in. See [Error Code Reference](#error-code-reference).)
 
 ---
 
@@ -115,27 +115,22 @@ Verifies the code from the previous step and signs in — creating a new `role: 
 {
   "success": true,
   "data": {
-    "user": {
-      "id": "66a1f0c9e4b0a1a2b3c4d5e6",
-      "email": "buyer@example.com",
-      "name": "buyer@example.com",
-      "role": "buyer",
-      "emailVerified": true
-    },
-    "token": "raw-session-token-value...",
-    "redirect": false
+    "id": "66a1f0c9e4b0a1a2b3c4d5e6",
+    "name": "buyer@example.com",
+    "email": "buyer@example.com",
+    "role": "buyer"
   }
 }
 ```
 
-**Response Headers tab** — copy `set-auth-token`'s value into the `buyer_access_token` collection variable (see [One-Time Postman Setup](#one-time-postman-setup)). A `Set-Cookie` header is also present; Postman's cookie jar handles it automatically if you keep testing from the same collection.
-
-- A client-submitted `role` in the body is silently ignored — every new account is always `role: "buyer"` (`FR-AUTH-004`; `additionalFields.role` is `input: false` in `src/lib/auth.ts`).
-- Signing in with the same email a second time (whether by this method or Google) resolves to the same account id, not a duplicate (`FR-AUTH-005`).
+- `data` is the session user directly — `{ id, name, email, role }`, plus `phone` once the buyer sets one via [`account.api.md`](./account.api.md#patch-apiaccountprofile). There is no `token`/`redirect` wrapper (that was Better Auth's shape); the session token is delivered only via the `set-auth-token` header and the session cookie.
+- **Response Headers tab** — copy `set-auth-token`'s value into the `buyer_access_token` collection variable (see [One-Time Postman Setup](#one-time-postman-setup)). A `Set-Cookie: techcart_session=…` header is also present; Postman's cookie jar handles it automatically if you keep testing from the same collection.
+- A client-submitted `role` in the body is silently ignored — every new account is always `role: "buyer"` (`FR-AUTH-004`; `auth.repository.ts`'s `createBuyer` always writes `role: "buyer"`).
+- Signing in with the same email a second time (whether by this method or Google One Tap) resolves to the same account id, not a duplicate (`FR-AUTH-005`).
 
 ### Error cases
 
-**Wrong or already-used code** (confirmed against Better Auth's own `emailOTP` plugin source, `atomicVerifyOTP()`):
+**Wrong or already-consumed code** (`auth.service.ts`'s `verifyBuyerOtp` → `otp.ts`'s `verifyOtp`; a wrong code and a reused one are deliberately indistinguishable):
 
 ```
 400 Bad Request
@@ -145,7 +140,7 @@ Verifies the code from the previous step and signs in — creating a new `role: 
 {
   "success": false,
   "code": "INVALID_OTP",
-  "message": "Invalid OTP"
+  "message": "Incorrect or expired code."
 }
 ```
 
@@ -159,25 +154,13 @@ Verifies the code from the previous step and signs in — creating a new `role: 
 {
   "success": false,
   "code": "OTP_EXPIRED",
-  "message": "OTP expired"
+  "message": "This code has expired. Request a new one."
 }
 ```
 
-**More than 3 wrong attempts against the same code** (`allowedAttempts` default):
+There is **no per-code attempt limit** — `otp.ts` only hashes-and-compares. Hammering the endpoint instead trips the per-IP / per-email rate limiter (`429 RATE_LIMITED`, see [Error Code Reference](#error-code-reference)).
 
-```
-403 Forbidden
-```
-
-```json
-{
-  "success": false,
-  "code": "TOO_MANY_ATTEMPTS",
-  "message": "Too many attempts"
-}
-```
-
-**Email belongs to an already-registered admin account:** identical `403 GOOGLE_ACCOUNT_IS_ADMIN` as the send-OTP step — this is the one gap `validateUserInfo`'s OAuth/One-Tap check doesn't cover on its own (a *returning* OTP sign-in for an already-existing account), closed by a dedicated `hooks.before` matcher in `src/lib/auth.ts`.
+**Email belongs to an already-registered admin account:** identical `403 GOOGLE_ACCOUNT_IS_ADMIN` as the send-OTP step — `auth.service.ts`'s `rejectIfNonBuyer` runs first on both the send and the verify path.
 
 ---
 
@@ -201,36 +184,17 @@ Google One Tap sign-in (`FR-AUTH-001`, `003`) — verifies a Google-issued ID to
 }
 ```
 
-**Not directly testable by hand in Postman** — `idToken` must be a real, signature-valid Google ID token from an actual One Tap sign-in in a browser; there's no way to fabricate one here. Documented for completeness (shape and response match the OTP-verify response above, minus `redirect`).
+**Not directly testable by hand in Postman** — `idToken` must be a real, signature-valid Google ID token from an actual One Tap sign-in in a browser (`src/lib/googleAuth.ts` verifies it against Google's public JWKS); there's no way to fabricate one here. Documented for completeness — the success response is the bare session-user object, identical shape to the email-OTP verify response above, plus the `set-auth-token` header.
 
 ### Error cases
 
-Same `GOOGLE_ACCOUNT_IS_ADMIN` (403) as the OTP paths above, when the token's email belongs to an existing admin account.
+Same `GOOGLE_ACCOUNT_IS_ADMIN` (403) as the OTP paths above, when the token's email belongs to an existing admin account. An unverifiable token returns `401 INVALID_GOOGLE_TOKEN`.
 
 ---
 
-### `POST /api/auth/sign-in/social` + `GET /api/auth/callback/google`
+### Google OAuth full-page redirect — **not available**
 
-Google OAuth sign-in (`FR-AUTH-001`, `003`) — a full browser redirect flow, **not directly Postman-testable end-to-end**. Documented here for completeness only.
-
-| Field  | Value                                                          |
-| ------ | ----------------------------------------------------------------- |
-| Method | `POST`                                                             |
-| URL    | `{{base_url}}/api/auth/sign-in/social`                             |
-| Name   | `Buyer — Start Google OAuth`                                       |
-
-**Body tab → raw → JSON:**
-
-```json
-{
-  "provider": "google",
-  "callbackURL": "http://localhost:3000/"
-}
-```
-
-**Response — `200 OK`:** `{"success": true, "data": {"url": "https://accounts.google.com/o/oauth2/v2/auth?...", "redirect": true}}` — `data.url` is where a real browser would be sent next. Postman can fetch this URL, but Google itself will refuse a non-interactive/scripted authorization — the round trip through Google's consent screen and back to `GET /api/auth/callback/google?state=...&code=...` needs a real browser, not something this manual carries you through.
-
-- **Known, documented limitation** (unchanged since Issue #139): a redirect response's headers aren't readable by frontend JS the way a `fetch` response's are, so the OAuth path specifically needs its own token-exchange technique once a real sign-in UI is built — One Tap and email-OTP both get the bearer token cleanly since they're direct JSON calls.
+The full-page Google OAuth redirect flow (`POST /api/auth/sign-in/social` + `GET /api/auth/callback/google`) was **not rebuilt** on the custom session engine — Issue #258/M3.20 only ported the direct-JSON buyer paths (One Tap + email OTP), and Issue #260/M3.22 removed the Better Auth catch-all that used to serve those routes. Both now return `404 NOT_FOUND`. One Tap and email OTP are the only buyer sign-in paths.
 
 ---
 
@@ -430,11 +394,17 @@ Resolves the current session from either a bearer token or a cookie.
 {
   "success": true,
   "data": {
-    "user": { "id": "66a1f0c9e4b0a1a2b3c4d5e6", "email": "buyer@example.com", "role": "buyer" },
-    "session": { "id": "...", "userId": "...", "expiresAt": "2026-08-30T10:00:00.000Z" }
+    "user": {
+      "id": "66a1f0c9e4b0a1a2b3c4d5e6",
+      "name": "buyer@example.com",
+      "email": "buyer@example.com",
+      "role": "buyer"
+    }
   }
 }
 ```
+
+- `data.user` is the same session-user shape the sign-in responses return (`+ phone` if set). There is **no `session` key** — `auth.controller.ts`'s `getSessionHandler` returns `{ user }` only.
 
 **With no `Authorization` header, an invalid token, or an already-signed-out token:** `200 OK`, `{"success": true, "data": null}` — this endpoint never 401s itself, it just reports "no session" as a null payload. Every other route in this codebase treats `data: null` from this call as "not signed in."
 
@@ -452,13 +422,13 @@ Invalidates the current session (cookie and/or the bearer token that made this r
 
 **Headers tab:** `Authorization: Bearer {{buyer_access_token}}` (or `{{admin_access_token}}`). **Body:** `{}`.
 
-**Click Send. Expected response — `200 OK`:** `{"success": true, "data": {}}`. A subsequent `GET /api/auth/get-session` with the same token now returns `data: null` (`FR-AUTH-017`).
+**Click Send. Expected response — `200 OK`:** `{"success": true, "data": null}`. Idempotent — a missing or already-invalid token is still a `200`. A subsequent `GET /api/auth/get-session` with the same token now returns `data: null` (`FR-AUTH-017`).
 
 ---
 
 ## Admin Password Reset
 
-Self-service recovery for an admin who forgets the password from the sign-in flow above (`FR-AUTH-019`–`022`). Since Issue #259/M3.21 both endpoints are hand-rolled on the custom session engine (no Better Auth), against a private `passwordResetTokens` collection.
+Self-service recovery for an admin who forgets the password from the sign-in flow above (`FR-AUTH-019`–`022`). Both endpoints are hand-rolled in `auth.service.ts` on the custom session engine, against a private `passwordResetTokens` collection.
 
 ### `POST /api/auth/request-password-reset`
 
@@ -481,12 +451,12 @@ Self-service recovery for an admin who forgets the password from the sign-in flo
 ```json
 {
   "success": true,
-  "data": {}
+  "data": { "status": "ok" }
 }
 ```
 
-- **No-enumeration guarantee (`FR-AUTH-019`):** a registered admin's email, a registered buyer's email, and a completely unregistered email all get this exact `200`/`{}` response — try all three and compare. The email is only actually sent for a non-buyer (admin) account; a buyer submitting their own email here gets the identical response but no email, since buyers have no password to reset.
-- The reset link is `<CORS_ORIGINS[0]>/reset-password?token=<token>` — the `token` query param is what `POST /api/auth/reset-password` needs. Unlike the sign-in/2FA OTP codes above, this token is still real/random, not fixed — password reset was out of scope for Issue #242/M3.14's fixed-OTP change. In a Postman-only workflow it's verifiable by response shape only unless you can read the Mailtrap inbox the email delivers to.
+- **No-enumeration guarantee (`FR-AUTH-019`):** a registered admin's email, a registered buyer's email, and a completely unregistered email all get this exact `200` / `{ "status": "ok" }` response — try all three and compare. The email is only actually sent for a non-buyer (admin) account; a buyer submitting their own email here gets the identical response but no email, since buyers have no password to reset.
+- The reset link is `<CORS_ORIGINS[0] or APP_BASE_URL>/reset-password?token=<token>` — the `token` query param is what `POST /api/auth/reset-password` needs. Unlike the sign-in/2FA OTP codes above, this token is a real 32-byte random value, not fixed. In a Postman-only workflow it's verifiable by response shape only unless you can read the Mailtrap inbox the email delivers to (or the backend console).
 
 ---
 
@@ -509,7 +479,7 @@ Self-service recovery for an admin who forgets the password from the sign-in flo
 }
 ```
 
-**Click Send. Expected response — `200 OK`:** `{"success": true, "data": {}}`.
+**Click Send. Expected response — `200 OK`:** `{"success": true, "data": { "status": "ok" }}`.
 
 - **Invalidates every existing session for that admin** (`FR-AUTH-022`) — a bearer token obtained before the reset stops working on the very next `GET /api/auth/get-session` call.
 - The new password works immediately on [`POST /api/auth/sign-in/email`](#post-apiauthsign-inemail) above (still followed by the same mandatory OTP step — no bypass).
@@ -536,20 +506,19 @@ Self-service recovery for an admin who forgets the password from the sign-in flo
 
 | Code                                  | Status  | Where it comes from                                                                                  | Reachable via an existing endpoint? |
 | -------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------- |
-| `GOOGLE_ACCOUNT_IS_ADMIN`              | 403     | `src/lib/auth.ts`'s `rejectIfNonBuyerEmail`/`rejectAdminEmailOnReturningOtpSignIn` — a buyer sign-in attempt (any method) on an email already registered as a non-buyer account | Yes                                   |
+| `GOOGLE_ACCOUNT_IS_ADMIN`              | 403     | `auth.service.ts`'s `rejectIfNonBuyer` — a buyer sign-in attempt (One Tap, or email-OTP send **or** verify) on an email already registered as a non-buyer account | Yes                                   |
+| `INVALID_GOOGLE_TOKEN`                 | 401     | `auth.service.ts`'s `signInWithGoogle` — the One Tap `idToken` failed JWKS verification (`src/lib/googleAuth.ts`) | Only with a real, invalid Google token |
 | `INVALID_EMAIL_OR_PASSWORD`            | 401     | `auth.service.ts`'s `adminPasswordSignIn` (`/sign-in/email`) — wrong password, unknown email, or a `role:"buyer"` account, all indistinguishable | Yes                                   |
 | `ACCOUNT_DEACTIVATED`                  | 403     | `auth.service.ts` — `/sign-in/email` for an admin whose `status` is `false` (checked ahead of the password); also the buyer OTP-request path                | Yes                                   |
 | `INVALID_TWO_FACTOR_COOKIE`            | 401     | `auth.controller.ts` — `/two-factor/send-otp` or `/verify-otp` with no valid `techcart_admin_2fa` challenge cookie | Yes                                   |
-| `INVALID_OTP`                          | 400     | Better Auth's `emailOTP` plugin (`atomicVerifyOTP`) — buyer OTP verify, wrong or already-consumed code | Yes                                   |
-| `OTP_EXPIRED`                          | 400     | Better Auth's `emailOTP` plugin — buyer OTP verify, code older than its 10-minute expiry               | Yes                                   |
-| `TOO_MANY_ATTEMPTS`                    | 403     | Better Auth's `emailOTP` plugin — buyer OTP verify, more than 3 wrong attempts against the same code   | Yes                                   |
+| `INVALID_OTP`                          | 400     | `auth.service.ts`'s `verifyBuyerOtp` → `src/lib/otp.ts`'s `verifyOtp` — buyer OTP verify, wrong or already-consumed code | Yes                                   |
+| `OTP_EXPIRED`                          | 400     | `auth.service.ts`'s `verifyBuyerOtp` — buyer OTP verify, code older than its 10-minute expiry           | Yes                                   |
 | `INVALID_CODE`                         | 401     | `auth.service.ts`'s `adminVerifyOtp` — admin OTP verify, wrong or reused code                           | Yes                                   |
 | `OTP_HAS_EXPIRED`                      | 401     | `auth.service.ts`'s `adminVerifyOtp` — admin OTP verify, code older than 10 minutes                    | Yes                                   |
 | `INVALID_RESET_TOKEN`                  | 400     | `auth.service.ts`'s `resetAdminPassword` — `/reset-password` token expired or already used             | Yes                                   |
-| `RATE_LIMITED`                         | 429     | `auth.service.ts` (Issue #259) / `betterAuthHandler.ts` (#145) — per-IP / per-email limit tripped on any admin sign-in, OTP, or reset-request path | Yes                                   |
-| `AUTH_ERROR`                           | varies  | `src/middleware/betterAuthHandler.ts`'s fallback — any Better Auth error whose own JSON body has no `code` key, not otherwise enumerated above | Not directly — every error case this doc names above has a real, more specific code |
+| `RATE_LIMITED`                         | 429     | `auth.service.ts`'s `consumeIpLimit`/`consumeEmailLimit` (`src/lib/rateLimit.ts`) — per-IP / per-email limit tripped on any buyer OTP, admin sign-in, OTP, or reset-request path | Yes                                   |
 
-The buyer-flow codes (`INVALID_OTP`/`OTP_EXPIRED`/`TOO_MANY_ATTEMPTS`) still come from Better Auth's `emailOTP` plugin (buyer sign-in is being migrated in Issues #258/#262). The admin-flow codes are produced by this repo's own hand-rolled `auth.service.ts`/`auth.controller.ts` (Issue #259/M3.21), routed through `errorHandler.ts`'s `AppError` path like every other module's error contract.
+Every code above is produced by this repo's own hand-rolled `auth.service.ts` / `auth.controller.ts` / `src/lib/otp.ts`, routed through `errorHandler.ts`'s `AppError` path like every other module's error contract. The buyer OTP codes (`INVALID_OTP` / `OTP_EXPIRED`) and the admin OTP codes (`INVALID_CODE` / `OTP_HAS_EXPIRED`) are deliberately different literal values, one flow's error never mistaken for the other's. There is no per-code attempt counter (the retired `TOO_MANY_ATTEMPTS`) and no generic `AUTH_ERROR` fallback (the retired `betterAuthHandler.ts`) any more.
 
 ---
 
