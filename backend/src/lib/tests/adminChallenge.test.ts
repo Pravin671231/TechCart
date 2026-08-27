@@ -72,8 +72,8 @@ describe("adminChallenge", () => {
     expect(readAdminChallenge(reqWithCookie(`techcart_admin_2fa=${wrongType}`))).toBeNull();
   });
 
-  it("uses sameSite=lax when BETTER_AUTH_URL is not https (dev/test)", () => {
-    // vitest.config.ts sets BETTER_AUTH_URL to http://localhost:4000.
+  it("uses sameSite=lax when APP_BASE_URL is not https (dev/test)", () => {
+    // vitest.config.ts sets APP_BASE_URL to http://localhost:4000.
     const { res, cookies } = fakeRes();
     issueAdminChallenge(res, { userId: "admin-1" });
 

@@ -17,10 +17,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1096.0",
     "@aws-sdk/s3-request-presigner": "^3.1096.0",
-    "@better-auth/core": "^1.7.1",
-    "@better-auth/mongo-adapter": "^1.7.1",
     "bcryptjs": "^3.0.3",
-    "better-auth": "^1.7.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

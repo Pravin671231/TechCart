@@ -12,12 +12,12 @@
 // disconnect shape as every other seed script.
 import mongoose from "mongoose";
 import { connectDB, disconnectDB } from "@/config/db";
-import type { AdminRole } from "./createAdminUser";
+import { provisionAdminUser, type AdminRole } from "./createAdminUser";
 
-// Buyers are passwordless (SRS v0.3 §2.1) — no Better Auth credential to
-// create, so these are inserted directly against the `users` collection via
-// the raw MongoDB driver, mirroring additionalFields in src/lib/auth.ts
-// (role/status) plus Better Auth's own base user fields.
+// Buyers are passwordless (SRS v0.3 §2.1) — no password credential to create,
+// so these are inserted directly against the `users` collection via the raw
+// MongoDB driver with the same base fields provisionAdminUser writes
+// (name/email/emailVerified/role/status/timestamps), minus passwordHash.
 const SAMPLE_BUYERS = [
   { name: "Asha Rao", email: "buyer1@example.com" },
   { name: "Rohan Mehta", email: "buyer2@example.com" },
@@ -71,13 +71,6 @@ async function upsertBuyer(buyer: { name: string; email: string }): Promise<{
 export async function seedUsers(): Promise<void> {
   await connectDB();
 
-  // Dynamic import so createAdminUser.ts (which statically imports
-  // @/lib/auth) is only evaluated after the DB connection is open — same
-  // freeze-on-undefined-db reason superAdmin.ts's own dynamic import
-  // documents (auth.ts's mongodbAdapter(mongoose.connection.db!, ...)
-  // captures `db` as a plain value at module-load time).
-  const { provisionAdminUser } = await import("./createAdminUser.js");
-
   for (const buyer of SAMPLE_BUYERS) {
     const result = await upsertBuyer(buyer);
     console.log(
@@ -98,12 +91,8 @@ export async function seedUsers(): Promise<void> {
 }
 
 if (require.main === module) {
-  // Explicit exit on success — importing @/lib/auth (via createAdminUser.ts)
-  // pulls in an ioredis client that keeps an open handle after
-  // disconnectDB() resolves, so the process would otherwise hang instead of
-  // returning to the shell. Confirmed empirically running this script
-  // directly; superAdmin.ts has the identical import chain and the same
-  // latent gap, left untouched here as out of scope for this issue.
+  // Explicit exit on success — defensive, in case any transitive import ever
+  // keeps an open handle (e.g. a socket) after disconnectDB() resolves.
   seedUsers()
     .then(() => process.exit(0))
     .catch((error: unknown) => {

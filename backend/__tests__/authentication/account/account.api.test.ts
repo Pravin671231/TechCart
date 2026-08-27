@@ -3,11 +3,11 @@ import request from "supertest";
 import type { Express } from "express";
 
 // Issue #144/M3.6 — buyer profile + admin change-password, both gated by
-// rbac.ts (real Better Auth session required, same as every route rewritten
-// in #143). No repository mocking here — account.repository.ts reads/writes
-// the same real `users` collection Better Auth's own adapter owns, matching
-// __tests__/adminUsers/adminUsers.api.test.ts's identical "real DB, no mocks"
-// choice for this same collection.
+// rbac.ts (a real session, resolved via @/lib/session, is required — same as
+// every route rewritten in #143). No repository mocking here —
+// account.repository.ts reads/writes the real `users` collection directly,
+// matching __tests__/adminUsers/adminUsers.api.test.ts's identical "real DB,
+// no mocks" choice for this same collection.
 vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));

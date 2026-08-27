@@ -1,8 +1,7 @@
 // Raw MongoDB driver against the `users` collection, not a new Mongoose
-// model — matches auth.ts's own explicit reasoning ("shouldn't create a
-// circular import with a future users Mongoose model") and avoids two
-// independent schemas (a Mongoose one here, Better Auth's own adapter)
-// drifting against the same collection.
+// model — the established convention for this collection across the
+// authentication modules (auth/account/adminUsers all use the raw driver
+// here), avoiding a competing schema against the same collection.
 import mongoose, { Types } from "mongoose";
 import type { AdminRole } from "@/scripts/seed/createAdminUser";
 

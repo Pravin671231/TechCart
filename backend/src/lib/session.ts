@@ -4,8 +4,8 @@ import { Schema, model } from "mongoose";
 import { env } from "@/config/env";
 import { signSessionJwt, verifySessionJwt } from "@/lib/jwt";
 
-// Standalone session-token primitive (Issue #257/M3.19, amended by
-// #267/M3.27) — no route, no rbac.ts wiring, no Better Auth coupling yet.
+// The session-token engine (Issue #257/M3.19, amended by #267/M3.27) — the
+// hybrid JWT + DB-row model every auth flow and rbac.ts run on since #258–261.
 // The token is a signed JWT, but a live, non-revoked row here is still
 // required on every verification, since FR-AUTH-017/022/026/039 need
 // instant/selective revocation a stateless JWT alone can't provide.
@@ -38,11 +38,12 @@ sessionSchema.index({ userId: 1 });
 const Session = model<SessionDocument>("Session", sessionSchema);
 
 const SESSION_ROLLING_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days — FR-AUTH-016
-const SESSION_COOKIE_NAME = "techcart_session"; // distinct from Better Auth's own cookie(s)
+const SESSION_COOKIE_NAME = "techcart_session";
 
-// Mirrors auth.ts's own isCrossSiteDeployment gate — a no-op in dev/test
-// (BETTER_AUTH_URL is http:// there), real once deployed behind https.
-const isCrossSiteDeployment = env.BETTER_AUTH_URL.startsWith("https://");
+// A no-op in dev/test (APP_BASE_URL is http:// there), real once deployed
+// behind https — buyer-app/admin-app (Vercel) are cross-site from backend
+// (Render), so the session cookie needs SameSite=None; Secure to be sent.
+const isCrossSiteDeployment = env.APP_BASE_URL.startsWith("https://");
 
 export interface IssueSessionInput {
   userId: string;

@@ -3,7 +3,7 @@ import request from "supertest";
 import type { Express } from "express";
 
 // Issue #143/M3.5 — every /api/admin/uploads route is now gated by
-// rbac.ts, which needs a real Better Auth session to resolve, not the old
+// rbac.ts, which needs a real session to resolve, not the old
 // X-Admin-Key header — see brands.api.test.ts's own header comment for the
 // full rationale. No-session now 401s as UNAUTHENTICATED (rbac.ts), not the
 // old adminAuth.ts's UNAUTHORIZED.

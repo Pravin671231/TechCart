@@ -11,20 +11,12 @@ import type mongooseType from "mongoose";
 // MONGODB_URI is set before @/config/env is first evaluated) copied
 // verbatim from that file's established convention.
 //
-// This suite exercises Better Auth's built-in emailAndPassword
-// reset-password support, configured in src/lib/auth.ts. Endpoint paths and
-// the sendResetPassword callback signature were originally written without
-// local package access to verify against — both the issue/SRS's
-// illustrative "/forgot-password" and the plausible-sounding
-// "/forget-password" 404'd against real CI. A diagnostic logging
-// Object.keys(auth.api) revealed the real method is `requestPasswordReset`
-// (better-auth@1.7.1 apparently doesn't expose a link-based
-// "forget"/"forgot" password method at all — only requestPasswordReset,
-// requestPasswordResetEmailOTP, forgetPasswordEmailOTP for the OTP variant),
-// which maps to POST /request-password-reset per the same camelCase ->
-// kebab-case convention already confirmed for signInEmail -> /sign-in/email
-// and getSession -> /get-session. /reset-password and the sendResetPassword
-// callback signature both matched as originally written.
+// This suite exercises the hand-rolled reset flow (Issue #259/M3.21,
+// auth.service.ts): POST /api/auth/request-password-reset (records a token
+// via @/lib/passwordResetTokens, mails a link — only for a non-buyer
+// account, always returns the same generic response) and POST
+// /api/auth/reset-password (consumes the token, bcrypt-writes
+// users.passwordHash, then revokeAllSessionsForUser for FR-AUTH-022).
 vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),

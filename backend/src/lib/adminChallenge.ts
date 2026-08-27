@@ -13,15 +13,14 @@ import { env } from "@/config/env";
 // matching the OTP's own TTL), delivered as an httpOnly cookie. The
 // SameSite=None; Secure gate mirrors session.ts's isCrossSiteDeployment
 // exactly — admin-app (Vercel) is cross-domain from backend (Render), and a
-// SameSite=Lax cookie is never sent on that cross-site fetch (this was a
-// real bug once, Issue #148/M3.10, for Better Auth's equivalent cookie).
+// SameSite=Lax cookie is never sent on that cross-site fetch.
 
 const CHALLENGE_COOKIE_NAME = "techcart_admin_2fa";
 const CHALLENGE_TTL_SECONDS = 10 * 60; // 10 minutes — matches otp.ts's OTP_TTL_MS
 const CHALLENGE_TYP = "admin-2fa";
 const JWT_ALGORITHM = "HS256";
 
-const isCrossSiteDeployment = env.BETTER_AUTH_URL.startsWith("https://");
+const isCrossSiteDeployment = env.APP_BASE_URL.startsWith("https://");
 
 export interface AdminChallenge {
   userId: string;

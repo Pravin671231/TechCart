@@ -12,7 +12,7 @@ import type mongooseType from "mongoose";
 // a `SameSite=Lax` cookie is never sent on a cross-site request at all.
 //
 // This is its own file, not folded into admin-sign-in.api.test.ts, because
-// it needs a genuinely different BETTER_AUTH_URL (https, not the shared
+// it needs a genuinely different APP_BASE_URL (https, not the shared
 // http://localhost:4000 every other suite uses) — set here, before any
 // dynamic import of @/config/env (transitively pulled in via @/app), so its
 // module-level parse picks it up. Vitest isolates each test file's module
@@ -31,7 +31,7 @@ const ADMIN_EMAIL = "cross-site-cookie-admin@example.com";
 const ADMIN_PASSWORD = "Sup3rSecret!Pass";
 
 beforeAll(async () => {
-  process.env.BETTER_AUTH_URL = "https://techcart-backend.example.onrender.com";
+  process.env.APP_BASE_URL = "https://techcart-backend.example.onrender.com";
 
   const { MongoMemoryServer: MemoryServer } = await import("mongodb-memory-server");
   mongod = await MemoryServer.create();
@@ -61,7 +61,7 @@ afterAll(async () => {
 });
 
 describe("cross-site pending-2FA cookie (Issue #259/M3.21)", () => {
-  it("sets SameSite=None; Secure on the challenge cookie when BETTER_AUTH_URL is https", async () => {
+  it("sets SameSite=None; Secure on the challenge cookie when APP_BASE_URL is https", async () => {
     const res = await request(app)
       .post("/api/auth/sign-in/email")
       .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });

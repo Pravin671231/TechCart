@@ -1,11 +1,9 @@
 import mongoose, { Types } from "mongoose";
 
 // Raw MongoDB driver against `users`, not a Mongoose model — mirrors
-// account.repository.ts's/adminUsers.repository.ts's established
-// convention exactly. Better Auth's own adapter still owns this
-// collection's schema during the coexistence window (Issues #258–261), so
-// a competing Mongoose model here would risk conflicting with it; reads and
-// writes stay scoped to the plain field set both systems already agree on.
+// account.repository.ts's/adminUsers.repository.ts's established convention
+// exactly (originally to avoid a competing schema alongside Better Auth's
+// own adapter; kept as the module convention now that adapter is gone).
 
 export type UserRecord = {
   _id: Types.ObjectId;
@@ -71,7 +69,7 @@ export async function touchLastSignIn(userId: Types.ObjectId): Promise<void> {
 
 // Issue #259/M3.21 — hand-rolled password-reset flow writes the new bcrypt
 // hash straight to `users.passwordHash`, matching provisionAdminUser's own
-// raw-driver shape (Better Auth's `account` collection is no longer used).
+// raw-driver shape.
 export async function updatePasswordHash(
   userId: Types.ObjectId,
   passwordHash: string,

@@ -17,6 +17,7 @@
 // missing var fails the run loudly rather than silently provisioning a
 // well-known default account, matching env.ts's own fail-fast convention.
 import { connectDB, disconnectDB } from "@/config/db";
+import { provisionAdminUser } from "./createAdminUser";
 
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL;
 const SUPER_ADMIN_NAME = process.env.SUPER_ADMIN_NAME;
@@ -35,13 +36,6 @@ export async function seedSuperAdmin(): Promise<void> {
   }
 
   await connectDB();
-
-  // Dynamic import so createAdminUser.ts (which statically imports
-  // @/lib/auth) is only evaluated after the DB connection is open — a static
-  // top-level import here would freeze auth.ts's mongodbAdapter(mongoose
-  // .connection.db!, ...) on an undefined `db`, since imports resolve before
-  // this function body ever runs connectDB() above.
-  const { provisionAdminUser } = await import("./createAdminUser.js");
 
   const result = await provisionAdminUser({
     email: SUPER_ADMIN_EMAIL,
