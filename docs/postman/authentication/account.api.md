@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing session-scoped "my own account" endpoints in Postman.
 
-**Scope:** this document covers Issue #144 (M3.6 — account self-service, `FR-AUTH-036`–`039`): a buyer profile (view/update own `name`/`phone`) and an admin change-password capability. Distinct from [`adminUsers.api.md`](./adminUsers.api.md) — this module is always "my own account," never someone else's, and its two halves have genuinely different role guards on the same mount: `GET`/`PATCH /api/account/profile` requires a **buyer** session, `POST /api/account/change-password` requires **any** admin session (`catalog-manager`, `order-manager`, or `super-admin` — not buyer-only like the profile routes, and not super-admin-only like `adminUsers.api.md`). See [`../../../backend/CLAUDE.md`](../../../backend/CLAUDE.md)'s Account Self-Service section for full implementation detail.
+**Scope:** this document covers account self-service (`FR-AUTH-036`–`039`): a buyer profile (view/update own `name`/`phone`) and an admin change-password capability. Distinct from [`adminUsers.api.md`](./adminUsers.api.md) — this module is always "my own account," never someone else's, and its two halves have genuinely different role guards on the same mount: `GET`/`PATCH /api/account/profile` requires a **buyer** session, `POST /api/account/change-password` requires **any** admin session (`catalog-manager`, `order-manager`, or `super-admin` — not buyer-only like the profile routes, and not super-admin-only like `adminUsers.api.md`). Both are gated by `src/middleware/rbac.ts` against a session from TechCart's custom session engine (Better Auth was removed in Issues #258–#261); `POST /api/account/change-password` bcrypt-verifies `users.passwordHash` directly (Issue #259/M3.21). See [`../../../backend/CLAUDE.md`](../../../backend/CLAUDE.md)'s Account Self-Service section for full implementation detail.
 
 ---
 
@@ -10,7 +10,7 @@ A step-by-step guide to testing session-scoped "my own account" endpoints in Pos
 
 Same as [`../product-catalog/uploads.api.md`](../product-catalog/uploads.api.md#prerequisites) plus [`auth.api.md`](./auth.api.md#prerequisites). This doc needs **both** tokens [`auth.api.md`](./auth.api.md#one-time-postman-setup) sets up, since exercising both halves (and each half's cross-role rejection) needs both a buyer and an admin session live at once:
 
-- `buyer_access_token` — from [`auth.api.md`](./auth.api.md#buyer-sign-in)'s email-OTP (or One Tap/OAuth) sign-in.
+- `buyer_access_token` — from [`auth.api.md`](./auth.api.md#buyer-sign-in)'s email-OTP (or Google One Tap) sign-in.
 - `admin_access_token` — from [`auth.api.md`](./auth.api.md#admin-sign-in-password--mandatory-otp)'s password + OTP sign-in, any of the three admin roles (not super-admin-only).
 
 ---
@@ -213,7 +213,7 @@ Content-Type: application/json
 | `FORBIDDEN`                 | 403    | `src/middleware/rbac.ts` — a real session whose role isn't allowed on that specific route (buyer-only vs. admin-only) | Yes                                     |
 | `VALIDATION_ERROR`          | 400    | `errorHandler.ts` — a thrown `ZodError` (empty profile-update body, `newPassword` too short)                       | Yes                                     |
 | `ACCOUNT_NOT_FOUND`         | 404    | `account.service.ts` — the authenticated user's own id no longer resolves to a `users` document (a defensive, effectively unreachable case once `rbac` has resolved a real session) | No — theoretical only |
-| `INVALID_CURRENT_PASSWORD`  | 401    | `account.service.ts`'s `changePassword` — Better Auth's own `changePassword` call rejected the submitted current password | Yes                                     |
+| `INVALID_CURRENT_PASSWORD`  | 401    | `account.service.ts`'s `changePassword` — the submitted `currentPassword` failed a bcrypt check against the stored `users.passwordHash` | Yes                                     |
 
 ---
 

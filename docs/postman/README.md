@@ -2,11 +2,11 @@
 
 This folder is a set of hand-written, step-by-step guides for testing TechCart's backend API by hand in Postman — one file per backend module, each with request/response examples and error cases. It is **not** an exported Postman collection JSON file; there is no `.postman_collection.json` to import here, just markdown walkthroughs.
 
-Before opening any file below, do the one-time collection setup (`base_url`/`admin_api_key` variables) described in [`product-catalog/uploads.api.md`](./product-catalog/uploads.api.md#one-time-postman-setup) — every other doc in this folder assumes that setup is already done and just reuses the same collection. [`authentication/auth.api.md`](./authentication/auth.api.md#one-time-postman-setup) adds two further collection variables (`buyer_access_token`/`admin_access_token`) on top of that, needed by every other file in its own folder.
+Before opening any file below, do the one-time collection setup: the `base_url` variable ([`product-catalog/uploads.api.md`](./product-catalog/uploads.api.md#one-time-postman-setup)) and then [`authentication/auth.api.md`](./authentication/auth.api.md#one-time-postman-setup)'s `buyer_access_token`/`admin_access_token` variables — the latter hold the bearer tokens **every** admin and account request in this folder needs (`Authorization: Bearer <token>`), so complete an admin sign-in before working through `product-catalog/`. Every other doc assumes that setup is done and reuses the same collection.
 
-This index covers two domains: M2 (Product Catalog) — Issues #25 through #36, plus Issue #102 (SRS v0.2 amendment: variant-only pricing, stock/inventory tracking removed) and Issue #104 (SRS v0.2 amendment: shared admin list pagination/sort) — and M3 (Authentication) — Issues #139 (buyer sign-in), #140 (admin sign-in), #141 (admin password reset), #142 (admin account provisioning), and #144 (account self-service).
+This index covers two domains: M2 (Product Catalog) — Issues #25 through #36, plus Issue #102 (SRS v0.2 amendment: variant-only pricing, stock/inventory tracking removed) and Issue #104 (SRS v0.2 amendment: shared admin list pagination/sort) — and M3 (Authentication) — buyer sign-in, admin sign-in + password reset, admin account provisioning, and account self-service (`FR-AUTH-001`–`045`).
 
-**A known, documented gap, not something to "fix" while reading `product-catalog/`:** every `product-catalog/*.api.md` file still documents the admin routes as guarded by the placeholder `X-Admin-Key` header — accurate when those docs were written (through Issue #34/M2.10), but Issue #143/M3.5 replaced that guard with real session+role authentication (`src/middleware/rbac.ts`) for every one of those routes. The `product-catalog/` docs haven't been updated to reflect that yet; a real request against `/api/admin/brands`, `/api/admin/categories`, etc. today needs `Authorization: Bearer <token>` from [`authentication/auth.api.md`](./authentication/auth.api.md)'s admin sign-in flow, not `X-Admin-Key`. Tracked as a follow-up, out of scope for the Authentication docs added here (Issue #224).
+**Admin auth is session-based, not `X-Admin-Key`.** Issue #143/M3.5 replaced the temporary `X-Admin-Key` header with real session + role authentication (`src/middleware/rbac.ts`) on every `/api/admin/*` route, and Issue #264/M3.26 updated the `product-catalog/*.api.md` docs to match — a real request against `/api/admin/brands`, `/api/admin/categories`, etc. sends `Authorization: Bearer <token>` from [`authentication/auth.api.md`](./authentication/auth.api.md)'s admin sign-in flow. The backend auth engine itself was rewritten from Better Auth to a hand-rolled custom session/OTP engine in Issues #258–#261 (M3.19–23); the `/api/auth/*` wire contract was preserved, and the `authentication/*.api.md` docs were re-verified against it in #264.
 
 ---
 
@@ -23,7 +23,7 @@ Two standing rules for this folder, in effect from Issue #224 onward:
 
 ### Files, in recommended setup order
 
-A product can't exist without a brand and a category first, so work through these roughly in order the first time:
+Do [`authentication/auth.api.md`](./authentication/auth.api.md)'s admin sign-in first — every `/api/admin/*` request below needs the `admin_access_token` it produces. Then, since a product can't exist without a brand and a category, work through these roughly in order the first time:
 
 | # | File | Covers | Issues |
 | - | ---- | ------ | ------ |
@@ -125,7 +125,7 @@ Same shape as specifications above — no public/status/search surface.
 
 | # | File | Covers | Issues |
 | - | ---- | ------ | ------ |
-| 1 | [`auth.api.md`](./authentication/auth.api.md) | Buyer sign-in (Google One Tap/OAuth, email OTP), admin sign-in (password + mandatory OTP), session (`get-session`/`sign-out`), admin password reset | #139, #140, #141 |
+| 1 | [`auth.api.md`](./authentication/auth.api.md) | Buyer sign-in (Google One Tap, email OTP), admin sign-in (password + mandatory OTP), session (`get-session`/`sign-out`), admin password reset | #139, #140, #141, #258–#261, #264 |
 | 2 | [`adminUsers.api.md`](./authentication/adminUsers.api.md) | Admin account provisioning — create/list/update further admin accounts (super-admin only) | #142 |
 | 3 | [`account.api.md`](./authentication/account.api.md) | "My own account" — buyer profile, admin change-password | #144 |
 
@@ -138,8 +138,6 @@ Same shape as specifications above — no public/status/search surface.
 | POST | `/api/auth/email-otp/send-verification-otp` | buyer | [→](./authentication/auth.api.md#post-apiauthemail-otpsend-verification-otp) |
 | POST | `/api/auth/sign-in/email-otp` | buyer | [→](./authentication/auth.api.md#post-apiauthsign-inemail-otp) |
 | POST | `/api/auth/one-tap/callback` | buyer | [→](./authentication/auth.api.md#post-apiauthone-tapcallback) |
-| POST | `/api/auth/sign-in/social` | buyer | [→](./authentication/auth.api.md#post-apiauthsign-insocial--get-apiauthcallbackgoogle) |
-| GET | `/api/auth/callback/google` | buyer | [→](./authentication/auth.api.md#post-apiauthsign-insocial--get-apiauthcallbackgoogle) |
 | POST | `/api/auth/sign-in/email` | admin | [→](./authentication/auth.api.md#post-apiauthsign-inemail) |
 | POST | `/api/auth/two-factor/send-otp` | admin | [→](./authentication/auth.api.md#post-apiauthtwo-factorsend-otp) |
 | POST | `/api/auth/two-factor/verify-otp` | admin | [→](./authentication/auth.api.md#post-apiauthtwo-factorverify-otp) |
@@ -166,4 +164,4 @@ Same shape as specifications above — no public/status/search surface.
 
 ---
 
-**18 endpoints total** across the 3 files above (12 + 3 + 3). Google OAuth's two-call flow (`POST /api/auth/sign-in/social` + `GET /api/auth/callback/google`) is a real browser-redirect sequence Postman can't complete end-to-end on its own — see [`auth.api.md`](./authentication/auth.api.md#post-apiauthsign-insocial--get-apiauthcallbackgoogle) for what that means for testing it by hand.
+**16 endpoints total** across the 3 files above (10 + 3 + 3). The full-page Google OAuth redirect flow (`POST /api/auth/sign-in/social` + `GET /api/auth/callback/google`) was **not** rebuilt on the custom session engine (Issues #258/#260) — those two paths now return 404; One Tap and email OTP are the buyer sign-in methods. Google One Tap's `idToken` still can't be fabricated by hand — see [`auth.api.md`](./authentication/auth.api.md#post-apiauthone-tapcallback).

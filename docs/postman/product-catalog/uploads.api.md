@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the current TechCart backend API using Postman.
 
-**Scope:** this document covers what's actually implemented as of Issue #26 (M2.2 — Cloudflare R2 image uploads): the `GET /health` check and the two upload endpoints, `POST /api/admin/uploads/presign` and `POST /api/admin/uploads/direct` (SRS amendment `FR-CAT-097`–`100`). There is no login/session system yet — admin routes are gated by a single static `X-Admin-Key` header (`FR-CAT-088`–`090`), a placeholder until SRS v0.3 ships real authentication. Categories, products, and every buyer-facing endpoint (besides the brand list) are separate, not-yet-implemented issues (#28–#36) — see [What's Not Here Yet](#whats-not-here-yet). Brand management (`#27`) has its own file, [`brands.api.md`](./brands.api.md); later endpoint groups (`categories.api.md`, ...) get their own file alongside this one as they land.
+**Scope:** this document covers the `GET /health` check and the two upload endpoints, `POST /api/admin/uploads/presign` and `POST /api/admin/uploads/direct` (`FR-CAT-097`–`100`), plus the one-time Postman collection setup every other `product-catalog/*.api.md` file reuses. Admin routes require a real session — send `Authorization: Bearer <token>` from an admin sign-in (`src/middleware/rbac.ts`; the temporary `X-Admin-Key` header was removed by Issue #143/M3.5). The `/api/admin/uploads/*` routes are guarded by `rbac(["catalog-manager", "super-admin"])`, so an `order-manager` or buyer token is rejected. Get a token from [`../authentication/auth.api.md`](../authentication/auth.api.md)'s admin sign-in flow. Every other catalog module has its own file: [`brands.api.md`](./brands.api.md), [`categories.api.md`](./categories.api.md), [`categorySpecifications.api.md`](./categorySpecifications.api.md), [`categoryVariants.api.md`](./categoryVariants.api.md), [`products.api.md`](./products.api.md).
 
 ---
 
@@ -18,19 +18,20 @@ Before opening Postman, make sure:
 
    You should see `Server is running on port 4000` in the terminal (the default `PORT` in `backend/.env.example`).
 
-2. **`.env` is filled in.** Copy `backend/.env.example` to `backend/.env` and set:
+2. **`.env` is filled in.** Copy `backend/.env.example` to `backend/.env` and set at least:
    ```
    PORT=4000
    NODE_ENV=development
    MONGODB_URI=<your MongoDB Atlas or local connection string>
-   ADMIN_API_KEY=<any string you choose — this is what you'll paste into Postman>
    R2_ACCOUNT_ID=<Cloudflare account ID>
    R2_ACCESS_KEY_ID=<R2 API token access key ID>
    R2_SECRET_ACCESS_KEY=<R2 API token secret>
    R2_BUCKET_NAME=<your R2 bucket name>
    R2_PUBLIC_URL_BASE=<the bucket's public URL — a custom domain or the r2.dev URL>
    ```
-   All nine are required — `src/config/env.ts` validates them with `zod` at startup and refuses to boot if any are missing. The five `R2_*` values need a **real Cloudflare R2 account** for the presign endpoint to issue a URL that actually works; without one, `POST /presign` will 500 (the AWS SDK will fail to reach a real R2 endpoint), not silently succeed.
+   `src/config/env.ts` validates every required var with `zod` at startup and refuses to boot if any are missing — the full list (including `JWT_SECRET`, `APP_BASE_URL`, `REDIS_URL`, and the `MAILTRAP_*` / `GOOGLE_*` vars the auth module needs) is in [`../authentication/auth.api.md`](../authentication/auth.api.md#prerequisites). There is no `ADMIN_API_KEY` any more — admin auth is session-based. The five `R2_*` values need a **real Cloudflare R2 account** for the presign endpoint to issue a URL that actually works; without one, `POST /presign` will 500 (the AWS SDK will fail to reach a real R2 endpoint), not silently succeed.
+
+3. **You have an admin bearer token.** Complete [`../authentication/auth.api.md`](../authentication/auth.api.md#admin-sign-in-password--mandatory-otp)'s admin sign-in (password + OTP) as a `catalog-manager` or `super-admin` account and copy the `set-auth-token` value — every `/api/admin/*` request in this folder sends it as `Authorization: Bearer <token>`.
 
 ---
 
@@ -47,12 +48,11 @@ Do this once before testing anything.
 
 Click the collection name → **Variables** tab → add:
 
-| Variable        | Initial Value           | Current Value                        |
-| --------------- | ----------------------- | ------------------------------------ |
-| `base_url`      | `http://localhost:4000` | `http://localhost:4000`              |
-| `admin_api_key` | _(leave empty)_         | _(paste your `ADMIN_API_KEY` value)_ |
+| Variable        | Initial Value           | Current Value            |
+| --------------- | ----------------------- | ------------------------ |
+| `base_url`      | `http://localhost:4000` | `http://localhost:4000`  |
 
-Click **Save**. There's no `access_token`/`otp_session_id` to manage here — unlike a login-based API, `admin_api_key` is a static value you set once and never refresh.
+Click **Save**. [`../authentication/auth.api.md`](../authentication/auth.api.md#one-time-postman-setup) adds the `buyer_access_token` / `admin_access_token` variables that hold the bearer tokens — every `/api/admin/*` request in this folder sends `Authorization: Bearer {{admin_access_token}}`, so do that file's admin sign-in first. A session token expires (rolling 30-day window); re-run the admin sign-in to refresh it if a request starts returning `401 UNAUTHENTICATED`.
 
 ---
 
@@ -103,7 +103,7 @@ The one real admin endpoint right now. Issues a short-lived presigned URL for up
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -140,7 +140,7 @@ Content-Type: application/json
 
 ### Error cases
 
-**Missing `X-Admin-Key` header:**
+**Missing or invalid `Authorization: Bearer` token** (no header, a malformed token, or an expired/signed-out session):
 
 ```
 401 Unauthorized
@@ -149,12 +149,24 @@ Content-Type: application/json
 ```json
 {
   "success": false,
-  "code": "UNAUTHORIZED",
-  "message": "Missing or invalid admin credentials"
+  "code": "UNAUTHENTICATED",
+  "message": "Sign in required."
 }
 ```
 
-**Wrong `X-Admin-Key` value:** identical response to the missing-header case above.
+**A valid session whose role isn't `catalog-manager`/`super-admin`** (e.g. an `order-manager` or a buyer token):
+
+```
+403 Forbidden
+```
+
+```json
+{
+  "success": false,
+  "code": "FORBIDDEN",
+  "message": "This action requires one of: catalog-manager, super-admin."
+}
+```
 
 **Invalid `purpose`** (e.g. `"purpose": "banner-image"`):
 
@@ -199,7 +211,7 @@ A second upload path for clients that can't perform a direct browser-to-R2 `PUT`
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 ```
 
 Do **not** set `Content-Type` manually here — Postman sets `multipart/form-data; boundary=...` automatically once you use the form-data body type below.
@@ -234,7 +246,7 @@ Do **not** set `Content-Type` manually here — Postman sets `multipart/form-dat
 
 ### Error cases
 
-**Missing `X-Admin-Key` header:** identical `401 UNAUTHORIZED` response as `/presign`.
+**Missing/invalid bearer token, or a wrong-role session:** identical `401 UNAUTHENTICATED` / `403 FORBIDDEN` responses as `/presign`.
 
 **Invalid `purpose`:** identical `400 VALIDATION_ERROR` shape as `/presign`, keyed on `purpose`.
 
@@ -280,7 +292,8 @@ Every code below was found by grepping every `AppError(...)`/error-producing cal
 
 | Code                        | Status | Where it comes from                                                                                                       | Reachable via an existing endpoint?                                                                                                                                 |
 | --------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `UNAUTHORIZED`              | 401    | `adminAuth.ts` — missing/wrong `X-Admin-Key`                                                                              | Yes                                                                                                                                                                 |
+| `UNAUTHENTICATED`           | 401    | `src/middleware/rbac.ts` — no valid session resolves from the request (missing/malformed/expired bearer token)             | Yes                                                                                                                                                                 |
+| `FORBIDDEN`                 | 403    | `src/middleware/rbac.ts` — a valid session whose role isn't in the route's allow-list (`/api/admin/uploads/*` needs `catalog-manager` or `super-admin`) | Yes                                                                                                                                       |
 | `VALIDATION_ERROR`          | 400    | `errorHandler.ts` — a thrown `ZodError` (e.g. bad `purpose`/`contentType`), reported as an `errors` object keyed by field | Yes                                                                                                                                                                 |
 | `NOT_FOUND`                 | 404    | `notFound.ts` — unmatched route                                                                                           | Yes                                                                                                                                                                 |
 | `INTERNAL_ERROR`            | 500    | `errorHandler.ts` — fallback for anything unrecognized; response shape depends on `NODE_ENV`, see note below              | Yes, but not triggered in normal use                                                                                                                                |
@@ -336,5 +349,3 @@ This document is a snapshot of Issues #25 (core plumbing) and #26 (R2 uploads) �
 
 - Buyer browsing/search/inventory visibility (`#35`)
 - Buyer filtering, sorting, and card content (`#36`)
-
-No real authentication exists yet either (v0.3) — the `X-Admin-Key` header is explicitly a temporary placeholder, not a long-term design.

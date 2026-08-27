@@ -2,13 +2,13 @@
 
 A step-by-step guide to testing the Brand management endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #27 (M2.3 — Brand management, `FR-CAT-023`–`029`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-047`–`048` for this entity), and Issue #34 (M2.10 — Admin search, `FR-CAT-052` for this entity): the five admin CRUD endpoints under `/api/admin/brands`, the status-toggle endpoint, `search` on the admin list, and the public `GET /api/brands`. See [`uploads.api.md`](./uploads.api.md) for `GET /health` and the R2 upload endpoints, and for the one-time Postman collection setup (`base_url`, `admin_api_key` variables) — this doc assumes that setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #27 (M2.3 — Brand management, `FR-CAT-023`–`029`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-047`–`048` for this entity), and Issue #34 (M2.10 — Admin search, `FR-CAT-052` for this entity): the five admin CRUD endpoints under `/api/admin/brands`, the status-toggle endpoint, `search` on the admin list, and the public `GET /api/brands`. See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup (`base_url` variable); the admin routes here send `Authorization: Bearer {{admin_access_token}}` from [`../authentication/auth.api.md`](../authentication/auth.api.md)'s admin sign-in. This doc assumes that setup is already done and reuses the same collection.
 
 ---
 
 ## Prerequisites
 
-Same as [`uploads.api.md`](./uploads.api.md#prerequisites): backend running (`npm run dev --workspace backend`), `backend/.env` filled in, `admin_api_key` collection variable set. A brand's `logo` field is optional and, if you want to test it, requires first getting an `objectKey` from `POST /api/admin/uploads/presign` or `POST /api/admin/uploads/direct` (see that doc) — a brand create/update rejects any `objectKey` that wasn't actually issued by one of those two endpoints.
+Same as [`uploads.api.md`](./uploads.api.md#prerequisites): backend running (`npm run dev --workspace backend`), `backend/.env` filled in, and an `admin_access_token` collection variable set from [`../authentication/auth.api.md`](../authentication/auth.api.md#one-time-postman-setup)'s admin sign-in (password + OTP, as a `catalog-manager` or `super-admin`). A brand's `logo` field is optional and, if you want to test it, requires first getting an `objectKey` from `POST /api/admin/uploads/presign` or `POST /api/admin/uploads/direct` (see that doc) — a brand create/update rejects any `objectKey` that wasn't actually issued by one of those two endpoints.
 
 **Optional collection variable:** add `brand_id` (leave the value empty) so you can paste a created brand's `_id` into it and reuse `{{brand_id}}` across the `GET/PATCH/DELETE :id` requests below.
 
@@ -27,7 +27,7 @@ Creates a brand. The slug is auto-generated from `name` server-side — you cann
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -78,7 +78,7 @@ Content-Type: application/json
 
 ### Error cases
 
-**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`, same shape as every other admin endpoint (see [Error Code Reference](#error-code-reference)).
+**Missing or invalid bearer token:** `401 UNAUTHENTICATED` (or `403 FORBIDDEN` for a valid session whose role isn't `catalog-manager`/`super-admin`) — same shape as every other admin endpoint (see [Error Code Reference](#error-code-reference)).
 
 **Missing `name`:**
 
@@ -118,7 +118,7 @@ Lists every brand, any status, each with its product count — paginated and sor
 | URL    | `{{base_url}}/api/admin/brands` |
 | Name   | `List Brands (Admin)`           |
 
-**Headers tab:** `X-Admin-Key: {{admin_api_key}}`. No body.
+**Headers tab:** `Authorization: Bearer {{admin_access_token}}`. No body.
 
 **Query params (all optional):**
 
@@ -179,7 +179,7 @@ Fetches a single brand by id, any status.
 | URL    | `{{base_url}}/api/admin/brands/{{brand_id}}` |
 | Name   | `Get Brand (Admin)`                        |
 
-**Headers tab:** `X-Admin-Key: {{admin_api_key}}`.
+**Headers tab:** `Authorization: Bearer {{admin_access_token}}`.
 
 **Click Send. Expected response — `200 OK`:** same shape as a single item from the list above, minus `productCount` (this endpoint doesn't compute it).
 
@@ -228,7 +228,7 @@ Updates `name`, `description`, and/or `logo`. All fields optional — send only 
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -265,7 +265,7 @@ Toggles the brand's boolean `status` (`FR-CAT-047`) — active/inactive, not a s
 **Headers tab:**
 
 ```
-X-Admin-Key: {{admin_api_key}}
+Authorization: Bearer {{admin_access_token}}
 Content-Type: application/json
 ```
 
@@ -283,7 +283,7 @@ Content-Type: application/json
 
 ### Error cases
 
-**Missing `X-Admin-Key` header:** `401 UNAUTHORIZED`.
+**Missing or invalid bearer token:** `401 UNAUTHENTICATED`.
 
 **Nonexistent id:** same `BRAND_NOT_FOUND` shape as `GET :id` above.
 
@@ -315,7 +315,7 @@ Deletes a brand — but only if **zero** products of any status reference it (`F
 | URL    | `{{base_url}}/api/admin/brands/{{brand_id}}` |
 | Name   | `Delete Brand`                             |
 
-**Headers tab:** `X-Admin-Key: {{admin_api_key}}`. No body.
+**Headers tab:** `Authorization: Bearer {{admin_access_token}}`. No body.
 
 **Click Send. Expected response — `200 OK`:**
 
@@ -352,7 +352,7 @@ Reproducible now — create a product against the brand via [`products.api.md`](
 
 ## `GET /api/brands`
 
-Public, buyer-facing brand list — active brands only, public fields only. No `X-Admin-Key` needed.
+Public, buyer-facing brand list — active brands only, public fields only. No auth header needed.
 
 | Field  | Value                     |
 | ------ | -------------------------- |
@@ -384,13 +384,13 @@ No headers, no body.
 
 - Only brands with `status: true` are returned — deactivate one via `PATCH /api/admin/brands/:id/status` above to see it drop out of this list.
 - `status`, `createdBy`, `updatedBy`, `createdAt`, `updatedAt` are stripped entirely — this response only ever has `_id`, `name`, `slug`, and (when present) `logo`/`description`.
-- No auth header required — sending an `X-Admin-Key` here has no effect either way.
+- No auth header required — this is a public buyer endpoint; sending an admin `Authorization` header here has no effect either way.
 
 ---
 
 ## Error Code Reference
 
-Brand-specific codes, in addition to the ones already documented in [`uploads.api.md`](./uploads.api.md#error-code-reference) (`UNAUTHORIZED`, `VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR`, and — now reachable for the first time via brand create/update — `OBJECT_KEY_NOT_ISSUED`):
+Brand-specific codes, in addition to the ones already documented in [`uploads.api.md`](./uploads.api.md#error-code-reference) (`UNAUTHENTICATED`, `FORBIDDEN`, `VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR`, and — now reachable for the first time via brand create/update — `OBJECT_KEY_NOT_ISSUED`):
 
 | Code              | Status | Where it comes from                                                             | Reachable via an existing endpoint? |
 | ----------------- | ------ | --------------------------------------------------------------------------------- | ------------------------------------ |
@@ -413,4 +413,4 @@ This document is a snapshot of Issue #27 (plus #33's status endpoint and #34's `
 - Buyer browsing/search/inventory visibility (`#35`)
 - Buyer filtering, sorting, and card content (`#36`)
 
-No real authentication exists yet either (v0.3) — the `X-Admin-Key` header is explicitly a temporary placeholder, not a long-term design.
+Admin authentication is real session + RBAC — send `Authorization: Bearer <token>` from an admin sign-in (`src/middleware/rbac.ts`), see [`../authentication/auth.api.md`](../authentication/auth.api.md). The former `X-Admin-Key` placeholder was removed by Issue #143/M3.5.
