@@ -500,6 +500,7 @@ describe("GET /api/categories/:slug/products", () => {
       updatedBy: null,
     });
     vi.mocked(categoriesRepository.listActiveChildIds).mockResolvedValue([subcategoryId]);
+    const listVariantId = new Types.ObjectId();
     vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
       items: [
         {
@@ -514,7 +515,7 @@ describe("GET /api/categories/:slug/products", () => {
           // active) variant — the product itself carries neither anymore.
           variants: [
             {
-              _id: new Types.ObjectId(),
+              _id: listVariantId,
               sku: "SKU-1",
               attributes: [],
               images: [{ url: "https://cdn.test.example/a.png", isPrimary: true }],
@@ -553,6 +554,7 @@ describe("GET /api/categories/:slug/products", () => {
         mrp: 50000,
         discount: 0,
         sellingPrice: 50000,
+        defaultVariantId: listVariantId.toString(),
         isFeatured: false,
         cardSpecifications: [],
       },

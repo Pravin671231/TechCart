@@ -4,7 +4,7 @@ This folder is a set of hand-written, step-by-step guides for testing TechCart's
 
 Before opening any file below, do the one-time collection setup: the `base_url` variable ([`product-catalog/uploads.api.md`](./product-catalog/uploads.api.md#one-time-postman-setup)) and then [`authentication/auth.api.md`](./authentication/auth.api.md#one-time-postman-setup)'s `buyer_access_token`/`admin_access_token` variables — the latter hold the bearer tokens **every** admin and account request in this folder needs (`Authorization: Bearer <token>`), so complete an admin sign-in before working through `product-catalog/`. Every other doc assumes that setup is done and reuses the same collection.
 
-This index covers two domains: M2 (Product Catalog) — Issues #25 through #36, plus Issue #102 (SRS v0.2 amendment: variant-only pricing, stock/inventory tracking removed) and Issue #104 (SRS v0.2 amendment: shared admin list pagination/sort) — and M3 (Authentication) — buyer sign-in, admin sign-in + password reset, admin account provisioning, and account self-service (`FR-AUTH-001`–`045`).
+This index covers three domains: M2 (Product Catalog) — Issues #25 through #36, plus Issue #102 (SRS v0.2 amendment: variant-only pricing, stock/inventory tracking removed) and Issue #104 (SRS v0.2 amendment: shared admin list pagination/sort); M3 (Authentication) — buyer sign-in, admin sign-in + password reset, admin account provisioning, and account self-service (`FR-AUTH-001`–`045`); and M4 (Shopping Cart) — the buyer cart (`FR-CART-001`–`018`, Issues #150/#151).
 
 **Admin auth is session-based, not `X-Admin-Key`.** Issue #143/M3.5 replaced the temporary `X-Admin-Key` header with real session + role authentication (`src/middleware/rbac.ts`) on every `/api/admin/*` route, and Issue #264/M3.26 updated the `product-catalog/*.api.md` docs to match — a real request against `/api/admin/brands`, `/api/admin/categories`, etc. sends `Authorization: Bearer <token>` from [`authentication/auth.api.md`](./authentication/auth.api.md)'s admin sign-in flow. The backend auth engine itself was rewritten from Better Auth to a hand-rolled custom session/OTP engine in Issues #258–#261 (M3.19–23); the `/api/auth/*` wire contract was preserved, and the `authentication/*.api.md` docs were re-verified against it in #264.
 
@@ -25,14 +25,14 @@ Two standing rules for this folder, in effect from Issue #224 onward:
 
 Do [`authentication/auth.api.md`](./authentication/auth.api.md)'s admin sign-in first — every `/api/admin/*` request below needs the `admin_access_token` it produces. Then, since a product can't exist without a brand and a category, work through these roughly in order the first time:
 
-| # | File | Covers | Issues |
-| - | ---- | ------ | ------ |
-| 1 | [`uploads.api.md`](./product-catalog/uploads.api.md) | Health check, collection setup, R2 presigned/direct image uploads | #25, #26 |
-| 2 | [`brands.api.md`](./product-catalog/brands.api.md) | Brand CRUD, status toggle, admin search, public list | #27, #33, #34 |
-| 3 | [`categories.api.md`](./product-catalog/categories.api.md) | Category CRUD + hierarchy, status toggle, admin search, public list/search, buyer category-product listing | #28, #33, #34, #35, #36 |
-| 4 | [`categorySpecifications.api.md`](./product-catalog/categorySpecifications.api.md) | Per-category specification schema (define/update/delete fields & groups) | #29 |
-| 5 | [`categoryVariants.api.md`](./product-catalog/categoryVariants.api.md) | Per-category variant axes (e.g. Color, Size) that drive the admin variant editor | #30 |
-| 6 | [`products.api.md`](./product-catalog/products.api.md) | Product CRUD, embedded variant pricing, status transitions, admin search, buyer browsing/filtering/sorting | #31, #32, #33, #34, #35, #36, #102 |
+| #   | File                                                                               | Covers                                                                                                     | Issues                             |
+| --- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| 1   | [`uploads.api.md`](./product-catalog/uploads.api.md)                               | Health check, collection setup, R2 presigned/direct image uploads                                          | #25, #26                           |
+| 2   | [`brands.api.md`](./product-catalog/brands.api.md)                                 | Brand CRUD, status toggle, admin search, public list                                                       | #27, #33, #34                      |
+| 3   | [`categories.api.md`](./product-catalog/categories.api.md)                         | Category CRUD + hierarchy, status toggle, admin search, public list/search, buyer category-product listing | #28, #33, #34, #35, #36            |
+| 4   | [`categorySpecifications.api.md`](./product-catalog/categorySpecifications.api.md) | Per-category specification schema (define/update/delete fields & groups)                                   | #29                                |
+| 5   | [`categoryVariants.api.md`](./product-catalog/categoryVariants.api.md)             | Per-category variant axes (e.g. Color, Size) that drive the admin variant editor                           | #30                                |
+| 6   | [`products.api.md`](./product-catalog/products.api.md)                             | Product CRUD, embedded variant pricing, status transitions, admin search, buyer browsing/filtering/sorting | #31, #32, #33, #34, #35, #36, #102 |
 
 `categories.api.md` also carries two short pointer tables ("Related Endpoints — Specifications" / "— Variant Types") that just link out to files 4 and 5 above — their real documentation lives there, not in `categories.api.md` itself.
 
@@ -42,72 +42,72 @@ Do [`authentication/auth.api.md`](./authentication/auth.api.md)'s admin sign-in 
 
 #### `uploads.api.md`
 
-| Method | Path | Scope | Doc |
-| ------ | ---- | ----- | --- |
-| GET | `/health` | public | [→](./product-catalog/uploads.api.md#get-health) |
-| POST | `/api/admin/uploads/presign` | admin | [→](./product-catalog/uploads.api.md#post-apiadminuploadspresign) |
-| POST | `/api/admin/uploads/direct` | admin | [→](./product-catalog/uploads.api.md#post-apiadminuploadsdirect) |
+| Method | Path                         | Scope  | Doc                                                               |
+| ------ | ---------------------------- | ------ | ----------------------------------------------------------------- |
+| GET    | `/health`                    | public | [→](./product-catalog/uploads.api.md#get-health)                  |
+| POST   | `/api/admin/uploads/presign` | admin  | [→](./product-catalog/uploads.api.md#post-apiadminuploadspresign) |
+| POST   | `/api/admin/uploads/direct`  | admin  | [→](./product-catalog/uploads.api.md#post-apiadminuploadsdirect)  |
 
 #### `brands.api.md`
 
-| Method | Path | Scope | Doc |
-| ------ | ---- | ----- | --- |
-| POST | `/api/admin/brands` | admin | [→](./product-catalog/brands.api.md#post-apiadminbrands) |
-| GET | `/api/admin/brands` | admin | [→](./product-catalog/brands.api.md#get-apiadminbrands) |
-| GET | `/api/admin/brands/:id` | admin | [→](./product-catalog/brands.api.md#get-apiadminbrandsid) |
-| PATCH | `/api/admin/brands/:id` | admin | [→](./product-catalog/brands.api.md#patch-apiadminbrandsid) |
-| PATCH | `/api/admin/brands/:id/status` | admin | [→](./product-catalog/brands.api.md#patch-apiadminbrandsidstatus) |
-| DELETE | `/api/admin/brands/:id` | admin | [→](./product-catalog/brands.api.md#delete-apiadminbrandsid) |
-| GET | `/api/brands` | public | [→](./product-catalog/brands.api.md#get-apibrands) |
+| Method | Path                           | Scope  | Doc                                                               |
+| ------ | ------------------------------ | ------ | ----------------------------------------------------------------- |
+| POST   | `/api/admin/brands`            | admin  | [→](./product-catalog/brands.api.md#post-apiadminbrands)          |
+| GET    | `/api/admin/brands`            | admin  | [→](./product-catalog/brands.api.md#get-apiadminbrands)           |
+| GET    | `/api/admin/brands/:id`        | admin  | [→](./product-catalog/brands.api.md#get-apiadminbrandsid)         |
+| PATCH  | `/api/admin/brands/:id`        | admin  | [→](./product-catalog/brands.api.md#patch-apiadminbrandsid)       |
+| PATCH  | `/api/admin/brands/:id/status` | admin  | [→](./product-catalog/brands.api.md#patch-apiadminbrandsidstatus) |
+| DELETE | `/api/admin/brands/:id`        | admin  | [→](./product-catalog/brands.api.md#delete-apiadminbrandsid)      |
+| GET    | `/api/brands`                  | public | [→](./product-catalog/brands.api.md#get-apibrands)                |
 
 #### `categories.api.md`
 
-| Method | Path | Scope | Doc |
-| ------ | ---- | ----- | --- |
-| POST | `/api/admin/categories` | admin | [→](./product-catalog/categories.api.md#post-apiadmincategories) |
-| PATCH | `/api/admin/categories/:id` | admin | [→](./product-catalog/categories.api.md#patch-apiadmincategoriesid) |
-| PATCH | `/api/admin/categories/:id/status` | admin | [→](./product-catalog/categories.api.md#patch-apiadmincategoriesidstatus) |
-| GET | `/api/admin/categories` | admin | [→](./product-catalog/categories.api.md#get-apiadmincategories) |
-| GET | `/api/admin/categories/:id` | admin | [→](./product-catalog/categories.api.md#get-apiadmincategoriesid) |
-| DELETE | `/api/admin/categories/:id` | admin | [→](./product-catalog/categories.api.md#delete-apiadmincategoriesid) |
-| GET | `/api/categories` | public | [→](./product-catalog/categories.api.md#get-apicategories) |
-| GET | `/api/categories/search` | public | [→](./product-catalog/categories.api.md#get-apicategoriessearch) |
-| GET | `/api/categories/:slug/products` | public | [→](./product-catalog/categories.api.md#get-apicategoriesslugproducts) |
+| Method | Path                               | Scope  | Doc                                                                       |
+| ------ | ---------------------------------- | ------ | ------------------------------------------------------------------------- |
+| POST   | `/api/admin/categories`            | admin  | [→](./product-catalog/categories.api.md#post-apiadmincategories)          |
+| PATCH  | `/api/admin/categories/:id`        | admin  | [→](./product-catalog/categories.api.md#patch-apiadmincategoriesid)       |
+| PATCH  | `/api/admin/categories/:id/status` | admin  | [→](./product-catalog/categories.api.md#patch-apiadmincategoriesidstatus) |
+| GET    | `/api/admin/categories`            | admin  | [→](./product-catalog/categories.api.md#get-apiadmincategories)           |
+| GET    | `/api/admin/categories/:id`        | admin  | [→](./product-catalog/categories.api.md#get-apiadmincategoriesid)         |
+| DELETE | `/api/admin/categories/:id`        | admin  | [→](./product-catalog/categories.api.md#delete-apiadmincategoriesid)      |
+| GET    | `/api/categories`                  | public | [→](./product-catalog/categories.api.md#get-apicategories)                |
+| GET    | `/api/categories/search`           | public | [→](./product-catalog/categories.api.md#get-apicategoriessearch)          |
+| GET    | `/api/categories/:slug/products`   | public | [→](./product-catalog/categories.api.md#get-apicategoriesslugproducts)    |
 
 #### `categorySpecifications.api.md`
 
-| Method | Path | Scope | Doc |
-| ------ | ---- | ----- | --- |
-| GET | `/api/admin/categories/:id/specifications` | admin | [→](./product-catalog/categorySpecifications.api.md#get-apiadmincategoriesidspecifications) |
-| PUT | `/api/admin/categories/:id/specifications` | admin | [→](./product-catalog/categorySpecifications.api.md#put-apiadmincategoriesidspecifications) |
-| PATCH | `/api/admin/categories/:id/specifications` | admin | [→](./product-catalog/categorySpecifications.api.md#patch-apiadmincategoriesidspecifications) |
+| Method | Path                                       | Scope | Doc                                                                                           |
+| ------ | ------------------------------------------ | ----- | --------------------------------------------------------------------------------------------- |
+| GET    | `/api/admin/categories/:id/specifications` | admin | [→](./product-catalog/categorySpecifications.api.md#get-apiadmincategoriesidspecifications)   |
+| PUT    | `/api/admin/categories/:id/specifications` | admin | [→](./product-catalog/categorySpecifications.api.md#put-apiadmincategoriesidspecifications)   |
+| PATCH  | `/api/admin/categories/:id/specifications` | admin | [→](./product-catalog/categorySpecifications.api.md#patch-apiadmincategoriesidspecifications) |
 
 No public, status, or search surface exists for this resource — it's a schema definition, not a listable entity.
 
 #### `categoryVariants.api.md`
 
-| Method | Path | Scope | Doc |
-| ------ | ---- | ----- | --- |
-| GET | `/api/admin/categories/:id/variant-types` | admin | [→](./product-catalog/categoryVariants.api.md#get-apiadmincategoriesidvariant-types) |
-| PUT | `/api/admin/categories/:id/variant-types` | admin | [→](./product-catalog/categoryVariants.api.md#put-apiadmincategoriesidvariant-types) |
-| PATCH | `/api/admin/categories/:id/variant-types` | admin | [→](./product-catalog/categoryVariants.api.md#patch-apiadmincategoriesidvariant-types) |
+| Method | Path                                      | Scope | Doc                                                                                    |
+| ------ | ----------------------------------------- | ----- | -------------------------------------------------------------------------------------- |
+| GET    | `/api/admin/categories/:id/variant-types` | admin | [→](./product-catalog/categoryVariants.api.md#get-apiadmincategoriesidvariant-types)   |
+| PUT    | `/api/admin/categories/:id/variant-types` | admin | [→](./product-catalog/categoryVariants.api.md#put-apiadmincategoriesidvariant-types)   |
+| PATCH  | `/api/admin/categories/:id/variant-types` | admin | [→](./product-catalog/categoryVariants.api.md#patch-apiadmincategoriesidvariant-types) |
 
 Same shape as specifications above — no public/status/search surface.
 
 #### `products.api.md`
 
-| Method | Path | Scope | Doc |
-| ------ | ---- | ----- | --- |
-| POST | `/api/admin/products` | admin | [→](./product-catalog/products.api.md#post-apiadminproducts) |
-| PATCH | `/api/admin/products/:id` | admin | [→](./product-catalog/products.api.md#patch-apiadminproductsid) |
-| GET | `/api/admin/products/:id` | admin | [→](./product-catalog/products.api.md#get-apiadminproductsid) |
-| GET | `/api/admin/products` | admin | [→](./product-catalog/products.api.md#get-apiadminproducts) |
-| DELETE | `/api/admin/products/:id` | admin | [→](./product-catalog/products.api.md#delete-apiadminproductsid) |
-| PATCH | `/api/admin/products/:id/status` | admin | [→](./product-catalog/products.api.md#patch-apiadminproductsidstatus) |
-| POST | `/api/admin/products/:id/variants` | admin | [→](./product-catalog/products.api.md#post-apiadminproductsidvariants) |
-| PATCH | `/api/admin/products/:id/variants/:variantId` | admin | [→](./product-catalog/products.api.md#patch-apiadminproductsidvariantsvariantid) |
-| GET | `/api/products` | public | [→](./product-catalog/products.api.md#get-apiproducts) |
-| GET | `/api/products/:slug` | public | [→](./product-catalog/products.api.md#get-apiproductsslug) |
+| Method | Path                                          | Scope  | Doc                                                                              |
+| ------ | --------------------------------------------- | ------ | -------------------------------------------------------------------------------- |
+| POST   | `/api/admin/products`                         | admin  | [→](./product-catalog/products.api.md#post-apiadminproducts)                     |
+| PATCH  | `/api/admin/products/:id`                     | admin  | [→](./product-catalog/products.api.md#patch-apiadminproductsid)                  |
+| GET    | `/api/admin/products/:id`                     | admin  | [→](./product-catalog/products.api.md#get-apiadminproductsid)                    |
+| GET    | `/api/admin/products`                         | admin  | [→](./product-catalog/products.api.md#get-apiadminproducts)                      |
+| DELETE | `/api/admin/products/:id`                     | admin  | [→](./product-catalog/products.api.md#delete-apiadminproductsid)                 |
+| PATCH  | `/api/admin/products/:id/status`              | admin  | [→](./product-catalog/products.api.md#patch-apiadminproductsidstatus)            |
+| POST   | `/api/admin/products/:id/variants`            | admin  | [→](./product-catalog/products.api.md#post-apiadminproductsidvariants)           |
+| PATCH  | `/api/admin/products/:id/variants/:variantId` | admin  | [→](./product-catalog/products.api.md#patch-apiadminproductsidvariantsvariantid) |
+| GET    | `/api/products`                               | public | [→](./product-catalog/products.api.md#get-apiproducts)                           |
+| GET    | `/api/products/:slug`                         | public | [→](./product-catalog/products.api.md#get-apiproductsslug)                       |
 
 `GET /api/products?q=` and its variant-attribute/specification filters depend on a MongoDB Atlas Search index this repo can't provision for you locally — see [`../../backend/atlas-search/README.md`](../../backend/atlas-search/README.md) before testing those specifically.
 
@@ -123,45 +123,71 @@ Same shape as specifications above — no public/status/search surface.
 
 `auth.api.md` first — every other file in this folder reuses its `buyer_access_token`/`admin_access_token` collection variables:
 
-| # | File | Covers | Issues |
-| - | ---- | ------ | ------ |
-| 1 | [`auth.api.md`](./authentication/auth.api.md) | Buyer sign-in (Google One Tap, email OTP), admin sign-in (password + mandatory OTP), session (`get-session`/`sign-out`), admin password reset | #139, #140, #141, #258–#261, #264 |
-| 2 | [`adminUsers.api.md`](./authentication/adminUsers.api.md) | Admin account provisioning — create/list/update further admin accounts (super-admin only) | #142 |
-| 3 | [`account.api.md`](./authentication/account.api.md) | "My own account" — buyer profile, admin change-password | #144 |
+| #   | File                                                      | Covers                                                                                                                                        | Issues                            |
+| --- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| 1   | [`auth.api.md`](./authentication/auth.api.md)             | Buyer sign-in (Google One Tap, email OTP), admin sign-in (password + mandatory OTP), session (`get-session`/`sign-out`), admin password reset | #139, #140, #141, #258–#261, #264 |
+| 2   | [`adminUsers.api.md`](./authentication/adminUsers.api.md) | Admin account provisioning — create/list/update further admin accounts (super-admin only)                                                     | #142                              |
+| 3   | [`account.api.md`](./authentication/account.api.md)       | "My own account" — buyer profile, admin change-password                                                                                       | #144                              |
 
 ### Full endpoint index
 
 #### `auth.api.md`
 
-| Method | Path | Scope | Doc |
-| ------ | ---- | ----- | --- |
-| POST | `/api/auth/email-otp/send-verification-otp` | buyer | [→](./authentication/auth.api.md#post-apiauthemail-otpsend-verification-otp) |
-| POST | `/api/auth/sign-in/email-otp` | buyer | [→](./authentication/auth.api.md#post-apiauthsign-inemail-otp) |
-| POST | `/api/auth/one-tap/callback` | buyer | [→](./authentication/auth.api.md#post-apiauthone-tapcallback) |
-| POST | `/api/auth/sign-in/email` | admin | [→](./authentication/auth.api.md#post-apiauthsign-inemail) |
-| POST | `/api/auth/two-factor/send-otp` | admin | [→](./authentication/auth.api.md#post-apiauthtwo-factorsend-otp) |
-| POST | `/api/auth/two-factor/verify-otp` | admin | [→](./authentication/auth.api.md#post-apiauthtwo-factorverify-otp) |
-| GET | `/api/auth/get-session` | buyer + admin | [→](./authentication/auth.api.md#get-apiauthget-session) |
-| POST | `/api/auth/sign-out` | buyer + admin | [→](./authentication/auth.api.md#post-apiauthsign-out) |
-| POST | `/api/auth/request-password-reset` | admin | [→](./authentication/auth.api.md#post-apiauthrequest-password-reset) |
-| POST | `/api/auth/reset-password` | admin | [→](./authentication/auth.api.md#post-apiauthreset-password) |
+| Method | Path                                        | Scope         | Doc                                                                          |
+| ------ | ------------------------------------------- | ------------- | ---------------------------------------------------------------------------- |
+| POST   | `/api/auth/email-otp/send-verification-otp` | buyer         | [→](./authentication/auth.api.md#post-apiauthemail-otpsend-verification-otp) |
+| POST   | `/api/auth/sign-in/email-otp`               | buyer         | [→](./authentication/auth.api.md#post-apiauthsign-inemail-otp)               |
+| POST   | `/api/auth/one-tap/callback`                | buyer         | [→](./authentication/auth.api.md#post-apiauthone-tapcallback)                |
+| POST   | `/api/auth/sign-in/email`                   | admin         | [→](./authentication/auth.api.md#post-apiauthsign-inemail)                   |
+| POST   | `/api/auth/two-factor/send-otp`             | admin         | [→](./authentication/auth.api.md#post-apiauthtwo-factorsend-otp)             |
+| POST   | `/api/auth/two-factor/verify-otp`           | admin         | [→](./authentication/auth.api.md#post-apiauthtwo-factorverify-otp)           |
+| GET    | `/api/auth/get-session`                     | buyer + admin | [→](./authentication/auth.api.md#get-apiauthget-session)                     |
+| POST   | `/api/auth/sign-out`                        | buyer + admin | [→](./authentication/auth.api.md#post-apiauthsign-out)                       |
+| POST   | `/api/auth/request-password-reset`          | admin         | [→](./authentication/auth.api.md#post-apiauthrequest-password-reset)         |
+| POST   | `/api/auth/reset-password`                  | admin         | [→](./authentication/auth.api.md#post-apiauthreset-password)                 |
 
 #### `adminUsers.api.md`
 
-| Method | Path | Scope | Doc |
-| ------ | ---- | ----- | --- |
-| POST | `/api/admin/users` | admin (super-admin only) | [→](./authentication/adminUsers.api.md#post-apiadminusers) |
-| GET | `/api/admin/users` | admin (super-admin only) | [→](./authentication/adminUsers.api.md#get-apiadminusers) |
-| PATCH | `/api/admin/users/:id` | admin (super-admin only) | [→](./authentication/adminUsers.api.md#patch-apiadminusersid) |
+| Method | Path                   | Scope                    | Doc                                                           |
+| ------ | ---------------------- | ------------------------ | ------------------------------------------------------------- |
+| POST   | `/api/admin/users`     | admin (super-admin only) | [→](./authentication/adminUsers.api.md#post-apiadminusers)    |
+| GET    | `/api/admin/users`     | admin (super-admin only) | [→](./authentication/adminUsers.api.md#get-apiadminusers)     |
+| PATCH  | `/api/admin/users/:id` | admin (super-admin only) | [→](./authentication/adminUsers.api.md#patch-apiadminusersid) |
 
 #### `account.api.md`
 
-| Method | Path | Scope | Doc |
-| ------ | ---- | ----- | --- |
-| GET | `/api/account/profile` | buyer | [→](./authentication/account.api.md#get-apiaccountprofile) |
-| PATCH | `/api/account/profile` | buyer | [→](./authentication/account.api.md#patch-apiaccountprofile) |
-| POST | `/api/account/change-password` | admin (any role) | [→](./authentication/account.api.md#post-apiaccountchange-password) |
+| Method | Path                           | Scope            | Doc                                                                 |
+| ------ | ------------------------------ | ---------------- | ------------------------------------------------------------------- |
+| GET    | `/api/account/profile`         | buyer            | [→](./authentication/account.api.md#get-apiaccountprofile)          |
+| PATCH  | `/api/account/profile`         | buyer            | [→](./authentication/account.api.md#patch-apiaccountprofile)        |
+| POST   | `/api/account/change-password` | admin (any role) | [→](./authentication/account.api.md#post-apiaccountchange-password) |
 
 ---
 
 **16 endpoints total** across the 3 files above (10 + 3 + 3). The full-page Google OAuth redirect flow (`POST /api/auth/sign-in/social` + `GET /api/auth/callback/google`) was **not** rebuilt on the custom session engine (Issues #258/#260) — those two paths now return 404; One Tap and email OTP are the buyer sign-in methods. Google One Tap's `idToken` still can't be fabricated by hand — see [`auth.api.md`](./authentication/auth.api.md#post-apiauthone-tapcallback).
+
+---
+
+## Shopping Cart
+
+### Files
+
+| #   | File                                         | Covers                                                                                              | Issues     |
+| --- | -------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------- |
+| 1   | [`cart.api.md`](./shopping-cart/cart.api.md) | Buyer cart — retrieve/add/update-quantity/remove-line/clear, live pricing & availability resolution | #150, #151 |
+
+Needs a `buyer_access_token` (from [`authentication/auth.api.md`](./authentication/auth.api.md)'s buyer sign-in) and at least one published product with an active variant.
+
+### Full endpoint index
+
+#### `cart.api.md`
+
+| Method | Path                         | Scope | Doc                                                           |
+| ------ | ---------------------------- | ----- | ------------------------------------------------------------- |
+| GET    | `/api/cart`                  | buyer | [→](./shopping-cart/cart.api.md#get-apicart)                  |
+| POST   | `/api/cart/items`            | buyer | [→](./shopping-cart/cart.api.md#post-apicartitems)            |
+| PATCH  | `/api/cart/items/:variantId` | buyer | [→](./shopping-cart/cart.api.md#patch-apicartitemsvariantid)  |
+| DELETE | `/api/cart/items/:variantId` | buyer | [→](./shopping-cart/cart.api.md#delete-apicartitemsvariantid) |
+| DELETE | `/api/cart`                  | buyer | [→](./shopping-cart/cart.api.md#delete-apicart)               |
+
+**5 endpoints**, all buyer-session-only — no admin surface (SRS v0.4 §7).

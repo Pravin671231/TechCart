@@ -469,6 +469,10 @@ export type PublicProductListItem = {
   mrp?: number;
   discount?: number;
   sellingPrice?: number;
+  // The default (lowest-price active) variant's id — the one a card's
+  // quick-add/"Go to Cart" control acts on (M4, FR-CART-021). Absent on the
+  // same zero-active-variant edge case the price fields above are.
+  defaultVariantId?: Types.ObjectId;
   isFeatured: boolean;
   cardSpecifications: PublicCardSpecification[];
 };
@@ -618,6 +622,7 @@ function toPublicListItem(product: PublicProductDoc): PublicProductListItem {
     item.mrp = defaultVariant.mrp;
     item.discount = defaultVariant.discount;
     item.sellingPrice = defaultVariant.sellingPrice;
+    item.defaultVariantId = defaultVariant._id;
   }
   if (primaryImage) item.primaryImage = toPublicImage(primaryImage);
   return item;

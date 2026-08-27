@@ -798,6 +798,17 @@ describe("GET /api/products", () => {
     expect(res.body.data).toEqual([]);
   });
 
+  it("exposes the default variant's id on each list item (M4 / FR-CART-021)", async () => {
+    vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({
+      items: [{ ...publicProductStub, variants: [existingVariant] }],
+      total: 1,
+    });
+
+    const res = await request(app).get("/api/products");
+
+    expect(res.body.data[0].defaultVariantId).toBe(variantId.toString());
+  });
+
   it("clamps an oversized limit rather than rejecting it", async () => {
     vi.mocked(productsRepository.listPublicPaginated).mockResolvedValue({ items: [], total: 0 });
 
