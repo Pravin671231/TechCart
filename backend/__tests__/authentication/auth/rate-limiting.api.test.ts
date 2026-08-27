@@ -18,15 +18,12 @@ import { signInBuyer, authRequest } from "../../testHelpers/adminSession.js";
 // that added these two files). Sharing one instance for both concerns here
 // keeps this issue's net-new concurrent-instance count at 1, not 2.
 //
-// Rate limiting itself exercises two independent layers without needing to
-// know which one actually fires for a given request: Better Auth's own
-// native per-request limiter (src/lib/auth.ts's `rateLimit.customRules`,
-// keyed by IP via `x-forwarded-for` — no trustedProxies configured, so a
-// single-value forwarded header is trusted directly, confirmed against the
-// installed better-auth@1.7.1 package's own utils/ip.mjs) and this repo's
-// own `enforceEmailRateLimits` hook (keyed by email, for the three paths
-// whose body carries one). Both funnel through the same `RATE_LIMITED` code
-// via betterAuthHandler.ts's fallback.
+// Rate limiting is enforced in-handler by each hand-rolled auth route
+// (auth.service.ts's consumeIpLimit / consumeEmailLimit calls, Issue
+// #258/#259) — an IP dimension keyed off `x-forwarded-for` (single-value,
+// trusted directly — matches a single-hop PaaS deployment) and, for the
+// paths whose body carries one, an email dimension. Both surface the same
+// `429 RATE_LIMITED` code.
 //
 // Each rate-limiting `it` block below sets its own distinct
 // `X-Forwarded-For` value so a test's IP-keyed bucket can't bleed into
@@ -237,14 +234,15 @@ describe("FR-AUTH-045 error-code enumeration", () => {
   it("produces a distinct, stable code for every named category", async () => {
     const codes: Record<string, string> = {};
 
-    // 1. Invalid credentials — src/lib/auth.ts's generic
+    // 1. Invalid credentials — auth.service.ts's generic
     // INVALID_EMAIL_OR_PASSWORD, shared by wrong-password and unknown-email.
     const wrongPassword = await request(app)
       .post("/api/auth/sign-in/email")
       .send({ email: ADMIN_EMAIL, password: "wrong-password" });
     codes.invalidCredentials = wrongPassword.body.code;
 
-    // 2. Account deactivated — enforceAccountNotDeactivated (Issue #145).
+    // 2. Account deactivated — auth.service.ts's adminPasswordSignIn checks
+    // status ahead of the password (Issue #259/M3.21).
     const deactivatedEmail = "deactivated-fixture@example.com";
     await provisionAdminUser({
       email: deactivatedEmail,
@@ -260,8 +258,8 @@ describe("FR-AUTH-045 error-code enumeration", () => {
       .send({ email: deactivatedEmail, password: ADMIN_PASSWORD });
     codes.accountDeactivated = deactivated.body.code;
 
-    // 3. OTP required — the password-only step's data.code (Issue #145,
-    // betterAuthHandler.ts's twoFactorRedirect stamping).
+    // 3. OTP required — the password-only step's data.code, returned
+    // directly by adminSignInHandler (Issue #259/M3.21).
     const agent = request.agent(app);
     const passwordRes = await agent
       .post("/api/auth/sign-in/email")

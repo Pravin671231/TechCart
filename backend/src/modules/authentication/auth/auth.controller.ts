@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from "express";
+import type { Request, Response } from "express";
 import { z } from "zod";
 import {
   clearAdminChallenge,
@@ -78,34 +78,28 @@ export async function signInEmailOtpHandler(req: Request, res: Response): Promis
   respondWithSession(res, result);
 }
 
-// Falls through to Better Auth (the router's own catch-all, mounted after
-// this handler) for an admin session — see auth.routes.ts.
-export async function getSessionHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
+// No session, or a token the custom engine doesn't recognize, returns
+// `200 { success: true, data: null }` — byte-compatible with what the
+// removed Better Auth bridge produced for a null session (Issue #260/M3.22),
+// which both frontends and the existing tests already expect.
+export async function getSessionHandler(req: Request, res: Response): Promise<void> {
   const token = extractSessionToken(req);
-  if (!token) {
-    next();
-    return;
-  }
-  const user = await getSessionUser(token);
+  const user = token ? await getSessionUser(token) : null;
   if (!user) {
-    next();
+    res.status(200).json(successResponse(null));
     return;
   }
   res.status(200).json(successResponse({ user }));
 }
 
-export async function signOutHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
+// Idempotent — a missing or already-invalid token is still a `200`, since
+// the caller's intent (no active session afterward) is satisfied either way.
+export async function signOutHandler(req: Request, res: Response): Promise<void> {
   const token = extractSessionToken(req);
-  if (!token) {
-    next();
-    return;
+  const result = token ? await verifySessionToken(token) : null;
+  if (result?.ok) {
+    await signOutSession(result.jti);
   }
-  const result = await verifySessionToken(token);
-  if (!result.ok) {
-    next();
-    return;
-  }
-  await signOutSession(result.jti);
   res.status(200).json(successResponse(null));
 }
 
