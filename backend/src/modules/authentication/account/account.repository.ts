@@ -29,3 +29,20 @@ export async function updateProfile(
   await usersCollection().updateOne({ _id: id }, { $set: patch });
   return findById(id);
 }
+
+// Issue #259/M3.21 — admin self-service change-password now verifies/writes
+// `users.passwordHash` (bcrypt) directly, replacing the Better Auth
+// `auth.api.changePassword` call that no longer has a session to resolve.
+export async function getPasswordHash(id: Types.ObjectId): Promise<string | null> {
+  const record = await mongoose.connection
+    .db!.collection<{ passwordHash?: string }>("users")
+    .findOne({ _id: id }, { projection: { passwordHash: 1 } });
+  return record?.passwordHash ?? null;
+}
+
+export async function setPasswordHash(id: Types.ObjectId, passwordHash: string): Promise<void> {
+  await usersCollection().updateOne(
+    { _id: id },
+    { $set: { passwordHash, updatedAt: new Date() } },
+  );
+}

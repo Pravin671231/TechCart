@@ -42,8 +42,14 @@ export async function recordResetToken(token: string, userId: string): Promise<v
 
 // Atomic findOneAndDelete, same pattern uploads.repository.ts's consumeByKey
 // already uses — not-found collapses "never issued"/"already consumed" into
-// one null result, no need to distinguish the two here.
+// one null result, no need to distinguish the two here. The `expiresAt`
+// guard rejects an expired-but-not-yet-TTL-collected token (Issue #259/M3.21
+// — the hand-rolled /reset-password handler now owns expiry enforcement,
+// where Better Auth's own /reset-password used to).
 export async function consumeResetToken(token: string): Promise<string | null> {
-  const record = await PasswordResetToken.findOneAndDelete({ token }).lean();
+  const record = await PasswordResetToken.findOneAndDelete({
+    token,
+    expiresAt: { $gt: new Date() },
+  }).lean();
   return record?.userId ?? null;
 }

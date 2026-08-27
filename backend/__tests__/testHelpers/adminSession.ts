@@ -45,10 +45,14 @@ export async function teardownMemoryMongo(ctx: MemoryMongoContext): Promise<void
 
 export async function clearAuthCollections(mongoose: typeof mongooseType): Promise<void> {
   await mongoose.connection.db!.collection("users").deleteMany({});
+  // The custom session/OTP engine's own collections (Issue #257–259).
+  await mongoose.connection.db!.collection("sessions").deleteMany({});
+  await mongoose.connection.db!.collection("otps").deleteMany({});
+  await mongoose.connection.db!.collection("passwordresettokens").deleteMany({});
+  // Legacy Better Auth collections — harmless no-ops once nothing writes them.
   await mongoose.connection.db!.collection("account").deleteMany({});
   await mongoose.connection.db!.collection("verification").deleteMany({});
   await mongoose.connection.db!.collection("session").deleteMany({});
-  await mongoose.connection.db!.collection("twoFactor").deleteMany({});
 }
 
 // Requires the calling test file to have already called
@@ -69,13 +73,9 @@ export async function signInFully(app: Express, email: string, password: string)
     throw new Error(`two-factor/send-otp failed: ${send.status}`);
   }
 
-  // Issue #242/M3.14 — auth.ts's databaseHooks.verification.create.before
-  // now forces every 2fa-otp-* verification record's stored value to
-  // "123456:0" regardless of the real (random) code sendOtpEmail was
-  // actually called with, so submitting that captured code would never
-  // verify anymore. "123456" is the only value that ever succeeds now; the
-  // mock-call check stays as a sanity check that send-otp really triggered
-  // an email attempt.
+  // Issue #242/M3.14 — the admin 2FA OTP is fixed to "123456" in every
+  // environment (otp.ts). The mock-call check stays as a sanity check that
+  // send-otp really triggered an email attempt.
   const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
   if (!(sendOtpEmail as unknown as Mock).mock.calls.at(-1)) {
     throw new Error("sendOtpEmail was never called — is it mocked in this test file?");

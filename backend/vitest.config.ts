@@ -19,7 +19,7 @@ export default defineConfig({
       R2_PUBLIC_URL_BASE: "https://cdn.test.example",
       BETTER_AUTH_SECRET: "test-better-auth-secret",
       BETTER_AUTH_URL: "http://localhost:4000",
-      JWT_SECRET: "test-jwt-secret",
+      JWT_SECRET: "test-jwt-secret-at-least-32-characters-long",
       GOOGLE_CLIENT_ID: "test-google-client-id",
       GOOGLE_CLIENT_SECRET: "test-google-client-secret",
       // Never actually connected to — every test mocks

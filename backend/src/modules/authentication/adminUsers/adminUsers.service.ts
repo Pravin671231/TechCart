@@ -1,10 +1,10 @@
 import crypto from "node:crypto";
 import type { Types } from "mongoose";
-import { auth } from "@/lib/auth";
+import { revokeAllSessionsForUser } from "@/lib/session";
 import { AppError } from "@/utils/AppError";
 import { buildPagination, type Pagination } from "@/utils/apiResponse";
-import { revokeSessionsForUser } from "@/utils/sessions";
 import { provisionAdminUser, type AdminRole } from "@/scripts/seed/createAdminUser";
+import { sendAdminPasswordResetLink } from "../auth/auth.service";
 import * as adminUsersRepository from "./adminUsers.repository";
 import type {
   AdminUserListPage,
@@ -35,7 +35,7 @@ export async function createAdminUser(input: CreateAdminUserInput): Promise<Admi
     name: input.name,
     role: input.role,
   });
-  await auth.api.requestPasswordReset({ body: { email: input.email } });
+  await sendAdminPasswordResetLink(input.email);
 
   const created = await adminUsersRepository.findByEmail(input.email);
   if (!created) {
@@ -70,7 +70,9 @@ export interface UpdateAdminUserInput {
 // endpoint (role escalation or self-deactivation both blocked identically —
 // the guard doesn't distinguish which field changed). Deactivating
 // (status: false) invalidates every live session for that admin
-// synchronously, in the same request, reusing #141's revokeSessionsForUser.
+// synchronously, in the same request, via the custom session engine's
+// revokeAllSessionsForUser (Issue #259/M3.21 — was #141's Better Auth
+// revokeSessionsForUser).
 export async function updateAdminUser(
   id: Types.ObjectId,
   input: UpdateAdminUserInput,
@@ -87,7 +89,7 @@ export async function updateAdminUser(
   }
 
   if (input.status === false) {
-    await revokeSessionsForUser(id.toString());
+    await revokeAllSessionsForUser(id.toString());
   }
 
   return updated;

@@ -4,22 +4,19 @@ import type { Express } from "express";
 import type { MongoMemoryServer } from "mongodb-memory-server";
 import type mongooseType from "mongoose";
 
-// Issue #148/M3.10 — verifies the cross-site two-factor cookie fix in
-// src/lib/auth.ts. admin-app (Vercel) is cross-domain from backend (Render),
-// so the pending-2FA cookie Better Auth's own `twoFactor` plugin sets
-// between /sign-in/email and /two-factor/verify-otp must be
-// `SameSite=None; Secure` to survive a real cross-site fetch — otherwise
-// it's silently dropped, since a `SameSite=Lax` cookie (Better Auth's
-// default) is never sent on a cross-site request at all.
+// Issue #259/M3.21 (was #148/M3.10) — verifies the cross-site pending-2FA
+// cookie fix in src/lib/adminChallenge.ts. admin-app (Vercel) is cross-domain
+// from backend (Render), so the `techcart_admin_2fa` cookie set between
+// /sign-in/email and /two-factor/verify-otp must be `SameSite=None; Secure`
+// to survive a real cross-site fetch — otherwise it's silently dropped, since
+// a `SameSite=Lax` cookie is never sent on a cross-site request at all.
 //
 // This is its own file, not folded into admin-sign-in.api.test.ts, because
 // it needs a genuinely different BETTER_AUTH_URL (https, not the shared
 // http://localhost:4000 every other suite uses) — set here, before any
-// dynamic import of @/lib/auth (transitively pulled in via @/app), so
-// @/config/env's module-level parse picks it up. Vitest isolates each test
-// file's module registry, so this override can't leak into any other
-// suite — every other file keeps resolving BETTER_AUTH_URL from
-// vitest.config.ts's shared test.env block untouched.
+// dynamic import of @/config/env (transitively pulled in via @/app), so its
+// module-level parse picks it up. Vitest isolates each test file's module
+// registry, so this override can't leak into any other suite.
 vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
   sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
@@ -63,8 +60,8 @@ afterAll(async () => {
   await mongod?.stop();
 });
 
-describe("cross-site two-factor cookie (Issue #148/M3.10)", () => {
-  it("sets SameSite=None; Secure on the pending two-factor cookie when BETTER_AUTH_URL is https", async () => {
+describe("cross-site pending-2FA cookie (Issue #259/M3.21)", () => {
+  it("sets SameSite=None; Secure on the challenge cookie when BETTER_AUTH_URL is https", async () => {
     const res = await request(app)
       .post("/api/auth/sign-in/email")
       .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
@@ -75,10 +72,10 @@ describe("cross-site two-factor cookie (Issue #148/M3.10)", () => {
     const setCookie = res.headers["set-cookie"];
     expect(setCookie).toBeTruthy();
     const cookies = Array.isArray(setCookie) ? setCookie : [setCookie];
-    const twoFactorCookie = cookies.find((c: string) => /two_factor/i.test(c));
+    const challengeCookie = cookies.find((c: string) => /techcart_admin_2fa/i.test(c));
 
-    expect(twoFactorCookie).toBeTruthy();
-    expect(twoFactorCookie?.toLowerCase()).toContain("samesite=none");
-    expect(twoFactorCookie?.toLowerCase()).toContain("secure");
+    expect(challengeCookie).toBeTruthy();
+    expect(challengeCookie?.toLowerCase()).toContain("samesite=none");
+    expect(challengeCookie?.toLowerCase()).toContain("secure");
   });
 });

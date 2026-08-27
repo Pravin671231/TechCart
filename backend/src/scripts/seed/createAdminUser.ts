@@ -1,30 +1,15 @@
-// Shared admin-provisioning helper (Issue #140/M3.2) — used by both
-// admin.ts's CLI entry point and __tests__/auth/admin-sign-in.api.test.ts, so
-// "create a Better-Auth-compatible password credential" logic exists in
-// exactly one place. This is deliberately NOT a full admin-provisioning API
-// (FR-AUTH-025, a separate, larger, out-of-scope issue) — just enough to get
-// one real admin account into the database to exercise the password+OTP
-// sign-in flow outside of tests.
+// Shared admin-provisioning helper — used by the CLI seed scripts
+// (superAdmin.ts, seedUsers.ts) and the auth test suites, so "create an
+// admin account with a real password" logic lives in exactly one place.
 //
-// The password credential is created through Better Auth's own server-side
-// `auth.api.signUpEmail` rather than a raw-driver insert, since only Better
-// Auth knows its own password-hash format — hand-rolling that would risk a
-// hash the real sign-in flow can't verify against. `disableSignUp` was tried
-// in auth.ts first but rejects `auth.api.signUpEmail` too (confirmed against
-// a real CI run: "Email and password sign up is not enabled" even for this
-// server-side call, not just the public HTTP route) — so sign-up stays
-// enabled, and the safety property this needed comes from auth.ts's
-// `rejectBuyerOnPasswordSignIn` hook instead: a self-registered account is
-// always role "buyer" and can never sign in with its password regardless of
-// how the credential was created.
-//
-// `role` and `twoFactorEnabled` aren't settable via signUpEmail's own input
-// (role is `input:false` in auth.ts's additionalFields, and twoFactorEnabled
-// isn't part of sign-up's payload at all) — both are patched afterwards via
-// the raw MongoDB driver, the same convention auth.ts's own
-// databaseHooks/hooks already use to touch the `users` collection directly.
-import mongoose from "mongoose";
-import { auth } from "@/lib/auth";
+// Issue #259/M3.21 — the password credential is now a bcrypt hash written
+// straight to `users.passwordHash` via the raw MongoDB driver, replacing
+// Better Auth's `auth.api.signUpEmail` (which stored a scrypt hash in a
+// separate `account` collection). Admins are the only role with a password;
+// the hand-rolled `/api/auth/sign-in/email` flow verifies against this same
+// field.
+import mongoose, { Types } from "mongoose";
+import { hashPassword } from "@/lib/password";
 
 export type AdminRole = "catalog-manager" | "order-manager" | "super-admin";
 
@@ -51,27 +36,59 @@ export interface ProvisionAdminUserResult {
   created: boolean;
 }
 
+interface AdminUserDoc {
+  _id: Types.ObjectId;
+  name: string;
+  email: string;
+  role: string;
+  status: boolean;
+  emailVerified: boolean;
+  twoFactorEnabled: boolean;
+  passwordHash: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export async function provisionAdminUser(
   input: ProvisionAdminUserInput,
 ): Promise<ProvisionAdminUserResult> {
-  const usersCollection = mongoose.connection.db!.collection<{
-    email: string;
-    role?: string;
-    twoFactorEnabled?: boolean;
-  }>("users");
-
+  const usersCollection = mongoose.connection.db!.collection<AdminUserDoc>("users");
   const existing = await usersCollection.findOne({ email: input.email });
 
+  const now = new Date();
+  const passwordHash = await hashPassword(input.password);
+
   if (!existing) {
-    await auth.api.signUpEmail({
-      body: { email: input.email, password: input.password, name: input.name },
+    await usersCollection.insertOne({
+      _id: new Types.ObjectId(),
+      name: input.name,
+      email: input.email,
+      role: input.role,
+      status: true,
+      emailVerified: true,
+      twoFactorEnabled: true,
+      passwordHash,
+      createdAt: now,
+      updatedAt: now,
     });
+    return { email: input.email, role: input.role, created: true };
   }
 
+  // Idempotent re-run (superAdmin.ts / seedUsers.ts run repeatedly). `status`
+  // is deliberately left untouched — a deactivated account isn't silently
+  // reactivated by a re-seed, matching the pre-#259 behaviour.
   await usersCollection.updateOne(
     { email: input.email },
-    { $set: { role: input.role, twoFactorEnabled: true, emailVerified: true } },
+    {
+      $set: {
+        role: input.role,
+        twoFactorEnabled: true,
+        emailVerified: true,
+        passwordHash,
+        updatedAt: now,
+      },
+    },
   );
 
-  return { email: input.email, role: input.role, created: !existing };
+  return { email: input.email, role: input.role, created: false };
 }

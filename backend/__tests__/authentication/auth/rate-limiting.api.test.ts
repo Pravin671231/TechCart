@@ -268,29 +268,26 @@ describe("FR-AUTH-045 error-code enumeration", () => {
       .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
     codes.otpRequired = passwordRes.body.data.code;
 
-    // 4. OTP invalid — admin twoFactor plugin, confirmed INVALID_CODE
-    // against the installed better-auth@1.7.1 package's own
-    // plugins/two-factor/error-code.mjs.
+    // 4. OTP invalid — the hand-rolled admin OTP flow (Issue #259/M3.21)
+    // maps a wrong/reused code to INVALID_CODE, matching the value
+    // admin-app's describeAuthError.ts already keys on.
     const sendOtp = await agent.post("/api/auth/two-factor/send-otp").send({});
     expect(sendOtp.status).toBe(200);
     const wrongOtp = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "000000" });
     codes.otpInvalid = wrongOtp.body.code;
 
-    // 5. OTP expired — admin twoFactor plugin, confirmed OTP_HAS_EXPIRED
-    // (distinct from #4's INVALID_CODE) against the same installed package.
+    // 5. OTP expired — OTP_HAS_EXPIRED, distinct from #4's INVALID_CODE.
     const agent2 = request.agent(app);
     await agent2
       .post("/api/auth/sign-in/email")
       .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
     await agent2.post("/api/auth/two-factor/send-otp").send({});
     await mongoose.connection
-      .db!.collection("verification")
-      .updateMany({}, { $set: { expiresAt: new Date(Date.now() - 1000) } });
-    // Issue #242/M3.14 — auth.ts's databaseHooks.verification.create.before
-    // forces every 2fa-otp-* record's stored value to "123456:0" regardless
-    // of the real (random) emailed code, so "123456" is the code that would
-    // verify if not expired — submitting it here specifically exercises the
-    // expiry branch, not an incidental wrong-code rejection.
+      .db!.collection("otps")
+      .updateMany(
+        { purpose: "admin-2fa" },
+        { $set: { expiresAt: new Date(Date.now() - 1000) } },
+      );
     const expiredOtp = await agent2.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
     codes.otpExpired = expiredOtp.body.code;
 

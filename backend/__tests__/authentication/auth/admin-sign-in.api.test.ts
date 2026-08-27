@@ -4,24 +4,21 @@ import type { Express } from "express";
 import type { MongoMemoryServer } from "mongodb-memory-server";
 import type mongooseType from "mongoose";
 
-// Admin password + mandatory OTP sign-in (Issue #140/M3.2, FR-AUTH-009–018,
-// 030). Kept as its own file, separate from __tests__/auth/auth.api.test.ts
-// (#139, buyer sign-in) — the flow shape differs materially (two-step
-// password-then-OTP vs. buyer's single-call methods) even though the
-// low-level setup (mongodb-memory-server, dynamic imports so MONGODB_URI is
-// set before @/config/env is first evaluated, mocked sendOtpEmail) is copied
-// verbatim from that file's own established convention.
+// Admin password + mandatory OTP sign-in (Issue #259/M3.21, FR-AUTH-009–017,
+// 030). Kept as its own file, separate from auth.api.test.ts (#139, buyer
+// sign-in) — the flow shape differs materially (two-step password-then-OTP
+// vs. buyer's single-call methods).
 //
-// This suite exercises Better Auth's `twoFactor` plugin, configured in
-// src/lib/auth.ts. The endpoint paths/payload shapes/otpOptions callback
-// signature were originally written without local package access to verify
-// against, then confirmed for real against CI: POST /api/auth/sign-in/email,
-// POST /api/auth/two-factor/send-otp, and POST /api/auth/two-factor/verify-otp
-// all work exactly as designed, including the two-factor-cookie state
-// persisted across an agent's calls and the single-use/wrong-code rejections.
-// One real surprise found this way: the plugin's OTP `verification` record's
-// `identifier` isn't a simple "contains the email" string, unlike the buyer
-// emailOTP flow's — see the "rejects an expired OTP" case below.
+// This is the hand-rolled replacement for Better Auth's emailAndPassword +
+// twoFactor plugins (Issue #140/M3.2), built on #257's session engine +
+// #258's `otps` collection. Wire-compatible with admin-app's existing flow:
+//   POST /api/auth/sign-in/email        — password step, no session, sets a
+//                                          signed `techcart_admin_2fa` cookie,
+//                                          returns { code: "OTP_REQUIRED" }
+//   POST /api/auth/two-factor/send-otp  — mints + emails the OTP for the
+//                                          pending challenge (initial + resend)
+//   POST /api/auth/two-factor/verify-otp — verifies, establishes the session
+// The OTP is fixed to "123456" in every environment (otp.ts / Issue #242).
 vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
@@ -57,12 +54,8 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await mongoose.connection.db!.collection("users").deleteMany({});
-  await mongoose.connection.db!.collection("account").deleteMany({});
-  await mongoose.connection.db!.collection("verification").deleteMany({});
-  await mongoose.connection.db!.collection("session").deleteMany({});
-  // twoFactor plugin's own secret/backup-code collection, if it creates one
-  // — a no-op deleteMany against a non-existent collection is harmless.
-  await mongoose.connection.db!.collection("twoFactor").deleteMany({});
+  await mongoose.connection.db!.collection("otps").deleteMany({});
+  await mongoose.connection.db!.collection("sessions").deleteMany({});
 
   await provisionAdminUser({
     email: ADMIN_EMAIL,
@@ -76,11 +69,8 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-async function capturePasswordStep(agent: ReturnType<typeof request.agent>) {
-  const res = await agent
-    .post("/api/auth/sign-in/email")
-    .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
-  return res;
+function capturePasswordStep(agent: ReturnType<typeof request.agent>) {
+  return agent.post("/api/auth/sign-in/email").send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
 }
 
 async function sendAndCaptureOtp(agent: ReturnType<typeof request.agent>): Promise<string> {
@@ -89,7 +79,7 @@ async function sendAndCaptureOtp(agent: ReturnType<typeof request.agent>): Promi
 
   const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
   const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1] as string;
-  expect(otp).toBeTruthy();
+  expect(otp).toBe("123456");
   return otp;
 }
 
@@ -101,6 +91,7 @@ describe("Admin password + mandatory OTP sign-in", () => {
       const passwordRes = await capturePasswordStep(agent);
       expect(passwordRes.status).toBe(200);
       expect(passwordRes.body.success).toBe(true);
+      expect(passwordRes.body.data.code).toBe("OTP_REQUIRED");
 
       // Correct password alone must not establish a session (FR-AUTH-014).
       const midFlowSession = await agent.get("/api/auth/get-session");
@@ -108,14 +99,12 @@ describe("Admin password + mandatory OTP sign-in", () => {
 
       await sendAndCaptureOtp(agent);
 
-      // Issue #242/M3.14 — auth.ts's databaseHooks.verification.create.before
-      // now forces every 2fa-otp-* record's stored value to "123456:0"
-      // regardless of the real (random) code sendOtpEmail was actually
-      // called with (asserted inside sendAndCaptureOtp), so "123456" is the
-      // only value that verifies anymore.
       const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
       expect(verify.status).toBe(200);
       expect(verify.body.success).toBe(true);
+      expect(verify.body.data.user.email).toBe(ADMIN_EMAIL);
+      expect(verify.body.data.user.role).toBe("super-admin");
+      expect(verify.headers["set-auth-token"]).toBeTruthy();
 
       const session = await agent.get("/api/auth/get-session");
       expect(session.status).toBe(200);
@@ -123,22 +112,25 @@ describe("Admin password + mandatory OTP sign-in", () => {
       expect(session.body.data.user.role).toBe("super-admin");
     });
 
-    it("emails a real random code but still verifies against the fixed value (Issue #242/M3.14's documented asymmetry)", async () => {
+    it("accepts an OTP well past the 3-minute mark, within the 10-minute window (Issue #254/M3.18)", async () => {
       const agent = request.agent(app);
       await capturePasswordStep(agent);
+      await sendAndCaptureOtp(agent);
 
-      const emailedOtp = await sendAndCaptureOtp(agent);
-      // Unlike the buyer flow (auth.api.test.ts), the twoFactor plugin has
-      // no generateOTP-style override, so the emailed code is still the
-      // real generateRandomString(6, "0-9") output — not the fixed value.
-      expect(emailedOtp).not.toBe("123456");
-      expect(emailedOtp).toMatch(/^\d{6}$/);
+      // Simulate ~4 minutes elapsed of the 10-minute window by pulling the
+      // stored record's expiry back to now+6min. The old Better Auth
+      // twoFactor default expired at 3 minutes — this confirms the single
+      // shared 10-minute otp.ts TTL fixes that by construction.
+      await mongoose.connection
+        .db!.collection("otps")
+        .updateMany(
+          { purpose: "admin-2fa" },
+          { $set: { expiresAt: new Date(Date.now() + 6 * 60 * 1000) } },
+        );
 
-      // Verification still only ever accepts "123456", regardless of what
-      // was actually emailed — databaseHooks.verification.create.before
-      // forces the stored value on every write.
       const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
       expect(verify.status).toBe(200);
+      expect(verify.body.success).toBe(true);
     });
   });
 
@@ -157,17 +149,19 @@ describe("Admin password + mandatory OTP sign-in", () => {
       expect(wrongPassword.body.success).toBe(false);
       expect(unknownEmail.body.success).toBe(false);
       expect(wrongPassword.body.code).toBe(unknownEmail.body.code);
+      expect(wrongPassword.body.code).toBe("INVALID_EMAIL_OR_PASSWORD");
       expect(wrongPassword.body.message).toBe(unknownEmail.body.message);
     });
 
-    it("never sends an OTP on a wrong password", async () => {
+    it("never sets a challenge cookie on a wrong password", async () => {
       const res = await request(app)
         .post("/api/auth/sign-in/email")
         .send({ email: ADMIN_EMAIL, password: "not-the-password" });
 
       expect(res.status).toBeGreaterThanOrEqual(400);
-      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
-      expect(sendOtpEmail).not.toHaveBeenCalled();
+      const setCookie = res.headers["set-cookie"];
+      const cookies = setCookie ? (Array.isArray(setCookie) ? setCookie : [setCookie]) : [];
+      expect(cookies.some((c: string) => c.includes("techcart_admin_2fa"))).toBe(false);
     });
   });
 
@@ -180,12 +174,8 @@ describe("Admin password + mandatory OTP sign-in", () => {
       const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "000000" });
       expect(verify.status).toBeGreaterThanOrEqual(400);
       expect(verify.body.success).toBe(false);
-      // FR-AUTH-045 — confirmed against the installed better-auth@1.7.1
-      // package's own plugins/two-factor/error-code.mjs: the twoFactor
-      // plugin's own wrong-code error is INVALID_CODE, distinct from the
-      // buyer emailOTP plugin's INVALID_OTP (see auth.api.test.ts) — both
-      // being different values is fine, FR-AUTH-045 only requires each is
-      // internally stable, not cross-distinguishable from the other flow's.
+      // Matches the admin twoFactor plugin's own wrong-code error value that
+      // admin-app's describeAuthError.ts already keys on (Issue #145/M3.7).
       expect(verify.body.code).toBe("INVALID_CODE");
 
       const session = await agent.get("/api/auth/get-session");
@@ -197,26 +187,13 @@ describe("Admin password + mandatory OTP sign-in", () => {
       await capturePasswordStep(agent);
       await sendAndCaptureOtp(agent);
 
-      // Push the stored record's expiry into the past instead of faking the
-      // system clock, matching auth.api.test.ts's own convention. Unlike the
-      // buyer emailOTP flow, confirmed against a real CI run that the
-      // twoFactor plugin's OTP `verification` identifier isn't a simple
-      // "contains the email" string (a $regex match on ADMIN_EMAIL found
-      // nothing, silently leaving expiresAt untouched) — beforeEach clears
-      // this collection per test, so updating every remaining record is
-      // safe and identifier-format-agnostic.
       await mongoose.connection
-        .db!.collection("verification")
-        .updateMany({}, { $set: { expiresAt: new Date(Date.now() - 1000) } });
+        .db!.collection("otps")
+        .updateMany({ purpose: "admin-2fa" }, { $set: { expiresAt: new Date(Date.now() - 1000) } });
 
-      // "123456" is the code that would verify if not expired (see the
-      // happy-path test's own comment) — submitting it here specifically
-      // exercises the expiry branch, not an incidental wrong-code rejection.
       const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
       expect(verify.status).toBeGreaterThanOrEqual(400);
       expect(verify.body.success).toBe(false);
-      // FR-AUTH-045 — confirmed against the installed package's own
-      // error-code.mjs; distinct from the wrong-code case's INVALID_CODE.
       expect(verify.body.code).toBe("OTP_HAS_EXPIRED");
     });
 
@@ -228,9 +205,8 @@ describe("Admin password + mandatory OTP sign-in", () => {
       const first = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
       expect(first.status).toBe(200);
 
-      // Restart the challenge (a fresh password step) and replay the
-      // already-consumed code — must still be rejected as used, not
-      // accepted a second time.
+      // Restart the challenge (a fresh password step — which does NOT mint a
+      // new OTP) and replay the already-consumed code.
       const secondAgent = request.agent(app);
       await capturePasswordStep(secondAgent);
       const second = await secondAgent
@@ -239,15 +215,29 @@ describe("Admin password + mandatory OTP sign-in", () => {
 
       expect(second.status).toBeGreaterThanOrEqual(400);
       expect(second.body.success).toBe(false);
+      expect(second.body.code).toBe("INVALID_CODE");
+    });
+
+    it("rejects the OTP steps with no challenge cookie", async () => {
+      const send = await request(app).post("/api/auth/two-factor/send-otp").send({});
+      expect(send.status).toBe(401);
+      expect(send.body.code).toBe("INVALID_TWO_FACTOR_COOKIE");
+
+      const verify = await request(app)
+        .post("/api/auth/two-factor/verify-otp")
+        .send({ code: "123456" });
+      expect(verify.status).toBe(401);
+      expect(verify.body.code).toBe("INVALID_TWO_FACTOR_COOKIE");
     });
   });
 
   describe("Sign-out invalidation (FR-AUTH-017)", () => {
-    it("rejects the session cookie after sign-out", async () => {
+    it("rejects the session after sign-out", async () => {
       const agent = request.agent(app);
       await capturePasswordStep(agent);
       await sendAndCaptureOtp(agent);
-      await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
+      const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
+      const token = verify.headers["set-auth-token"] as string;
 
       const beforeSignOut = await agent.get("/api/auth/get-session");
       expect(beforeSignOut.body.data.user.email).toBe(ADMIN_EMAIL);
@@ -257,20 +247,24 @@ describe("Admin password + mandatory OTP sign-in", () => {
 
       const afterSignOut = await agent.get("/api/auth/get-session");
       expect(afterSignOut.body.data ?? null).toBeFalsy();
+
+      const withBearer = await request(app)
+        .get("/api/auth/get-session")
+        .set("Authorization", `Bearer ${token}`);
+      expect(withBearer.body.data ?? null).toBeFalsy();
     });
   });
 
   describe("Session cookie flags (FR-AUTH-015–016)", () => {
-    it("sets httpOnly/secure/sameSite=lax on the session cookie", async () => {
+    it("sets httpOnly/sameSite=lax on the session cookie in a non-https env", async () => {
       const agent = request.agent(app);
       await capturePasswordStep(agent);
       await sendAndCaptureOtp(agent);
       const verify = await agent.post("/api/auth/two-factor/verify-otp").send({ code: "123456" });
 
       const setCookie = verify.headers["set-cookie"];
-      expect(setCookie).toBeTruthy();
       const cookies = Array.isArray(setCookie) ? setCookie : [setCookie];
-      const sessionCookie = cookies.find((c: string) => /session/i.test(c));
+      const sessionCookie = cookies.find((c: string) => /techcart_session/i.test(c));
       expect(sessionCookie).toBeTruthy();
       expect(sessionCookie?.toLowerCase()).toContain("httponly");
       expect(sessionCookie?.toLowerCase()).toContain("samesite=lax");
@@ -316,13 +310,13 @@ describe("Admin password + mandatory OTP sign-in", () => {
 
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(res.body.success).toBe(false);
+      expect(res.body.code).toBe("INVALID_EMAIL_OR_PASSWORD");
     });
   });
 
   describe("OTP required signal (Issue #145/M3.7, FR-AUTH-045)", () => {
     it("stamps data.code=OTP_REQUIRED on the password-only response", async () => {
-      const agent = request.agent(app);
-      const passwordRes = await capturePasswordStep(agent);
+      const passwordRes = await capturePasswordStep(request.agent(app));
 
       expect(passwordRes.status).toBe(200);
       expect(passwordRes.body.success).toBe(true);
