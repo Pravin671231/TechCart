@@ -17,9 +17,13 @@ import { env } from "@/config/env";
 
 const isTestEnv = env.NODE_ENV === "test";
 
-// Vitest's injected REDIS_URL (vitest.config.ts) is a dummy value with
-// nothing listening on it — never actually connect to it.
-const redisClient = isTestEnv ? null : new Redis(env.REDIS_URL);
+// A real Redis client only when rate limiting is on, we're not under test,
+// and a REDIS_URL is actually configured. Otherwise the limiters run on
+// per-instance in-memory counters (RateLimiterMemory) — still enforced when
+// RATE_LIMITING_ENABLED is true, just not shared across instances.
+// RATE_LIMITING_ENABLED=false short-circuits `consume()` below entirely.
+const redisClient =
+  env.RATE_LIMITING_ENABLED && !isTestEnv && env.REDIS_URL ? new Redis(env.REDIS_URL) : null;
 
 // Limiter instances are created lazily per distinct (keyPrefix, points,
 // duration) triple and cached — consumeIpLimit's and consumeEmailLimit's
@@ -31,10 +35,9 @@ function getLimiter(keyPrefix: string, points: number, duration: number): RateLi
   const existing = limiters.get(cacheKey);
   if (existing) return existing;
 
-  const limiter = isTestEnv
-    ? new RateLimiterMemory({ keyPrefix, points, duration })
-    : new RateLimiterRedis({
-        storeClient: redisClient!,
+  const limiter = redisClient
+    ? new RateLimiterRedis({
+        storeClient: redisClient,
         keyPrefix,
         points,
         duration,
@@ -42,7 +45,8 @@ function getLimiter(keyPrefix: string, points: number, duration: number): RateLi
         // limit instead of crashing every auth request or silently
         // disabling rate limiting altogether.
         insuranceLimiter: new RateLimiterMemory({ keyPrefix, points, duration }),
-      });
+      })
+    : new RateLimiterMemory({ keyPrefix, points, duration });
   limiters.set(cacheKey, limiter);
   return limiter;
 }
@@ -58,6 +62,13 @@ async function consume(
   points: number,
   duration: number,
 ): Promise<ConsumeResult> {
+  // RATE_LIMITING_ENABLED=false (env.ts) makes every limiter a no-op — a
+  // local-dev / manual-testing escape hatch. Read live (not a module-load
+  // const) so a test can flip it without a module reset.
+  if (!env.RATE_LIMITING_ENABLED) {
+    return { allowed: true, retryAfter: null };
+  }
+
   const limiter = getLimiter(keyPrefix, points, duration);
   try {
     await limiter.consume(key);
