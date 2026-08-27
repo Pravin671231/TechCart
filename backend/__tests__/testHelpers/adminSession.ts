@@ -8,10 +8,11 @@ import request from "supertest";
 // __tests__/adminUsers/adminUsers.api.test.ts's own signInFully/adminRequest
 // on their second real use (the six catalog Supertest suites this issue
 // converts from X-Admin-Key to real-session auth are the third through
-// eighth). Every catalog admin route is now gated by rbac.ts, which needs a
-// real Better Auth session to resolve — these suites still mock each
-// module's own repository layer, so this only adds a real Mongo connection
-// for session resolution, not real catalog reads/writes.
+// eighth). Every catalog admin route is now gated by rbac.ts, which resolves
+// a session via the custom engine (@/lib/session) — signInFully drives the
+// real hand-rolled sign-in endpoints to get a bearer token. These suites
+// still mock each module's own repository layer, so this only adds a real
+// Mongo connection for session resolution, not real catalog reads/writes.
 
 export interface MemoryMongoContext {
   mongod: MongoMemoryServer;
@@ -49,10 +50,6 @@ export async function clearAuthCollections(mongoose: typeof mongooseType): Promi
   await mongoose.connection.db!.collection("sessions").deleteMany({});
   await mongoose.connection.db!.collection("otps").deleteMany({});
   await mongoose.connection.db!.collection("passwordresettokens").deleteMany({});
-  // Legacy Better Auth collections — harmless no-ops once nothing writes them.
-  await mongoose.connection.db!.collection("account").deleteMany({});
-  await mongoose.connection.db!.collection("verification").deleteMany({});
-  await mongoose.connection.db!.collection("session").deleteMany({});
 }
 
 // Requires the calling test file to have already called

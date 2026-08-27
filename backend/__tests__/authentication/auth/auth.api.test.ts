@@ -14,11 +14,11 @@ import type mongooseType from "mongoose";
 // of a static top-level import like every other test file in this repo
 // uses.
 //
-// Issue #258/M3.20 — replaces Better Auth's buyer sign-in (google
+// Issue #258/M3.20 — replaced Better Auth's buyer sign-in (google
 // social-provider plugin + emailOTP plugin) with a hand-rolled
-// implementation. Better Auth itself is untouched and still serves every
-// admin path via the same app's /api/auth/* catch-all — this suite only
-// exercises the new buyer-specific routes mounted ahead of it.
+// implementation on the custom session engine; Better Auth was fully
+// removed in #261/M3.23. This suite exercises the buyer sign-in routes
+// (one-tap/callback, email-otp send/verify, get-session, sign-out).
 const { verifyIdTokenMock } = vi.hoisted(() => ({ verifyIdTokenMock: vi.fn() }));
 
 vi.mock("google-auth-library", () => ({

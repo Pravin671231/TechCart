@@ -2,24 +2,18 @@ import Redis from "ioredis";
 import { RateLimiterMemory, RateLimiterRedis } from "rate-limiter-flexible";
 import { env } from "@/config/env";
 
-// Issue #145/M3.7 (FR-AUTH-040–044). Two independent consumers share this
-// file:
+// Issue #145/M3.7 (FR-AUTH-040–044), reworked by #258/#259 once the auth
+// routes became hand-rolled. Two consumers, both calling in directly from the
+// hand-rolled sign-in / OTP / password-reset handlers (auth.service.ts):
 //
-// 1. Better Auth's own native per-request rate limiter (wired in lib/auth.ts
-//    via `betterAuth({rateLimit: {customStorage: nativeIpRateLimitStorage,
-//    customRules: {...}}})`) — Better Auth already resolves the real client
-//    IP (advanced.ipAddress, honoring x-forwarded-for) and applies its rules
-//    atomically before any route handler runs; this file only supplies the
-//    Redis-backed storage and this issue's own per-path window/max values.
-//    That native system has no per-email dimension at all.
-// 2. `consumeEmailLimit`, called directly from lib/auth.ts's own
-//    `hooks.before` chain (see enforceEmailRateLimits) for the endpoints
-//    whose request body actually carries an email — the "per email" half of
-//    FR-AUTH-040/042/043 that Better Auth's native system can't provide.
+// 1. `consumeIpLimit` — the per-IP dimension of FR-AUTH-040–044, keyed off
+//    the request's `x-forwarded-for` (single-value, trusted directly — a
+//    single-hop PaaS deployment shape).
+// 2. `consumeEmailLimit` — the per-email dimension of FR-AUTH-040/042/043,
+//    for the paths whose request body carries an email.
 //
 // Both funnel through the same generic `consume()` so there's one Redis
-// client and one library in this file, not two different rate-limiting
-// styles.
+// client and one library in this file.
 
 const isTestEnv = env.NODE_ENV === "test";
 
@@ -27,12 +21,9 @@ const isTestEnv = env.NODE_ENV === "test";
 // nothing listening on it — never actually connect to it.
 const redisClient = isTestEnv ? null : new Redis(env.REDIS_URL);
 
-// Better Auth's native rate limiter calls customStorage.consume(key, rule)
-// with a *dynamic* {window, max} per matched path (see resolveRateLimitConfig
-// in better-auth's own rate-limiter), so limiter instances are created
-// lazily per distinct (keyPrefix, points, duration) triple rather than
-// one-per-path up front. consumeEmailLimit's four groups also go through
-// this same cache, keyed by their own fixed values.
+// Limiter instances are created lazily per distinct (keyPrefix, points,
+// duration) triple and cached — consumeIpLimit's and consumeEmailLimit's
+// groups all go through this same cache, keyed by their own fixed values.
 const limiters = new Map<string, RateLimiterMemory | RateLimiterRedis>();
 
 function getLimiter(keyPrefix: string, points: number, duration: number): RateLimiterMemory | RateLimiterRedis {
@@ -77,32 +68,19 @@ async function consume(
   }
 }
 
-// Bridge for betterAuth({rateLimit: {customStorage}}) — see lib/auth.ts.
-// `key` already includes the path (Better Auth's own `createRateLimitKey`
-// joins ip+path before calling this), so one keyPrefix is enough here.
-export const nativeIpRateLimitStorage = {
-  consume: (key: string, rule: { window: number; max: number }): Promise<ConsumeResult> =>
-    consume("auth-ip", key, rule.max, rule.window),
-};
-
 export type EmailLimitGroup =
   | "admin-signin"
   | "admin-forgot-password"
   | "buyer-otp-request";
 
-// Issue #259/M3.21 — the admin sign-in / OTP paths moved from Better Auth's
-// native customRules (lib/auth.ts) to hand-rolled route handlers, which sit
-// ahead of the Better Auth catch-all and so never reach that native limiter.
-// These replicate FR-AUTH-040/041's IP-keyed limits, mirroring how #258 did
-// the same for the buyer paths it intercepted (IP_LIMIT_CONFIG below).
+// FR-AUTH-040/042/043's per-email limits, enforced in the hand-rolled
+// sign-in / OTP-request / password-reset handlers (auth.service.ts).
 
 const EMAIL_LIMIT_CONFIG: Record<EmailLimitGroup, { points: number; duration: number }> = {
-  // FR-AUTH-040 — admin sign-in, per email. Shares its threshold with the
-  // native IP-keyed rule on the same path (lib/auth.ts's customRules); the
-  // /two-factor/verify-otp leg of this same named limit has no email in its
-  // request body (just {code}) and stays IP-only via the native system —
-  // documented, accepted scope, same treatment this codebase gives other
-  // infra-shaped gaps.
+  // FR-AUTH-040 — admin sign-in, per email. The /two-factor/verify-otp leg of
+  // this same named limit has no email in its request body (just {code}) and
+  // stays IP-only via consumeIpLimit — documented, accepted scope, same
+  // treatment this codebase gives other infra-shaped gaps.
   "admin-signin": { points: 5, duration: 900 }, // 5 / 15 min
   // FR-AUTH-042 — admin forgot-password, per email.
   "admin-forgot-password": { points: 3, duration: 3600 }, // 3 / 1 hour
@@ -118,11 +96,8 @@ export async function consumeEmailLimit(
   return consume(`email:${group}`, email.toLowerCase(), config.points, config.duration);
 }
 
-// Issue #258/M3.20 — the IP half of FR-AUTH-043/044 for the two buyer routes
-// that used to be covered by Better Auth's own native customRules (auth.ts)
-// before those paths were intercepted by hand-rolled routes ahead of the
-// Better Auth catch-all. That native per-request limiter never runs for a
-// path it no longer receives, so these two rules are replicated here.
+// FR-AUTH-040–044's per-IP limits, enforced in the hand-rolled auth handlers
+// (auth.service.ts) — one group per rate-limited path.
 export type IpLimitGroup =
   | "buyer-google-signin"
   | "buyer-otp-request"
@@ -132,12 +107,12 @@ export type IpLimitGroup =
   | "admin-forgot-password";
 
 const IP_LIMIT_CONFIG: Record<IpLimitGroup, { points: number; duration: number }> = {
-  "buyer-google-signin": { points: 20, duration: 3600 }, // FR-AUTH-044 — was auth.ts's "/one-tap/callback" rule
-  "buyer-otp-request": { points: 5, duration: 600 }, // FR-AUTH-043 (IP half) — was auth.ts's "/email-otp/send-verification-otp" rule
-  "admin-signin": { points: 5, duration: 900 }, // FR-AUTH-040 — was auth.ts's "/sign-in/email" rule
-  "admin-otp-verify": { points: 5, duration: 900 }, // FR-AUTH-040 — was auth.ts's "/two-factor/verify-otp" rule
-  "admin-otp-resend": { points: 3, duration: 600 }, // FR-AUTH-041 — was auth.ts's "/two-factor/send-otp" rule
-  "admin-forgot-password": { points: 3, duration: 3600 }, // FR-AUTH-042 — was auth.ts's "/request-password-reset" rule
+  "buyer-google-signin": { points: 20, duration: 3600 }, // FR-AUTH-044 — POST /one-tap/callback
+  "buyer-otp-request": { points: 5, duration: 600 }, // FR-AUTH-043 (IP half) — POST /email-otp/send-verification-otp
+  "admin-signin": { points: 5, duration: 900 }, // FR-AUTH-040 — POST /sign-in/email
+  "admin-otp-verify": { points: 5, duration: 900 }, // FR-AUTH-040 — POST /two-factor/verify-otp
+  "admin-otp-resend": { points: 3, duration: 600 }, // FR-AUTH-041 — POST /two-factor/send-otp
+  "admin-forgot-password": { points: 3, duration: 3600 }, // FR-AUTH-042 — POST /request-password-reset
 };
 
 export async function consumeIpLimit(group: IpLimitGroup, ip: string): Promise<ConsumeResult> {

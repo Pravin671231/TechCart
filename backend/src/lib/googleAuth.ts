@@ -1,11 +1,9 @@
 import { OAuth2Client } from "google-auth-library";
 import { env } from "@/config/env";
 
-// Replaces Better Auth's `google` social-provider plugin for buyer sign-in
-// (Issue #258/M3.20) — verifies a Google ID token directly against Google's
-// public JWKS instead of delegating to a plugin. GOOGLE_CLIENT_ID is the
-// same var Better Auth's still-running admin-side config also declares
-// (Issue #139) — no new env var needed.
+// Verifies a Google ID token directly against Google's public JWKS for
+// buyer One Tap sign-in (Issue #258/M3.20) — replaced Better Auth's `google`
+// social-provider plugin. Uses the existing GOOGLE_CLIENT_ID env var.
 
 const client = new OAuth2Client(env.GOOGLE.CLIENT_ID);
 

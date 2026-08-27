@@ -5,17 +5,15 @@ import type { MongoMemoryServer } from "mongodb-memory-server";
 import type mongooseType from "mongoose";
 
 // Issue #258/M3.20 — the buyer-flow counterpart to
-// cross-site-cookies.api.test.ts (which stays exactly as-is, verifying
-// Better Auth's own admin two-factor pending cookie — untouched by this
-// issue, since admin sign-in isn't migrated yet). #257's session.ts already
-// carries the identical isCrossSiteDeployment gate (mirroring auth.ts's
-// own), so this verifies the NEW techcart_session cookie gets the same
-// SameSite=None; Secure treatment once a buyer signs in through the new
-// engine under a cross-site (https) deployment.
+// cross-site-cookies.api.test.ts (which verifies the admin two-factor
+// pending cookie in adminChallenge.ts). session.ts and adminChallenge.ts
+// share the identical isCrossSiteDeployment gate, so this verifies the
+// techcart_session cookie gets the same SameSite=None; Secure treatment
+// once a buyer signs in under a cross-site (https) deployment.
 //
 // Its own file, not folded into auth.api.test.ts, for the same reason
 // cross-site-cookies.api.test.ts is separate: it needs a genuinely
-// different BETTER_AUTH_URL (https, not the shared http://localhost:4000
+// different APP_BASE_URL (https, not the shared http://localhost:4000
 // every other suite uses) — set here, before any dynamic import of
 // @/lib/session (transitively pulled in via @/app), so @/config/env's
 // module-level parse picks it up. Vitest isolates each test file's module
@@ -29,7 +27,7 @@ let mongoose: typeof mongooseType;
 let app: Express;
 
 beforeAll(async () => {
-  process.env.BETTER_AUTH_URL = "https://techcart-backend.example.onrender.com";
+  process.env.APP_BASE_URL = "https://techcart-backend.example.onrender.com";
 
   const { MongoMemoryServer: MemoryServer } = await import("mongodb-memory-server");
   mongod = await MemoryServer.create();
@@ -49,7 +47,7 @@ afterAll(async () => {
 });
 
 describe("cross-site buyer session cookie (Issue #258/M3.20)", () => {
-  it("sets SameSite=None; Secure on the session cookie when BETTER_AUTH_URL is https", async () => {
+  it("sets SameSite=None; Secure on the session cookie when APP_BASE_URL is https", async () => {
     const email = "cross-site-buyer@example.com";
 
     await request(app)

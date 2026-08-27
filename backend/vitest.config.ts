@@ -17,8 +17,7 @@ export default defineConfig({
       R2_SECRET_ACCESS_KEY: "test-secret-access-key",
       R2_BUCKET_NAME: "test-bucket",
       R2_PUBLIC_URL_BASE: "https://cdn.test.example",
-      BETTER_AUTH_SECRET: "test-better-auth-secret",
-      BETTER_AUTH_URL: "http://localhost:4000",
+      APP_BASE_URL: "http://localhost:4000",
       JWT_SECRET: "test-jwt-secret-at-least-32-characters-long",
       GOOGLE_CLIENT_ID: "test-google-client-id",
       GOOGLE_CLIENT_SECRET: "test-google-client-secret",
@@ -37,17 +36,6 @@ export default defineConfig({
     // blows past Vitest's 5s default.
     testTimeout: 30000,
     hookTimeout: 30000,
-    // Vitest externalizes node_modules packages by default (loaded via
-    // Node's own require/import, bypassing Vite's SSR module graph) — a
-    // vi.mock() of a package only intercepts imports Vitest itself
-    // resolves. better-auth's plugins import Google token verification from
-    // @better-auth/core deep inside their own dist files, so those packages
-    // need to be inlined for __tests__/auth's mocks to actually reach them.
-    server: {
-      deps: {
-        inline: ["better-auth", "@better-auth/core", "@better-auth/mongo-adapter"],
-      },
-    },
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],

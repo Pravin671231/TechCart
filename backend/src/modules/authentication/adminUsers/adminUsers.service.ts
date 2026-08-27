@@ -71,8 +71,7 @@ export interface UpdateAdminUserInput {
 // the guard doesn't distinguish which field changed). Deactivating
 // (status: false) invalidates every live session for that admin
 // synchronously, in the same request, via the custom session engine's
-// revokeAllSessionsForUser (Issue #259/M3.21 — was #141's Better Auth
-// revokeSessionsForUser).
+// revokeAllSessionsForUser (@/lib/session).
 export async function updateAdminUser(
   id: Types.ObjectId,
   input: UpdateAdminUserInput,

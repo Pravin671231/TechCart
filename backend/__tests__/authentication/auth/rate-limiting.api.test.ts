@@ -212,11 +212,10 @@ describe("Auth rate limiting (Issue #145/M3.7)", () => {
     it("returns 429 RATE_LIMITED after exceeding the OAuth callback limit for one IP", async () => {
       const ip = "10.0.1.9";
       let last;
-      // max: 20 — the underlying token is never valid, but Better Auth's
-      // native rate limiter runs before any endpoint logic (confirmed
-      // against the installed package's own api/index.mjs `onRequest`), so
-      // every one of these 21 calls counts against the bucket regardless of
-      // what status the 20 allowed ones get for an invalid token.
+      // max: 20 — the underlying token is never valid, but signInWithGoogle
+      // consumes the IP limit before verifying the token (auth.service.ts),
+      // so every one of these 21 calls counts against the bucket regardless
+      // of what status the 20 allowed ones get for an invalid token.
       for (let i = 0; i < 21; i++) {
         last = await request(app)
           .post("/api/auth/one-tap/callback")

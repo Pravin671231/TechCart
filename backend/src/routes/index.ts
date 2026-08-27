@@ -9,8 +9,11 @@ import adminRouter from "./admin.routes";
 
 const router = Router();
 
-// Ahead of express.json() below — Better Auth needs the raw, unparsed
-// request body/stream (#139, SRS v0.3).
+// Mounted ahead of the global express.json() below — each hand-rolled auth
+// route declares its own route-scoped express.json() (auth.routes.ts), so
+// body parsing for /api/auth/* stays owned by that module. Historically this
+// ordering was required because Better Auth's catch-all needed the raw,
+// unparsed body stream (#139); it's kept now as the module's own convention.
 router.use(authModule.path, authModule.router);
 
 router.use(express.json());

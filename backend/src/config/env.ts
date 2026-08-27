@@ -22,8 +22,10 @@ const envSchema = z.object({
   R2_SECRET_ACCESS_KEY: z.string().min(1, "R2_SECRET_ACCESS_KEY is required"),
   R2_BUCKET_NAME: z.string().min(1, "R2_BUCKET_NAME is required"),
   R2_PUBLIC_URL_BASE: z.string().min(1, "R2_PUBLIC_URL_BASE is required"),
-  BETTER_AUTH_SECRET: z.string().min(1, "BETTER_AUTH_SECRET is required"),
-  BETTER_AUTH_URL: z.string().min(1, "BETTER_AUTH_URL is required"),
+  // The backend's own public base URL. `.startsWith("https://")` gates the
+  // cross-site cookie attributes (session.ts / adminChallenge.ts) and it's
+  // the fallback origin for admin password-reset links (auth.service.ts).
+  APP_BASE_URL: z.string().min(1, "APP_BASE_URL is required"),
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
   GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required"),
   GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
@@ -54,8 +56,7 @@ export const env = {
     BUCKET_NAME: rawEnv.R2_BUCKET_NAME,
     PUBLIC_URL_BASE: rawEnv.R2_PUBLIC_URL_BASE,
   },
-  BETTER_AUTH_SECRET: rawEnv.BETTER_AUTH_SECRET,
-  BETTER_AUTH_URL: rawEnv.BETTER_AUTH_URL,
+  APP_BASE_URL: rawEnv.APP_BASE_URL,
   JWT_SECRET: rawEnv.JWT_SECRET,
   GOOGLE: {
     CLIENT_ID: rawEnv.GOOGLE_CLIENT_ID,

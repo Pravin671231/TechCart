@@ -8,9 +8,8 @@ import type mongooseType from "mongoose";
 // setup (mongodb-memory-server, dynamic imports so MONGODB_URI is set before
 // @/config/env is first evaluated, mocked resend) copied verbatim from
 // admin-sign-in.api.test.ts/admin-password-reset.api.test.ts's established
-// convention — this suite needs the same real Better Auth session/user state
-// (rbac.ts's auth.api.getSession call can't be trusted against a mocked
-// adapter either).
+// convention — this suite needs real session/user state in a real DB
+// (rbac.ts's session verification can't be trusted against mocks either).
 //
 // These routes are gated by rbac(["super-admin"]) (src/middleware/rbac.ts)
 // — the X-Admin-Key router guard this file's own header comment originally

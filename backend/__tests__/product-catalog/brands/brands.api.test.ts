@@ -4,8 +4,8 @@ import request from "supertest";
 import type { Express } from "express";
 
 // Issue #143/M3.5 — every /api/admin/brands route is now gated by rbac.ts,
-// which needs a real Better Auth session (auth.api.getSession) to resolve,
-// not the old X-Admin-Key header. Adopts the mongodb-memory-server harness
+// which needs a real session (verified via @/lib/session) to resolve, not
+// the old X-Admin-Key header. Adopts the mongodb-memory-server harness
 // __tests__/auth/*/__tests__/adminUsers/* already use for exactly that
 // reason — brands/products.repository stay mocked below, same as before;
 // only session resolution touches a real DB.

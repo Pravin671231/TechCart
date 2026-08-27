@@ -282,7 +282,7 @@ export async function adminVerifyOtp(
 const RESET_TOKEN_BYTES = 32;
 
 function buildAdminResetUrl(token: string): string {
-  const origin = env.CORS_ORIGINS.split(",")[0]?.trim() || env.BETTER_AUTH_URL;
+  const origin = env.CORS_ORIGINS.split(",")[0]?.trim() || env.APP_BASE_URL;
   return `${origin.replace(/\/+$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
 }
 
