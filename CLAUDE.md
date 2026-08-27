@@ -44,6 +44,8 @@ Issue #264 / M3.26 (docs: update Postman manuals for the custom auth endpoints, 
 
 `RATE_LIMITING_ENABLED` toggle + optional `REDIS_URL` (infra, no milestone, merged PR #284): `backend`'s auth abuse limiters (`FR-AUTH-040`–`044`, `src/lib/rateLimit.ts`) gain a `RATE_LIMITING_ENABLED` env var (default `"true"`) — set `"false"` and `consume()` short-circuits to `{ allowed: true }`, so `429 RATE_LIMITED` never fires (a local-dev / manual-Postman-testing escape hatch; `render.yaml` pins it `"true"`). `REDIS_URL` is now **optional**: with it the limiters are Redis-backed and shared across instances, without it (or under test) they fall back to per-instance `RateLimiterMemory` — still enforced when the toggle is on. The backend boots with neither var. Default config is unchanged behaviour. See `backend/CLAUDE.md`'s Abuse Mitigation & Error Contract section for full detail.
 
+`admin-app`: nested `<form>` in the product variant editor (bug fix, no milestone, merged PR #286): `ProductVariantsEditor.tsx`'s `VariantForm` rendered its own `<form>` while already nested inside `ProductForm.tsx`'s `<form>` — invalid HTML, logged as a React hydration error. `VariantForm`'s root is now a `<div role="group">` with an explicit `onClick` submit handler on its button and an in-handler SKU/MRP check replacing the native `required` validation lost with the `<form>`; the variant editor's own `addVariant`/`updateVariant` mutations are unchanged. See `admin-app/AGENTS.md`'s "Product create/edit form" section for detail.
+
 ## Development process — read before starting any feature
 
 This repo is built strictly feature-by-feature against a versioned SRS, not from a single upfront spec:
