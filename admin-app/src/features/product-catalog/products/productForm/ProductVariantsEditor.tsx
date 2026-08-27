@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
 import { useGetCategoryVariantsQuery } from "@/features/product-catalog/categoryVariants/categoryVariantsApi";
 import type { VariantAxis } from "@/features/product-catalog/categoryVariants/types";
@@ -106,6 +106,7 @@ const VariantForm = ({
   const [weight, setWeight] = useState(variant?.weight !== undefined ? String(variant.weight) : "");
   const [active, setActive] = useState(variant?.active ?? true);
   const [images, setImages] = useState<UploadedImage[]>([]);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const isSaving = isAdding || isUpdating;
   const saveError = getApiErrorEnvelope(addError ?? updateError);
@@ -114,8 +115,19 @@ const VariantForm = ({
   const discountNum = discount === "" ? 0 : Number(discount);
   const sellingPreview = computeSellingPreview(mrpNum, discountNum);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSubmit() {
+    // This editor is nested inside the product form's own <form>, so its root
+    // can't be a <form> element (nested forms are invalid HTML). That means no
+    // native required-field validation — mirror the two hard requirements here.
+    if (!sku.trim()) {
+      setFormError("SKU is required.");
+      return;
+    }
+    if (!mrp.trim() || !Number.isFinite(Number(mrp)) || Number(mrp) <= 0) {
+      setFormError("Enter a valid MRP.");
+      return;
+    }
+    setFormError(null);
 
     const attributes = axes
       .map((axis) => ({ name: axis.name, value: attributeValues[axis.code] ?? "" }))
@@ -158,8 +170,9 @@ const VariantForm = ({
   }
 
   return (
-    <form
-      onSubmit={(event) => void handleSubmit(event)}
+    <div
+      role="group"
+      aria-label={variant ? "Edit variant" : "New variant"}
       className="mb-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3"
     >
       <div className="grid gap-3 sm:grid-cols-5">
@@ -237,21 +250,27 @@ const VariantForm = ({
         />
       </div>
 
-      {saveError && (
+      {(formError || saveError) && (
         <p role="alert" className="mt-3 text-sm text-red-800">
-          {saveError.message ?? "Unable to save this variant."}
+          {formError ?? saveError?.message ?? "Unable to save this variant."}
         </p>
       )}
 
       <div className="mt-3 flex gap-2">
-        <Button type="submit" size="sm" loading={isSaving} loadingLabel="Saving…">
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => void handleSubmit()}
+          loading={isSaving}
+          loadingLabel="Saving…"
+        >
           {variant ? "Save variant" : "Add variant"}
         </Button>
         <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
           Cancel
         </Button>
       </div>
-    </form>
+    </div>
   );
 };
 
