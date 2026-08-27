@@ -236,7 +236,7 @@ Google OAuth sign-in (`FR-AUTH-001`, `003`) — a full browser redirect flow, **
 
 ## Admin Sign-In (Password + Mandatory OTP)
 
-Two-step challenge, distinct from buyer's single-call methods — a correct password alone never establishes a session (`FR-AUTH-011`–`014`, `030`).
+Two-step challenge, distinct from buyer's single-call methods — a correct password alone never establishes a session (`FR-AUTH-011`–`014`, `030`). Since Issue #259/M3.21 this is a hand-rolled flow on the custom session engine (no Better Auth). The "which admin is mid-sign-in" state between the three calls rides an `httpOnly` cookie named `techcart_admin_2fa` (`SameSite=None; Secure` when the backend runs over HTTPS, `SameSite=Lax` otherwise) — Postman must keep the same cookie jar across all three calls.
 
 ### `POST /api/auth/sign-in/email`
 
@@ -265,12 +265,12 @@ Password step.
 {
   "success": true,
   "data": {
-    "twoFactorRedirect": true
+    "code": "OTP_REQUIRED"
   }
 }
 ```
 
-- **No session is established yet** — `GET /api/auth/get-session` right after this step still returns `data: null`. Postman needs to keep using the same request (same collection run / same cookie jar) so the two-factor challenge state (a cookie) carries into the next two calls — this doc assumes you're testing sequentially in one Postman session.
+- **No session is established yet** — `GET /api/auth/get-session` right after this step still returns `data: null`. A `Set-Cookie: techcart_admin_2fa=…` header carries the pending challenge into the next two calls. **No OTP email is sent by this step** — the next call (`/two-factor/send-otp`) mints and sends it.
 
 ### Error cases
 
@@ -288,13 +288,27 @@ Password step.
 }
 ```
 
-No OTP is ever sent for any of these three cases.
+**A deactivated admin account** (`status: false`) — checked ahead of the password, so this is returned even for a wrong password:
+
+```
+403 Forbidden
+```
+
+```json
+{
+  "success": false,
+  "code": "ACCOUNT_DEACTIVATED",
+  "message": "This account has been deactivated."
+}
+```
+
+No challenge cookie is set, and no OTP is ever sent, for any of these cases.
 
 ---
 
 ### `POST /api/auth/two-factor/send-otp`
 
-Dispatches the mandatory OTP email — only reachable after a valid password step above.
+Mints + sends the OTP email for the pending challenge. Used for the initial send **and** "Resend".
 
 | Field  | Value                                       |
 | ------ | ---------------------------------------------- |
@@ -302,9 +316,23 @@ Dispatches the mandatory OTP email — only reachable after a valid password ste
 | URL    | `{{base_url}}/api/auth/two-factor/send-otp`     |
 | Name   | `Admin — Send OTP`                              |
 
-**Headers tab:** `Content-Type: application/json`. **Body:** `{}`.
+**Headers tab:** none required (no body). The `techcart_admin_2fa` cookie from the password step must be sent — Postman does this automatically within one cookie jar.
 
 **Click Send. Expected response — `200 OK`:** `{"success": true, "data": {}}`. The code is fixed to `123456` in every environment — submit that at `/two-factor/verify-otp`, no need to check an inbox. See [Prerequisites](#prerequisites).
+
+**Error — missing or expired challenge cookie:**
+
+```
+401 Unauthorized
+```
+
+```json
+{
+  "success": false,
+  "code": "INVALID_TWO_FACTOR_COOKIE",
+  "message": "Your sign-in session has expired. Start again."
+}
+```
 
 ---
 
@@ -318,7 +346,7 @@ Completes sign-in.
 | URL    | `{{base_url}}/api/auth/two-factor/verify-otp`       |
 | Name   | `Admin — Verify OTP`                                |
 
-**Headers tab:** `Content-Type: application/json`.
+**Headers tab:** `Content-Type: application/json`. The `techcart_admin_2fa` cookie must be sent.
 
 **Body tab → raw → JSON:**
 
@@ -334,9 +362,9 @@ Completes sign-in.
 {
   "success": true,
   "data": {
-    "token": "raw-session-token-value...",
     "user": {
       "id": "66a1f0c9e4b0a1a2b3c4d5e6",
+      "name": "Admin Name",
       "email": "admin@example.com",
       "role": "super-admin"
     }
@@ -344,13 +372,13 @@ Completes sign-in.
 }
 ```
 
-Copy `set-auth-token` (Response Headers tab) into the `admin_access_token` collection variable. The session cookie set here is `httpOnly`/`secure`/`sameSite=lax` (`FR-AUTH-015`–`016`).
+Copy `set-auth-token` (Response Headers tab) into the `admin_access_token` collection variable — that's the bearer token for every `/api/admin/*` and `/api/account/*` call. The session cookie set here is `techcart_session` (`httpOnly`, `SameSite=Lax` over HTTP / `None; Secure` over HTTPS) (`FR-AUTH-015`–`016`). The `techcart_admin_2fa` challenge cookie is cleared.
 
 ### Error cases
 
-Confirmed against Better Auth's own `twoFactor` plugin source (`otp/index.mjs`) — no session is established in any of these cases:
+No session is established in any of these cases:
 
-**Wrong code:**
+**Wrong code, or a reused/already-consumed code:**
 
 ```
 401 Unauthorized
@@ -360,37 +388,25 @@ Confirmed against Better Auth's own `twoFactor` plugin source (`otp/index.mjs`) 
 {
   "success": false,
   "code": "INVALID_CODE",
-  "message": "Invalid code"
+  "message": "Incorrect or expired code."
 }
 ```
 
-**Expired code, or a reused/already-verified code** (both collapse to the same "no verification record found" check):
+**Expired code** (older than 10 minutes):
 
 ```
-400 Bad Request
+401 Unauthorized
 ```
 
 ```json
 {
   "success": false,
   "code": "OTP_HAS_EXPIRED",
-  "message": "OTP has expired"
+  "message": "This code has expired. Request a new one."
 }
 ```
 
-**More than 5 wrong attempts against the same code** (`allowedAttempts` default):
-
-```
-400 Bad Request
-```
-
-```json
-{
-  "success": false,
-  "code": "TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE",
-  "message": "Too many attempts. Please request a new code."
-}
-```
+**Missing or expired challenge cookie:** `401` `INVALID_TWO_FACTOR_COOKIE` (same shape as `/two-factor/send-otp` above).
 
 ---
 
@@ -442,7 +458,7 @@ Invalidates the current session (cookie and/or the bearer token that made this r
 
 ## Admin Password Reset
 
-Self-service recovery for an admin who forgets the password from the sign-in flow above (`FR-AUTH-019`–`022`) — built on Better Auth's own `emailAndPassword` reset support, not a hand-rolled token.
+Self-service recovery for an admin who forgets the password from the sign-in flow above (`FR-AUTH-019`–`022`). Since Issue #259/M3.21 both endpoints are hand-rolled on the custom session engine (no Better Auth), against a private `passwordResetTokens` collection.
 
 ### `POST /api/auth/request-password-reset`
 
@@ -470,7 +486,7 @@ Self-service recovery for an admin who forgets the password from the sign-in flo
 ```
 
 - **No-enumeration guarantee (`FR-AUTH-019`):** a registered admin's email, a registered buyer's email, and a completely unregistered email all get this exact `200`/`{}` response — try all three and compare. The email is only actually sent for a non-buyer (admin) account; a buyer submitting their own email here gets the identical response but no email, since buyers have no password to reset.
-- The reset link's token isn't parseable out of a real email in a Postman-only workflow — if you have server/log access, or control the inbox `MAILTRAP_FROM_EMAIL`/the request delivers to (Mailtrap's own sandbox inbox works directly), the emailed link carries it; otherwise this step is verifiable by response shape only, not a full round trip. Unlike the sign-in/2FA OTP codes above, this token is still real/random, not fixed — password reset was out of scope for Issue #242/M3.14's fixed-OTP change. (This repo's own test suite reads the token back from a private tracking collection instead of the email — not something available outside the codebase.)
+- The reset link is `<CORS_ORIGINS[0]>/reset-password?token=<token>` — the `token` query param is what `POST /api/auth/reset-password` needs. Unlike the sign-in/2FA OTP codes above, this token is still real/random, not fixed — password reset was out of scope for Issue #242/M3.14's fixed-OTP change. In a Postman-only workflow it's verifiable by response shape only unless you can read the Mailtrap inbox the email delivers to.
 
 ---
 
@@ -500,7 +516,7 @@ Self-service recovery for an admin who forgets the password from the sign-in flo
 
 ### Error cases
 
-**Expired token** (1-hour expiry, `resetPasswordTokenExpiresIn: 3600`) or **an already-used token** (confirmed against Better Auth's own `resetPassword` endpoint source, `api/routes/password.mjs` — both collapse to the same "no verification record found" check):
+**Expired token** (1-hour expiry) or **an already-used token** — both collapse to the same "no live token" check:
 
 ```
 400 Bad Request
@@ -509,8 +525,8 @@ Self-service recovery for an admin who forgets the password from the sign-in flo
 ```json
 {
   "success": false,
-  "code": "INVALID_TOKEN",
-  "message": "Invalid token"
+  "code": "INVALID_RESET_TOKEN",
+  "message": "This reset link is invalid or has expired."
 }
 ```
 
@@ -521,20 +537,22 @@ Self-service recovery for an admin who forgets the password from the sign-in flo
 | Code                                  | Status  | Where it comes from                                                                                  | Reachable via an existing endpoint? |
 | -------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------- |
 | `GOOGLE_ACCOUNT_IS_ADMIN`              | 403     | `src/lib/auth.ts`'s `rejectIfNonBuyerEmail`/`rejectAdminEmailOnReturningOtpSignIn` — a buyer sign-in attempt (any method) on an email already registered as a non-buyer account | Yes                                   |
-| `INVALID_EMAIL_OR_PASSWORD`            | 401     | `src/lib/auth.ts`'s `rejectBuyerOnPasswordSignIn`, or Better Auth's own `/sign-in/email` — wrong password, unknown email, or a `role:"buyer"` account, all indistinguishable | Yes                                   |
+| `INVALID_EMAIL_OR_PASSWORD`            | 401     | `auth.service.ts`'s `adminPasswordSignIn` (`/sign-in/email`) — wrong password, unknown email, or a `role:"buyer"` account, all indistinguishable | Yes                                   |
+| `ACCOUNT_DEACTIVATED`                  | 403     | `auth.service.ts` — `/sign-in/email` for an admin whose `status` is `false` (checked ahead of the password); also the buyer OTP-request path                | Yes                                   |
+| `INVALID_TWO_FACTOR_COOKIE`            | 401     | `auth.controller.ts` — `/two-factor/send-otp` or `/verify-otp` with no valid `techcart_admin_2fa` challenge cookie | Yes                                   |
 | `INVALID_OTP`                          | 400     | Better Auth's `emailOTP` plugin (`atomicVerifyOTP`) — buyer OTP verify, wrong or already-consumed code | Yes                                   |
 | `OTP_EXPIRED`                          | 400     | Better Auth's `emailOTP` plugin — buyer OTP verify, code older than its 10-minute expiry               | Yes                                   |
 | `TOO_MANY_ATTEMPTS`                    | 403     | Better Auth's `emailOTP` plugin — buyer OTP verify, more than 3 wrong attempts against the same code   | Yes                                   |
-| `INVALID_CODE`                         | 401     | Better Auth's `twoFactor` plugin's `otp` sub-plugin — admin OTP verify, wrong code                      | Yes                                   |
-| `OTP_HAS_EXPIRED`                      | 400     | Better Auth's `twoFactor` plugin — admin OTP verify, code expired or already consumed                  | Yes                                   |
-| `TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE`   | 400     | Better Auth's `twoFactor` plugin — admin OTP verify, more than 5 wrong attempts against the same code  | Yes                                   |
-| `INVALID_TOKEN`                        | 400     | Better Auth's `emailAndPassword` plugin (`resetPassword` endpoint) — reset token expired or already used | Yes                                   |
+| `INVALID_CODE`                         | 401     | `auth.service.ts`'s `adminVerifyOtp` — admin OTP verify, wrong or reused code                           | Yes                                   |
+| `OTP_HAS_EXPIRED`                      | 401     | `auth.service.ts`'s `adminVerifyOtp` — admin OTP verify, code older than 10 minutes                    | Yes                                   |
+| `INVALID_RESET_TOKEN`                  | 400     | `auth.service.ts`'s `resetAdminPassword` — `/reset-password` token expired or already used             | Yes                                   |
+| `RATE_LIMITED`                         | 429     | `auth.service.ts` (Issue #259) / `betterAuthHandler.ts` (#145) — per-IP / per-email limit tripped on any admin sign-in, OTP, or reset-request path | Yes                                   |
 | `AUTH_ERROR`                           | varies  | `src/middleware/betterAuthHandler.ts`'s fallback — any Better Auth error whose own JSON body has no `code` key, not otherwise enumerated above | Not directly — every error case this doc names above has a real, more specific code |
 
-Every code above except `AUTH_ERROR` was confirmed by reading the installed `better-auth`/`@better-auth/core` package source directly (`node_modules/better-auth/dist/plugins/{email-otp,two-factor}/`, `node_modules/better-auth/dist/api/routes/password.mjs`), not guessed — an earlier version of this doc labeled all of these generically as `AUTH_ERROR`, which was inaccurate. Every other backend module's error contract (`VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR` — see [`uploads.api.md`](../product-catalog/uploads.api.md#error-code-reference)) is produced by this repo's own `errorHandler.ts`, which never runs for `/api/auth/*` — every response on this page instead comes from Better Auth's own handler, reshaped into `{success, code, message}` by `betterAuthHandler.ts`. That bridge always includes a `code`; `AUTH_ERROR` is only ever a fallback for a genuinely code-less Better Auth error body, not a case this doc has otherwise named.
+The buyer-flow codes (`INVALID_OTP`/`OTP_EXPIRED`/`TOO_MANY_ATTEMPTS`) still come from Better Auth's `emailOTP` plugin (buyer sign-in is being migrated in Issues #258/#262). The admin-flow codes are produced by this repo's own hand-rolled `auth.service.ts`/`auth.controller.ts` (Issue #259/M3.21), routed through `errorHandler.ts`'s `AppError` path like every other module's error contract.
 
 ---
 
 ## What's Not Here Yet
 
-Rate limiting on any of the endpoints above (`FR-AUTH-040`–`041`, Upstash Redis) is still explicitly deferred — no Redis dependency exists in this codebase yet. Admin account provisioning (creating a further admin over the API, `FR-AUTH-024`–`029`) and "my own account" self-service (buyer profile, admin change-password, `FR-AUTH-036`–`039`) are covered in [`adminUsers.api.md`](./adminUsers.api.md) and [`account.api.md`](./account.api.md) respectively — not this file.
+Admin account provisioning (creating a further admin over the API, `FR-AUTH-024`–`029`) and "my own account" self-service (buyer profile, admin change-password, `FR-AUTH-036`–`039`) are covered in [`adminUsers.api.md`](./adminUsers.api.md) and [`account.api.md`](./account.api.md) respectively — not this file.

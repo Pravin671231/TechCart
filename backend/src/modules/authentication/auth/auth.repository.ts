@@ -14,6 +14,10 @@ export type UserRecord = {
   role: string;
   status: boolean;
   phone?: string;
+  // bcrypt hash — admins only (buyers are passwordless). Set by
+  // provisionAdminUser and the hand-rolled password-reset flow (Issue
+  // #259/M3.21).
+  passwordHash?: string;
   lastSignInAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -63,4 +67,17 @@ export async function isDeactivated(email: string): Promise<boolean> {
 
 export async function touchLastSignIn(userId: Types.ObjectId): Promise<void> {
   await usersCollection().updateOne({ _id: userId }, { $set: { lastSignInAt: new Date() } });
+}
+
+// Issue #259/M3.21 — hand-rolled password-reset flow writes the new bcrypt
+// hash straight to `users.passwordHash`, matching provisionAdminUser's own
+// raw-driver shape (Better Auth's `account` collection is no longer used).
+export async function updatePasswordHash(
+  userId: Types.ObjectId,
+  passwordHash: string,
+): Promise<void> {
+  await usersCollection().updateOne(
+    { _id: userId },
+    { $set: { passwordHash, updatedAt: new Date() } },
+  );
 }

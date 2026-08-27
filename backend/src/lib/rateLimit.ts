@@ -90,6 +90,12 @@ export type EmailLimitGroup =
   | "admin-forgot-password"
   | "buyer-otp-request";
 
+// Issue #259/M3.21 — the admin sign-in / OTP paths moved from Better Auth's
+// native customRules (lib/auth.ts) to hand-rolled route handlers, which sit
+// ahead of the Better Auth catch-all and so never reach that native limiter.
+// These replicate FR-AUTH-040/041's IP-keyed limits, mirroring how #258 did
+// the same for the buyer paths it intercepted (IP_LIMIT_CONFIG below).
+
 const EMAIL_LIMIT_CONFIG: Record<EmailLimitGroup, { points: number; duration: number }> = {
   // FR-AUTH-040 — admin sign-in, per email. Shares its threshold with the
   // native IP-keyed rule on the same path (lib/auth.ts's customRules); the
@@ -117,11 +123,21 @@ export async function consumeEmailLimit(
 // before those paths were intercepted by hand-rolled routes ahead of the
 // Better Auth catch-all. That native per-request limiter never runs for a
 // path it no longer receives, so these two rules are replicated here.
-export type IpLimitGroup = "buyer-google-signin" | "buyer-otp-request";
+export type IpLimitGroup =
+  | "buyer-google-signin"
+  | "buyer-otp-request"
+  | "admin-signin"
+  | "admin-otp-verify"
+  | "admin-otp-resend"
+  | "admin-forgot-password";
 
 const IP_LIMIT_CONFIG: Record<IpLimitGroup, { points: number; duration: number }> = {
   "buyer-google-signin": { points: 20, duration: 3600 }, // FR-AUTH-044 — was auth.ts's "/one-tap/callback" rule
   "buyer-otp-request": { points: 5, duration: 600 }, // FR-AUTH-043 (IP half) — was auth.ts's "/email-otp/send-verification-otp" rule
+  "admin-signin": { points: 5, duration: 900 }, // FR-AUTH-040 — was auth.ts's "/sign-in/email" rule
+  "admin-otp-verify": { points: 5, duration: 900 }, // FR-AUTH-040 — was auth.ts's "/two-factor/verify-otp" rule
+  "admin-otp-resend": { points: 3, duration: 600 }, // FR-AUTH-041 — was auth.ts's "/two-factor/send-otp" rule
+  "admin-forgot-password": { points: 3, duration: 3600 }, // FR-AUTH-042 — was auth.ts's "/request-password-reset" rule
 };
 
 export async function consumeIpLimit(group: IpLimitGroup, ip: string): Promise<ConsumeResult> {

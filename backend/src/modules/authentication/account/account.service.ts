@@ -1,9 +1,8 @@
 import type { Request } from "express";
 import { Types } from "mongoose";
-import { auth } from "@/lib/auth";
+import { hashPassword, verifyPassword } from "@/lib/password";
+import { extractSessionToken, revokeAllSessionsForUser, verifySessionToken } from "@/lib/session";
 import { AppError } from "@/utils/AppError";
-import { buildFetchHeaders } from "@/utils/fetchHeaders";
-import { revokeSessionsForUser } from "@/utils/sessions";
 import * as accountRepository from "./account.repository";
 import type { UserProfileRecord } from "./account.repository";
 
@@ -39,34 +38,29 @@ export async function updateProfile(
 
 // FR-AUTH-038/039: current-password-required change that invalidates every
 // *other* session for this admin, leaving the device making this request
-// signed in. The bearer token a client sends is `<rawToken>.<signature>`
-// (bearer plugin), but the `session` collection only ever stores the raw
-// part before that `.` — confirmed via real CI diagnostics, after every
-// naive attempt to exclude "the current session" by matching the full
-// header value against `session.token` silently matched nothing and ended
-// up deleting every session for the user, current one included. Every
-// comparison below uses that raw first segment instead. A wrong current
-// password is rejected with one generic code, no further detail — same
-// enumeration-safety posture as sign-in's INVALID_EMAIL_OR_PASSWORD
-// (auth.ts).
+// signed in. Issue #259/M3.21 — verifies/writes `users.passwordHash`
+// (bcrypt) directly on the custom session engine, replacing the Better Auth
+// `auth.api.changePassword` call (which no longer has a session to resolve).
+// The current session is excluded from the bulk revoke by its exact `jti`,
+// resolved from this request's own bearer token / session cookie. A wrong
+// current password is rejected with one generic code, no further detail —
+// same enumeration-safety posture as sign-in's INVALID_EMAIL_OR_PASSWORD.
 export async function changePassword(
   req: Request,
   userId: string,
   currentPassword: string,
   newPassword: string,
 ): Promise<void> {
-  const authHeader = req.headers.authorization;
-  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
-  const currentToken = bearerToken?.split(".")[0];
-
-  try {
-    await auth.api.changePassword({
-      body: { currentPassword, newPassword },
-      headers: buildFetchHeaders(req),
-    });
-  } catch {
+  const objectId = new Types.ObjectId(userId);
+  const currentHash = await accountRepository.getPasswordHash(objectId);
+  if (!currentHash || !(await verifyPassword(currentPassword, currentHash))) {
     throw new AppError(401, "INVALID_CURRENT_PASSWORD", "Current password is incorrect.");
   }
 
-  await revokeSessionsForUser(userId, currentToken);
+  await accountRepository.setPasswordHash(objectId, await hashPassword(newPassword));
+
+  const token = extractSessionToken(req);
+  const verified = token ? await verifySessionToken(token) : null;
+  const currentJti = verified && verified.ok ? verified.jti : undefined;
+  await revokeAllSessionsForUser(userId, currentJti);
 }

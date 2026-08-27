@@ -24,7 +24,7 @@ const envSchema = z.object({
   R2_PUBLIC_URL_BASE: z.string().min(1, "R2_PUBLIC_URL_BASE is required"),
   BETTER_AUTH_SECRET: z.string().min(1, "BETTER_AUTH_SECRET is required"),
   BETTER_AUTH_URL: z.string().min(1, "BETTER_AUTH_URL is required"),
-  JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
+  JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
   GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required"),
   GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
   // TEMPORARY (see mailer.ts's own header comment) — reverted from

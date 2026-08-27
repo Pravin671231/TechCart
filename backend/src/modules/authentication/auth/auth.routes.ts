@@ -1,8 +1,13 @@
 import express, { Router } from "express";
 import { betterAuthHandler } from "@/middleware/betterAuthHandler";
 import {
+  adminSendOtpHandler,
+  adminSignInHandler,
+  adminVerifyOtpHandler,
   getSessionHandler,
   oneTapCallbackHandler,
+  requestPasswordResetHandler,
+  resetPasswordHandler,
   sendVerificationOtpHandler,
   signInEmailOtpHandler,
   signOutHandler,
@@ -21,6 +26,16 @@ const router = Router();
 router.post("/one-tap/callback", express.json(), oneTapCallbackHandler);
 router.post("/email-otp/send-verification-otp", express.json(), sendVerificationOtpHandler);
 router.post("/sign-in/email-otp", express.json(), signInEmailOtpHandler);
+
+// Issue #259/M3.21 — hand-rolled admin password + mandatory OTP challenge
+// and password reset, also mounted ABOVE the Better Auth catch-all so they
+// shadow Better Auth's own emailAndPassword/twoFactor plugin routes. Wire-
+// compatible with admin-app's existing flow (paths/shapes/codes unchanged).
+router.post("/sign-in/email", express.json(), adminSignInHandler);
+router.post("/two-factor/send-otp", express.json(), adminSendOtpHandler);
+router.post("/two-factor/verify-otp", express.json(), adminVerifyOtpHandler);
+router.post("/request-password-reset", express.json(), requestPasswordResetHandler);
+router.post("/reset-password", express.json(), resetPasswordHandler);
 
 // No body parsing on either — get-session is a GET, and sign-out reads only
 // the token, not a body. Both try the new session engine first and next()

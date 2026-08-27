@@ -192,13 +192,11 @@ describe("Admin password reset", () => {
       await requestForgotPassword(ADMIN_EMAIL);
       const token = await captureResetToken();
 
-      // Push every record in the (per-test-cleared) verification collection
-      // into the past, rather than filtering by a guessed identifier shape
-      // — same identifier-format-agnostic approach #140's own expired-OTP
-      // test landed on after CI revealed the buyer emailOTP assumption
-      // didn't hold for a different flow.
+      // Expire the token in our own passwordResetTokens collection — the
+      // hand-rolled /reset-password handler (Issue #259/M3.21) checks
+      // `expiresAt` on consume, not Better Auth.
       await mongoose.connection
-        .db!.collection("verification")
+        .db!.collection("passwordresettokens")
         .updateMany({}, { $set: { expiresAt: new Date(Date.now() - 1000) } });
 
       const reset = await request(app)
