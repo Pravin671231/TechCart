@@ -298,7 +298,7 @@ describe("ProductForm", () => {
     fireEvent.click(await screen.findByRole("button", { name: "+ Add variant" }));
 
     const addButton = await screen.findByRole("button", { name: "Add variant" });
-    const variantForm = addButton.closest("form")!;
+    const variantForm = screen.getByRole("group", { name: "New variant" });
 
     fireEvent.change(within(variantForm).getByLabelText("Storage"), { target: { value: "128" } });
     fireEvent.change(within(variantForm).getByLabelText("SKU *"), {
