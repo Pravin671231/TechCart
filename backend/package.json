@@ -24,6 +24,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "ioredis": "^6.0.0",
+    "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.5.0",
     "mongoose": "^9.8.1",
     "multer": "^2.2.0",
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.2.0",
     "@types/node": "^24.13.3",
     "@types/nodemailer": "^8.0.1",
