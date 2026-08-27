@@ -27,7 +27,7 @@ function renderSignIn() {
 function setUnauthenticatedSession() {
   server.use(
     http.get(`${BASE}/get-session`, () => {
-      return HttpResponse.json({ success: true, data: { user: null } });
+      return HttpResponse.json({ success: true, data: null });
     }),
   );
 }
@@ -51,7 +51,9 @@ describe("SignInContent", () => {
       http.get(`${BASE}/get-session`, () => {
         return HttpResponse.json({
           success: true,
-          data: verified ? { user: { id: "u1", name: "Admin", email: "admin@example.com", role: "catalog-manager" } } : { user: null },
+          data: verified
+            ? { user: { id: "u1", name: "Admin", email: "admin@example.com", role: "catalog-manager" } }
+            : null,
         });
       }),
       http.post(`${BASE}/sign-in/email`, () => {
@@ -74,6 +76,31 @@ describe("SignInContent", () => {
 
     expect(await screen.findByText("Home content")).toBeInTheDocument();
     expect(getToken()).toBe("real-token");
+  });
+
+  it("mints an OTP by calling send-otp as soon as the code step opens", async () => {
+    setUnauthenticatedSession();
+    let sendOtpCalls = 0;
+
+    server.use(
+      http.post(`${BASE}/sign-in/email`, () => {
+        return HttpResponse.json({ success: true, data: { code: "OTP_REQUIRED" } });
+      }),
+      http.post(`${BASE}/two-factor/send-otp`, () => {
+        sendOtpCalls += 1;
+        return HttpResponse.json({ success: true, data: {} });
+      }),
+    );
+
+    renderSignIn();
+    await submitPassword();
+
+    await screen.findByLabelText("Verification code");
+    await waitFor(() => expect(sendOtpCalls).toBe(1));
+
+    // The Resend button is still on its initial cooldown — the code arrived
+    // without the user having to trigger a resend.
+    expect(screen.getByRole("button", { name: /Resend code in \d+s/ })).toBeDisabled();
   });
 
   it("shows a distinct message for an incorrect password", async () => {

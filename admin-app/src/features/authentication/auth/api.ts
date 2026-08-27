@@ -29,8 +29,8 @@ export const authApi = api.injectEndpoints({
     // Admin's password step never itself establishes a session (2FA is
     // mandatory for every admin account) — it only ever returns
     // {code: "OTP_REQUIRED"} nested in `data` on success (backend's
-    // betterAuthHandler.ts). Read the flag rather than assume it, in case
-    // that ever changes.
+    // auth.controller.ts adminSignInHandler). Read the flag rather than
+    // assume it, in case that ever changes.
     signInPassword: builder.mutation<{ otpRequired: boolean }, { email: string; password: string }>({
       query: (body) => ({ url: authUrl("/sign-in/email"), method: "POST", body }),
       transformResponse: (response: SignInPasswordResponse) => ({

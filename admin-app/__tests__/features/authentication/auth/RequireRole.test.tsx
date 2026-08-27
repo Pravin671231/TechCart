@@ -27,7 +27,7 @@ function renderSuperAdminOnly() {
 
 describe("RequireRole", () => {
   it("redirects to sign-in when there is no session", async () => {
-    server.use(http.get(SESSION_URL, () => HttpResponse.json({ success: true, data: { user: null } })));
+    server.use(http.get(SESSION_URL, () => HttpResponse.json({ success: true, data: null })));
 
     renderSuperAdminOnly();
 
