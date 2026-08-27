@@ -7,11 +7,10 @@ export default defineConfig({
     environment: "node",
     env: {
       MONGODB_URI: "mongodb://localhost:27017/techcart-test",
-      // Never actually connected to — src/lib/rateLimit.ts skips
-      // constructing a real ioredis client under NODE_ENV=test and uses
-      // RateLimiterMemory instead. Present only so env.ts's zod schema (which
-      // requires REDIS_URL like every other var) is satisfied.
-      REDIS_URL: "redis://localhost:6379",
+      // REDIS_URL is deliberately omitted — it's optional (env.ts) and
+      // src/lib/rateLimit.ts uses RateLimiterMemory under NODE_ENV=test
+      // regardless. RATE_LIMITING_ENABLED defaults to "true", so the
+      // rate-limiting suites still exercise the real sliding-window logic.
       R2_ACCOUNT_ID: "test-account-id",
       R2_ACCESS_KEY_ID: "test-access-key-id",
       R2_SECRET_ACCESS_KEY: "test-secret-access-key",
