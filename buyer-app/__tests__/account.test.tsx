@@ -41,7 +41,7 @@ describe("Account profile", () => {
   it("redirects to /sign-in when there is no session", async () => {
     server.use(
       http.get("*/api/auth/get-session", () => {
-        return HttpResponse.json({ success: true, data: { user: null } });
+        return HttpResponse.json({ success: true, data: null });
       })
     );
 

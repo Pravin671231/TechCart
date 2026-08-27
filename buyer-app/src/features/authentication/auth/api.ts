@@ -6,7 +6,9 @@ export const authApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getSession: builder.query<SessionUser | null, void>({
       query: () => "/api/auth/get-session",
-      transformResponse: (response: { user?: SessionUser | null }) => response.user ?? null,
+      // A signed-out session is `data: null` from the backend (auth.controller.ts
+      // getSessionHandler → successResponse(null)); a signed-in one is `data: { user }`.
+      transformResponse: (response: { user?: SessionUser | null } | null) => response?.user ?? null,
       providesTags: ["Session"],
     }),
 

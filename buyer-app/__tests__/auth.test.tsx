@@ -200,7 +200,7 @@ describe("Auth", () => {
         http.get("*/api/auth/get-session", () => {
           return HttpResponse.json({
             success: true,
-            data: { user: null },
+            data: null,
           });
         }),
         http.post("*/api/auth/email-otp/send-verification-otp", () => {
@@ -216,7 +216,7 @@ describe("Auth", () => {
               code: "GOOGLE_ACCOUNT_IS_ADMIN",
               message: "This account is an admin account",
             },
-            { status: 400 }
+            { status: 403 }
           );
         })
       );
@@ -253,7 +253,7 @@ describe("Auth", () => {
         http.get("*/api/auth/get-session", () => {
           return HttpResponse.json({
             success: true,
-            data: { user: null },
+            data: null,
           });
         }),
         http.post("*/api/auth/email-otp/send-verification-otp", () => {
@@ -307,7 +307,7 @@ describe("Auth", () => {
       let sendCount = 0;
       server.use(
         http.get("*/api/auth/get-session", () => {
-          return HttpResponse.json({ success: true, data: { user: null } });
+          return HttpResponse.json({ success: true, data: null });
         }),
         http.post("*/api/auth/email-otp/send-verification-otp", () => {
           sendCount += 1;
@@ -315,7 +315,7 @@ describe("Auth", () => {
             return HttpResponse.json({ success: true, data: null });
           }
           return HttpResponse.json(
-            { success: false, code: "TOO_MANY_ATTEMPTS", message: "Too many attempts, try later" },
+            { success: false, code: "RATE_LIMITED", message: "Too many attempts, try later" },
             { status: 429 }
           );
         })
@@ -356,7 +356,7 @@ describe("Auth", () => {
         http.get("*/api/auth/get-session", () => {
           return HttpResponse.json({
             success: true,
-            data: { user: null },
+            data: null,
           });
         }),
         http.post("*/api/auth/email-otp/send-verification-otp", () => {
