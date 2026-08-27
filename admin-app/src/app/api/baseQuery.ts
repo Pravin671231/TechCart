@@ -9,12 +9,12 @@ import { ADMIN_API_BASE_URL } from "@/config/env";
 import { getToken } from "@/features/authentication/auth/tokenStorage";
 
 // Issue #148/M3.10 — replaces the X-Admin-Key prompt entirely with real
-// Better Auth sessions. `credentials: "include"` is needed only for the
+// session-based auth. `credentials: "include"` is needed only for the
 // brief cross-site two-factor pending-challenge cookie window between
-// POST /sign-in/email and POST /two-factor/verify-otp (see backend's
-// src/lib/auth.ts for the matching SameSite=None/Secure cookie fix) —
-// every other request here is authenticated purely via the bearer token
-// below, cookies are otherwise unused.
+// POST /sign-in/email and POST /two-factor/verify-otp (backend's
+// src/lib/adminChallenge.ts gates that cookie to SameSite=None; Secure on
+// a cross-site deployment) — every other request here is authenticated
+// purely via the bearer token below, cookies are otherwise unused.
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: ADMIN_API_BASE_URL,
   credentials: "include",

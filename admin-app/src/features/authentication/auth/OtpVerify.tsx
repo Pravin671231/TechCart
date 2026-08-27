@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import { TextField } from "@/components/form/FormField";
@@ -20,6 +20,23 @@ export const OtpVerify = ({ email, onVerified, onStartOver }: OtpVerifyProps) =>
 
   const [sendOtp, { isLoading: isResending }] = useSendOtpMutation();
   const [verifyOtp, { isLoading: isVerifying }] = useVerifyOtpMutation();
+
+  // The password step (POST /sign-in/email) establishes the pending 2FA
+  // challenge cookie but does not mint an OTP — the backend's
+  // /two-factor/send-otp step does (auth.controller.ts). Fire it once when
+  // this step opens; the ref guard keeps StrictMode's double-mount from
+  // sending twice. "Resend code" reuses the same mutation afterwards.
+  const initialSendFired = useRef(false);
+  useEffect(() => {
+    if (initialSendFired.current) return;
+    initialSendFired.current = true;
+    sendOtp()
+      .unwrap()
+      .catch((err) => {
+        setError(describeAuthError(err, "Unable to send a verification code. Please try again."));
+        setResendCountdown(0);
+      });
+  }, [sendOtp]);
 
   useEffect(() => {
     if (resendCountdown <= 0) return;

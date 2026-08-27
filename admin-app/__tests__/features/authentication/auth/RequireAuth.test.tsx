@@ -27,7 +27,7 @@ function renderProtected() {
 
 describe("RequireAuth", () => {
   it("redirects to sign-in when there is no session (401 case)", async () => {
-    server.use(http.get(SESSION_URL, () => HttpResponse.json({ success: true, data: { user: null } })));
+    server.use(http.get(SESSION_URL, () => HttpResponse.json({ success: true, data: null })));
 
     renderProtected();
 
