@@ -14,7 +14,7 @@
 | 0.1     | 2026-07-21 | Initial scope, structure, feature listing | Complete     |
 | 0.2     | 2026-07-28 | Product Catalog                           | Complete     |
 | 0.3     | 2026-08-20 | Authentication                            | Complete     |
-| 0.4     | 2026-08-21 | Shopping Cart                             | Spec drafted |
+| 0.4     | 2026-08-21 | Shopping Cart                             | Complete     |
 | 0.5     | 2026-08-21 | Orders                                    | Spec drafted |
 | 0.6     | 2026-08-21 | Payments                                  | Spec drafted |
 | 0.7     | 2026-08-21 | Dashboard                                 | Spec drafted |
@@ -123,7 +123,7 @@ See the Technology Blueprint (§1.5). Summary: Next.js 16 (Buyer), React 19 + Vi
 | --- | ---------------------- | ------------------------------------------------------------------------------------- | ------------------ | ------------ |
 | 1   | Product Catalog        | Product/category browsing, search, filtering, admin CRUD                              | v0.2               | Complete     |
 | 2   | Authentication         | Buyer + admin auth, RBAC, session management                                          | v0.3               | Complete     |
-| 3   | Shopping Cart          | Guest + logged-in cart, persistence, sync                                             | v0.4               | Spec drafted |
+| 3   | Shopping Cart          | Authenticated buyer cart, live pricing, no guest cart                                 | v0.4               | Complete     |
 | 4   | Orders                 | Checkout capture, order lifecycle, history                                            | v0.5               | Spec drafted |
 | 5   | Payments               | Razorpay integration, verification, refunds                                           | v0.6               | Spec drafted |
 | 6   | Dashboard              | Admin analytics + buyer account dashboard                                             | v0.7               | Spec drafted |
@@ -196,7 +196,7 @@ A feature earns a row once its spec is drafted (step 2 of the workflow above); t
 | --------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
 | Product Catalog | [v0.2](features/0.2-product-catalog.md) — `FR-CAT-001`–`100` | [M2 - Product Catalog](https://github.com/Pravin671231/TechCart/milestone/3) | [#25](https://github.com/Pravin671231/TechCart/issues/25)–[#36](https://github.com/Pravin671231/TechCart/issues/36), [#41](https://github.com/Pravin671231/TechCart/issues/41), [#71](https://github.com/Pravin671231/TechCart/issues/71)–[#82](https://github.com/Pravin671231/TechCart/issues/82), [#102](https://github.com/Pravin671231/TechCart/issues/102), [#104](https://github.com/Pravin671231/TechCart/issues/104) | Complete (`v0.2.0`) |
 | Authentication  | [v0.3](features/0.3-authentication.md) — `FR-AUTH-001`–`046` | [M3 - Authentication](https://github.com/Pravin671231/TechCart/milestone/4)  | [#139](https://github.com/Pravin671231/TechCart/issues/139)–[#149](https://github.com/Pravin671231/TechCart/issues/149), M3.12–M3.27 follow-ups ([#224](https://github.com/Pravin671231/TechCart/issues/224), [#241](https://github.com/Pravin671231/TechCart/issues/241)–[#245](https://github.com/Pravin671231/TechCart/issues/245), [#254](https://github.com/Pravin671231/TechCart/issues/254), [#257](https://github.com/Pravin671231/TechCart/issues/257)–[#264](https://github.com/Pravin671231/TechCart/issues/264), [#267](https://github.com/Pravin671231/TechCart/issues/267)) | Complete (`v0.3.0`) |
-| Shopping Cart   | [v0.4](features/0.4-shopping-cart.md) — `FR-CART-001`–`021`  | [M4 - Shopping Cart](https://github.com/Pravin671231/TechCart/milestone/5)   | [#150](https://github.com/Pravin671231/TechCart/issues/150)–[#153](https://github.com/Pravin671231/TechCart/issues/153) | Issues open |
+| Shopping Cart   | [v0.4](features/0.4-shopping-cart.md) — `FR-CART-001`–`021`  | [M4 - Shopping Cart](https://github.com/Pravin671231/TechCart/milestone/5)   | [#150](https://github.com/Pravin671231/TechCart/issues/150)–[#153](https://github.com/Pravin671231/TechCart/issues/153) | Complete            |
 | Orders          | [v0.5](features/0.5-orders.md) — `FR-ORD-001`–`033`          | [M5 - Orders](https://github.com/Pravin671231/TechCart/milestone/6)          | [#154](https://github.com/Pravin671231/TechCart/issues/154)–[#163](https://github.com/Pravin671231/TechCart/issues/163) | Issues open |
 | Payments        | [v0.6](features/0.6-payments.md) — `FR-PAY-001`–`028`        | [M6 - Payments](https://github.com/Pravin671231/TechCart/milestone/7)        | [#164](https://github.com/Pravin671231/TechCart/issues/164)–[#170](https://github.com/Pravin671231/TechCart/issues/170) | Issues open |
 | Dashboard       | [v0.7](features/0.7-dashboard.md) — `FR-DASH-001`–`024`      | [M7 - Dashboard](https://github.com/Pravin671231/TechCart/milestone/8)       | [#171](https://github.com/Pravin671231/TechCart/issues/171)–[#175](https://github.com/Pravin671231/TechCart/issues/175) | Issues open |
