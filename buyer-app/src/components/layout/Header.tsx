@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthStatus } from "./AuthStatus";
+import { CartIndicator } from "./CartIndicator";
 
 export function Header() {
   return (
@@ -31,6 +32,7 @@ export function Header() {
           Search products…
         </Link>
 
+        <CartIndicator />
         <AuthStatus />
       </div>
     </header>

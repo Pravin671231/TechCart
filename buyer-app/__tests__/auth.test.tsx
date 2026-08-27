@@ -7,10 +7,13 @@ import { server } from "./mocks/server";
 const API_URL = "http://localhost:4000";
 
 const mockPush = vi.fn();
+let mockSearchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => "/sign-in",
+  useSearchParams: () => mockSearchParams,
 }));
 
 describe("Auth", () => {
@@ -20,6 +23,7 @@ describe("Auth", () => {
     vi.stubEnv("NEXT_PUBLIC_GOOGLE_CLIENT_ID", "test-client-id.apps.googleusercontent.com");
     localStorage.clear();
     mockPush.mockClear();
+    mockSearchParams = new URLSearchParams();
   });
 
   afterEach(() => {
@@ -185,6 +189,56 @@ describe("Auth", () => {
         const token = localStorage.getItem("auth_token");
         expect(token).toBe("test_token_123");
       });
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith("/");
+      });
+    });
+
+    it("redirects to a safe ?redirect= target once a session exists", async () => {
+      mockSearchParams = new URLSearchParams("redirect=/cart");
+      const { makeStore } = await import("@/store/store");
+      const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
+
+      server.use(
+        http.get("*/api/auth/get-session", () =>
+          HttpResponse.json({
+            success: true,
+            data: { user: { id: "user1", name: "T", email: "t@example.com", role: "buyer" } },
+          }),
+        ),
+      );
+
+      render(
+        <Provider store={makeStore()}>
+          <SignInContent />
+        </Provider>,
+      );
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith("/cart");
+      });
+    });
+
+    it("falls back to home for an unsafe (protocol-relative) ?redirect= value", async () => {
+      mockSearchParams = new URLSearchParams("redirect=//evil.example.com");
+      const { makeStore } = await import("@/store/store");
+      const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
+
+      server.use(
+        http.get("*/api/auth/get-session", () =>
+          HttpResponse.json({
+            success: true,
+            data: { user: { id: "user1", name: "T", email: "t@example.com", role: "buyer" } },
+          }),
+        ),
+      );
+
+      render(
+        <Provider store={makeStore()}>
+          <SignInContent />
+        </Provider>,
+      );
 
       await waitFor(() => {
         expect(mockPush).toHaveBeenCalledWith("/");

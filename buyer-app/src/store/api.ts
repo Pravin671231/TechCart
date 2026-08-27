@@ -119,6 +119,6 @@ const baseQueryWithEnvelope: BaseQueryFn<
 export const api = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithEnvelope,
-  tagTypes: ["Product", "Category", "Session"],
+  tagTypes: ["Product", "Category", "Session", "Cart"],
   endpoints: () => ({}),
 });

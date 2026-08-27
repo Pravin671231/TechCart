@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { AddToCartButton } from "@/features/cart/AddToCartButton";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { formatPrice } from "./money";
 import type { PublicProductListItem } from "./types";
@@ -8,8 +9,8 @@ export function ProductCard({ product }: { product: PublicProductListItem }) {
   const isOutOfStock = product.availability === "out_of_stock";
 
   return (
-    <Link href={`/products/${product.slug}`} className="block">
-      <article className="flex flex-col overflow-hidden rounded-lg border border-neutral-200 shadow-sm transition hover:shadow-md">
+    <article className="flex flex-col overflow-hidden rounded-lg border border-neutral-200 shadow-sm transition hover:shadow-md">
+      <Link href={`/products/${product.slug}`} className="flex flex-1 flex-col">
         <div className="relative flex aspect-square items-center justify-center bg-neutral-50 text-xs text-neutral-400">
           {product.primaryImage ? (
             // R2's public URL base is env-specific and unknown to buyer-app at build
@@ -41,7 +42,10 @@ export function ProductCard({ product }: { product: PublicProductListItem }) {
             size="sm"
           />
         </div>
-      </article>
-    </Link>
+      </Link>
+      <div className="px-3 pb-3">
+        <AddToCartButton variantId={product.defaultVariantId} size="sm" className="w-full" />
+      </div>
+    </article>
   );
 }
