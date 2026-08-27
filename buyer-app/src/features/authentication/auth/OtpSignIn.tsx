@@ -50,7 +50,8 @@ export function OtpSignIn() {
       if (code === "GOOGLE_ACCOUNT_IS_ADMIN") {
         setCodeError("This email is registered as an admin account. Please sign in as a buyer instead.");
       } else if (code === "INVALID_OTP") {
-        // Better Auth's emailOTP plugin actually returns "INVALID_OTP", not "OTP_INVALID".
+        // `INVALID_OTP` is the code the backend's verifyBuyerOtp throws for a
+        // wrong or already-consumed code (auth.service.ts).
         setCodeError("The OTP you entered is invalid. Please try again.");
       } else if (code === "OTP_EXPIRED") {
         setCodeError("The OTP has expired. Please request a new one.");
