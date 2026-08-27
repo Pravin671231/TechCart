@@ -44,6 +44,24 @@ export async function findById(id: Types.ObjectId): Promise<ProductRecord | null
   return Product.findById(id).lean();
 }
 
+// Cart (M4, FR-CART-003/009) needs to resolve a line item's embedded variant
+// by its own `_id` — there's no standalone variant collection, so this is a
+// query into the `variants` array. `findByVariantId` backs the add/update
+// paths' "does this variant exist at all" check; `findByVariantIds` resolves
+// every line's parent product for a cart read in one round trip. Neither
+// filters on `status`/`active` — the cart deliberately keeps a line whose
+// variant has since been deactivated or whose product was unpublished,
+// flagging it `unavailable` rather than dropping it (FR-CART-012), so the
+// caller needs the full document to make that call.
+export async function findByVariantId(variantId: Types.ObjectId): Promise<ProductRecord | null> {
+  return Product.findOne({ "variants._id": variantId }).lean();
+}
+
+export async function findByVariantIds(variantIds: Types.ObjectId[]): Promise<ProductRecord[]> {
+  if (variantIds.length === 0) return [];
+  return Product.find({ "variants._id": { $in: variantIds } }).lean();
+}
+
 // Buyer-facing detail/list responses need the brand's/category's own name
 // and slug, not just the raw ref id — the first use of Mongoose `.populate()`
 // in this codebase (every admin read so far has been happy with the raw ref).
