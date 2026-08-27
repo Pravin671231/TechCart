@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { NotFoundState } from "@/components/ui/NotFoundState";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
+import { AddToCartButton } from "@/features/cart/AddToCartButton";
 import { useGetProductBySlugQuery } from "@/features/products/api";
 import { formatPrice } from "@/features/products/money";
 import { ProductListError } from "@/features/products/ProductListError";
@@ -142,10 +143,11 @@ export function ProductDetailContent({ slug }: { slug: string }) {
             />
           )}
 
-          <div className="rounded-lg border border-dashed border-neutral-300 p-3 text-[11px] text-neutral-500">
-            <strong className="text-neutral-600">No add-to-cart control in v0.2.</strong> The
-            product detail page is read-only in this version.
-          </div>
+          <AddToCartButton
+            variantId={selectedVariant?._id ?? product.variants[0]?._id}
+            size="md"
+            className="w-full sm:w-auto"
+          />
         </section>
       </div>
 

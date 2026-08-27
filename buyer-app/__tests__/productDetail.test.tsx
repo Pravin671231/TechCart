@@ -6,6 +6,13 @@ import { Provider } from "react-redux";
 import { server } from "./mocks/server";
 import type { PublicProductDetail } from "@/features/products/types";
 
+// ProductDetailContent now renders the shared AddToCartButton (next/navigation).
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/products/test-phone",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 const API_URL = "http://localhost:4000";
 
 function makeDetail(overrides: Partial<PublicProductDetail> = {}): PublicProductDetail {

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { AddToCartButton } from "@/features/cart/AddToCartButton";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { formatPrice } from "@/features/products/money";
 import type { PublicProductListItem } from "@/features/products/types";
@@ -8,11 +9,8 @@ export function CategoryProductCard({ product }: { product: PublicProductListIte
   const isOutOfStock = product.availability === "out_of_stock";
 
   return (
-    <Link
-      href={`/products/${product.slug}`}
-      className="flex gap-6 border-b border-neutral-200 py-6 first:pt-0 last:border-b-0"
-    >
-      <article className="flex flex-1 gap-6">
+    <article className="flex gap-6 border-b border-neutral-200 py-6 first:pt-0 last:border-b-0">
+      <Link href={`/products/${product.slug}`} className="flex flex-1 gap-6">
         <div className="relative flex aspect-[4/5] w-40 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-xs text-neutral-400 sm:w-52">
           {product.primaryImage ? (
             <Image
@@ -45,16 +43,18 @@ export function CategoryProductCard({ product }: { product: PublicProductListIte
             </ul>
           )}
         </div>
-        <div className="flex w-32 shrink-0 flex-col items-start gap-0.5 rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-right sm:w-40">
-          <PriceDisplay
-            price={formatPrice(product.sellingPrice)}
-            mrp={formatPrice(product.mrp)}
-            discount={product.discount}
-            size="md"
-            stacked
-          />
-        </div>
-      </article>
-    </Link>
+      </Link>
+
+      <div className="flex w-32 shrink-0 flex-col items-stretch gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-right sm:w-40">
+        <PriceDisplay
+          price={formatPrice(product.sellingPrice)}
+          mrp={formatPrice(product.mrp)}
+          discount={product.discount}
+          size="md"
+          stacked
+        />
+        <AddToCartButton variantId={product.defaultVariantId} size="sm" className="mt-1 w-full" />
+      </div>
+    </article>
   );
 }

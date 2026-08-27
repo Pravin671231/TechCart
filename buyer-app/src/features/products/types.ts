@@ -19,6 +19,10 @@ export type PublicProductListItem = {
   discount: number;
   sellingPrice: number;
   availability: ProductAvailability;
+  // The default (lowest-price active) variant's id — what a card's add-to-cart
+  // control acts on (M4, FR-CART-021). Absent when the product has no active
+  // variant.
+  defaultVariantId?: string;
   isFeatured: boolean;
   cardSpecifications: CardSpecification[];
 };

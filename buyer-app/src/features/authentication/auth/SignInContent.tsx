@@ -1,20 +1,29 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useGetSessionQuery } from "./api";
 import { GoogleSignIn } from "./GoogleSignIn";
 import { OtpSignIn } from "./OtpSignIn";
 
+// Only same-origin relative paths are honoured — a `//host` or absolute URL
+// falls back to home, so `?redirect=` can't be used as an open-redirect.
+function safeRedirect(raw: string | null): string {
+  if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  return "/";
+}
+
 export function SignInContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = safeRedirect(searchParams.get("redirect"));
   const { data: session } = useGetSessionQuery();
 
   useEffect(() => {
     if (session) {
-      router.push("/");
+      router.push(redirectTo);
     }
-  }, [session, router]);
+  }, [session, router, redirectTo]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

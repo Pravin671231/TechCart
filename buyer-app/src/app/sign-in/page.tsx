@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { SignInContent } from "@/features/authentication/auth/SignInContent";
 
 export const metadata = {
@@ -5,5 +6,11 @@ export const metadata = {
 };
 
 export default function SignInPage() {
-  return <SignInContent />;
+  // SignInContent reads `?redirect=` via useSearchParams, which requires a
+  // Suspense boundary in this Next version.
+  return (
+    <Suspense>
+      <SignInContent />
+    </Suspense>
+  );
 }
