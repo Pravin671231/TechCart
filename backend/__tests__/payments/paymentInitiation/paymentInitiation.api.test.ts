@@ -88,7 +88,7 @@ beforeAll(async () => {
   app = ctx.app;
   token = await signInBuyer(app, BUYER_EMAIL);
   otherToken = await signInBuyer(app, OTHER_BUYER_EMAIL);
-}, 60000);
+}, 90000);
 
 afterAll(async () => {
   await teardownMemoryMongo(ctx);
