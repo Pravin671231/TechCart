@@ -29,6 +29,17 @@ export async function findLatestByOrder(orderId: Types.ObjectId): Promise<Paymen
   return Payment.findOne({ order: orderId }).sort({ createdAt: -1 }).lean();
 }
 
+// #168 — batch counterpart of findLatestByOrder, for attaching a payment
+// summary to an admin order list page (one query for the whole page rather
+// than one per row). Returns every attempt for every requested order,
+// newest first; payments.service.ts's getPaymentSummariesByOrders() reduces
+// this to one (the latest) per order.
+export async function findLatestByOrders(orderIds: Types.ObjectId[]): Promise<PaymentRecord[]> {
+  return Payment.find({ order: { $in: orderIds } })
+    .sort({ createdAt: -1 })
+    .lean();
+}
+
 export async function findByRazorpayOrderId(
   razorpayOrderId: string,
 ): Promise<PaymentRecord | null> {
