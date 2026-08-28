@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { rbac } from "@/middleware/rbac";
-import { initiatePaymentHandler } from "@/modules/payments/payments.controller";
+import { initiatePaymentHandler, verifyPaymentHandler } from "@/modules/payments/payments.controller";
 import {
   cancelOrderHandler,
   checkoutHandler,
@@ -24,5 +24,6 @@ router.post("/:id/cancel", cancelOrderHandler);
 // paths are order-scoped and this router already carries the buyer/order
 // ownership guard these two need identically.
 router.post("/:id/payment", initiatePaymentHandler);
+router.post("/:id/payment/verify", verifyPaymentHandler);
 
 export default router;

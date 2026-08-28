@@ -1,9 +1,20 @@
 import { Types } from "mongoose";
 import { AppError } from "@/utils/AppError";
 import { env } from "@/config/env";
-import { createRazorpayOrder } from "@/externalService/razorpay";
+import {
+  createRazorpayOrder,
+  verifyPaymentSignature as verifyPaymentSignatureCrypto,
+} from "@/externalService/razorpay";
 import { findOwned as findOwnedOrder } from "@/modules/orders/orders.repository";
-import { create, findLatestByOrder, type PaymentRecord } from "./payments.repository";
+import { buildOrderResponse, markOrderPaid, type OrderResponse } from "@/modules/orders/orders.service";
+import {
+  create,
+  findByRazorpayOrderId,
+  findLatestByOrder,
+  markCaptured,
+  markFailed,
+  type PaymentRecord,
+} from "./payments.repository";
 
 function toObjectId(id: string): Types.ObjectId {
   return new Types.ObjectId(id);
@@ -69,4 +80,55 @@ export async function initiatePayment(
   });
 
   return toInitiateResponse(payment);
+}
+
+export type VerifyPaymentInput = {
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+};
+
+// FR-PAY-005-011 — the Razorpay Checkout widget's client-side success
+// callback, verified server-side before the order is ever marked paid. A
+// signature mismatch fails this attempt but leaves the order itself in
+// pending_payment, so the buyer can retry (FR-PAY-011, initiatePayment's own
+// idempotency guard above already mints a fresh Razorpay order once this
+// attempt is marked failed).
+export async function verifyPayment(
+  userId: string,
+  orderId: string,
+  input: VerifyPaymentInput,
+): Promise<OrderResponse> {
+  const orderOid = toObjectId(orderId);
+  const order = await findOwnedOrder(orderOid, toObjectId(userId));
+  if (!order) {
+    throw new AppError(404, "ORDER_NOT_FOUND", "Order not found.");
+  }
+
+  const payment = await findByRazorpayOrderId(input.razorpayOrderId);
+  if (!payment || payment.order.toString() !== orderId) {
+    throw new AppError(404, "PAYMENT_NOT_FOUND", "No matching payment attempt for this order.");
+  }
+
+  const isValid = verifyPaymentSignatureCrypto(
+    input.razorpayOrderId,
+    input.razorpayPaymentId,
+    input.razorpaySignature,
+  );
+
+  if (!isValid) {
+    await markFailed(payment._id);
+    throw new AppError(
+      400,
+      "PAYMENT_VERIFICATION_FAILED",
+      "Payment signature verification failed.",
+    );
+  }
+
+  await markCaptured(payment._id, {
+    razorpayPaymentId: input.razorpayPaymentId,
+    razorpaySignature: input.razorpaySignature,
+  });
+  const updatedOrder = await markOrderPaid(orderOid, input.razorpayPaymentId);
+  return buildOrderResponse(updatedOrder);
 }

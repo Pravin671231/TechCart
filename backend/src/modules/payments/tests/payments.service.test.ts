@@ -6,20 +6,30 @@ import type { PaymentRecord } from "../payments.repository";
 vi.mock("../payments.repository", () => ({
   create: vi.fn(),
   findLatestByOrder: vi.fn(),
+  findByRazorpayOrderId: vi.fn(),
+  markCaptured: vi.fn(),
+  markFailed: vi.fn(),
 }));
 
 vi.mock("@/modules/orders/orders.repository", () => ({
   findOwned: vi.fn(),
 }));
 
+vi.mock("@/modules/orders/orders.service", () => ({
+  markOrderPaid: vi.fn(),
+  buildOrderResponse: vi.fn(),
+}));
+
 vi.mock("@/externalService/razorpay", () => ({
   createRazorpayOrder: vi.fn(),
+  verifyPaymentSignature: vi.fn(),
 }));
 
 import { findOwned } from "@/modules/orders/orders.repository";
-import { createRazorpayOrder } from "@/externalService/razorpay";
+import { buildOrderResponse, markOrderPaid } from "@/modules/orders/orders.service";
+import { createRazorpayOrder, verifyPaymentSignature } from "@/externalService/razorpay";
 import * as paymentsRepository from "../payments.repository";
-import { initiatePayment } from "../payments.service";
+import { initiatePayment, verifyPayment } from "../payments.service";
 
 const userId = new Types.ObjectId().toString();
 const orderId = new Types.ObjectId().toString();
@@ -141,5 +151,64 @@ describe("initiatePayment / FR-PAY-001-004", () => {
 
     expect(createRazorpayOrder).toHaveBeenCalled();
     expect(result.razorpayOrderId).toBe("order_retry");
+  });
+});
+
+describe("verifyPayment / FR-PAY-005-011", () => {
+  const verifyInput = {
+    razorpayOrderId: "order_existing",
+    razorpayPaymentId: "pay_123",
+    razorpaySignature: "sig_123",
+  };
+
+  it("throws ORDER_NOT_FOUND for a non-owned or nonexistent order", async () => {
+    vi.mocked(findOwned).mockResolvedValue(null);
+
+    await expect(verifyPayment(userId, orderId, verifyInput)).rejects.toMatchObject({
+      statusCode: 404,
+      code: "ORDER_NOT_FOUND",
+    });
+  });
+
+  it("throws PAYMENT_NOT_FOUND when no payment matches the given razorpayOrderId for this order", async () => {
+    vi.mocked(findOwned).mockResolvedValue(makeOrder());
+    vi.mocked(paymentsRepository.findByRazorpayOrderId).mockResolvedValue(null);
+
+    await expect(verifyPayment(userId, orderId, verifyInput)).rejects.toMatchObject({
+      statusCode: 404,
+      code: "PAYMENT_NOT_FOUND",
+    });
+  });
+
+  it("on a valid signature: marks the payment captured and the order paid", async () => {
+    vi.mocked(findOwned).mockResolvedValue(makeOrder());
+    vi.mocked(paymentsRepository.findByRazorpayOrderId).mockResolvedValue(makePayment());
+    vi.mocked(verifyPaymentSignature).mockReturnValue(true);
+    vi.mocked(markOrderPaid).mockResolvedValue(makeOrder({ status: "paid" }));
+    vi.mocked(buildOrderResponse).mockReturnValue({ id: orderId, status: "paid" } as never);
+
+    const result = await verifyPayment(userId, orderId, verifyInput);
+
+    expect(paymentsRepository.markCaptured).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ razorpayPaymentId: "pay_123", razorpaySignature: "sig_123" }),
+    );
+    expect(markOrderPaid).toHaveBeenCalledWith(expect.anything(), "pay_123");
+    expect(paymentsRepository.markFailed).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ status: "paid" });
+  });
+
+  it("on an invalid signature: marks the payment failed and leaves the order untouched", async () => {
+    vi.mocked(findOwned).mockResolvedValue(makeOrder());
+    vi.mocked(paymentsRepository.findByRazorpayOrderId).mockResolvedValue(makePayment());
+    vi.mocked(verifyPaymentSignature).mockReturnValue(false);
+
+    await expect(verifyPayment(userId, orderId, verifyInput)).rejects.toMatchObject({
+      statusCode: 400,
+      code: "PAYMENT_VERIFICATION_FAILED",
+    });
+
+    expect(paymentsRepository.markFailed).toHaveBeenCalled();
+    expect(markOrderPaid).not.toHaveBeenCalled();
   });
 });
