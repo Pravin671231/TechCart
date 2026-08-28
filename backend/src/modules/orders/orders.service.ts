@@ -19,11 +19,14 @@ import {
   getOwnedAddress,
 } from "@/modules/addresses/addresses.service";
 import type { AddressInput, AddressRecord } from "@/modules/addresses/addresses.repository";
+import { buildPagination, type Pagination } from "@/utils/apiResponse";
 import { allocateOrderNumber } from "./orderNumber";
 import {
   create,
   findById,
+  findOwned,
   findStalePendingPayment,
+  listForUser,
   updateStatus,
   type OrderRecord,
 } from "./orders.repository";
@@ -237,6 +240,10 @@ export async function checkout(userId: string, input: CheckoutInput): Promise<Ch
   };
 }
 
+function orderNotFound(): AppError {
+  return new AppError(404, "ORDER_NOT_FOUND", "Order not found.");
+}
+
 // FR-ORD-013 — every status write anywhere in this codebase goes through
 // this one function: validates the move via the state machine, then
 // persists the new status plus one statusHistory entry in one atomic
@@ -249,7 +256,7 @@ export async function transitionOrder(
 ): Promise<OrderRecord> {
   const order = await findById(orderId);
   if (!order) {
-    throw new AppError(404, "ORDER_NOT_FOUND", "Order not found.");
+    throw orderNotFound();
   }
 
   assertTransition(order.status, toStatus);
@@ -272,7 +279,7 @@ export async function transitionOrder(
     },
   );
   if (!updated) {
-    throw new AppError(404, "ORDER_NOT_FOUND", "Order not found.");
+    throw orderNotFound();
   }
   return updated;
 }
@@ -313,4 +320,39 @@ export async function runAutoCancelSweep(): Promise<{ cancelledCount: number }> 
   }
 
   return { cancelledCount: stale.length };
+}
+
+// FR-ORD-011 — own orders only, newest first, paginated.
+export async function listOrdersForBuyer(
+  userId: string,
+  page: number,
+  limit: number,
+): Promise<{ items: OrderResponse[]; pagination: Pagination }> {
+  const { items, total } = await listForUser(toObjectId(userId), { page, limit });
+  return {
+    items: items.map(buildOrderResponse),
+    pagination: buildPagination(page, limit, total),
+  };
+}
+
+// FR-ORD-012 — a non-owned order id gets the identical error a nonexistent
+// one would (findOwned filters {_id, user} together), so order ids can't be
+// used to enumerate other buyers' purchases.
+export async function getOwnedOrder(userId: string, orderId: string): Promise<OrderResponse> {
+  const order = await findOwned(toObjectId(orderId), toObjectId(userId));
+  if (!order) throw orderNotFound();
+  return buildOrderResponse(order);
+}
+
+// FR-ORD-014 — buyer cancel, restricted to pending_payment/paid. That
+// restriction comes for free from the state machine itself ("cancelled" is
+// only reachable from those two statuses) — transitionOrder's
+// INVALID_ORDER_TRANSITION error already names the current status.
+export async function cancelOwnedOrder(userId: string, orderId: string): Promise<OrderResponse> {
+  const orderOid = toObjectId(orderId);
+  const owned = await findOwned(orderOid, toObjectId(userId));
+  if (!owned) throw orderNotFound();
+
+  const updated = await transitionOrder(orderOid, "cancelled");
+  return buildOrderResponse(updated);
 }
