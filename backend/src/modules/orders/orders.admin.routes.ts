@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { ORDER_ADMIN_ROLES, rbac } from "@/middleware/rbac";
+import { refundOrderHandler } from "@/modules/payments/payments.controller";
 import {
   adminCancelOrderHandler,
   advanceOrderStatusHandler,
@@ -18,5 +19,7 @@ router.get("/", listAdminOrdersHandler);
 router.get("/:id", getAdminOrderHandler);
 router.patch("/:id/status", advanceOrderStatusHandler);
 router.post("/:id/cancel", adminCancelOrderHandler);
+// FR-PAY-012-018 — admin-initiated refund, owned by the payments module.
+router.post("/:id/refund", refundOrderHandler);
 
 export default router;

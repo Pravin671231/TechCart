@@ -3,12 +3,21 @@ import { AppError } from "@/utils/AppError";
 import { env } from "@/config/env";
 import {
   createRazorpayOrder,
+  createRazorpayRefund,
   verifyPaymentSignature as verifyPaymentSignatureCrypto,
   verifyWebhookSignature as verifyWebhookSignatureCrypto,
 } from "@/externalService/razorpay";
 import { findOwned as findOwnedOrder } from "@/modules/orders/orders.repository";
-import { buildOrderResponse, markOrderPaid, type OrderResponse } from "@/modules/orders/orders.service";
 import {
+  buildOrderResponse,
+  getOrderForAdmin,
+  markOrderPaid,
+  transitionOrder,
+  type AdminOrderResponse,
+  type OrderResponse,
+} from "@/modules/orders/orders.service";
+import {
+  addRefund,
   appendWebhookEvent,
   create,
   findByRazorpayOrderId,
@@ -18,6 +27,7 @@ import {
   markFailed,
   type PaymentRecord,
 } from "./payments.repository";
+import type { PaymentStatus } from "./payments.model";
 
 function toObjectId(id: string): Types.ObjectId {
   return new Types.ObjectId(id);
@@ -210,4 +220,72 @@ export async function handleRazorpayWebhookEvent(
     type: body.event,
     receivedAt: new Date(),
   });
+}
+
+export type RefundInput = {
+  amount?: number | undefined;
+  reason: string;
+};
+
+// FR-PAY-012-018 — full or partial refund, admin-initiated. A full refund
+// (the requested amount, or the whole remaining balance when amount is
+// omitted, exhausts what's left) also transitions the order itself to
+// "refunded" via the shared transitionOrder() (the state machine already
+// has every paid/processing/shipped/delivered -> refunded edge, no change
+// needed there); a partial refund leaves the order's own status untouched —
+// there is no "partially refunded" order status in the state machine.
+export async function refundOrder(
+  orderId: string,
+  input: RefundInput,
+): Promise<AdminOrderResponse> {
+  const orderOid = toObjectId(orderId);
+  const payment = await findLatestByOrder(orderOid);
+  if (!payment || (payment.status !== "captured" && payment.status !== "partially_refunded")) {
+    throw new AppError(
+      400,
+      "REFUND_NOT_ALLOWED",
+      "This order has no captured payment eligible for refund.",
+    );
+  }
+  if (!payment.razorpayPaymentId) {
+    throw new AppError(
+      400,
+      "REFUND_NOT_ALLOWED",
+      "This order has no captured payment eligible for refund.",
+    );
+  }
+
+  const alreadyRefunded = payment.refunds.reduce((sum, refund) => sum + refund.amount, 0);
+  const refundable = payment.amount - alreadyRefunded;
+  const amount = input.amount ?? refundable;
+
+  if (amount <= 0 || amount > refundable) {
+    throw new AppError(
+      400,
+      "REFUND_AMOUNT_INVALID",
+      `Refund amount must be between 1 and ${refundable} paise.`,
+    );
+  }
+
+  const result = await createRazorpayRefund(payment.razorpayPaymentId, amount);
+  const isFullRefund = alreadyRefunded + amount >= payment.amount;
+  const newStatus: PaymentStatus = isFullRefund ? "refunded" : "partially_refunded";
+
+  await addRefund(
+    payment._id,
+    {
+      razorpayRefundId: result.id,
+      amount,
+      reason: input.reason,
+      status: result.status,
+      createdAt: new Date(),
+    },
+    newStatus,
+  );
+
+  if (isFullRefund) {
+    await transitionOrder(orderOid, "refunded", { note: input.reason });
+  }
+
+  return getOrderForAdmin(orderId);
 }
