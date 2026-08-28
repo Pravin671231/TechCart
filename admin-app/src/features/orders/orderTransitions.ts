@@ -7,12 +7,20 @@ import type { OrderStatus } from "./types";
 // backend's own rule, not shared code" caveat every prior admin form in
 // this codebase already carries (CategoryForm's parent picker, the
 // type-dependent specification/variant-axis inputs).
+//
+// "refunded" is deliberately dropped from every status's list here (Issue
+// #170/M6.7) — it's still a legal backend transition (paid/processing/
+// shipped/delivered -> refunded), but reaching it through this generic
+// status <select> would bypass the real refund flow entirely (no Razorpay
+// refund call, no payments.refunds[] entry, no refundable-balance check).
+// The dedicated Refund action (RefundOrderModal, OrderDetailPage) is now
+// the only path to this status.
 export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   pending_payment: ["paid", "cancelled"],
-  paid: ["processing", "cancelled", "refunded"],
-  processing: ["shipped", "refunded"],
-  shipped: ["delivered", "refunded"],
-  delivered: ["refunded"],
+  paid: ["processing", "cancelled"],
+  processing: ["shipped"],
+  shipped: ["delivered"],
+  delivered: [],
   cancelled: [],
   refunded: [],
 };

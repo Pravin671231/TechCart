@@ -43,10 +43,34 @@ export interface OrderStatusHistoryEntry {
   note?: string;
 }
 
-// The one field beyond buyer-app's own OrderResponse shape — the ordering
+// Mirrors backend's payments.model.ts's PAYMENT_STATUSES exactly.
+export const PAYMENT_STATUSES = [
+  "created",
+  "authorized",
+  "captured",
+  "failed",
+  "refunded",
+  "partially_refunded",
+] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+// Mirrors backend's payments.service.ts's PaymentSummary — a lightweight
+// projection attached to both the admin order list and detail responses
+// (Issue #168), null when no payment attempt has ever been made for the
+// order yet. `amount` is integer paise, unlike every other money field on
+// AdminOrder (totalAmount, item prices), which are whole rupees — this
+// module converts at its own boundary (RefundOrderModal), not here.
+export interface PaymentSummary {
+  status: PaymentStatus;
+  amount: number;
+  razorpayPaymentId?: string;
+}
+
+// The two fields beyond buyer-app's own OrderResponse shape — the ordering
 // buyer's resolved identity (backend's getOrderForAdmin/listOrdersForAdmin
 // both populate it; null only if the buyer account itself was hard-deleted,
-// which nothing in this codebase does today).
+// which nothing in this codebase does today) and the payment summary
+// (Issue #168/#170).
 export interface AdminOrder {
   id: string;
   orderNumber: string;
@@ -60,6 +84,7 @@ export interface AdminOrder {
   cancellationReason?: string;
   createdAt: string;
   buyer: { id: string; name: string; email: string } | null;
+  payment: PaymentSummary | null;
 }
 
 // Matches backend's ORDER_SORT_FIELDS (orders.repository.ts). Kept as one
