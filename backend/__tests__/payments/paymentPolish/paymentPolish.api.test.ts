@@ -7,16 +7,42 @@ import type { Express } from "express";
 // to buyer/admin order reads, and an error-envelope audit across every
 // payment/webhook/refund endpoint this milestone added. Real DB, same
 // rationale as every other payments suite in this milestone.
+//
+// This is a full mock, not a partial importOriginal() one: importOriginal()
+// forces eager evaluation of the real module (and transitively
+// @/config/env) the moment anything in this file statically imports from
+// "@/externalService/razorpay", which happens before bootstrapMemoryMongo()
+// has set the real MONGODB_URI — freezing it on vitest.config.ts's
+// placeholder, the exact bug class orders.service.ts's own dynamic-import
+// comments document. verifyPaymentSignature is genuinely under test here
+// (payments.service.ts imports it from this same module, and this suite
+// reaches a captured payment via the real initiate -> verify path), so the
+// mock reimplements its real HMAC logic directly against node:crypto rather
+// than importing it — identical algorithm, same dummy secret, zero
+// dependency on @/config/env.
 vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@/externalService/razorpay", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/externalService/razorpay")>();
+vi.mock("@/externalService/razorpay", async () => {
+  const nodeCrypto = await import("node:crypto");
   return {
-    ...actual,
     createRazorpayOrder: vi.fn(),
     createRazorpayRefund: vi.fn(),
+    verifyPaymentSignature: (
+      razorpayOrderId: string,
+      razorpayPaymentId: string,
+      razorpaySignature: string,
+    ): boolean => {
+      const expected = nodeCrypto
+        .createHmac("sha256", "test-razorpay-key-secret")
+        .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+        .digest("hex");
+      const expectedBuf = Buffer.from(expected, "hex");
+      const actualBuf = Buffer.from(razorpaySignature, "hex");
+      if (expectedBuf.length !== actualBuf.length) return false;
+      return nodeCrypto.timingSafeEqual(expectedBuf, actualBuf);
+    },
   };
 });
 
