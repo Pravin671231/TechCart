@@ -211,7 +211,7 @@ describe("POST /api/admin/orders/:id/refund (FR-PAY-012-018)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe("refunded");
-    expect(createRazorpayRefund).toHaveBeenCalledWith(expect.any(String), 4000000);
+    expect(createRazorpayRefund).toHaveBeenCalledWith(expect.any(String), 400000000);
   });
 
   it("a partial refund leaves the order's own status untouched", async () => {
