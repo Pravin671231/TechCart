@@ -6,6 +6,7 @@ import { parseObjectId } from "@/utils/objectId";
 import { requireActorId } from "@/utils/actor";
 import { parseQuery } from "@/utils/parseQuery";
 import { addressInputSchema } from "@/modules/addresses/addresses.controller";
+import { getPaymentSummariesByOrders, getPaymentSummary } from "@/modules/payments/payments.service";
 import { ORDER_SORT_FIELDS, type OrderSortField } from "./orders.repository";
 import { ORDER_STATUSES } from "./orders.model";
 import {
@@ -72,11 +73,14 @@ export async function listOrdersHandler(req: Request, res: Response): Promise<vo
   res.status(200).json(successResponse(items, pagination));
 }
 
-// FR-ORD-012, FR-ORD-013
+// FR-ORD-012, FR-ORD-013. #168 — the response also carries a `payment`
+// summary (null when no payment attempt has been made yet) so the buyer
+// detail view can render payment state without a separate round trip.
 export async function getOrderHandler(req: Request, res: Response): Promise<void> {
   const orderId = parseObjectId(req.params.id);
   const order = await getOwnedOrder(requireActorId(req), orderId.toString());
-  res.status(200).json(successResponse(order));
+  const payment = await getPaymentSummary(orderId.toString());
+  res.status(200).json(successResponse({ ...order, payment }));
 }
 
 // FR-ORD-014
@@ -86,7 +90,8 @@ export async function cancelOrderHandler(req: Request, res: Response): Promise<v
   res.status(200).json(successResponse(order));
 }
 
-// FR-ORD-017
+// FR-ORD-017. #168 — each item also carries a `payment` summary, resolved
+// in one batch query for the whole page rather than one per row.
 export async function listAdminOrdersHandler(req: Request, res: Response): Promise<void> {
   const query = listAdminOrdersQuerySchema.parse(req.query);
   const { sort } = parseQuery<OrderSortField>(
@@ -103,14 +108,21 @@ export async function listAdminOrdersHandler(req: Request, res: Response): Promi
     ...(query.search !== undefined ? { search: query.search } : {}),
     ...(query.status !== undefined ? { status: query.status } : {}),
   });
-  res.status(200).json(successResponse(items, pagination));
+  const paymentSummaries = await getPaymentSummariesByOrders(items.map((item) => item.id));
+  const itemsWithPayment = items.map((item) => ({
+    ...item,
+    payment: paymentSummaries.get(item.id) ?? null,
+  }));
+  res.status(200).json(successResponse(itemsWithPayment, pagination));
 }
 
-// FR-ORD-018
+// FR-ORD-018. #168 — the response also carries a `payment` summary, same
+// shape/reasoning as the buyer detail view above.
 export async function getAdminOrderHandler(req: Request, res: Response): Promise<void> {
   const orderId = parseObjectId(req.params.id);
   const order = await getOrderForAdmin(orderId.toString());
-  res.status(200).json(successResponse(order));
+  const payment = await getPaymentSummary(orderId.toString());
+  res.status(200).json(successResponse({ ...order, payment }));
 }
 
 // FR-ORD-019

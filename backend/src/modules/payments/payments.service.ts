@@ -22,6 +22,7 @@ import {
   create,
   findByRazorpayOrderId,
   findLatestByOrder,
+  findLatestByOrders,
   hasWebhookEvent,
   markCaptured,
   markFailed,
@@ -288,4 +289,48 @@ export async function refundOrder(
   }
 
   return getOrderForAdmin(orderId);
+}
+
+export type PaymentSummary = {
+  status: PaymentStatus;
+  amount: number;
+  razorpayPaymentId?: string;
+};
+
+function toSummary(payment: PaymentRecord): PaymentSummary {
+  return {
+    status: payment.status,
+    amount: payment.amount,
+    ...(payment.razorpayPaymentId !== undefined
+      ? { razorpayPaymentId: payment.razorpayPaymentId }
+      : {}),
+  };
+}
+
+// #168 — a lightweight payment summary for a single order's buyer/admin
+// detail view, so the frontend can render payment state without a separate
+// round trip. null (not an error) when no payment attempt has ever been
+// made for this order (e.g. it's still awaiting checkout's own follow-up).
+export async function getPaymentSummary(orderId: string): Promise<PaymentSummary | null> {
+  const payment = await findLatestByOrder(toObjectId(orderId));
+  return payment ? toSummary(payment) : null;
+}
+
+// #168 — batch counterpart for the admin order list (one query for the
+// whole page, not one per row). Only the latest attempt per order is kept;
+// findLatestByOrders() already returns newest-first, so the first payment
+// seen per order id is the one that wins.
+export async function getPaymentSummariesByOrders(
+  orderIds: string[],
+): Promise<Map<string, PaymentSummary>> {
+  if (orderIds.length === 0) return new Map();
+  const payments = await findLatestByOrders(orderIds.map(toObjectId));
+  const summaries = new Map<string, PaymentSummary>();
+  for (const payment of payments) {
+    const key = payment.order.toString();
+    if (!summaries.has(key)) {
+      summaries.set(key, toSummary(payment));
+    }
+  }
+  return summaries;
 }

@@ -8,7 +8,12 @@ import { handleRazorpayWebhookEvent } from "@/modules/payments/payments.service"
 // backend can't correlate to a known payment is acknowledged, not retried
 // (payments.service.ts's own no-op branches).
 export async function handleRazorpayWebhookHandler(req: Request, res: Response): Promise<void> {
-  const rawBody = (req.body as Buffer).toString("utf8");
+  // express.raw() only populates req.body as a Buffer when the request's
+  // Content-Type matches "application/json" — a request sent with no body
+  // at all (e.g. a malformed/empty delivery) leaves req.body undefined, not
+  // an empty Buffer, so `.toString()` would throw before ever reaching
+  // handleRazorpayWebhookEvent's own missing-signature guard below.
+  const rawBody = Buffer.isBuffer(req.body) ? req.body.toString("utf8") : "";
   const signature = req.headers["x-razorpay-signature"];
   const eventId = req.headers["x-razorpay-event-id"];
 
