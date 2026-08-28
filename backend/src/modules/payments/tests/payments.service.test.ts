@@ -11,6 +11,7 @@ vi.mock("../payments.repository", () => ({
   markFailed: vi.fn(),
   hasWebhookEvent: vi.fn(),
   appendWebhookEvent: vi.fn(),
+  addRefund: vi.fn(),
 }));
 
 vi.mock("@/modules/orders/orders.repository", () => ({
@@ -20,23 +21,37 @@ vi.mock("@/modules/orders/orders.repository", () => ({
 vi.mock("@/modules/orders/orders.service", () => ({
   markOrderPaid: vi.fn(),
   buildOrderResponse: vi.fn(),
+  transitionOrder: vi.fn(),
+  getOrderForAdmin: vi.fn(),
 }));
 
 vi.mock("@/externalService/razorpay", () => ({
   createRazorpayOrder: vi.fn(),
+  createRazorpayRefund: vi.fn(),
   verifyPaymentSignature: vi.fn(),
   verifyWebhookSignature: vi.fn(),
 }));
 
 import { findOwned } from "@/modules/orders/orders.repository";
-import { buildOrderResponse, markOrderPaid } from "@/modules/orders/orders.service";
+import {
+  buildOrderResponse,
+  getOrderForAdmin,
+  markOrderPaid,
+  transitionOrder,
+} from "@/modules/orders/orders.service";
 import {
   createRazorpayOrder,
+  createRazorpayRefund,
   verifyPaymentSignature,
   verifyWebhookSignature,
 } from "@/externalService/razorpay";
 import * as paymentsRepository from "../payments.repository";
-import { handleRazorpayWebhookEvent, initiatePayment, verifyPayment } from "../payments.service";
+import {
+  handleRazorpayWebhookEvent,
+  initiatePayment,
+  refundOrder,
+  verifyPayment,
+} from "../payments.service";
 
 const userId = new Types.ObjectId().toString();
 const orderId = new Types.ObjectId().toString();
@@ -314,5 +329,111 @@ describe("handleRazorpayWebhookEvent / FR-PAY-023-025", () => {
       expect.anything(),
       expect.objectContaining({ eventId: "payment.captured:pay_wh1" }),
     );
+  });
+});
+
+describe("refundOrder / FR-PAY-012-018", () => {
+  it("throws REFUND_NOT_ALLOWED when there's no captured payment", async () => {
+    vi.mocked(paymentsRepository.findLatestByOrder).mockResolvedValue(
+      makePayment({ status: "created" }),
+    );
+
+    await expect(refundOrder(orderId, { reason: "Customer request" })).rejects.toMatchObject({
+      statusCode: 400,
+      code: "REFUND_NOT_ALLOWED",
+    });
+  });
+
+  it("throws REFUND_AMOUNT_INVALID for an amount exceeding the refundable balance", async () => {
+    vi.mocked(paymentsRepository.findLatestByOrder).mockResolvedValue(
+      makePayment({ status: "captured", razorpayPaymentId: "pay_1", amount: 1000, refunds: [] }),
+    );
+
+    await expect(
+      refundOrder(orderId, { amount: 5000, reason: "Too much" }),
+    ).rejects.toMatchObject({ statusCode: 400, code: "REFUND_AMOUNT_INVALID" });
+  });
+
+  it("a full refund (amount omitted) refunds the whole balance and transitions the order to refunded", async () => {
+    vi.mocked(paymentsRepository.findLatestByOrder).mockResolvedValue(
+      makePayment({ status: "captured", razorpayPaymentId: "pay_1", amount: 1000, refunds: [] }),
+    );
+    vi.mocked(createRazorpayRefund).mockResolvedValue({
+      id: "rfnd_1",
+      amount: 1000,
+      status: "processed",
+    });
+    vi.mocked(getOrderForAdmin).mockResolvedValue({ id: orderId, status: "refunded" } as never);
+
+    const result = await refundOrder(orderId, { reason: "Customer request" });
+
+    expect(createRazorpayRefund).toHaveBeenCalledWith("pay_1", 1000);
+    expect(paymentsRepository.addRefund).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ amount: 1000, razorpayRefundId: "rfnd_1" }),
+      "refunded",
+    );
+    expect(transitionOrder).toHaveBeenCalledWith(
+      expect.anything(),
+      "refunded",
+      expect.objectContaining({ note: "Customer request" }),
+    );
+    expect(result).toMatchObject({ status: "refunded" });
+  });
+
+  it("a partial refund leaves the order's own status untouched", async () => {
+    vi.mocked(paymentsRepository.findLatestByOrder).mockResolvedValue(
+      makePayment({ status: "captured", razorpayPaymentId: "pay_1", amount: 1000, refunds: [] }),
+    );
+    vi.mocked(createRazorpayRefund).mockResolvedValue({
+      id: "rfnd_2",
+      amount: 400,
+      status: "processed",
+    });
+    vi.mocked(getOrderForAdmin).mockResolvedValue({ id: orderId, status: "paid" } as never);
+
+    await refundOrder(orderId, { amount: 400, reason: "Partial" });
+
+    expect(paymentsRepository.addRefund).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ amount: 400 }),
+      "partially_refunded",
+    );
+    expect(transitionOrder).not.toHaveBeenCalled();
+  });
+
+  it("accounts for a prior partial refund when computing the remaining refundable balance", async () => {
+    vi.mocked(paymentsRepository.findLatestByOrder).mockResolvedValue(
+      makePayment({
+        status: "partially_refunded",
+        razorpayPaymentId: "pay_1",
+        amount: 1000,
+        refunds: [
+          {
+            razorpayRefundId: "rfnd_1",
+            amount: 400,
+            reason: "Earlier",
+            status: "processed",
+            createdAt: new Date(),
+          },
+        ],
+      }),
+    );
+    vi.mocked(createRazorpayRefund).mockResolvedValue({
+      id: "rfnd_2",
+      amount: 600,
+      status: "processed",
+    });
+    vi.mocked(getOrderForAdmin).mockResolvedValue({ id: orderId, status: "refunded" } as never);
+
+    await refundOrder(orderId, { reason: "Remaining balance" });
+
+    expect(createRazorpayRefund).toHaveBeenCalledWith("pay_1", 600);
+    expect(paymentsRepository.addRefund).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ amount: 600 }),
+      "refunded",
+    );
+    expect(transitionOrder).toHaveBeenCalled();
   });
 });
