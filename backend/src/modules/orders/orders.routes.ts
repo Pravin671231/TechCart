@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { rbac } from "@/middleware/rbac";
+import { initiatePaymentHandler } from "@/modules/payments/payments.controller";
 import {
   cancelOrderHandler,
   checkoutHandler,
@@ -18,5 +19,10 @@ router.post("/", checkoutHandler);
 router.get("/", listOrdersHandler);
 router.get("/:id", getOrderHandler);
 router.post("/:id/cancel", cancelOrderHandler);
+// FR-PAY-001-011 — payment initiation and client-side verification. Owned
+// by the payments module (src/modules/payments/), routed here since both
+// paths are order-scoped and this router already carries the buyer/order
+// ownership guard these two need identically.
+router.post("/:id/payment", initiatePaymentHandler);
 
 export default router;

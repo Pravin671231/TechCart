@@ -33,6 +33,13 @@ const envSchema = z.object({
   R2_SECRET_ACCESS_KEY: z.string().min(1, "R2_SECRET_ACCESS_KEY is required"),
   R2_BUCKET_NAME: z.string().min(1, "R2_BUCKET_NAME is required"),
   R2_PUBLIC_URL_BASE: z.string().min(1, "R2_PUBLIC_URL_BASE is required"),
+  // Razorpay (M6/SRS v0.6). Dummy values are fine for automated tests — only
+  // HMAC signature verification (payments.service.ts) is exercised for real
+  // against these; the Razorpay SDK's own network calls are mocked in every
+  // test. Real test-mode keys are added later via .env for manual E2E.
+  RAZORPAY_KEY_ID: z.string().min(1, "RAZORPAY_KEY_ID is required"),
+  RAZORPAY_KEY_SECRET: z.string().min(1, "RAZORPAY_KEY_SECRET is required"),
+  RAZORPAY_WEBHOOK_SECRET: z.string().min(1, "RAZORPAY_WEBHOOK_SECRET is required"),
   // The backend's own public base URL. `.startsWith("https://")` gates the
   // cross-site cookie attributes (session.ts / adminChallenge.ts) and it's
   // the fallback origin for admin password-reset links (auth.service.ts).
@@ -67,6 +74,11 @@ export const env = {
     SECRET_ACCESS_KEY: rawEnv.R2_SECRET_ACCESS_KEY,
     BUCKET_NAME: rawEnv.R2_BUCKET_NAME,
     PUBLIC_URL_BASE: rawEnv.R2_PUBLIC_URL_BASE,
+  },
+  RAZORPAY: {
+    KEY_ID: rawEnv.RAZORPAY_KEY_ID,
+    KEY_SECRET: rawEnv.RAZORPAY_KEY_SECRET,
+    WEBHOOK_SECRET: rawEnv.RAZORPAY_WEBHOOK_SECRET,
   },
   APP_BASE_URL: rawEnv.APP_BASE_URL,
   JWT_SECRET: rawEnv.JWT_SECRET,

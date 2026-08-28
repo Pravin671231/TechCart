@@ -16,6 +16,12 @@ export default defineConfig({
       R2_SECRET_ACCESS_KEY: "test-secret-access-key",
       R2_BUCKET_NAME: "test-bucket",
       R2_PUBLIC_URL_BASE: "https://cdn.test.example",
+      // Dummy Razorpay credentials — real enough for HMAC verification tests
+      // to self-sign against (payments.service.ts), never dialed over the
+      // network (the SDK itself is mocked wherever a test exercises it).
+      RAZORPAY_KEY_ID: "rzp_test_dummykeyid",
+      RAZORPAY_KEY_SECRET: "test-razorpay-key-secret",
+      RAZORPAY_WEBHOOK_SECRET: "test-razorpay-webhook-secret",
       APP_BASE_URL: "http://localhost:4000",
       JWT_SECRET: "test-jwt-secret-at-least-32-characters-long",
       GOOGLE_CLIENT_ID: "test-google-client-id",
