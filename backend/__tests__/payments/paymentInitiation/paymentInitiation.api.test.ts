@@ -4,20 +4,23 @@ import type { Express } from "express";
 
 // M6 / Issue #164 — payment initiation, real DB (ownership/status guards are
 // the actual behavior under test, same rationale every orders suite in M5
-// documents). The Razorpay SDK's own network call is mocked wholesale — only
-// HMAC signature verification is exercised for real, and that's not this
-// endpoint's concern.
+// documents). The Razorpay SDK's own network call is mocked wholesale; this
+// file never exercises HMAC signature verification, so — unlike the sibling
+// payments suites that do — this mock is a full replacement, not a partial
+// importOriginal() one. That distinction matters: importOriginal() forces
+// eager evaluation of the real module (and transitively @/config/env) the
+// moment anything in this file statically imports from
+// "@/externalService/razorpay", which happens before bootstrapMemoryMongo()
+// has set the real MONGODB_URI — freezing it on vitest.config.ts's
+// placeholder, the exact bug class orders.service.ts's own dynamic-import
+// comments document. A full mock with no real import sidesteps it entirely.
 vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@/externalService/razorpay", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/externalService/razorpay")>();
-  return {
-    ...actual,
-    createRazorpayOrder: vi.fn(),
-  };
-});
+vi.mock("@/externalService/razorpay", () => ({
+  createRazorpayOrder: vi.fn(),
+}));
 
 import { createRazorpayOrder } from "@/externalService/razorpay";
 import { Product } from "@/modules/product-catalog/features/products/products.model";
