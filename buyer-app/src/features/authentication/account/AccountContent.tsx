@@ -43,12 +43,15 @@ export function AccountContent() {
           )}
         </div>
 
-        <div className="text-center">
+        <div className="flex flex-col items-center gap-2 text-center">
           <Link
             href="/account/addresses"
             className="text-sm font-medium text-primary hover:underline"
           >
             Manage saved addresses
+          </Link>
+          <Link href="/orders" className="text-sm font-medium text-primary hover:underline">
+            View your orders
           </Link>
         </div>
       </div>
