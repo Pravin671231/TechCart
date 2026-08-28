@@ -9,15 +9,50 @@ import type { Express } from "express";
 // vitest.config.ts injects (a self-computed HMAC, same "exercise the pure
 // crypto for real" convention as #165's verify suite). Order/payment
 // creation still mocks the Razorpay SDK's own network call.
+//
+// This is a full mock, not a partial importOriginal() one: importOriginal()
+// forces eager evaluation of the real module (and transitively
+// @/config/env) the moment anything in this file statically imports from
+// "@/externalService/razorpay", which happens before bootstrapMemoryMongo()
+// has set the real MONGODB_URI — freezing it on vitest.config.ts's
+// placeholder, the exact bug class orders.service.ts's own dynamic-import
+// comments document. verifyPaymentSignature/verifyWebhookSignature are
+// genuinely under test here (payments.service.ts imports both from this
+// same module), so the mock reimplements their real HMAC logic directly
+// against node:crypto rather than importing them — identical algorithm,
+// same dummy secrets, zero dependency on @/config/env.
 vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@/externalService/razorpay", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/externalService/razorpay")>();
+vi.mock("@/externalService/razorpay", async () => {
+  const nodeCrypto = await import("node:crypto");
+  function timingSafeEqualHex(expectedHex: string, actualHex: string): boolean {
+    const expected = Buffer.from(expectedHex, "hex");
+    const actual = Buffer.from(actualHex, "hex");
+    if (expected.length !== actual.length) return false;
+    return nodeCrypto.timingSafeEqual(expected, actual);
+  }
   return {
-    ...actual,
     createRazorpayOrder: vi.fn(),
+    verifyPaymentSignature: (
+      razorpayOrderId: string,
+      razorpayPaymentId: string,
+      razorpaySignature: string,
+    ): boolean => {
+      const expected = nodeCrypto
+        .createHmac("sha256", "test-razorpay-key-secret")
+        .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+        .digest("hex");
+      return timingSafeEqualHex(expected, razorpaySignature);
+    },
+    verifyWebhookSignature: (rawBody: string, signature: string): boolean => {
+      const expected = nodeCrypto
+        .createHmac("sha256", "test-razorpay-webhook-secret")
+        .update(rawBody)
+        .digest("hex");
+      return timingSafeEqualHex(expected, signature);
+    },
   };
 });
 
