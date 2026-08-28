@@ -23,15 +23,19 @@ import {
   bootstrapMemoryMongo,
   teardownMemoryMongo,
   signInBuyer,
+  signInFully,
   authRequest,
   type MemoryMongoContext,
 } from "../../testHelpers/adminSession";
 
 const BUYER_EMAIL = "order-status-buyer@example.com";
+const ORDER_MANAGER_EMAIL = "order-status-order-manager@example.com";
+const ORDER_MANAGER_PASSWORD = "OrderMgr!Pass1";
 
 let ctx: MemoryMongoContext;
 let app: Express;
 let token: string;
+let orderManagerToken: string;
 
 const validAddress = {
   fullName: "Asha Rao",
@@ -79,6 +83,15 @@ beforeAll(async () => {
   ctx = await bootstrapMemoryMongo();
   app = ctx.app;
   token = await signInBuyer(app, BUYER_EMAIL);
+
+  const { provisionAdminUser } = await import("../../../src/scripts/seed/createAdminUser.js");
+  await provisionAdminUser({
+    email: ORDER_MANAGER_EMAIL,
+    password: ORDER_MANAGER_PASSWORD,
+    name: "Order Status Order Manager Fixture",
+    role: "order-manager",
+  });
+  orderManagerToken = await signInFully(app, ORDER_MANAGER_EMAIL, ORDER_MANAGER_PASSWORD);
 }, 60000);
 
 afterAll(async () => {
@@ -141,12 +154,16 @@ describe("markOrderPaid / FR-ORD-009", () => {
 
   it("is not reachable via any HTTP route", async () => {
     const orderId = await seedOrder();
-    for (const path of [
-      `/api/orders/${orderId.toString()}/paid`,
-      `/api/orders/${orderId.toString()}/mark-paid`,
-      `/api/admin/orders/${orderId.toString()}/paid`,
-    ]) {
-      const res = await authRequest(app, "post", path, token);
+    for (const [path, authToken] of [
+      [`/api/orders/${orderId.toString()}/paid`, token],
+      [`/api/orders/${orderId.toString()}/mark-paid`, token],
+      // Uses an order-manager token (not the buyer one) — #158 mounted a
+      // real rbac-guarded router at /api/admin/orders/*, so a wrong-role
+      // token would 403 before route-matching even runs, which wouldn't
+      // prove "no handler exists" the way it does for an allowed role.
+      [`/api/admin/orders/${orderId.toString()}/paid`, orderManagerToken],
+    ] as const) {
+      const res = await authRequest(app, "post", path, authToken);
       expect(res.status).toBe(404);
     }
   });

@@ -29,6 +29,11 @@ declare global {
 // literal array.
 export const CATALOG_ADMIN_ROLES = ["catalog-manager", "super-admin"] as const;
 
+// FR-ORD-020 — the reciprocal boundary: order management belongs
+// exclusively to order-manager/super-admin, a catalog-manager session is
+// rejected 403 on every /api/admin/orders/* route.
+export const ORDER_ADMIN_ROLES = ["order-manager", "super-admin"] as const;
+
 // Issue #144/M3.6 — widened from AdminRole-only so the identical guard also
 // covers the new buyer-only /api/account/profile routes, instead of a
 // parallel middleware duplicating this same session+role check.
@@ -56,9 +61,7 @@ export function rbac(roles: readonly Role[]) {
     }
 
     if (!roles.includes(result.role as Role)) {
-      next(
-        new AppError(403, "FORBIDDEN", `This action requires one of: ${roles.join(", ")}.`),
-      );
+      next(new AppError(403, "FORBIDDEN", `This action requires one of: ${roles.join(", ")}.`));
       return;
     }
 
