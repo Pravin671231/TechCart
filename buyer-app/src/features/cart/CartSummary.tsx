@@ -1,7 +1,11 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import { formatPrice } from "@/features/products/money";
 import type { Cart } from "./types";
 
 export function CartSummary({ cart }: { cart: Cart }) {
+  const router = useRouter();
   const availableCount = cart.items.filter((line) => !line.unavailable).length;
   const unavailableCount = cart.items.length - availableCount;
 
@@ -32,6 +36,7 @@ export function CartSummary({ cart }: { cart: Cart }) {
       <button
         type="button"
         disabled={availableCount === 0}
+        onClick={() => router.push("/checkout")}
         className="mt-5 w-full rounded-md bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-neutral-300"
       >
         Proceed to checkout
