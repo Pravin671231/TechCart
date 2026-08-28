@@ -20,8 +20,15 @@ import {
 } from "@/modules/addresses/addresses.service";
 import type { AddressInput, AddressRecord } from "@/modules/addresses/addresses.repository";
 import { allocateOrderNumber } from "./orderNumber";
-import { create, type OrderRecord } from "./orders.repository";
+import {
+  create,
+  findById,
+  findStalePendingPayment,
+  updateStatus,
+  type OrderRecord,
+} from "./orders.repository";
 import type { OrderShippingAddress, OrderStatus } from "./orders.model";
+import { assertTransition } from "./orders.stateMachine";
 
 export type CheckoutInput = {
   addressId?: string | undefined;
@@ -228,4 +235,82 @@ export async function checkout(userId: string, input: CheckoutInput): Promise<Ch
     ...buildOrderResponse(order),
     ...(droppedItems.length > 0 ? { droppedItems } : {}),
   };
+}
+
+// FR-ORD-013 — every status write anywhere in this codebase goes through
+// this one function: validates the move via the state machine, then
+// persists the new status plus one statusHistory entry in one atomic
+// update. Reused by #157's buyer cancel, #158's admin advance/cancel, and
+// this issue's own auto-cancel sweep below.
+export async function transitionOrder(
+  orderId: Types.ObjectId,
+  toStatus: OrderStatus,
+  options?: { note?: string; trackingReference?: string; cancellationReason?: string },
+): Promise<OrderRecord> {
+  const order = await findById(orderId);
+  if (!order) {
+    throw new AppError(404, "ORDER_NOT_FOUND", "Order not found.");
+  }
+
+  assertTransition(order.status, toStatus);
+
+  const updated = await updateStatus(
+    orderId,
+    toStatus,
+    {
+      status: toStatus,
+      at: new Date(),
+      ...(options?.note !== undefined ? { note: options.note } : {}),
+    },
+    {
+      ...(options?.trackingReference !== undefined
+        ? { trackingReference: options.trackingReference }
+        : {}),
+      ...(options?.cancellationReason !== undefined
+        ? { cancellationReason: options.cancellationReason }
+        : {}),
+    },
+  );
+  if (!updated) {
+    throw new AppError(404, "ORDER_NOT_FOUND", "Order not found.");
+  }
+  return updated;
+}
+
+// FR-ORD-009 — reserved for Payments (v0.6) to call once it verifies a real
+// Razorpay payment against this order. Deliberately not wired to any
+// Express route anywhere in this codebase. paymentId isn't persisted yet
+// since orders.model.ts (v0.5) has no payment-reference field of its own —
+// v0.6 will extend the schema when it lands.
+export async function markOrderPaid(
+  orderId: Types.ObjectId,
+  _paymentId: string,
+): Promise<OrderRecord> {
+  return transitionOrder(orderId, "paid");
+}
+
+// FR-ORD-010 — orders left in pending_payment past 30 minutes are
+// auto-cancelled by queueWorkers.ts's repeatable BullMQ job. A run that
+// finds nothing to cancel is not itself an error (SRS v0.5 §3).
+const AUTO_CANCEL_WINDOW_MS = 30 * 60 * 1000;
+
+export async function runAutoCancelSweep(): Promise<{ cancelledCount: number }> {
+  const cutoff = new Date(Date.now() - AUTO_CANCEL_WINDOW_MS);
+  const stale = await findStalePendingPayment(cutoff);
+
+  for (const order of stale) {
+    await transitionOrder(order._id, "cancelled", {
+      note: "Auto-cancelled after 30 minutes with no successful payment.",
+    });
+  }
+
+  if (stale.length > 0) {
+    console.log(
+      `[orders] auto-cancel sweep: cancelled ${stale.length} stale pending_payment order(s).`,
+    );
+  } else {
+    console.log("[orders] auto-cancel sweep: nothing to cancel.");
+  }
+
+  return { cancelledCount: stale.length };
 }
