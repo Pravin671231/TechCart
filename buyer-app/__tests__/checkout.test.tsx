@@ -207,8 +207,7 @@ describe("Checkout flow", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^place order$/i }));
 
-    expect(await screen.findByText(/order placed/i)).toBeInTheDocument();
-    expect(screen.getByText(/TC-2026-000001/)).toBeInTheDocument();
+    expect(await screen.findByText(/TC-2026-000001/)).toBeInTheDocument();
     expect(screen.queryByText(/some items were removed/i)).not.toBeInTheDocument();
   });
 
@@ -255,7 +254,7 @@ describe("Checkout flow", () => {
 
     expect(await screen.findByText(/some items were removed/i)).toBeInTheDocument();
     expect(screen.getByText(/SKU SKU-1/)).toBeInTheDocument();
-    expect(screen.getByText(/order placed/i)).toBeInTheDocument();
+    expect(screen.getByText(/TC-2026-000002/)).toBeInTheDocument();
   });
 
   it("shows a message and no place-order action when the cart has nothing available", async () => {

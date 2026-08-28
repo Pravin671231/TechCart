@@ -9,4 +9,5 @@ export type {
   OrderResponse,
   DroppedItem,
   CheckoutResponse,
+  PaymentSummary,
 } from "@/features/orders/types";

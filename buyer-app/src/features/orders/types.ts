@@ -38,6 +38,14 @@ export type OrderShippingAddress = {
 export type OrderStatus =
   "pending_payment" | "paid" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
 
+// M6/#168 — a lightweight summary of the order's latest payment attempt,
+// null until POST .../payment has ever been called for this order.
+export type PaymentSummary = {
+  status: "created" | "authorized" | "captured" | "failed" | "refunded" | "partially_refunded";
+  amount: number;
+  razorpayPaymentId?: string;
+};
+
 export type OrderResponse = {
   id: string;
   orderNumber: string;
@@ -50,6 +58,7 @@ export type OrderResponse = {
   trackingReference?: string;
   cancellationReason?: string;
   createdAt: string;
+  payment: PaymentSummary | null;
 };
 
 export type DroppedItem = { sku: string; reason: string };
