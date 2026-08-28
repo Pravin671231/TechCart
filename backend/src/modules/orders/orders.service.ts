@@ -23,12 +23,16 @@ import { buildPagination, type Pagination } from "@/utils/apiResponse";
 import { allocateOrderNumber } from "./orderNumber";
 import {
   create,
+  findBuyerIdentity,
   findById,
   findOwned,
   findStalePendingPayment,
+  listForAdmin,
   listForUser,
   updateStatus,
+  type AdminOrderListFilter,
   type OrderRecord,
+  type OrderSortField,
 } from "./orders.repository";
 import type { OrderShippingAddress, OrderStatus } from "./orders.model";
 import { assertTransition } from "./orders.stateMachine";
@@ -354,5 +358,71 @@ export async function cancelOwnedOrder(userId: string, orderId: string): Promise
   if (!owned) throw orderNotFound();
 
   const updated = await transitionOrder(orderOid, "cancelled");
+  return buildOrderResponse(updated);
+}
+
+export type AdminOrderResponse = OrderResponse & {
+  buyer: { id: string; name: string; email: string } | null;
+};
+
+// FR-ORD-017 — every order across all buyers, paginated/sortable/status-
+// filterable/searchable by order number or buyer email.
+export async function listOrdersForAdmin(params: {
+  page: number;
+  limit: number;
+  sort?: { field: OrderSortField; order: 1 | -1 };
+  search?: string;
+  status?: OrderStatus;
+}): Promise<{ items: OrderResponse[]; pagination: Pagination }> {
+  const filter: AdminOrderListFilter = {
+    ...(params.status !== undefined ? { status: params.status } : {}),
+    ...(params.search !== undefined ? { search: params.search } : {}),
+  };
+  const { items, total } = await listForAdmin(filter, params.sort, {
+    page: params.page,
+    limit: params.limit,
+  });
+  return {
+    items: items.map(buildOrderResponse),
+    pagination: buildPagination(params.page, params.limit, total),
+  };
+}
+
+// FR-ORD-018 — identical shape to the buyer detail view plus the ordering
+// buyer's identity.
+export async function getOrderForAdmin(orderId: string): Promise<AdminOrderResponse> {
+  const order = await findById(toObjectId(orderId));
+  if (!order) throw orderNotFound();
+  const buyer = await findBuyerIdentity(order.user);
+  return { ...buildOrderResponse(order), buyer };
+}
+
+// FR-ORD-019 — advance along the legal state graph; an optional tracking
+// reference is recorded specifically on the transition into `shipped`
+// (transitionOrder records whatever's passed regardless of target status,
+// so a tracking reference supplied on a non-shipped transition is simply
+// stored too — the admin UI is expected to only ever send it on shipped,
+// matching the SRS's own "optional ... on the transition into shipped"
+// framing rather than this endpoint rejecting it outright on other moves).
+export async function advanceOrderStatusForAdmin(
+  orderId: string,
+  toStatus: OrderStatus,
+  trackingReference?: string,
+): Promise<OrderResponse> {
+  const updated = await transitionOrder(
+    toObjectId(orderId),
+    toStatus,
+    trackingReference !== undefined ? { trackingReference } : undefined,
+  );
+  return buildOrderResponse(updated);
+}
+
+// FR-ORD-015 — admin cancellation, same status gate as buyer cancellation
+// (via the identical transitionOrder/state-machine path), additionally
+// requiring a reason (enforced by the controller's Zod schema).
+export async function cancelOrderForAdmin(orderId: string, reason: string): Promise<OrderResponse> {
+  const updated = await transitionOrder(toObjectId(orderId), "cancelled", {
+    cancellationReason: reason,
+  });
   return buildOrderResponse(updated);
 }
