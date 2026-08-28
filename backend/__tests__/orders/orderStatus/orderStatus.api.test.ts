@@ -155,10 +155,13 @@ describe("markOrderPaid / FR-ORD-009", () => {
 describe("runAutoCancelSweep / FR-ORD-010", () => {
   it("auto-cancels a pending_payment order older than 30 minutes", async () => {
     const orderId = await seedOrder();
-    await Order.updateOne(
-      { _id: orderId },
-      { $set: { createdAt: new Date(Date.now() - 31 * 60_000) } },
-    );
+    // Mongoose marks `createdAt` immutable by default under
+    // {timestamps:true} and silently strips it from a Model.updateOne()
+    // $set (the exact class of bug Issue #121 hit and fixed for
+    // replaceVariants()) — the raw driver bypasses that entirely.
+    await ctx.mongoose.connection
+      .db!.collection("orders")
+      .updateOne({ _id: orderId }, { $set: { createdAt: new Date(Date.now() - 31 * 60_000) } });
 
     const result = await runAutoCancelSweep();
 
