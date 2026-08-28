@@ -46,6 +46,7 @@ function order(overrides: Partial<OrderResponse> = {}): OrderResponse {
     totalAmount: 80000,
     statusHistory: [{ status: "pending_payment", at: "2026-08-28T00:00:00.000Z" }],
     createdAt: "2026-08-28T00:00:00.000Z",
+    payment: null,
     ...overrides,
   };
 }

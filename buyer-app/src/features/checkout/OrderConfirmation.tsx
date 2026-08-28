@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { formatPrice } from "@/features/products/money";
 import { DroppedItemsNotice } from "./DroppedItemsNotice";
+import { PaymentStep } from "./PaymentStep";
 import type { CheckoutResponse } from "./types";
 
 export function OrderConfirmation({ order }: { order: CheckoutResponse }) {
@@ -10,31 +10,7 @@ export function OrderConfirmation({ order }: { order: CheckoutResponse }) {
         <DroppedItemsNotice items={order.droppedItems} />
       )}
 
-      <section className="rounded-lg border border-neutral-200 p-6 text-center">
-        <p className="text-base font-medium text-neutral-900">Order placed</p>
-        <p className="mt-1 text-sm text-neutral-500">Order #{order.orderNumber}</p>
-        <p className="mt-4 text-sm text-neutral-600">
-          Payment is coming soon — we&apos;ll notify you once it&apos;s ready.
-        </p>
-        <p className="mt-1 text-lg font-semibold text-neutral-900">
-          {formatPrice(order.totalAmount)}
-        </p>
-
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href={`/orders/${order.id}`}
-            className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-          >
-            View order
-          </Link>
-          <Link
-            href="/"
-            className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-          >
-            Continue shopping
-          </Link>
-        </div>
-      </section>
+      <PaymentStep order={order} />
 
       <section className="rounded-lg border border-neutral-200 p-5">
         <h2 className="text-sm font-semibold tracking-wide text-neutral-700 uppercase">Items</h2>
