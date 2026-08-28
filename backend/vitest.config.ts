@@ -16,6 +16,12 @@ export default defineConfig({
       R2_SECRET_ACCESS_KEY: "test-secret-access-key",
       R2_BUCKET_NAME: "test-bucket",
       R2_PUBLIC_URL_BASE: "https://cdn.test.example",
+      // Dummy Razorpay credentials — real enough for HMAC verification tests
+      // to self-sign against (payments.service.ts), never dialed over the
+      // network (the SDK itself is mocked wherever a test exercises it).
+      RAZORPAY_KEY_ID: "rzp_test_dummykeyid",
+      RAZORPAY_KEY_SECRET: "test-razorpay-key-secret",
+      RAZORPAY_WEBHOOK_SECRET: "test-razorpay-webhook-secret",
       APP_BASE_URL: "http://localhost:4000",
       JWT_SECRET: "test-jwt-secret-at-least-32-characters-long",
       GOOGLE_CLIENT_ID: "test-google-client-id",
@@ -35,6 +41,19 @@ export default defineConfig({
     // blows past Vitest's 5s default.
     testTimeout: 30000,
     hookTimeout: 30000,
+    // Real-DB Supertest suites (Issue #139 onward) each spin up their own
+    // full MongoMemoryServer + mongod child process. With enough of them
+    // (M6/#164 pushes the count past a dozen), running test files in
+    // parallel — Vitest's default — starves GitHub Actions' standard
+    // runners badly enough that mongod sometimes never gets a chance to
+    // bind before a suite's own connection attempt gives up
+    // (MongooseServerSelectionError: ECONNREFUSED), confirmed directly
+    // against a real CI run, not a guess. Running test files sequentially
+    // instead trades some wall-clock time for eliminating that resource
+    // contention outright; the unit-test majority of this suite is fast
+    // enough that the total cost is small next to the alternative of
+    // periodic real-DB suite failures.
+    fileParallelism: false,
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
