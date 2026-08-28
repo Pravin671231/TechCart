@@ -35,6 +35,22 @@ export default defineConfig({
     // blows past Vitest's 5s default.
     testTimeout: 30000,
     hookTimeout: 30000,
+    // Each real-DB suite spins up its own full mongod process
+    // (mongodb-memory-server) via bootstrapMemoryMongo(). With the default
+    // fork pool running as many files in parallel as there are CPU cores,
+    // enough of these suites landing on the same CI run can starve each
+    // other's mongod startup badly enough to blow past even a 60s
+    // connection timeout (observed directly in CI: repeatable
+    // MongooseServerSelectionError / hook-timeout failures that don't
+    // reproduce running a single suite in isolation). Capping concurrent
+    // test files caps concurrent mongod processes, trading some wall-clock
+    // time for reliability — the actual fix for this class of contention,
+    // not a bigger timeout number.
+    poolOptions: {
+      forks: {
+        maxForks: 2,
+      },
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
