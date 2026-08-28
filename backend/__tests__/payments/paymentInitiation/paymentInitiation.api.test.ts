@@ -112,7 +112,7 @@ describe("POST /api/orders/:id/payment (FR-PAY-001-004)", () => {
     const orderId = await seedOrder(token);
     vi.mocked(createRazorpayOrder).mockResolvedValue({
       id: "order_razorpaytest1",
-      amount: 4000000,
+      amount: 400000000,
       currency: "INR",
       status: "created",
     });
@@ -122,7 +122,7 @@ describe("POST /api/orders/:id/payment (FR-PAY-001-004)", () => {
     expect(res.status).toBe(201);
     expect(res.body.data).toMatchObject({
       razorpayOrderId: "order_razorpaytest1",
-      amount: 4000000,
+      amount: 400000000,
       currency: "INR",
     });
     expect(res.body.data.keyId).toEqual(expect.any(String));
@@ -133,7 +133,7 @@ describe("POST /api/orders/:id/payment (FR-PAY-001-004)", () => {
     const orderId = await seedOrder(token);
     vi.mocked(createRazorpayOrder).mockResolvedValue({
       id: "order_razorpaytest2",
-      amount: 4000000,
+      amount: 400000000,
       currency: "INR",
       status: "created",
     });

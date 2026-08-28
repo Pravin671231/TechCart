@@ -41,6 +41,19 @@ export default defineConfig({
     // blows past Vitest's 5s default.
     testTimeout: 30000,
     hookTimeout: 30000,
+    // Real-DB Supertest suites (Issue #139 onward) each spin up their own
+    // full MongoMemoryServer + mongod child process. With enough of them
+    // (M6/#164 pushes the count past a dozen), running test files in
+    // parallel — Vitest's default — starves GitHub Actions' standard
+    // runners badly enough that mongod sometimes never gets a chance to
+    // bind before a suite's own connection attempt gives up
+    // (MongooseServerSelectionError: ECONNREFUSED), confirmed directly
+    // against a real CI run, not a guess. Running test files sequentially
+    // instead trades some wall-clock time for eliminating that resource
+    // contention outright; the unit-test majority of this suite is fast
+    // enough that the total cost is small next to the alternative of
+    // periodic real-DB suite failures.
+    fileParallelism: false,
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
