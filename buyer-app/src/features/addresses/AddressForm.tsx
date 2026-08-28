@@ -25,7 +25,10 @@ export function AddressForm({
   onCancel,
 }: {
   address?: Address;
-  onDone: () => void;
+  // Passed the created/updated record so a caller (checkout's inline
+  // "add new address" step) can select it immediately without a second
+  // round trip — AddressListContent's own callers simply ignore the arg.
+  onDone: (address: Address) => void;
   onCancel: () => void;
 }) {
   const [input, setInput] = useState<AddressInput>(
@@ -70,12 +73,10 @@ export function AddressForm({
     };
 
     try {
-      if (address) {
-        await updateAddress({ id: address._id, input: payload }).unwrap();
-      } else {
-        await addAddress(payload).unwrap();
-      }
-      onDone();
+      const saved = address
+        ? await updateAddress({ id: address._id, input: payload }).unwrap()
+        : await addAddress(payload).unwrap();
+      onDone(saved);
     } catch (err) {
       const apiError = err as NormalizedApiError;
       setError(apiError?.message || "Failed to save address. Please try again.");
