@@ -35,19 +35,6 @@ export default defineConfig({
     // blows past Vitest's 5s default.
     testTimeout: 30000,
     hookTimeout: 30000,
-    // Each real-DB suite spins up its own full mongod process
-    // (mongodb-memory-server) via bootstrapMemoryMongo(). A subset of these
-    // suites has failed identically and repeatably in CI (Mongoose/Vitest
-    // connection timeouts) regardless of concurrency level — maxForks:2 was
-    // tried first and made no measurable difference (near-identical
-    // duration and the exact same failing files), so this pins to a single
-    // fork to fully rule concurrency in or out as the cause before treating
-    // it as something else entirely.
-    poolOptions: {
-      forks: {
-        maxForks: 1,
-      },
-    },
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
