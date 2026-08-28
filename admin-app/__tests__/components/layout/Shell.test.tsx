@@ -105,7 +105,9 @@ describe("AppShell / Sidebar", () => {
       http.get(SESSION_URL, () =>
         HttpResponse.json({
           success: true,
-          data: { user: { id: "u1", name: "Super Admin", email: "sa@example.com", role: "super-admin" } },
+          data: {
+            user: { id: "u1", name: "Super Admin", email: "sa@example.com", role: "super-admin" },
+          },
         }),
       ),
     );
@@ -114,6 +116,36 @@ describe("AppShell / Sidebar", () => {
 
     const adminUsersLinks = await screen.findAllByRole("link", { name: "Admin Users" });
     expect(adminUsersLinks[0]).toHaveAttribute("href", "/admin-users");
+  });
+
+  it("hides the role-gated 'Orders' nav item for a catalog-manager session (Issue #163/M5.10)", async () => {
+    renderShell("/");
+
+    await screen.findByRole("link", { name: "Dashboard" });
+    expect(screen.queryByRole("link", { name: "Orders" })).not.toBeInTheDocument();
+  });
+
+  it("shows the 'Orders' nav item once the session's role is order-manager", async () => {
+    server.use(
+      http.get(SESSION_URL, () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            user: {
+              id: "u1",
+              name: "Order Manager",
+              email: "om@example.com",
+              role: "order-manager",
+            },
+          },
+        }),
+      ),
+    );
+
+    renderShell("/");
+
+    const ordersLinks = await screen.findAllByRole("link", { name: "Orders" });
+    expect(ordersLinks[0]).toHaveAttribute("href", "/orders");
   });
 });
 

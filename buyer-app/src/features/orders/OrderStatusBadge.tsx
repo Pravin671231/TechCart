@@ -7,6 +7,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   shipped: "Shipped",
   delivered: "Delivered",
   cancelled: "Cancelled",
+  refunded: "Refunded",
 };
 
 const STATUS_CLASSES: Record<OrderStatus, string> = {
@@ -16,6 +17,7 @@ const STATUS_CLASSES: Record<OrderStatus, string> = {
   shipped: "bg-accent-100 text-accent-700",
   delivered: "bg-green-100 text-green-700",
   cancelled: "bg-red-100 text-red-700",
+  refunded: "bg-red-100 text-red-700",
 };
 
 export function OrderStatusBadge({ status }: { status: OrderStatus }) {

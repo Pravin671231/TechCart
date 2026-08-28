@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  ClipboardList,
   FolderTree,
   LayoutDashboard,
   ListChecks,
@@ -9,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { PRODUCT_CATALOG_ROUTES } from "@/features/product-catalog/routePaths";
+import { ORDERS_ROUTES } from "@/features/orders/routePaths";
 import type { AdminRole } from "@/features/authentication/auth/adminRoles";
 
 export interface NavItem {
@@ -47,6 +49,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Variant types",
     icon: SlidersHorizontal,
     group: "Catalog",
+  },
+  {
+    to: ORDERS_ROUTES.list,
+    label: "Orders",
+    icon: ClipboardList,
+    group: "Orders",
+    roles: ["order-manager", "super-admin"],
   },
   {
     to: "/admin-users",
