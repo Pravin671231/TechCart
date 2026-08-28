@@ -21,7 +21,6 @@ import {
 import type { AddressInput, AddressRecord } from "@/modules/addresses/addresses.repository";
 import { buildPagination, type Pagination } from "@/utils/apiResponse";
 import { allocateOrderNumber } from "./orderNumber";
-import { enqueueOrderConfirmation, enqueueStatusNotification } from "./orders.notifications";
 import {
   create,
   findBuyerIdentity,
@@ -244,6 +243,19 @@ export async function checkout(userId: string, input: CheckoutInput): Promise<Ch
   // function itself never throws — enqueue failures are caught and logged
   // internally); the actual email send happens later, asynchronously, in
   // the worker — never inline within this request/response cycle.
+  //
+  // Dynamic, not a static top-level import: orders.notifications.ts pulls
+  // in @/lib/queue -> @/config/env, and several test files import THIS
+  // module (orders.service.ts) statically at their own top level to call
+  // transitionOrder()/markOrderPaid() directly (not via HTTP). A static
+  // import here would make @/config/env's envSchema.parse(process.env) run
+  // as part of those test files' own module evaluation, before their
+  // beforeAll's bootstrapMemoryMongo() gets a chance to set the real
+  // MONGODB_URI — freezing env.MONGODB_URI on vitest.config.ts's injected
+  // placeholder for that worker's lifetime. Same bug class, same fix
+  // pattern vitest.setup.ts's own header comment documents for the
+  // identical reason.
+  const { enqueueOrderConfirmation } = await import("./orders.notifications.js");
   await enqueueOrderConfirmation(order);
 
   return {
@@ -297,7 +309,9 @@ export async function transitionOrder(
   // FR-ORD-022 — enqueued here, not at each individual call site, so every
   // caller of transitionOrder (buyer cancel, admin advance/cancel, the
   // auto-cancel sweep) gets notification coverage for free. A no-op for any
-  // status not in the notifiable set (e.g. processing).
+  // status not in the notifiable set (e.g. processing). Dynamic import —
+  // see the identical comment on checkout()'s own enqueue call above.
+  const { enqueueStatusNotification } = await import("./orders.notifications.js");
   await enqueueStatusNotification(updated, toStatus);
 
   return updated;
