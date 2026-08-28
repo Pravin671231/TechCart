@@ -31,7 +31,14 @@ export async function bootstrapMemoryMongo(): Promise<MemoryMongoContext> {
 
   const mongoose = (await import("mongoose")).default;
   const { connectDB } = await import("../../src/config/db.js");
-  await connectDB();
+  // mongodb-memory-server's real mongod process can take longer than the
+  // driver's 30s default serverSelectionTimeoutMS to become reachable when
+  // many real-DB suites spin up their own mongod concurrently under CI's
+  // resource contention (each suite gets its own MongoMemoryServer instance)
+  // — a real, repeatable timeout under load, not a one-off flake. A longer
+  // timeout here only affects this shared test harness; connectDB()'s other
+  // callers (index.ts, seed scripts) keep the driver's own default.
+  await connectDB({ serverSelectionTimeoutMS: 60000 });
 
   const appModule = await import("../../src/app.js");
   const app = (appModule as unknown as { default: Express }).default;
