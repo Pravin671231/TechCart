@@ -15,6 +15,8 @@ export interface AlertModalProps {
   onConfirm: () => void;
   onCancel: () => void;
   isConfirming?: boolean;
+  /** Disables the confirm button without touching isConfirming's own loading-label behavior — e.g. a required field in `message` that isn't filled in yet (Issue #163's CancelOrderModal). */
+  confirmDisabled?: boolean;
 }
 
 const VARIANT_STYLES: Record<
@@ -64,6 +66,7 @@ export const AlertModal = ({
   onConfirm,
   onCancel,
   isConfirming,
+  confirmDisabled,
 }: AlertModalProps) => {
   if (!open) return null;
 
@@ -110,6 +113,7 @@ export const AlertModal = ({
             onClick={onConfirm}
             loading={isConfirming}
             loadingLabel={styles.defaultLoadingLabel}
+            disabled={confirmDisabled}
             className={styles.confirmButtonClass}
           >
             {confirmLabel ?? styles.defaultConfirmLabel}

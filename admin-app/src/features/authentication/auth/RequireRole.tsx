@@ -13,8 +13,14 @@ import { NoAccess } from "./NoAccess";
 // query), so `isLoading` must still be checked here too, exactly like
 // RequireAuth does — without it, this guard would redirect to /sign-in on
 // every render before the cached session value ever arrives.
+//
+// `role` widened to `AdminRole | AdminRole[]` (Issue #163/M5.10, admin
+// order management) — an allow-list, mirroring backend's own `rbac(roles)`
+// shape, since order management needs `order-manager` *or* `super-admin`
+// rather than the single-role check `/admin-users` (#149) needed. Every
+// existing call site (`role="super-admin"`) keeps working unchanged.
 export interface RequireRoleProps {
-  role: AdminRole;
+  role: AdminRole | AdminRole[];
 }
 
 export const RequireRole = ({ role }: RequireRoleProps) => {
@@ -28,7 +34,8 @@ export const RequireRole = ({ role }: RequireRoleProps) => {
     return <Navigate to="/sign-in" replace />;
   }
 
-  if (session.role !== role) {
+  const allowedRoles = Array.isArray(role) ? role : [role];
+  if (!allowedRoles.some((allowedRole) => allowedRole === session.role)) {
     return <NoAccess />;
   }
 

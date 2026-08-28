@@ -29,8 +29,14 @@ export type OrderShippingAddress = {
   pincode: string;
 };
 
+// Matches backend's ORDER_STATUSES (orders.model.ts) exactly, including
+// "refunded" — a real gap found while building admin-app's own order
+// management (Issue #163): that issue's status-advance control is what
+// first makes "refunded" reachable in production (nothing before it wired
+// any UI to that transition), so a buyer viewing their history needed to be
+// able to render it too, not just the six statuses #162 originally shipped.
 export type OrderStatus =
-  "pending_payment" | "paid" | "processing" | "shipped" | "delivered" | "cancelled";
+  "pending_payment" | "paid" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
 
 export type OrderResponse = {
   id: string;

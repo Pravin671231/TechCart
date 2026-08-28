@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { LandingPlaceholder } from "@/features/landing/LandingPlaceholder";
 import { ProductCatalogRoutes } from "@/features/product-catalog/routes";
+import { OrdersRoutes } from "@/features/orders/routes";
 import { RequireAuth } from "@/features/authentication/auth/RequireAuth";
 import { RequireRole } from "@/features/authentication/auth/RequireRole";
 import { SignInContent } from "@/features/authentication/auth/SignInContent";
@@ -17,6 +18,9 @@ export const MainRoutes = () => {
           <Route element={<AppShell />}>
             <Route path="/admin-users" element={<AdminUsersPage />} />
           </Route>
+        </Route>
+        <Route element={<RequireRole role={["order-manager", "super-admin"]} />}>
+          <Route element={<AppShell />}>{OrdersRoutes()}</Route>
         </Route>
         <Route element={<AppShell />}>
           <Route path="/" element={<LandingPlaceholder />} />
