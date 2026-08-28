@@ -22,6 +22,13 @@ export interface CancelOrderArgs {
   reason: string;
 }
 
+export interface RefundOrderArgs {
+  id: string;
+  /** Integer paise, matching backend's refundSchema; omitted = full remaining balance. */
+  amount?: number;
+  reason: string;
+}
+
 // Splits the UI's combined OrderSort ("-createdAt" | ...) into the two
 // separate params the backend expects — same translation-at-the-boundary
 // shape as products/productsApi.ts's own toSortByOrderBy.
@@ -98,6 +105,23 @@ export const ordersApi = api.injectEndpoints({
         }
       },
     }),
+    refundOrder: build.mutation<AdminOrder, RefundOrderArgs>({
+      query: ({ id, amount, reason }) => ({
+        url: ORDERS_ENDPOINTS.refund(id),
+        method: "POST",
+        body: { amount, reason },
+      }),
+      transformResponse: (response: ApiSuccessEnvelope<AdminOrder>) => unwrapData(response),
+      invalidatesTags: ["Order"],
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          notifyApiSuccess("Refund processed.");
+        } catch (err) {
+          notifyApiError((err as { error: unknown }).error, "Unable to process refund.");
+        }
+      },
+    }),
   }),
 });
 
@@ -106,4 +130,5 @@ export const {
   useGetOrderQuery,
   useUpdateOrderStatusMutation,
   useCancelOrderMutation,
+  useRefundOrderMutation,
 } = ordersApi;
