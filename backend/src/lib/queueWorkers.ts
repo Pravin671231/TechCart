@@ -1,6 +1,17 @@
 import { Worker } from "bullmq";
 import { runAutoCancelSweep } from "@/modules/orders/orders.service";
-import { connection, orderLifecycleQueue, QUEUE_NAMES, warnQueueDisabledOnce } from "./queue";
+import {
+  NOTIFICATION_JOB_NAMES,
+  processOrderConfirmationJob,
+  processOrderStatusJob,
+} from "@/modules/orders/orders.notifications";
+import {
+  connection,
+  orderLifecycleQueue,
+  orderNotificationsQueue,
+  QUEUE_NAMES,
+  warnQueueDisabledOnce,
+} from "./queue";
 
 // FR-ORD-010 — the auto-cancel sweep runs as a BullMQ job scheduler
 // (bullmq@6's replacement for the old add({repeat}) API), upserted once at
@@ -14,7 +25,7 @@ const AUTO_CANCEL_SWEEP_INTERVAL_MS = 5 * 60_000;
 // after connectDB() succeeds, alongside app.listen. Silently does nothing
 // when the queue subsystem is disabled (see queue.ts).
 export async function startQueueWorkers(): Promise<void> {
-  if (!connection || !orderLifecycleQueue) {
+  if (!connection || !orderLifecycleQueue || !orderNotificationsQueue) {
     warnQueueDisabledOnce();
     return;
   }
@@ -24,6 +35,21 @@ export async function startQueueWorkers(): Promise<void> {
     async (job) => {
       if (job.name === AUTO_CANCEL_SWEEP_JOB) {
         await runAutoCancelSweep();
+      }
+    },
+    { connection },
+  );
+
+  // FR-ORD-021-023 — order-confirmation and order-status notification
+  // emails, sent here (asynchronously, worker-side) rather than inline
+  // within the request/response cycle that enqueued them.
+  new Worker(
+    QUEUE_NAMES.ORDER_NOTIFICATIONS,
+    async (job) => {
+      if (job.name === NOTIFICATION_JOB_NAMES.CONFIRMATION) {
+        await processOrderConfirmationJob(job.data);
+      } else if (job.name === NOTIFICATION_JOB_NAMES.STATUS) {
+        await processOrderStatusJob(job.data);
       }
     },
     { connection },
