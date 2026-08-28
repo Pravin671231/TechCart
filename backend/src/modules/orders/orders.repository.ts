@@ -29,6 +29,31 @@ export async function findById(id: Types.ObjectId): Promise<OrderRecord | null> 
   return Order.findById(id).lean();
 }
 
+// FR-ORD-012, FR-ORD-030's identical pattern — ownership filtered into the
+// query itself ({_id, user} together), never fetch-then-check, so a
+// non-owned or nonexistent id both resolve to null here.
+export async function findOwned(
+  id: Types.ObjectId,
+  userId: Types.ObjectId,
+): Promise<OrderRecord | null> {
+  return Order.findOne({ _id: id, user: userId }).lean();
+}
+
+// FR-ORD-011 — a buyer's own order history, newest first, paginated. No
+// search/sort dimension (unlike the admin list #158 adds) — the SRS
+// specifies "newest first" only.
+export async function listForUser(
+  userId: Types.ObjectId,
+  page: { page: number; limit: number },
+): Promise<{ items: OrderRecord[]; total: number }> {
+  const skip = (page.page - 1) * page.limit;
+  const [items, total] = await Promise.all([
+    Order.find({ user: userId }).sort({ createdAt: -1 }).skip(skip).limit(page.limit).lean(),
+    Order.countDocuments({ user: userId }),
+  ]);
+  return { items, total };
+}
+
 // FR-ORD-013, FR-ORD-019 — every status write goes through this single
 // function: sets `status` and appends one entry to `statusHistory`, in one
 // atomic update. orders.service.ts's transitionOrder() is the only caller,
