@@ -4,6 +4,7 @@ import { authModule } from "@/modules/authentication/auth/auth.module";
 import { addressesModule } from "@/modules/addresses/addresses.module";
 import { cartModule } from "@/modules/cart/cart.module";
 import { ordersModule } from "@/modules/orders/orders.module";
+import { webhooksModule } from "@/modules/webhooks/webhooks.module";
 import { healthModule } from "@/modules/health/health.module";
 import { brandsPublicModule } from "@/modules/product-catalog/features/brands/brands.module";
 import { categoriesPublicModule } from "@/modules/product-catalog/features/categories/categories.module";
@@ -18,6 +19,11 @@ const router = Router();
 // ordering was required because Better Auth's catch-all needed the raw,
 // unparsed body stream (#139); it's kept now as the module's own convention.
 router.use(authModule.path, authModule.router);
+// FR-PAY-023 — same reason as authModule above: this route needs the raw,
+// unparsed request body for webhook signature verification, so it mounts
+// its own express.raw() (webhooks.routes.ts) ahead of the global
+// express.json() below rather than being subject to it.
+router.use(webhooksModule.path, webhooksModule.router);
 
 router.use(express.json());
 router.use(accountModule.path, accountModule.router);

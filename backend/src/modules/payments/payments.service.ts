@@ -4,13 +4,16 @@ import { env } from "@/config/env";
 import {
   createRazorpayOrder,
   verifyPaymentSignature as verifyPaymentSignatureCrypto,
+  verifyWebhookSignature as verifyWebhookSignatureCrypto,
 } from "@/externalService/razorpay";
 import { findOwned as findOwnedOrder } from "@/modules/orders/orders.repository";
 import { buildOrderResponse, markOrderPaid, type OrderResponse } from "@/modules/orders/orders.service";
 import {
+  appendWebhookEvent,
   create,
   findByRazorpayOrderId,
   findLatestByOrder,
+  hasWebhookEvent,
   markCaptured,
   markFailed,
   type PaymentRecord,
@@ -131,4 +134,80 @@ export async function verifyPayment(
   });
   const updatedOrder = await markOrderPaid(orderOid, input.razorpayPaymentId);
   return buildOrderResponse(updatedOrder);
+}
+
+type RazorpayWebhookEntity = {
+  id: string;
+  order_id?: string;
+};
+
+type RazorpayWebhookBody = {
+  event: string;
+  payload?: {
+    payment?: { entity?: RazorpayWebhookEntity };
+  };
+};
+
+function resolveEventId(
+  headerEventId: string | undefined,
+  body: RazorpayWebhookBody,
+  paymentEntity: RazorpayWebhookEntity | undefined,
+): string {
+  if (headerEventId) return headerEventId;
+  // No x-razorpay-event-id header present — fall back to a deterministic
+  // key from the event type + payment id, so a redelivery of the identical
+  // event still collapses to the same idempotency key.
+  return `${body.event}:${paymentEntity?.id ?? "unknown"}`;
+}
+
+// FR-PAY-023-025 — the source of truth for payment state: verifies the raw
+// body's signature, then handles payment.captured/payment.failed
+// idempotently (a redelivered event id is recognized and skipped, never
+// reprocessed). Silently no-ops (still succeeds, so Razorpay doesn't retry)
+// on an event this backend has no matching payment record for, or one whose
+// payload doesn't carry a payment entity at all.
+export async function handleRazorpayWebhookEvent(
+  rawBody: string,
+  signature: string | undefined,
+  headerEventId: string | undefined,
+): Promise<void> {
+  if (!signature) {
+    throw new AppError(400, "MISSING_WEBHOOK_SIGNATURE", "Missing webhook signature header.");
+  }
+  if (!verifyWebhookSignatureCrypto(rawBody, signature)) {
+    throw new AppError(400, "INVALID_WEBHOOK_SIGNATURE", "Webhook signature verification failed.");
+  }
+
+  const body = JSON.parse(rawBody) as RazorpayWebhookBody;
+  const paymentEntity = body.payload?.payment?.entity;
+  if (!paymentEntity?.order_id) {
+    return;
+  }
+
+  const payment = await findByRazorpayOrderId(paymentEntity.order_id);
+  if (!payment) {
+    return;
+  }
+
+  const eventId = resolveEventId(headerEventId, body, paymentEntity);
+  if (await hasWebhookEvent(payment._id, eventId)) {
+    return;
+  }
+
+  if (body.event === "payment.captured") {
+    if (payment.status !== "captured") {
+      await markCaptured(payment._id, { razorpayPaymentId: paymentEntity.id });
+      await markOrderPaid(payment.order, paymentEntity.id);
+    }
+  } else if (body.event === "payment.failed") {
+    if (payment.status === "created") {
+      await markFailed(payment._id);
+    }
+  }
+
+  await appendWebhookEvent(payment._id, {
+    eventId,
+    type: body.event,
+    receivedAt: new Date(),
+  });
 }

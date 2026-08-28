@@ -9,6 +9,8 @@ vi.mock("../payments.repository", () => ({
   findByRazorpayOrderId: vi.fn(),
   markCaptured: vi.fn(),
   markFailed: vi.fn(),
+  hasWebhookEvent: vi.fn(),
+  appendWebhookEvent: vi.fn(),
 }));
 
 vi.mock("@/modules/orders/orders.repository", () => ({
@@ -23,13 +25,18 @@ vi.mock("@/modules/orders/orders.service", () => ({
 vi.mock("@/externalService/razorpay", () => ({
   createRazorpayOrder: vi.fn(),
   verifyPaymentSignature: vi.fn(),
+  verifyWebhookSignature: vi.fn(),
 }));
 
 import { findOwned } from "@/modules/orders/orders.repository";
 import { buildOrderResponse, markOrderPaid } from "@/modules/orders/orders.service";
-import { createRazorpayOrder, verifyPaymentSignature } from "@/externalService/razorpay";
+import {
+  createRazorpayOrder,
+  verifyPaymentSignature,
+  verifyWebhookSignature,
+} from "@/externalService/razorpay";
 import * as paymentsRepository from "../payments.repository";
-import { initiatePayment, verifyPayment } from "../payments.service";
+import { handleRazorpayWebhookEvent, initiatePayment, verifyPayment } from "../payments.service";
 
 const userId = new Types.ObjectId().toString();
 const orderId = new Types.ObjectId().toString();
@@ -210,5 +217,102 @@ describe("verifyPayment / FR-PAY-005-011", () => {
 
     expect(paymentsRepository.markFailed).toHaveBeenCalled();
     expect(markOrderPaid).not.toHaveBeenCalled();
+  });
+});
+
+describe("handleRazorpayWebhookEvent / FR-PAY-023-025", () => {
+  const rawBody = JSON.stringify({
+    event: "payment.captured",
+    payload: { payment: { entity: { id: "pay_wh1", order_id: "order_wh1" } } },
+  });
+
+  it("throws MISSING_WEBHOOK_SIGNATURE with no signature header", async () => {
+    await expect(handleRazorpayWebhookEvent(rawBody, undefined, "evt_1")).rejects.toMatchObject({
+      statusCode: 400,
+      code: "MISSING_WEBHOOK_SIGNATURE",
+    });
+  });
+
+  it("throws INVALID_WEBHOOK_SIGNATURE when verification fails", async () => {
+    vi.mocked(verifyWebhookSignature).mockReturnValue(false);
+
+    await expect(handleRazorpayWebhookEvent(rawBody, "bad-sig", "evt_1")).rejects.toMatchObject({
+      statusCode: 400,
+      code: "INVALID_WEBHOOK_SIGNATURE",
+    });
+  });
+
+  it("no-ops silently for an order_id with no matching payment", async () => {
+    vi.mocked(verifyWebhookSignature).mockReturnValue(true);
+    vi.mocked(paymentsRepository.findByRazorpayOrderId).mockResolvedValue(null);
+
+    await handleRazorpayWebhookEvent(rawBody, "good-sig", "evt_1");
+
+    expect(paymentsRepository.markCaptured).not.toHaveBeenCalled();
+  });
+
+  it("marks captured and calls markOrderPaid on payment.captured, then records the event", async () => {
+    vi.mocked(verifyWebhookSignature).mockReturnValue(true);
+    vi.mocked(paymentsRepository.findByRazorpayOrderId).mockResolvedValue(
+      makePayment({ status: "created", razorpayOrderId: "order_wh1" }),
+    );
+    vi.mocked(paymentsRepository.hasWebhookEvent).mockResolvedValue(false);
+
+    await handleRazorpayWebhookEvent(rawBody, "good-sig", "evt_1");
+
+    expect(paymentsRepository.markCaptured).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ razorpayPaymentId: "pay_wh1" }),
+    );
+    expect(markOrderPaid).toHaveBeenCalledWith(expect.anything(), "pay_wh1");
+    expect(paymentsRepository.appendWebhookEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventId: "evt_1", type: "payment.captured" }),
+    );
+  });
+
+  it("is idempotent — a redelivered event id is skipped, no reprocessing", async () => {
+    vi.mocked(verifyWebhookSignature).mockReturnValue(true);
+    vi.mocked(paymentsRepository.findByRazorpayOrderId).mockResolvedValue(
+      makePayment({ status: "captured", razorpayOrderId: "order_wh1" }),
+    );
+    vi.mocked(paymentsRepository.hasWebhookEvent).mockResolvedValue(true);
+
+    await handleRazorpayWebhookEvent(rawBody, "good-sig", "evt_1");
+
+    expect(paymentsRepository.markCaptured).not.toHaveBeenCalled();
+    expect(markOrderPaid).not.toHaveBeenCalled();
+    expect(paymentsRepository.appendWebhookEvent).not.toHaveBeenCalled();
+  });
+
+  it("marks failed on payment.failed when the attempt was still 'created'", async () => {
+    const failedBody = JSON.stringify({
+      event: "payment.failed",
+      payload: { payment: { entity: { id: "pay_wh2", order_id: "order_wh2" } } },
+    });
+    vi.mocked(verifyWebhookSignature).mockReturnValue(true);
+    vi.mocked(paymentsRepository.findByRazorpayOrderId).mockResolvedValue(
+      makePayment({ status: "created", razorpayOrderId: "order_wh2" }),
+    );
+    vi.mocked(paymentsRepository.hasWebhookEvent).mockResolvedValue(false);
+
+    await handleRazorpayWebhookEvent(failedBody, "good-sig", "evt_2");
+
+    expect(paymentsRepository.markFailed).toHaveBeenCalled();
+  });
+
+  it("falls back to a deterministic event id from event type + payment id with no header", async () => {
+    vi.mocked(verifyWebhookSignature).mockReturnValue(true);
+    vi.mocked(paymentsRepository.findByRazorpayOrderId).mockResolvedValue(
+      makePayment({ status: "created", razorpayOrderId: "order_wh1" }),
+    );
+    vi.mocked(paymentsRepository.hasWebhookEvent).mockResolvedValue(false);
+
+    await handleRazorpayWebhookEvent(rawBody, "good-sig", undefined);
+
+    expect(paymentsRepository.appendWebhookEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventId: "payment.captured:pay_wh1" }),
+    );
   });
 });
