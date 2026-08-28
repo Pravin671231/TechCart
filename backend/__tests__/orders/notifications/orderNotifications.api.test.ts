@@ -12,7 +12,13 @@ vi.mock("@/externalService/mailer", () => ({
   sendOrderStatusEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-const mockAdd = vi.fn().mockResolvedValue(undefined);
+// vi.mock factories are hoisted above every top-level statement, including
+// a plain `const mockAdd = vi.fn()` declared earlier in this file — a
+// `mock`-prefixed name only satisfies Vitest's static check, it doesn't
+// change *when* the factory runs, so referencing a not-yet-initialized
+// plain const throws a real TDZ error at runtime. vi.hoisted() is the
+// actual fix: it hoists the value itself alongside the mock.
+const { mockAdd } = vi.hoisted(() => ({ mockAdd: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/lib/queue", () => ({
   connection: null,
   warnQueueDisabledOnce: vi.fn(),
