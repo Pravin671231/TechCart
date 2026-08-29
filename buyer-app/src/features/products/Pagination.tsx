@@ -9,6 +9,13 @@ export function describeRange(pagination: PaginationData): string {
   return `Showing ${start}–${end} of ${pagination.total} products`;
 }
 
+// Issue #326 — the header count for infinite-scroll listings, where the
+// rendered list has accumulated across pages rather than showing one slice.
+export function describeLoadedCount(loaded: number, total: number): string {
+  if (total === 0) return "Showing 0 products";
+  return `Showing ${loaded} of ${total} products`;
+}
+
 export function Pagination({
   pagination,
   onPageChange,

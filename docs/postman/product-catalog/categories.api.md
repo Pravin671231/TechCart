@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the Category management endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #28 (M2.4 — Category management, `FR-CAT-014`–`022`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-046`, `048` for this entity), Issue #34 (M2.10 — Admin search, `FR-CAT-051` for this entity), Issue #35 (M2.11 — Buyer browsing, `FR-CAT-055`, `066` for this entity), and Issue #36 (M2.12 — Buyer filtering & sorting, `FR-CAT-070`–`076`, `092` for this entity's `:slug/products` route): the five admin CRUD endpoints under `/api/admin/categories`, the status-toggle endpoint, `search` on the admin list, the public `GET /api/categories`, `GET /api/categories/search`, and `GET /api/categories/:slug/products` (this last one returns *product* data and shares the full buyer filter/sort surface — see [`products.api.md`](./products.api.md), the module its controller actually lives in). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup (`base_url` variable); the admin routes here send `Authorization: Bearer {{admin_access_token}}` from [`../authentication/auth.api.md`](../authentication/auth.api.md)'s admin sign-in. See [`brands.api.md`](./brands.api.md) for the sibling entity this module closely mirrors. This doc assumes collection setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #28 (M2.4 — Category management, `FR-CAT-014`–`022`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-046`, `048` for this entity), Issue #34 (M2.10 — Admin search, `FR-CAT-051` for this entity), Issue #35 (M2.11 — Buyer browsing, `FR-CAT-055`, `066` for this entity), Issue #36 (M2.12 — Buyer filtering & sorting, `FR-CAT-070`–`076`, `092` for this entity's `:slug/products` route), and Issue #326 (M2 amendment — buyer faceted filter discovery, `FR-CAT-101`): the five admin CRUD endpoints under `/api/admin/categories`, the status-toggle endpoint, `search` on the admin list, the public `GET /api/categories`, `GET /api/categories/search`, `GET /api/categories/:slug/products`, and `GET /api/categories/:slug/filters` (this last one returns *product* data and shares the full buyer filter/sort surface — see [`products.api.md`](./products.api.md), the module its controller actually lives in). See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup (`base_url` variable); the admin routes here send `Authorization: Bearer {{admin_access_token}}` from [`../authentication/auth.api.md`](../authentication/auth.api.md)'s admin sign-in. See [`brands.api.md`](./brands.api.md) for the sibling entity this module closely mirrors. This doc assumes collection setup is already done and reuses the same collection.
 
 ---
 
@@ -574,13 +574,66 @@ No headers, no body. **Every filter/sort param `GET /api/products` accepts also 
 
 ---
 
+## `GET /api/categories/:slug/filters`
+
+Category-scoped **filter options** for the buyer filter rail (`FR-CAT-101`, Issue #326) — a single discovery object, not a product list. Everything is scoped to the resolved category **and its direct active subcategories**, the same subtree `:slug/products` uses.
+
+| Field  | Value                                             |
+| ------ | ------------------------------------------------- |
+| Method | `GET`                                             |
+| URL    | `{{base_url}}/api/categories/electronics/filters` |
+| Name   | `Category Filter Options (Buyer)`                 |
+
+No headers, no body, no query params.
+
+**Expected response — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "category": { "_id": "66a4f1c8e3b7a91d2c8f4c00", "name": "Smartphones", "slug": "smartphones" },
+    "brands": [
+      { "_id": "66a4f1c8e3b7a91d2c8f4a10", "name": "Nova", "slug": "nova", "productCount": 42 },
+      { "_id": "66a4f1c8e3b7a91d2c8f4a11", "name": "Zephyr", "slug": "zephyr", "productCount": 17 }
+    ],
+    "priceRange": { "min": 799900, "max": 15499900 },
+    "specifications": [
+      { "name": "Screen Size", "unit": "inch", "type": "number", "min": 5.4, "max": 6.9 },
+      { "name": "RAM", "unit": null, "type": "enum", "options": ["6GB", "8GB", "12GB"] },
+      { "name": "5G", "unit": null, "type": "boolean" }
+    ],
+    "variantAxes": [
+      { "name": "Colour", "code": "colour", "type": "color",
+        "options": [{ "label": "Midnight Black", "value": "midnight-black" }] }
+    ]
+  }
+}
+```
+
+- **`brands`** — only brands with ≥1 `published` product in scope, each with an accurate `productCount`; inactive brands and brands with no in-scope product are omitted, sorted by name.
+- **`priceRange`** — `{ min, max }` across every active variant's `sellingPrice` in scope, or `null` when nothing in scope has an active variant.
+- **`specifications`** — the category's `filterable` fields in schema declaration order: `options` on `enum`, computed `{ min, max }` from real product data on `number` (omitted when no in-scope product carries a numeric value for it), `unit` is `null` when the field declares none. `text` fields never appear.
+- **`variantAxes`** — the category's variant-type definition (`GET /api/admin/categories/:id/variant-types`), name/code/type/options.
+- **No `pagination` key** — this is a single object, not a list.
+
+### Error cases
+
+**Slug doesn't resolve to an active category** — identical to `:slug/products`:
+
+```json
+{ "success": false, "code": "CATEGORY_NOT_FOUND", "message": "Category \"missing\" was not found." }
+```
+
+---
+
 ## Error Code Reference
 
 Category-specific codes, in addition to the ones already documented in [`uploads.api.md`](./uploads.api.md#error-code-reference) (`UNAUTHENTICATED`, `FORBIDDEN`, `VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR`, `OBJECT_KEY_NOT_ISSUED`) and [`brands.api.md`](./brands.api.md#error-code-reference) (`INVALID_ID`):
 
 | Code                         | Status | Where it comes from                                                                                                                                                     | Reachable via an existing endpoint?                                         |
 | ---------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `CATEGORY_NOT_FOUND`         | 404    | `categories.service.ts` — `GET`/`PATCH`/`PATCH .../status` by an id with no matching category, or `GET .../:slug/products` by a slug with no matching *active* category | Yes                                                                         |
+| `CATEGORY_NOT_FOUND`         | 404    | `categories.service.ts` — `GET`/`PATCH`/`PATCH .../status` by an id with no matching category, or `GET .../:slug/products` / `GET .../:slug/filters` by a slug with no matching *active* category | Yes                                                                         |
 | `INVALID_PARENT_CATEGORY`    | 400    | `categories.service.ts`'s `validateParentCategory()` — `parentCategory` set to the category's own id                                                                    | Yes (on `PATCH` only — create can't self-reference, no id yet)              |
 | `PARENT_CATEGORY_NOT_FOUND`  | 404    | same — the referenced `parentCategory` doesn't exist                                                                                                                    | Yes                                                                         |
 | `PARENT_CATEGORY_TOO_DEEP`   | 400    | same — the referenced `parentCategory` already has a parent of its own                                                                                                  | Yes                                                                         |

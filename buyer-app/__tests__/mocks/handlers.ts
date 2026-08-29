@@ -14,6 +14,19 @@ export const handlers: HttpHandler[] = [
   ),
   http.get("*/api/categories", () => HttpResponse.json({ success: true, data: [] })),
   http.get("*/api/categories/search", () => HttpResponse.json({ success: true, data: [] })),
+  // Issue #326 — the category filter rail reads this on every category page.
+  http.get("*/api/categories/:slug/filters", () =>
+    HttpResponse.json({
+      success: true,
+      data: {
+        category: { _id: "c0", name: "Category", slug: "category" },
+        brands: [],
+        priceRange: null,
+        specifications: [],
+        variantAxes: [],
+      },
+    }),
+  ),
   http.get("*/api/products", () =>
     HttpResponse.json({
       success: true,

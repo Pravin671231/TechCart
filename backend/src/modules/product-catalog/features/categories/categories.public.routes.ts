@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { listProductsByCategorySlugHandler } from "@/modules/product-catalog/features/products/products.controller";
-import { listPublicCategoriesHandler, searchPublicCategoriesHandler } from "./categories.controller";
+import {
+  listPublicCategoriesHandler,
+  searchPublicCategoriesHandler,
+  listCategoryFiltersHandler,
+} from "./categories.controller";
 
 const router = Router();
 
@@ -10,6 +14,9 @@ const router = Router();
 // top-to-bottom as "list, search, then the one cross-module route."
 router.get("/", listPublicCategoriesHandler);
 router.get("/search", searchPublicCategoriesHandler);
+// FR-CAT-101 (Issue #326) — category-scoped filter options. Distinct last
+// segment from /:slug/products, so declaration order doesn't matter here.
+router.get("/:slug/filters", listCategoryFiltersHandler);
 // FR-CAT-055 — the controller lives in products.controller.ts (it returns
 // products, not categories); only this route's wiring crosses modules, the
 // same way brands.service.ts/categories.service.ts already reach into

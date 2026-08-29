@@ -5,18 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useGetProductSuggestionsQuery } from "@/features/products/api";
 import { useSearchCategoriesQuery } from "@/features/categories/api";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 const MIN_QUERY_LENGTH = 2;
 const MAX_SUGGESTIONS = 5;
-
-function useDebouncedValue<T>(value: T, delayMs: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), delayMs);
-    return () => clearTimeout(id);
-  }, [value, delayMs]);
-  return debounced;
-}
 
 export function SearchBar() {
   const router = useRouter();
@@ -66,8 +58,7 @@ export function SearchBar() {
 
   const productMatches = (products ?? []).slice(0, MAX_SUGGESTIONS);
   const categoryMatches = (categories ?? []).slice(0, MAX_SUGGESTIONS);
-  const showDropdown =
-    open && enabled && (productMatches.length > 0 || categoryMatches.length > 0);
+  const showDropdown = open && enabled && (productMatches.length > 0 || categoryMatches.length > 0);
 
   return (
     <div ref={containerRef} className="relative flex flex-1">

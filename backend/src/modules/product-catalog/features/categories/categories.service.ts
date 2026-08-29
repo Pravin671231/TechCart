@@ -4,9 +4,21 @@ import { generateUniqueSlug } from "@/utils/slug";
 import { truncate } from "@/utils/text";
 import { buildPagination, type Pagination } from "@/utils/apiResponse";
 import { consumeImageKeys, buildPublicUrl } from "@/modules/uploads/uploads.service";
-import { countByCategory, countByCategoryIds } from "@/modules/product-catalog/features/products/products.repository";
-import { deleteForCategory as deleteSpecificationsForCategory } from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service";
-import { deleteForCategory as deleteVariantsForCategory } from "@/modules/product-catalog/features/categoryVariants/categoryVariants.service";
+import {
+  countByCategory,
+  countByCategoryIds,
+  brandFacetsForCategories,
+  priceRangeForCategories,
+  specNumberRangesForCategories,
+} from "@/modules/product-catalog/features/products/products.repository";
+import {
+  deleteForCategory as deleteSpecificationsForCategory,
+  getFilterableFieldsByCategory,
+} from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service";
+import {
+  deleteForCategory as deleteVariantsForCategory,
+  getVariantAxes,
+} from "@/modules/product-catalog/features/categoryVariants/categoryVariants.service";
 import type { CategoryDocument, CategoryImage } from "./categories.model";
 import {
   create,
@@ -233,6 +245,85 @@ export async function getActiveCategoryBySlug(slug: string): Promise<CategoryRec
 
 export async function listActiveSubcategoryIds(parentId: Types.ObjectId): Promise<Types.ObjectId[]> {
   return listActiveChildIds(parentId);
+}
+
+// FR-CAT-101 (Issue #326): the buyer filter rail's discovery endpoint —
+// GET /api/categories/:slug/filters. Everything is scoped to the category
+// plus its direct active subcategories (categories are at most two levels
+// deep), the same subtree GET /api/categories/:slug/products resolves.
+export type CategoryFilterOptions = {
+  category: { _id: Types.ObjectId; name: string; slug: string };
+  brands: { _id: Types.ObjectId; name: string; slug: string; productCount: number }[];
+  priceRange: { min: number; max: number } | null;
+  specifications: {
+    name: string;
+    unit: string | null;
+    type: "enum" | "boolean" | "number";
+    options?: string[];
+    min?: number;
+    max?: number;
+  }[];
+  variantAxes: { name: string; code: string; type: string; options: { label: string; value: string }[] }[];
+};
+
+export async function getCategoryFilterOptions(slug: string): Promise<CategoryFilterOptions> {
+  const category = await getActiveCategoryBySlug(slug); // 404 CATEGORY_NOT_FOUND on miss/inactive
+  const subcategoryIds = await listActiveSubcategoryIds(category._id);
+  const categoryIds = [category._id, ...subcategoryIds];
+
+  // Filterable specification schema is defined on the parent category only —
+  // subcategories inherit no schema of their own (FR-CAT-030).
+  const filterableFields = await getFilterableFieldsByCategory(category._id);
+  const numberFieldNames = [...filterableFields.values()]
+    .filter((field) => field.type === "number")
+    .map((field) => field.name);
+
+  const [brands, priceRange, numberRanges, variantAxesView] = await Promise.all([
+    brandFacetsForCategories(categoryIds),
+    priceRangeForCategories(categoryIds),
+    specNumberRangesForCategories(categoryIds, numberFieldNames),
+    getVariantAxes(category._id),
+  ]);
+
+  const specifications: CategoryFilterOptions["specifications"] = [];
+  for (const field of filterableFields.values()) {
+    // getFilterableFieldsByCategory already excludes non-filterable fields,
+    // and `text` can never be filterable (FR-CAT-035) — so `type` here is
+    // always enum | boolean | number.
+    const type = field.type as "enum" | "boolean" | "number";
+    const entry: CategoryFilterOptions["specifications"][number] = {
+      name: field.name,
+      unit: field.unit ?? null,
+      type,
+    };
+    if (type === "enum" && field.options) entry.options = field.options;
+    if (type === "number") {
+      const range = numberRanges.get(field.name);
+      if (range) {
+        entry.min = range.min;
+        entry.max = range.max;
+      }
+    }
+    specifications.push(entry);
+  }
+
+  return {
+    category: { _id: category._id, name: category.name, slug: category.slug },
+    brands: brands.map((brand) => ({
+      _id: brand._id,
+      name: brand.name,
+      slug: brand.slug,
+      productCount: brand.productCount,
+    })),
+    priceRange,
+    specifications,
+    variantAxes: variantAxesView.variants.map((axis) => ({
+      name: axis.name,
+      code: axis.code,
+      type: axis.type,
+      options: axis.options ?? [],
+    })),
+  };
 }
 
 // FR-CAT-046's boolean toggle. Deactivating never touches, checks, or

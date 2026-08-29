@@ -33,6 +33,9 @@ vi.mock("@/modules/product-catalog/features/products/products.repository", () =>
   countByCategory: vi.fn(),
   countByCategoryIds: vi.fn(),
   listPublicPaginated: vi.fn(),
+  brandFacetsForCategories: vi.fn().mockResolvedValue([]),
+  priceRangeForCategories: vi.fn().mockResolvedValue(null),
+  specNumberRangesForCategories: vi.fn().mockResolvedValue(new Map()),
 }));
 
 vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
@@ -55,10 +58,13 @@ vi.mock(
 
 vi.mock("@/modules/product-catalog/features/categoryVariants/categoryVariants.service", () => ({
   deleteForCategory: vi.fn(),
+  getVariantAxes: vi.fn().mockResolvedValue({ category: null, variants: [] }),
 }));
 
 import * as categoriesRepository from "@/modules/product-catalog/features/categories/categories.repository";
 import * as productsRepository from "@/modules/product-catalog/features/products/products.repository";
+import * as categorySpecificationsService from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service";
+import * as categoryVariantsService from "@/modules/product-catalog/features/categoryVariants/categoryVariants.service";
 import {
   bootstrapMemoryMongo,
   teardownMemoryMongo,
@@ -602,5 +608,99 @@ describe("GET /api/categories/:slug/products", () => {
       "newest",
       { page: 1, limit: 48 },
     );
+  });
+});
+
+describe("GET /api/categories/:slug/filters", () => {
+  const activeCategory = (id: Types.ObjectId) => ({
+    _id: id,
+    name: "Electronics",
+    slug: "electronics",
+    parentCategory: null,
+    sortOrder: 0,
+    status: true,
+    createdBy: null,
+    updatedBy: null,
+  });
+
+  it("returns category-scoped brands, price range, spec facets and variant axes with no session", async () => {
+    const categoryId = new Types.ObjectId();
+    const subcategoryId = new Types.ObjectId();
+    const brandId = new Types.ObjectId();
+
+    vi.mocked(categoriesRepository.findActiveBySlug).mockResolvedValue(activeCategory(categoryId));
+    vi.mocked(categoriesRepository.listActiveChildIds).mockResolvedValue([subcategoryId]);
+    vi.mocked(productsRepository.brandFacetsForCategories).mockResolvedValue([
+      { _id: brandId, name: "Nova", slug: "nova", productCount: 4 },
+    ]);
+    vi.mocked(productsRepository.priceRangeForCategories).mockResolvedValue({ min: 9900, max: 149900 });
+    vi.mocked(productsRepository.specNumberRangesForCategories).mockResolvedValue(
+      new Map([["Screen Size", { min: 5.4, max: 6.9 }]]),
+    );
+    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
+      new Map([
+        ["Screen Size", { name: "Screen Size", type: "number", unit: "inch", required: false, filterable: true }],
+        ["RAM", { name: "RAM", type: "enum", options: ["8GB", "12GB"], required: false, filterable: true }],
+      ]),
+    );
+    vi.mocked(categoryVariantsService.getVariantAxes).mockResolvedValue({
+      category: categoryId,
+      variants: [
+        { name: "Colour", code: "colour", type: "color", required: false, options: [{ label: "Black", value: "black" }] },
+      ],
+    });
+
+    const res = await request(app).get("/api/categories/electronics/filters");
+
+    expect(res.status).toBe(200);
+    expect(productsRepository.brandFacetsForCategories).toHaveBeenCalledWith([categoryId, subcategoryId]);
+    expect(res.body).toEqual({
+      success: true,
+      data: {
+        category: { _id: categoryId.toString(), name: "Electronics", slug: "electronics" },
+        brands: [{ _id: brandId.toString(), name: "Nova", slug: "nova", productCount: 4 }],
+        priceRange: { min: 9900, max: 149900 },
+        specifications: [
+          { name: "Screen Size", unit: "inch", type: "number", min: 5.4, max: 6.9 },
+          { name: "RAM", unit: null, type: "enum", options: ["8GB", "12GB"] },
+        ],
+        variantAxes: [
+          { name: "Colour", code: "colour", type: "color", options: [{ label: "Black", value: "black" }] },
+        ],
+      },
+    });
+    expect(res.body.pagination).toBeUndefined();
+  });
+
+  it("returns null priceRange and empty arrays for a category with no in-scope products", async () => {
+    vi.mocked(categoriesRepository.findActiveBySlug).mockResolvedValue(
+      activeCategory(new Types.ObjectId()),
+    );
+    vi.mocked(categoriesRepository.listActiveChildIds).mockResolvedValue([]);
+    vi.mocked(productsRepository.brandFacetsForCategories).mockResolvedValue([]);
+    vi.mocked(productsRepository.priceRangeForCategories).mockResolvedValue(null);
+    vi.mocked(productsRepository.specNumberRangesForCategories).mockResolvedValue(new Map());
+    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(new Map());
+    vi.mocked(categoryVariantsService.getVariantAxes).mockResolvedValue({
+      category: new Types.ObjectId(),
+      variants: [],
+    });
+
+    const res = await request(app).get("/api/categories/electronics/filters");
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.priceRange).toBeNull();
+    expect(res.body.data.brands).toEqual([]);
+    expect(res.body.data.specifications).toEqual([]);
+    expect(res.body.data.variantAxes).toEqual([]);
+  });
+
+  it("returns CATEGORY_NOT_FOUND for a slug that doesn't resolve to an active category", async () => {
+    vi.mocked(categoriesRepository.findActiveBySlug).mockResolvedValue(null);
+
+    const res = await request(app).get("/api/categories/missing/filters");
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("CATEGORY_NOT_FOUND");
   });
 });

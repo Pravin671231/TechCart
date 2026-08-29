@@ -3,6 +3,7 @@ import { isValidObjectId, Types, type QueryFilter } from "mongoose";
 import { z } from "zod";
 import { successResponse } from "@/utils/apiResponse";
 import { parseObjectId } from "@/utils/objectId";
+import { parseSlugParam } from "@/utils/routeParams";
 import { parseQuery } from "@/utils/parseQuery";
 import { requireActorId } from "@/utils/actor";
 import {
@@ -13,6 +14,7 @@ import {
   listCategoriesForPublic,
   deleteCategory,
   updateCategoryStatus,
+  getCategoryFilterOptions,
 } from "./categories.service";
 import { CATEGORY_SORT_FIELDS, type CategorySortField } from "./categories.repository";
 import type { CategoryDocument } from "./categories.model";
@@ -144,4 +146,13 @@ export async function searchPublicCategoriesHandler(req: Request, res: Response)
   const query = searchCategoriesQuerySchema.parse(req.query);
   const categories = await listCategoriesForPublic(query.q);
   res.status(200).json(successResponse(categories));
+}
+
+// FR-CAT-101 (Issue #326) — GET /api/categories/:slug/filters. The :slug is
+// a category slug (like :slug/products), so a malformed one is 400 INVALID_SLUG
+// and an unknown/inactive one is 404 CATEGORY_NOT_FOUND (thrown by the service).
+export async function listCategoryFiltersHandler(req: Request, res: Response): Promise<void> {
+  const slug = parseSlugParam(req.params.slug);
+  const filters = await getCategoryFilterOptions(slug);
+  res.status(200).json(successResponse(filters));
 }

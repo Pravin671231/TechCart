@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { Provider } from "react-redux";
 import { server } from "./mocks/server";
+import { triggerIntersection } from "../vitest.setup";
 import type { PublicProductListItem } from "@/features/products/types";
 
 // ProductCard now renders the shared AddToCartButton, which uses
@@ -160,5 +161,93 @@ describe("Home", () => {
 
     await waitFor(() => expect(lastSort).toBe("price_asc"));
     expect(await screen.findByText("Product (price_asc)")).toBeInTheDocument();
+  });
+
+  it("appends the next page when the sentinel scrolls into view and stops at the end", async () => {
+    const pagesRequested: string[] = [];
+    server.use(
+      http.get(`${API_URL}/api/products`, ({ request }) => {
+        const page = new URL(request.url).searchParams.get("page") ?? "1";
+        pagesRequested.push(page);
+        const pageNum = Number(page);
+        return HttpResponse.json(
+          listBody([makeProduct({ _id: `p${pageNum}`, name: `Product page ${pageNum}` })], {
+            page: pageNum,
+            total: 3,
+            totalPages: 3,
+            hasNextPage: pageNum < 3,
+          }),
+        );
+      }),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { HomeContent } = await import("@/features/home/HomeContent");
+    render(
+      <Provider store={makeStore()}>
+        <HomeContent />
+      </Provider>,
+    );
+
+    expect(await screen.findByText("Product page 1")).toBeInTheDocument();
+
+    await act(async () => {
+      triggerIntersection();
+    });
+    expect(await screen.findByText("Product page 2")).toBeInTheDocument();
+    // page 1 stays rendered — pages are appended, not replaced.
+    expect(screen.getByText("Product page 1")).toBeInTheDocument();
+
+    await act(async () => {
+      triggerIntersection();
+    });
+    expect(await screen.findByText("Product page 3")).toBeInTheDocument();
+
+    // hasNextPage is now false — further intersections do nothing.
+    await act(async () => {
+      triggerIntersection();
+    });
+    await waitFor(() => expect(screen.getByText(/reached the end/i)).toBeInTheDocument());
+    expect(pagesRequested).toEqual(["1", "2", "3"]);
+  });
+
+  it("does not fire overlapping page requests on a rapid double intersection", async () => {
+    const pagesRequested: string[] = [];
+    server.use(
+      http.get(`${API_URL}/api/products`, async ({ request }) => {
+        const page = new URL(request.url).searchParams.get("page") ?? "1";
+        pagesRequested.push(page);
+        const pageNum = Number(page);
+        // A slow response keeps page 2 "in flight" across the second trigger.
+        if (pageNum === 2) await new Promise((resolve) => setTimeout(resolve, 50));
+        return HttpResponse.json(
+          listBody([makeProduct({ _id: `p${pageNum}`, name: `Product page ${pageNum}` })], {
+            page: pageNum,
+            total: 5,
+            totalPages: 5,
+            hasNextPage: true,
+          }),
+        );
+      }),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { HomeContent } = await import("@/features/home/HomeContent");
+    render(
+      <Provider store={makeStore()}>
+        <HomeContent />
+      </Provider>,
+    );
+
+    await screen.findByText("Product page 1");
+
+    await act(async () => {
+      triggerIntersection();
+      triggerIntersection();
+    });
+
+    await screen.findByText("Product page 2");
+    // Exactly one page-2 request despite two intersection events.
+    expect(pagesRequested.filter((page) => page === "2")).toHaveLength(1);
   });
 });

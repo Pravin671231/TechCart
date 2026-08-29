@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { Provider } from "react-redux";
 import { server } from "./mocks/server";
+import { triggerIntersection } from "../vitest.setup";
 import type { PublicProductListItem } from "@/features/products/types";
 
 // CategoryProductCard now renders the shared AddToCartButton (next/navigation).
@@ -68,14 +69,27 @@ const CATEGORIES = [
   },
 ];
 
-const BRANDS = [{ _id: "b1", name: "TestBrand", slug: "testbrand" }];
+const FILTER_OPTIONS = {
+  category: { _id: "cat-smartphones", name: "Smartphones", slug: "smartphones" },
+  brands: [{ _id: "b1", name: "TestBrand", slug: "testbrand", productCount: 5 }],
+  priceRange: { min: 9900, max: 149900 },
+  specifications: [
+    { name: "RAM", unit: null, type: "enum", options: ["8GB", "12GB"] },
+    { name: "5G", unit: null, type: "boolean" },
+  ],
+  variantAxes: [
+    { name: "Color", code: "color", type: "color", options: [{ label: "Black", value: "black" }] },
+  ],
+};
 
-function mockCategoriesAndBrands() {
+function mockCategoryPage(filterOptions: unknown = FILTER_OPTIONS) {
   server.use(
     http.get(`${API_URL}/api/categories`, () =>
       HttpResponse.json({ success: true, data: CATEGORIES }),
     ),
-    http.get(`${API_URL}/api/brands`, () => HttpResponse.json({ success: true, data: BRANDS })),
+    http.get(`${API_URL}/api/categories/smartphones/filters`, () =>
+      HttpResponse.json({ success: true, data: filterOptions }),
+    ),
   );
 }
 
@@ -91,7 +105,7 @@ describe("CategoryContent", () => {
   });
 
   it("renders products and breadcrumb from a mocked response", async () => {
-    mockCategoriesAndBrands();
+    mockCategoryPage();
     server.use(
       http.get(`${API_URL}/api/categories/smartphones/products`, () =>
         HttpResponse.json(
@@ -121,7 +135,7 @@ describe("CategoryContent", () => {
   });
 
   it("renders only the filterable specs a product has, with no placeholder padding", async () => {
-    mockCategoriesAndBrands();
+    mockCategoryPage();
     server.use(
       http.get(`${API_URL}/api/categories/smartphones/products`, () =>
         HttpResponse.json(
@@ -149,8 +163,28 @@ describe("CategoryContent", () => {
     expect(within(article).getAllByRole("listitem")).toHaveLength(2);
   });
 
+  it("populates the brand filter from the category-scoped /filters endpoint, with counts", async () => {
+    mockCategoryPage();
+    server.use(
+      http.get(`${API_URL}/api/categories/smartphones/products`, () =>
+        HttpResponse.json(listBody([makeProduct()])),
+      ),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { CategoryContent } = await import("@/features/category/CategoryContent");
+    render(
+      <Provider store={makeStore()}>
+        <CategoryContent slug="smartphones" />
+      </Provider>,
+    );
+
+    await screen.findByText("Test Phone");
+    expect(await screen.findByLabelText("TestBrand (5)")).toBeInTheDocument();
+  });
+
   it("re-fetches with the corresponding query param when a brand filter is applied, resetting to page 1", async () => {
-    mockCategoriesAndBrands();
+    mockCategoryPage();
     let lastUrl: URL | null = null;
     server.use(
       http.get(`${API_URL}/api/categories/smartphones/products`, ({ request }) => {
@@ -171,14 +205,44 @@ describe("CategoryContent", () => {
     expect(lastUrl!.searchParams.get("page")).toBe("1");
     expect(lastUrl!.searchParams.get("sort")).toBe("newest");
 
-    await userEvent.setup().click(await screen.findByLabelText("TestBrand"));
+    await userEvent.setup().click(await screen.findByLabelText("TestBrand (5)"));
 
     await waitFor(() => expect(lastUrl!.searchParams.get("brand")).toBe("b1"));
     expect(lastUrl!.searchParams.get("page")).toBe("1");
   });
 
+  it("sends a spec facet as spec[Field]=value and a variant axis as attributeName/attributeValue", async () => {
+    mockCategoryPage();
+    let lastUrl: URL | null = null;
+    server.use(
+      http.get(`${API_URL}/api/categories/smartphones/products`, ({ request }) => {
+        lastUrl = new URL(request.url);
+        return HttpResponse.json(listBody([makeProduct()]));
+      }),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { CategoryContent } = await import("@/features/category/CategoryContent");
+    render(
+      <Provider store={makeStore()}>
+        <CategoryContent slug="smartphones" />
+      </Provider>,
+    );
+
+    await screen.findByText("Test Phone");
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByLabelText("8GB"));
+    await waitFor(() => expect(lastUrl!.searchParams.get("spec[RAM]")).toBe("8GB"));
+
+    await user.click(screen.getByLabelText("Black"));
+    await waitFor(() => expect(lastUrl!.searchParams.get("attributeName")).toBe("Color"));
+    expect(lastUrl!.searchParams.get("attributeValue")).toBe("black");
+    expect(lastUrl!.searchParams.get("page")).toBe("1");
+  });
+
   it("re-fetches with the new sort value on sort change", async () => {
-    mockCategoriesAndBrands();
+    mockCategoryPage();
     let lastSort: string | null = null;
     server.use(
       http.get(`${API_URL}/api/categories/smartphones/products`, ({ request }) => {
@@ -202,9 +266,79 @@ describe("CategoryContent", () => {
     expect(await screen.findByText("Product (price_asc)")).toBeInTheDocument();
   });
 
-  it("renders a not-found state for a nonexistent category, not the generic error state", async () => {
-    mockCategoriesAndBrands();
+  it("appends the next page on scroll and resets to page 1 on a filter change", async () => {
+    mockCategoryPage();
+    const pagesRequested: string[] = [];
     server.use(
+      http.get(`${API_URL}/api/categories/smartphones/products`, ({ request }) => {
+        const url = new URL(request.url);
+        const page = Number(url.searchParams.get("page") ?? "1");
+        pagesRequested.push(`${page}${url.searchParams.has("brand") ? "-brand" : ""}`);
+        return HttpResponse.json(
+          listBody([makeProduct({ _id: `p${page}`, name: `Phone page ${page}` })], {
+            page,
+            total: 4,
+            totalPages: 2,
+            hasNextPage: page < 2,
+          }),
+        );
+      }),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { CategoryContent } = await import("@/features/category/CategoryContent");
+    render(
+      <Provider store={makeStore()}>
+        <CategoryContent slug="smartphones" />
+      </Provider>,
+    );
+
+    expect(await screen.findByText("Phone page 1")).toBeInTheDocument();
+
+    await act(async () => {
+      triggerIntersection();
+    });
+    expect(await screen.findByText("Phone page 2")).toBeInTheDocument();
+    expect(screen.getByText("Phone page 1")).toBeInTheDocument();
+
+    // A filter change resets the accumulated list back to page 1.
+    await userEvent.setup().click(await screen.findByLabelText("TestBrand (5)"));
+    await waitFor(() => expect(pagesRequested).toContain("1-brand"));
+  });
+
+  it("opens the mobile filter drawer from the Filters button", async () => {
+    mockCategoryPage();
+    server.use(
+      http.get(`${API_URL}/api/categories/smartphones/products`, () =>
+        HttpResponse.json(listBody([makeProduct()])),
+      ),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { CategoryContent } = await import("@/features/category/CategoryContent");
+    render(
+      <Provider store={makeStore()}>
+        <CategoryContent slug="smartphones" />
+      </Provider>,
+    );
+
+    await screen.findByText("Test Phone");
+    // The desktop rail + the drawer both render the rail; before opening, only
+    // one "Price" heading (desktop rail) is present.
+    expect(screen.getAllByText("Price")).toHaveLength(1);
+
+    await userEvent.setup().click(screen.getByRole("button", { name: /Filters/ }));
+
+    expect(screen.getByRole("button", { name: "Close filters" })).toBeInTheDocument();
+    expect(screen.getAllByText("Price")).toHaveLength(2);
+  });
+
+  it("renders a not-found state for a nonexistent category, not the generic error state", async () => {
+    mockCategoryPage();
+    server.use(
+      http.get(`${API_URL}/api/categories/does-not-exist/filters`, () =>
+        HttpResponse.json({ success: true, data: FILTER_OPTIONS }),
+      ),
       http.get(`${API_URL}/api/categories/does-not-exist/products`, () =>
         HttpResponse.json(
           { success: false, code: "CATEGORY_NOT_FOUND", message: "Category not found" },

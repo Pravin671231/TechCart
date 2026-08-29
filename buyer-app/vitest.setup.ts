@@ -16,9 +16,41 @@ if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
   vi.stubEnv("NEXT_PUBLIC_GOOGLE_CLIENT_ID", "test-client-id.apps.googleusercontent.com");
 }
 
+// jsdom has no IntersectionObserver. A minimal controllable stub: every
+// live observer is tracked, and `triggerIntersection()` (below) fires their
+// callbacks as if their target scrolled into view — used by the
+// infinite-scroll tests (Issue #326).
+type ObserverCallback = (entries: { isIntersecting: boolean }[]) => void;
+const observerCallbacks = new Set<ObserverCallback>();
+
+class MockIntersectionObserver {
+  private readonly callback: ObserverCallback;
+  constructor(callback: ObserverCallback) {
+    this.callback = callback;
+    observerCallbacks.add(callback);
+  }
+  observe(): void {}
+  unobserve(): void {}
+  takeRecords(): [] {
+    return [];
+  }
+  disconnect(): void {
+    observerCallbacks.delete(this.callback);
+  }
+}
+
+vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
+
+export function triggerIntersection(): void {
+  for (const callback of observerCallbacks) {
+    callback([{ isIntersecting: true }]);
+  }
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   server.resetHandlers();
   cleanup();
+  observerCallbacks.clear();
 });
 afterAll(() => server.close());
