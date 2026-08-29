@@ -11,12 +11,12 @@ export function Logo({ variant = "light" }: { variant?: "light" | "dark" }) {
 
   return (
     <span className="flex items-center">
-      {/* eslint-disable-next-line @next/next/no-img-element -- static inline-art logo, no optimization needed */}
-      <div className="flex h-8 w-auto shrink-0 items-center pe-2 rounded-md bg-white ">
+      <div className="flex h-8 w-auto shrink-0 items-center rounded-md bg-white pe-2">
+        {/* Static inline-art brand mark — a plain <img> (no next/image optimization needed). */}
         <img src="/techcart-cart.svg" alt="" aria-hidden="true" className="h-7 w-7 shrink-0" />
-      <span className={`text-base font-extrabold tracking-tight ${techColor}`}>
-        Tech<span className={cartWordColor}>Cart</span>
-      </span>
+        <span className={`text-base font-extrabold tracking-tight ${techColor}`}>
+          Tech<span className={cartWordColor}>Cart</span>
+        </span>
       </div>
     </span>
   );
