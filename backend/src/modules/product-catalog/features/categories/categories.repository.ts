@@ -104,7 +104,10 @@ export async function findActiveBySlug(slug: string): Promise<CategoryRecord | n
 // Direct (one-level) active children only — categories are at most two
 // levels deep, so a parent's children never have children of their own.
 export async function listActiveChildIds(parentId: Types.ObjectId): Promise<Types.ObjectId[]> {
-  const children = await Category.find({ parentCategory: parentId, status: true }, { _id: 1 }).lean();
+  const children = await Category.find(
+    { parentCategory: parentId, status: true },
+    { _id: 1 },
+  ).lean();
   return children.map((child) => child._id);
 }
 

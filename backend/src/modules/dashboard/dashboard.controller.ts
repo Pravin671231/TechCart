@@ -1,7 +1,12 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { successResponse } from "@/utils/apiResponse";
-import { getSalesSummary, getSalesOverTime, getTopProducts } from "./dashboard.service";
+import {
+  getSalesSummary,
+  getSalesOverTime,
+  getTopProducts,
+  getCatalogSummary,
+} from "./dashboard.service";
 
 // Accepts either a plain date ("2026-01-01") or a full ISO datetime — actual
 // validity is checked by dateRange.ts's resolveDateRange (new Date(...)),
@@ -27,4 +32,9 @@ export async function getTopProductsHandler(req: Request, res: Response): Promis
   const { from, to } = rangeQuerySchema.parse(req.query);
   const products = await getTopProducts(from, to);
   res.status(200).json(successResponse(products));
+}
+
+export async function getCatalogSummaryHandler(_req: Request, res: Response): Promise<void> {
+  const summary = await getCatalogSummary();
+  res.status(200).json(successResponse(summary));
 }
