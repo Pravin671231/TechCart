@@ -1,33 +1,32 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { ShoppingCart } from "lucide-react";
 import { formatPrice } from "@/features/products/money";
 import { useGetSessionQuery } from "@/features/authentication/auth/api";
 import { useGetCartQuery } from "@/features/cart/api";
 
-function CartIcon() {
-  return (
-    <svg
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="9" cy="21" r="1" />
-      <circle cx="20" cy="21" r="1" />
-      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-    </svg>
-  );
-}
-
 export function CartIndicator() {
   const { data: session } = useGetSessionQuery();
   const { data: cart } = useGetCartQuery(undefined, { skip: !session });
+
+  const itemCount = cart?.itemCount ?? 0;
+
+  // Issue #322 — a one-shot ~300ms shake whenever the cart count rises (an
+  // add-to-cart, including the optimistic bump before the server commits).
+  // Uses the render-time "adjust state on a data change" pattern — a guarded
+  // setState in the render body, with the last-seen count tracked in state
+  // (not a ref, which `react-hooks/refs` forbids reading during render) —
+  // the same idiom ProductDetailContent's default-variant reset uses.
+  const [shake, setShake] = useState(false);
+  const [seenItemCount, setSeenItemCount] = useState(itemCount);
+  if (itemCount !== seenItemCount) {
+    const increased = itemCount > seenItemCount;
+    setSeenItemCount(itemCount);
+    if (increased) setShake(true);
+  }
 
   // Unauthenticated: the icon routes to sign-in, no badge (FR-CART-019, SRS §6).
   if (!session) {
@@ -37,12 +36,10 @@ export function CartIndicator() {
         aria-label="Cart"
         className="text-gray-700 hover:text-gray-900"
       >
-        <CartIcon />
+        <ShoppingCart className="h-5 w-5" aria-hidden="true" />
       </Link>
     );
   }
-
-  const itemCount = cart?.itemCount ?? 0;
 
   return (
     <div className="group relative">
@@ -51,7 +48,13 @@ export function CartIndicator() {
         aria-label={`Cart, ${itemCount} item${itemCount === 1 ? "" : "s"}`}
         className="relative flex text-gray-700 hover:text-gray-900"
       >
-        <CartIcon />
+        <span
+          data-testid="cart-icon"
+          className={shake ? "flex animate-cart-shake" : "flex"}
+          onAnimationEnd={() => setShake(false)}
+        >
+          <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+        </span>
         {itemCount > 0 && (
           <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-semibold text-white">
             {itemCount}

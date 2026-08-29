@@ -8,7 +8,14 @@ export const categoriesApi = api.injectEndpoints({
       transformResponse: (response: unknown): PublicCategory[] => response as PublicCategory[],
       providesTags: ["Category"],
     }),
+    // Issue #322 — header search-bar suggestions. `q` is required by the
+    // backend (`GET /api/categories/search`); the caller slices to 5.
+    searchCategories: builder.query<PublicCategory[], string>({
+      query: (q) => ({ url: "/api/categories/search", params: { q } }),
+      transformResponse: (response: unknown): PublicCategory[] => response as PublicCategory[],
+      providesTags: ["Category"],
+    }),
   }),
 });
 
-export const { useGetCategoriesQuery } = categoriesApi;
+export const { useGetCategoriesQuery, useSearchCategoriesQuery } = categoriesApi;

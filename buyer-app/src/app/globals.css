@@ -38,3 +38,34 @@
     var(--font-jakarta), var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
 }
+
+/* Issue #322 — a brief, subtle left↔right nudge on the header cart icon when
+ * an item is added. ~300ms, minimal travel, settles back to rest. */
+@keyframes cart-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-2px);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  60% {
+    transform: translateX(-1.5px);
+  }
+  80% {
+    transform: translateX(1.5px);
+  }
+}
+
+.animate-cart-shake {
+  animation: cart-shake 300ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-cart-shake {
+    animation: none;
+  }
+}

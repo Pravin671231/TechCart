@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import type { ReactNode } from "react";
@@ -116,5 +116,33 @@ describe("CartIndicator", () => {
     await waitFor(() => {
       expect(screen.getByText("2")).toBeInTheDocument();
     });
+  });
+
+  // Issue #322 — the cart icon shakes once when the count rises, then settles.
+  it("shakes the cart icon on add, and settles back after the animation ends", async () => {
+    signedIn();
+    let currentCart = { id: "c1", items: [] as unknown[], itemCount: 0, subtotal: 0 };
+    server.use(
+      http.get(`${API_URL}/api/cart`, () =>
+        HttpResponse.json({ success: true, data: currentCart }),
+      ),
+      http.post(`${API_URL}/api/cart/items`, () => {
+        currentCart = { id: "c1", items: [sampleLine], itemCount: 2, subtotal: 80000 };
+        return HttpResponse.json({ success: true, data: currentCart });
+      }),
+    );
+
+    const { AddToCartButton } = await import("@/features/cart/AddToCartButton");
+    await renderIndicator(<AddToCartButton variantId="v1" />);
+
+    const icon = await screen.findByTestId("cart-icon");
+    expect(icon).not.toHaveClass("animate-cart-shake");
+
+    await userEvent.click(await screen.findByRole("button", { name: /add to cart/i }));
+
+    await waitFor(() => expect(screen.getByTestId("cart-icon")).toHaveClass("animate-cart-shake"));
+
+    fireEvent.animationEnd(screen.getByTestId("cart-icon"));
+    expect(screen.getByTestId("cart-icon")).not.toHaveClass("animate-cart-shake");
   });
 });
