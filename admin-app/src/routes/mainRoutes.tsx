@@ -3,6 +3,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { ProductCatalogRoutes } from "@/features/product-catalog/routes";
 import { OrdersRoutes } from "@/features/orders/routes";
+import { InventoryRoutes } from "@/features/inventory/routes";
 import { RequireAuth } from "@/features/authentication/auth/RequireAuth";
 import { RequireRole } from "@/features/authentication/auth/RequireRole";
 import { SignInContent } from "@/features/authentication/auth/SignInContent";
@@ -21,6 +22,9 @@ export const MainRoutes = () => {
         </Route>
         <Route element={<RequireRole role={["order-manager", "super-admin"]} />}>
           <Route element={<AppShell />}>{OrdersRoutes()}</Route>
+        </Route>
+        <Route element={<RequireRole role={["catalog-manager", "super-admin"]} />}>
+          <Route element={<AppShell />}>{InventoryRoutes()}</Route>
         </Route>
         <Route element={<AppShell />}>
           <Route path="/" element={<DashboardPage />} />

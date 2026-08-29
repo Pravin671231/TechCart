@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Boxes,
   ClipboardList,
   FolderTree,
   LayoutDashboard,
@@ -8,9 +9,11 @@ import {
   SlidersHorizontal,
   Tag,
   Users,
+  Warehouse,
 } from "lucide-react";
 import { PRODUCT_CATALOG_ROUTES } from "@/features/product-catalog/routePaths";
 import { ORDERS_ROUTES } from "@/features/orders/routePaths";
+import { INVENTORY_ROUTES } from "@/features/inventory/routePaths";
 import type { AdminRole } from "@/features/authentication/auth/adminRoles";
 
 export interface NavItem {
@@ -56,6 +59,20 @@ export const NAV_ITEMS: NavItem[] = [
     icon: ClipboardList,
     group: "Orders",
     roles: ["order-manager", "super-admin"],
+  },
+  {
+    to: INVENTORY_ROUTES.inventory,
+    label: "Inventory",
+    icon: Boxes,
+    group: "Inventory",
+    roles: ["catalog-manager", "super-admin"],
+  },
+  {
+    to: INVENTORY_ROUTES.warehouses,
+    label: "Warehouses",
+    icon: Warehouse,
+    group: "Inventory",
+    roles: ["catalog-manager", "super-admin"],
   },
   {
     to: "/admin-users",
