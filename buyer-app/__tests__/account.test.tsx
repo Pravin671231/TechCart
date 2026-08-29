@@ -34,7 +34,22 @@ describe("Account profile", () => {
             user: { id: "user1", name: "Jane Buyer", email: "jane@example.com", role: "buyer" },
           },
         });
-      })
+      }),
+      // Issue #175/M7.5 — AccountContent now also fetches the account
+      // dashboard whenever a session exists; every pre-existing test that
+      // establishes a session needs a matching default so it doesn't hit
+      // MSW's onUnhandledRequest: "error".
+      http.get("*/api/account/dashboard", () => {
+        return HttpResponse.json({
+          success: true,
+          data: {
+            profile: { _id: "user1", name: "Jane Buyer", email: "jane@example.com" },
+            recentOrders: [],
+            lifetimeOrderCount: 0,
+            lifetimeAmountSpent: 0,
+          },
+        });
+      }),
     );
   }
 
@@ -42,7 +57,7 @@ describe("Account profile", () => {
     server.use(
       http.get("*/api/auth/get-session", () => {
         return HttpResponse.json({ success: true, data: null });
-      })
+      }),
     );
 
     const { makeStore } = await import("@/store/store");
@@ -52,7 +67,7 @@ describe("Account profile", () => {
     render(
       <Provider store={store}>
         <AccountContent />
-      </Provider>
+      </Provider>,
     );
 
     await waitFor(() => {
@@ -66,9 +81,14 @@ describe("Account profile", () => {
       http.get("*/api/account/profile", () => {
         return HttpResponse.json({
           success: true,
-          data: { _id: "user1", name: "Jane Buyer", email: "jane@example.com", phone: "+919876543210" },
+          data: {
+            _id: "user1",
+            name: "Jane Buyer",
+            email: "jane@example.com",
+            phone: "+919876543210",
+          },
         });
-      })
+      }),
     );
 
     const { makeStore } = await import("@/store/store");
@@ -78,7 +98,7 @@ describe("Account profile", () => {
     render(
       <Provider store={store}>
         <AccountContent />
-      </Provider>
+      </Provider>,
     );
 
     await waitFor(() => {
@@ -102,7 +122,7 @@ describe("Account profile", () => {
           success: true,
           data: { _id: "user1", name: "Jane B. Updated", email: "jane@example.com" },
         });
-      })
+      }),
     );
 
     const { makeStore } = await import("@/store/store");
@@ -112,7 +132,7 @@ describe("Account profile", () => {
     render(
       <Provider store={store}>
         <AccountContent />
-      </Provider>
+      </Provider>,
     );
 
     const nameInput = await screen.findByDisplayValue("Jane Buyer");
@@ -141,9 +161,9 @@ describe("Account profile", () => {
             code: "VALIDATION_ERROR",
             errors: { name: "Too small: expected string to have >=1 characters" },
           },
-          { status: 400 }
+          { status: 400 },
         );
-      })
+      }),
     );
 
     const { makeStore } = await import("@/store/store");
@@ -153,7 +173,7 @@ describe("Account profile", () => {
     render(
       <Provider store={store}>
         <AccountContent />
-      </Provider>
+      </Provider>,
     );
 
     const nameInput = await screen.findByDisplayValue("Jane Buyer");
