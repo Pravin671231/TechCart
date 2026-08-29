@@ -31,6 +31,9 @@ let catalogManagerToken: string;
 let orderManagerToken: string;
 
 async function createProduct(status: "draft" | "published" | "archived"): Promise<void> {
+  // A real variant with a genuinely unique sku, not an empty array — the
+  // unique index on variants.sku indexes an empty array as a null entry, so
+  // two products both passing variants: [] collide with each other there.
   await Product.create({
     name: `Fixture ${status} ${new Types.ObjectId().toString()}`,
     slug: `fixture-${status}-${new Types.ObjectId().toString()}`,
@@ -40,7 +43,17 @@ async function createProduct(status: "draft" | "published" | "archived"): Promis
     specifications: [],
     isFeatured: false,
     status,
-    variants: [],
+    variants: [
+      {
+        sku: `SKU-${new Types.ObjectId().toString()}`,
+        attributes: [{ name: "Color", value: "Black" }],
+        images: [{ url: "https://cdn.test/a.webp", alt: "A", isPrimary: true }],
+        mrp: 1000,
+        discount: 0,
+        sellingPrice: 1000,
+        active: true,
+      },
+    ],
   });
 }
 
