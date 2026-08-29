@@ -173,7 +173,7 @@ describe("addVariant backfill (FR-INV-002)", () => {
       discount: 0,
     });
 
-    expect(addRes.status).toBe(200);
+    expect(addRes.status).toBe(201);
     const newVariant = addRes.body.data.variants[addRes.body.data.variants.length - 1];
 
     const row = await Inventory.findOne({ variantId: newVariant._id, warehouseId }).lean();
