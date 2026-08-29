@@ -39,12 +39,15 @@ const cartLine = {
   unavailable: false,
 };
 
-async function renderButton(variantId: string | undefined) {
+async function renderButton(
+  variantId: string | undefined,
+  availability?: "in_stock" | "out_of_stock",
+) {
   const { makeStore } = await import("@/store/store");
   const { AddToCartButton } = await import("@/features/cart/AddToCartButton");
   render(
     <Provider store={makeStore()}>
-      <AddToCartButton variantId={variantId} />
+      <AddToCartButton variantId={variantId} availability={availability} />
     </Provider>,
   );
 }
@@ -115,6 +118,44 @@ describe("AddToCartButton", () => {
     await renderButton("v1");
     await userEvent.click(await screen.findByRole("button", { name: /go to cart/i }));
     expect(mockPush).toHaveBeenCalledWith("/cart");
+  });
+
+  // Issue #192/M10.4 (FR-INV-007)
+  it("shows an Out of stock badge in place of the control, never a raw stock number", async () => {
+    await renderButton("v1", "out_of_stock");
+
+    const badge = await screen.findByRole("button", { name: /out of stock/i });
+    expect(badge).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /add to cart/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/\d/)).not.toBeInTheDocument();
+  });
+
+  // Issue #190/M10.2 + #192/M10.4 (FR-INV-009/010)
+  it("renders the available count inline when an add hits INSUFFICIENT_STOCK", async () => {
+    signedIn();
+    server.use(
+      http.get(`${API_URL}/api/cart`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { id: "c1", items: [], itemCount: 0, subtotal: 0 },
+        }),
+      ),
+      http.post(`${API_URL}/api/cart/items`, () =>
+        HttpResponse.json(
+          {
+            success: false,
+            code: "INSUFFICIENT_STOCK",
+            message: "Only 2 unit(s) available for this item.",
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+
+    await renderButton("v1", "in_stock");
+    await userEvent.click(await screen.findByRole("button", { name: /add to cart/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Only 2 unit(s) available");
   });
 
   it("reverts to 'Add to Cart' once the line is no longer in the cart", async () => {

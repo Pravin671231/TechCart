@@ -147,6 +147,33 @@ describe("Cart page", () => {
     });
   });
 
+  // Issue #190/M10.2 + #192/M10.4 (FR-INV-011)
+  it("renders the available count inline when a quantity increase hits INSUFFICIENT_STOCK", async () => {
+    signedIn();
+    server.use(
+      http.get(`${API_URL}/api/cart`, () =>
+        HttpResponse.json({ success: true, data: cart({ items: [line({ quantity: 2 })] }) }),
+      ),
+      http.patch(`${API_URL}/api/cart/items/v1`, () =>
+        HttpResponse.json(
+          {
+            success: false,
+            code: "INSUFFICIENT_STOCK",
+            message: "Only 1 more unit(s) available for this item.",
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+
+    await renderCart();
+    await screen.findByText("Test Phone");
+
+    await userEvent.click(screen.getByRole("button", { name: /increase quantity/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Only 1 more unit(s) available");
+  });
+
   it("removes a line", async () => {
     signedIn();
     let currentCart = cart({ items: [line()] });

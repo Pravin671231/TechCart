@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useGetSessionQuery } from "@/features/authentication/auth/api";
+import type { ProductAvailability } from "@/features/products/types";
+import type { NormalizedApiError } from "@/store/api";
 import { useAddCartItemMutation, useGetCartQuery } from "./api";
 
 const SIZE_CLASSES = {
@@ -17,10 +20,15 @@ const SIZE_CLASSES = {
 // getCart result — no per-card request.
 export function AddToCartButton({
   variantId,
+  availability,
   size = "md",
   className = "",
 }: {
   variantId: string | undefined;
+  // Issue #192/M10.4 (FR-INV-007) — a card passes its list item's own
+  // best-across-active-variants availability; the PDP passes the currently
+  // selected variant's. Never shown as a raw stock number.
+  availability?: ProductAvailability;
   size?: keyof typeof SIZE_CLASSES;
   className?: string;
 }) {
@@ -29,6 +37,7 @@ export function AddToCartButton({
   const { data: session } = useGetSessionQuery();
   const { data: cart } = useGetCartQuery(undefined, { skip: !session });
   const [addCartItem, { isLoading }] = useAddCartItemMutation();
+  const [insufficientStockMessage, setInsufficientStockMessage] = useState<string | null>(null);
 
   const base = `inline-flex items-center justify-center rounded-md font-medium transition ${SIZE_CLASSES[size]} ${className}`;
 
@@ -36,6 +45,16 @@ export function AddToCartButton({
     return (
       <button type="button" disabled className={`${base} bg-neutral-100 text-neutral-400`}>
         Unavailable
+      </button>
+    );
+  }
+
+  // FR-INV-007 — replaces the add-to-cart control entirely, never a raw
+  // stock number.
+  if (availability === "out_of_stock") {
+    return (
+      <button type="button" disabled className={`${base} bg-neutral-100 text-neutral-400`}>
+        Out of stock
       </button>
     );
   }
@@ -59,19 +78,34 @@ export function AddToCartButton({
       router.push(`/sign-in?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
-    addCartItem({ variantId }).catch(() => {
-      // rolled back via the getCart cache; no inline error surface on a card
-    });
+    setInsufficientStockMessage(null);
+    addCartItem({ variantId })
+      .unwrap()
+      .catch((err: NormalizedApiError) => {
+        // Issue #190/M10.2 — every other rejection is already rolled back
+        // via the optimistic getCart cache patch with no inline copy; this
+        // is the one case worth naming, since it's not a transient failure.
+        if (err?.code === "INSUFFICIENT_STOCK") {
+          setInsufficientStockMessage(err.message);
+        }
+      });
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={isLoading}
-      className={`${base} bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-60`}
-    >
-      Add to Cart
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={isLoading}
+        className={`${base} bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-60`}
+      >
+        Add to Cart
+      </button>
+      {insufficientStockMessage && (
+        <p role="alert" className="mt-1 text-xs text-accent-700">
+          {insufficientStockMessage}
+        </p>
+      )}
+    </>
   );
 }

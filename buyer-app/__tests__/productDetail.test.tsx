@@ -28,7 +28,6 @@ function makeDetail(overrides: Partial<PublicProductDetail> = {}): PublicProduct
     mrp: 49900,
     discount: 0,
     sellingPrice: 49900,
-    availability: "in_stock",
     isFeatured: false,
     specifications: [{ groupName: "Display", values: [{ name: "Screen Size", value: "6.1 in" }] }],
     hasVariants: false,
@@ -60,7 +59,6 @@ describe("ProductDetailContent", () => {
       mrp: 29900,
       discount: 0,
       sellingPrice: 29900,
-      availability: "in_stock",
       images: [{ url: "https://example.com/128gb.jpg", alt: "128GB" }],
       variants: [
         {
@@ -81,7 +79,7 @@ describe("ProductDetailContent", () => {
           mrp: 34900,
           discount: 0,
           sellingPrice: 34900,
-          availability: "low_stock",
+          availability: "in_stock",
         },
       ],
     });
@@ -130,7 +128,7 @@ describe("ProductDetailContent", () => {
           mrp: 34900,
           discount: 0,
           sellingPrice: 34900,
-          availability: "low_stock",
+          availability: "in_stock",
         },
       ],
     });

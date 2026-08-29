@@ -11,6 +11,7 @@ import { formatPrice } from "@/features/products/money";
 import { ProductListError } from "@/features/products/ProductListError";
 import type { PublicProductVariant } from "@/features/products/types";
 import type { NormalizedApiError } from "@/store/api";
+import { AvailabilityBadge } from "./AvailabilityBadge";
 import { ProductDetailSkeleton } from "./ProductDetailSkeleton";
 import { ProductGallery } from "./ProductGallery";
 import { ProductSpecifications } from "./ProductSpecifications";
@@ -131,9 +132,11 @@ export function ProductDetailContent({ slug }: { slug: string }) {
             />
           </div>
 
-          <p>
-            {/* <AvailabilityBadge availability={displayed.availability} /> */}
-          </p>
+          {selectedVariant && (
+            <p>
+              <AvailabilityBadge availability={selectedVariant.availability} />
+            </p>
+          )}
 
           {product.hasVariants && (
             <VariantSelector
@@ -145,6 +148,7 @@ export function ProductDetailContent({ slug }: { slug: string }) {
 
           <AddToCartButton
             variantId={selectedVariant?._id ?? product.variants[0]?._id}
+            availability={selectedVariant?.availability}
             size="md"
             className="w-full sm:w-auto"
           />
