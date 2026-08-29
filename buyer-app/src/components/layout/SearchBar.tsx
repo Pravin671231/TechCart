@@ -80,8 +80,8 @@ export function SearchBar() {
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          placeholder="Search products…"
-          aria-label="Search products"
+          placeholder="Search for products, brands & more…"
+          aria-label="Search"
           className="flex-1 bg-transparent px-3 text-sm text-neutral-700 outline-none placeholder:text-neutral-400"
         />
         <button

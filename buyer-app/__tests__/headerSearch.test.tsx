@@ -39,7 +39,7 @@ describe("Header SearchBar (Issue #322)", () => {
   it("navigates to /search?q= on submit", async () => {
     await renderSearchBar();
 
-    const input = screen.getByRole("searchbox", { name: /search products/i });
+    const input = screen.getByRole("searchbox", { name: /search/i });
     await userEvent.type(input, "phone{Enter}");
 
     expect(mockPush).toHaveBeenCalledWith("/search?q=phone");
@@ -85,7 +85,7 @@ describe("Header SearchBar (Issue #322)", () => {
     );
 
     await renderSearchBar();
-    await userEvent.type(screen.getByRole("searchbox", { name: /search products/i }), "pho");
+    await userEvent.type(screen.getByRole("searchbox", { name: /search/i }), "pho");
 
     const categoryLink = await screen.findByRole("link", { name: "Phones" });
     expect(categoryLink).toHaveAttribute("href", "/category/phones");
