@@ -55,6 +55,7 @@ import {
   signInBuyer,
   signInFully,
   authRequest,
+  seedTestWarehouseStock,
   type MemoryMongoContext,
 } from "../../testHelpers/adminSession";
 
@@ -110,6 +111,7 @@ async function seedPaidOrder(razorpayOrderId: string): Promise<string> {
     ],
   });
   const variantId = product.variants[0]!._id;
+  await seedTestWarehouseStock(product._id, [variantId]);
   await authRequest(app, "post", "/api/cart/items", buyerToken).send({
     variantId: variantId.toString(),
     quantity: 1,
@@ -267,6 +269,7 @@ describe("POST /api/admin/orders/:id/refund (FR-PAY-012-018)", () => {
       ],
     });
     const variantId = product.variants[0]!._id;
+    await seedTestWarehouseStock(product._id, [variantId]);
     await authRequest(app, "post", "/api/cart/items", buyerToken).send({
       variantId: variantId.toString(),
       quantity: 1,

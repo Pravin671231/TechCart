@@ -54,6 +54,7 @@ import {
   signInBuyer,
   signInFully,
   authRequest,
+  seedTestWarehouseStock,
   type MemoryMongoContext,
 } from "../../testHelpers/adminSession";
 
@@ -106,6 +107,7 @@ async function seedOrder(): Promise<string> {
     ],
   });
   const variantId = product.variants[0]!._id;
+  await seedTestWarehouseStock(product._id, [variantId]);
   await authRequest(app, "post", "/api/cart/items", buyerToken).send({
     variantId: variantId.toString(),
     quantity: 1,

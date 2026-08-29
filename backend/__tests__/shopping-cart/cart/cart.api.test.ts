@@ -14,11 +14,14 @@ vi.mock("@/externalService/mailer", () => ({
 }));
 
 import { Product } from "@/modules/product-catalog/features/products/products.model";
+import { Warehouse } from "@/modules/inventory/warehouses.model";
+import { Inventory } from "@/modules/inventory/inventory.model";
 import {
   bootstrapMemoryMongo,
   teardownMemoryMongo,
   signInBuyer,
   authRequest,
+  seedTestWarehouseStock,
   type MemoryMongoContext,
 } from "../../testHelpers/adminSession";
 
@@ -29,11 +32,18 @@ let app: Express;
 let token: string;
 
 // A helper: build a published product with two active variants.
+// Issue #190/M10.2 — cart.service's addItem/updateItem now allocate real
+// stock, so every seeded variant needs an inventory row; a generous default
+// (999) means every pre-existing test in this file keeps passing unchanged,
+// while variantAStock/variantBStock let the new allocation-specific tests
+// below control it explicitly.
 async function seedProduct(
   overrides: {
     variantASellingPrice?: number;
     variantBActive?: boolean;
     status?: "draft" | "published" | "archived";
+    variantAStock?: number;
+    variantBStock?: number;
   } = {},
 ) {
   const doc = await Product.create({
@@ -66,6 +76,8 @@ async function seedProduct(
       },
     ],
   });
+  await seedTestWarehouseStock(doc._id, [doc.variants[0]!._id], overrides.variantAStock ?? 999);
+  await seedTestWarehouseStock(doc._id, [doc.variants[1]!._id], overrides.variantBStock ?? 999);
   return {
     productId: doc._id,
     variantA: doc.variants[0]!._id,
@@ -274,5 +286,104 @@ describe("live pricing & availability (FR-CART-010/012/017)", () => {
     const res = await cartReq("get", "/api/cart");
     expect(res.body.data.items[0].unavailable).toBe(true);
     expect(res.body.data.subtotal).toBe(0);
+  });
+});
+
+// Issue #190/M10.2 (FR-INV-009-011) — cart-time stock allocation. Warehouse
+// detail is never part of the API response (it's an internal allocation
+// field), so these assert against the real Inventory collection directly.
+describe("stock allocation (Issue #190/M10.2)", () => {
+  async function stockAt(variantId: Types.ObjectId): Promise<number> {
+    const warehouse = await Warehouse.findOne({ code: "TEST-WH" });
+    const row = await Inventory.findOne({ variantId, warehouseId: warehouse!._id });
+    return row?.stock ?? 0;
+  }
+
+  it("decrements real stock on add and restores it on remove (FR-INV-009/011)", async () => {
+    const { variantA } = await seedProduct({ variantAStock: 10 });
+
+    await cartReq("post", "/api/cart/items").send({ variantId: variantA.toString(), quantity: 3 });
+    expect(await stockAt(variantA)).toBe(7);
+
+    await cartReq("delete", `/api/cart/items/${variantA.toString()}`);
+    expect(await stockAt(variantA)).toBe(10);
+  });
+
+  it("rejects adding more than is available with INSUFFICIENT_STOCK, naming the max available (FR-INV-010)", async () => {
+    const { variantA } = await seedProduct({ variantAStock: 2 });
+
+    const res = await cartReq("post", "/api/cart/items").send({
+      variantId: variantA.toString(),
+      quantity: 5,
+    });
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("INSUFFICIENT_STOCK");
+    expect(res.body.message).toContain("2");
+    expect(await stockAt(variantA)).toBe(2); // untouched
+  });
+
+  it("rejects adding a variant with zero stock anywhere (FR-INV-008)", async () => {
+    const { variantA } = await seedProduct({ variantAStock: 0 });
+
+    const res = await cartReq("post", "/api/cart/items").send({
+      variantId: variantA.toString(),
+      quantity: 1,
+    });
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("INSUFFICIENT_STOCK");
+  });
+
+  it("re-checks only the already-allocated warehouse on a repeat add, never re-shopping others (FR-INV-011)", async () => {
+    const { variantA } = await seedProduct({ variantAStock: 10 });
+
+    await cartReq("post", "/api/cart/items").send({ variantId: variantA.toString(), quantity: 4 });
+    expect(await stockAt(variantA)).toBe(6);
+
+    const res = await cartReq("post", "/api/cart/items").send({
+      variantId: variantA.toString(),
+      quantity: 3,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data.items[0].quantity).toBe(7);
+    expect(await stockAt(variantA)).toBe(3);
+  });
+
+  it("rejects a combined-line increase that would exceed the warehouse's remaining stock", async () => {
+    const { variantA } = await seedProduct({ variantAStock: 5 });
+    await cartReq("post", "/api/cart/items").send({ variantId: variantA.toString(), quantity: 4 });
+
+    const res = await cartReq("post", "/api/cart/items").send({
+      variantId: variantA.toString(),
+      quantity: 3,
+    });
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("INSUFFICIENT_STOCK");
+    expect(await stockAt(variantA)).toBe(1); // untouched by the failed attempt
+  });
+
+  it("allocates only the delta on a PATCH increase and restores only the delta on a decrease", async () => {
+    const { variantA } = await seedProduct({ variantAStock: 10 });
+    await cartReq("post", "/api/cart/items").send({ variantId: variantA.toString(), quantity: 2 });
+    expect(await stockAt(variantA)).toBe(8);
+
+    await cartReq("patch", `/api/cart/items/${variantA.toString()}`).send({ quantity: 6 });
+    expect(await stockAt(variantA)).toBe(4);
+
+    await cartReq("patch", `/api/cart/items/${variantA.toString()}`).send({ quantity: 3 });
+    expect(await stockAt(variantA)).toBe(7);
+  });
+
+  it("restores every remaining line's stock on a full cart clear", async () => {
+    const { variantA, variantB } = await seedProduct({ variantAStock: 10, variantBStock: 10 });
+    await cartReq("post", "/api/cart/items").send({ variantId: variantA.toString(), quantity: 3 });
+    await cartReq("post", "/api/cart/items").send({ variantId: variantB.toString(), quantity: 4 });
+
+    await cartReq("delete", "/api/cart");
+
+    expect(await stockAt(variantA)).toBe(10);
+    expect(await stockAt(variantB)).toBe(10);
   });
 });
