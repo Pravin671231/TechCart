@@ -26,34 +26,30 @@ export function SignInContent() {
   }, [session, router, redirectTo]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">Sign in to your account</h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Welcome to TechCart
-          </p>
-        </div>
+    <div className="mx-auto w-full max-w-md px-4 py-12 sm:py-16">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8">
+        <h1 className="text-center font-display text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
+          Sign in to your account
+        </h1>
+        <p className="mt-2 text-center text-sm text-neutral-500">Welcome to TechCart</p>
 
-        <div className="space-y-6">
-          <div className="rounded-md border border-gray-300 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Sign in with Google</h3>
+        <div className="mt-8 space-y-6">
+          <div className="flex justify-center">
             <GoogleSignIn />
           </div>
 
           <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <div className="w-full border-t border-neutral-200" />
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-gray-50 px-2 text-gray-500">Or sign in with email</span>
+            <div className="relative flex justify-center">
+              <span className="bg-white px-3 text-xs font-medium tracking-wide text-neutral-400 uppercase">
+                or
+              </span>
             </div>
           </div>
 
-          <div className="rounded-md border border-gray-300 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Sign in with OTP</h3>
-            <OtpSignIn />
-          </div>
+          <OtpSignIn />
         </div>
       </div>
     </div>

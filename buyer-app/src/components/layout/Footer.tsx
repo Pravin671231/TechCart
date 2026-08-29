@@ -38,7 +38,7 @@ export function Footer() {
   return (
     <footer className="border-t border-neutral-800 bg-neutral-900 text-neutral-400">
       <div className="mx-auto max-w-7xl px-4 py-10">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <Logo />
             <p className="mt-3 text-sm text-neutral-400">
@@ -88,13 +88,13 @@ export function Footer() {
             <h3 className="mb-3 text-xs font-semibold tracking-wide text-white uppercase">
               Follow Us
             </h3>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {SOCIAL_LINKS.map(({ label, Icon }) => (
                 <a
                   key={label}
                   href="#"
                   aria-label={label}
-                  className="flex h-8 w-8 items-center justify-center rounded-md bg-neutral-800 text-neutral-300 hover:bg-primary-600 hover:text-white"
+                  className="flex h-9 w-9 items-center justify-center rounded-md bg-neutral-800 text-neutral-300 hover:bg-primary-600 hover:text-white"
                 >
                   <Icon className="h-4 w-4" />
                 </a>
