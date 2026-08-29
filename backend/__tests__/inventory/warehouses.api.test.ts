@@ -12,6 +12,19 @@ vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
+// addVariant real-calls consumeImageKeys, which checks the presignedUploads
+// tracking collection for a key actually issued by a prior presign call —
+// never true for a directly-POSTed test fixture image, so it's mocked here
+// (same pattern brands.api.test.ts already uses).
+vi.mock("@/modules/uploads/uploads.service", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/modules/uploads/uploads.service")>();
+  return {
+    ...actual,
+    consumeImageKeys: vi.fn(),
+    buildPublicUrl: vi.fn((objectKey: string) => `https://cdn.test.example/${objectKey}`),
+  };
+});
+
 import { Product } from "@/modules/product-catalog/features/products/products.model";
 import { Warehouse } from "@/modules/inventory/warehouses.model";
 import { Inventory } from "@/modules/inventory/inventory.model";
@@ -155,7 +168,7 @@ describe("addVariant backfill (FR-INV-002)", () => {
     const addRes = await admin("post", `/api/admin/products/${product._id.toString()}/variants`).send({
       sku: `SKU-NEW-${new Types.ObjectId().toString()}`,
       attributes: [{ name: "Color", value: "Blue" }],
-      images: [{ url: "https://cdn.test/b.webp", alt: "B", isPrimary: true }],
+      images: [{ objectKey: "product-image/b.webp", alt: "B", isPrimary: true }],
       mrp: 12000,
       discount: 0,
     });

@@ -12,20 +12,29 @@ vi.mock("@/externalService/mailer", () => ({
 }));
 
 import { Product } from "@/modules/product-catalog/features/products/products.model";
+import { Brand } from "@/modules/product-catalog/features/brands/brands.model";
+import { Category } from "@/modules/product-catalog/features/categories/categories.model";
 import { Warehouse } from "@/modules/inventory/warehouses.model";
 import { Inventory } from "@/modules/inventory/inventory.model";
 import { bootstrapMemoryMongo, teardownMemoryMongo, type MemoryMongoContext } from "../testHelpers/adminSession";
 
 let ctx: MemoryMongoContext;
 let app: Express;
+let brandId: Types.ObjectId;
+let categoryId: Types.ObjectId;
 
+// GET /api/products and GET /api/products/:slug both populate brand/category
+// (products.repository.ts's PublicProductDoc) — a random, non-existent
+// ObjectId resolves to null and crashes toPublicRef, so these must be real
+// documents, unlike cart.api.test.ts's identical-looking seedProduct (which
+// never populates either ref).
 async function seedProduct(overrides: { variantBActive?: boolean } = {}) {
   return Product.create({
     name: "Nova Availability Phone",
     slug: `nova-availability-${new Types.ObjectId().toString()}`,
     description: "A phone.",
-    brand: new Types.ObjectId(),
-    category: new Types.ObjectId(),
+    brand: brandId,
+    category: categoryId,
     specifications: [],
     isFeatured: false,
     status: "published",
@@ -55,6 +64,11 @@ async function seedProduct(overrides: { variantBActive?: boolean } = {}) {
 beforeAll(async () => {
   ctx = await bootstrapMemoryMongo();
   app = ctx.app;
+
+  const brand = await Brand.create({ name: "Nova", slug: "nova-availability-brand" });
+  const category = await Category.create({ name: "Phones", slug: "phones-availability-category" });
+  brandId = brand._id;
+  categoryId = category._id;
 }, 60000);
 
 afterAll(async () => {

@@ -557,6 +557,9 @@ describe("GET /api/categories/:slug/products", () => {
         defaultVariantId: listVariantId.toString(),
         isFeatured: false,
         cardSpecifications: [],
+        // Issue #189/M10.1 — no inventory rows exist for this fixture
+        // variant in the real test DB, so it resolves to out_of_stock.
+        availability: "out_of_stock",
       },
     ]);
     expect(res.body.pagination).toEqual({
