@@ -53,7 +53,12 @@ export function CategoryProductCard({ product }: { product: PublicProductListIte
           size="md"
           stacked
         />
-        <AddToCartButton variantId={product.defaultVariantId} size="sm" className="mt-1 w-full" />
+        <AddToCartButton
+          variantId={product.defaultVariantId}
+          availability={product.availability}
+          size="sm"
+          className="mt-1 w-full"
+        />
       </div>
     </article>
   );

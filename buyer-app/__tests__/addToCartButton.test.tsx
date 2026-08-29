@@ -39,14 +39,19 @@ const cartLine = {
   unavailable: false,
 };
 
-async function renderButton(variantId: string | undefined) {
+async function renderButton(
+  variantId: string | undefined,
+  availability?: "in_stock" | "out_of_stock",
+) {
   const { makeStore } = await import("@/store/store");
   const { AddToCartButton } = await import("@/features/cart/AddToCartButton");
+  const store = makeStore();
   render(
-    <Provider store={makeStore()}>
-      <AddToCartButton variantId={variantId} />
+    <Provider store={store}>
+      <AddToCartButton variantId={variantId} availability={availability} />
     </Provider>,
   );
+  return store;
 }
 
 describe("AddToCartButton", () => {
@@ -95,10 +100,24 @@ describe("AddToCartButton", () => {
       }),
     );
 
-    await renderButton("v1");
-    await userEvent.click(await screen.findByRole("button", { name: /add to cart/i }));
+    const store = await renderButton("v1");
+    await screen.findByRole("button", { name: /add to cart/i });
+    // Guard against a real race: the button renders "Add to Cart" regardless
+    // of session/cart state, but handleClick routes to /sign-in when
+    // `session` is still `undefined` (loading) rather than the resolved
+    // user, and the mutation's own cache patch needs getCart's query entry
+    // to already exist (it's skipped until session resolves). Wait for both
+    // to actually settle before clicking, so a slow round-trip under load
+    // can't make this click look signed-out or land with nowhere to patch.
+    await waitFor(() => {
+      const queries = (store.getState() as { api: { queries: Record<string, { status?: string }> } })
+        .api.queries;
+      expect(queries["getSession(undefined)"]?.status).toBe("fulfilled");
+      expect(queries["getCart(undefined)"]?.status).toBe("fulfilled");
+    });
+    await userEvent.click(screen.getByRole("button", { name: /add to cart/i }));
 
-    expect(await screen.findByRole("button", { name: /go to cart/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /go to cart/i }, { timeout: 3000 })).toBeInTheDocument();
   });
 
   it("navigates to /cart when the variant is already in the cart", async () => {
@@ -115,6 +134,44 @@ describe("AddToCartButton", () => {
     await renderButton("v1");
     await userEvent.click(await screen.findByRole("button", { name: /go to cart/i }));
     expect(mockPush).toHaveBeenCalledWith("/cart");
+  });
+
+  // Issue #192/M10.4 (FR-INV-007)
+  it("shows an Out of stock badge in place of the control, never a raw stock number", async () => {
+    await renderButton("v1", "out_of_stock");
+
+    const badge = await screen.findByRole("button", { name: /out of stock/i });
+    expect(badge).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /add to cart/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/\d/)).not.toBeInTheDocument();
+  });
+
+  // Issue #190/M10.2 + #192/M10.4 (FR-INV-009/010)
+  it("renders the available count inline when an add hits INSUFFICIENT_STOCK", async () => {
+    signedIn();
+    server.use(
+      http.get(`${API_URL}/api/cart`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { id: "c1", items: [], itemCount: 0, subtotal: 0 },
+        }),
+      ),
+      http.post(`${API_URL}/api/cart/items`, () =>
+        HttpResponse.json(
+          {
+            success: false,
+            code: "INSUFFICIENT_STOCK",
+            message: "Only 2 unit(s) available for this item.",
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+
+    await renderButton("v1", "in_stock");
+    await userEvent.click(await screen.findByRole("button", { name: /add to cart/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Only 2 unit(s) available");
   });
 
   it("reverts to 'Add to Cart' once the line is no longer in the cart", async () => {

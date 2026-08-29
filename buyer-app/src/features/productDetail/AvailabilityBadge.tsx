@@ -2,7 +2,6 @@ import type { ProductAvailability } from "@/features/products/types";
 
 const AVAILABILITY_COPY: Record<ProductAvailability, { label: string; className: string }> = {
   in_stock: { label: "In stock", className: "bg-green-100 text-green-700" },
-  low_stock: { label: "Low stock", className: "bg-amber-100 text-amber-700" },
   out_of_stock: { label: "Out of stock", className: "bg-neutral-200 text-neutral-600" },
 };
 

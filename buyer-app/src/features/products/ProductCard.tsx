@@ -44,7 +44,12 @@ export function ProductCard({ product }: { product: PublicProductListItem }) {
         </div>
       </Link>
       <div className="px-3 pb-3">
-        <AddToCartButton variantId={product.defaultVariantId} size="sm" className="w-full" />
+        <AddToCartButton
+          variantId={product.defaultVariantId}
+          availability={product.availability}
+          size="sm"
+          className="w-full"
+        />
       </div>
     </article>
   );

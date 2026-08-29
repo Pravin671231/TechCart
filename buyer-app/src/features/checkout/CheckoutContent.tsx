@@ -41,14 +41,19 @@ export function CheckoutContent() {
   } = useGetAddressesQuery(undefined, { skip: !session });
 
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [hasDefaultedAddress, setHasDefaultedAddress] = useState(false);
 
   // Pre-select the buyer's default address once the list arrives; falls
-  // back to the first saved address if none is marked default.
-  useEffect(() => {
-    if (!addresses || selectedAddressId) return;
+  // back to the first saved address if none is marked default. Adjusted
+  // during render (React's documented pattern for deriving state from a
+  // prop change) rather than in an effect — same precedent as
+  // ProductDetailContent's default-variant reset, since
+  // react-hooks/set-state-in-effect rejects the effect-based version.
+  if (addresses && !hasDefaultedAddress) {
+    setHasDefaultedAddress(true);
     const defaultAddress = addresses.find((a) => a.isDefault) ?? addresses[0];
     if (defaultAddress) setSelectedAddressId(defaultAddress._id);
-  }, [addresses, selectedAddressId]);
+  }
 
   const [createOrder, { isLoading: isPlacingOrder }] = useCreateOrderMutation();
   const [order, setOrder] = useState<CheckoutResponse | null>(null);
