@@ -66,7 +66,7 @@ export async function markCaptured(
 ): Promise<PaymentRecord | null> {
   return Payment.findByIdAndUpdate(
     id,
-    { $set: { status: "captured", ...fields } },
+    { $set: { status: "captured", capturedAt: new Date(), ...fields } },
     { new: true },
   ).lean();
 }
@@ -92,4 +92,46 @@ export async function addRefund(
     { $push: { refunds: refund }, $set: { status } },
     { new: true },
   ).lean();
+}
+
+// Issue #171/M7.1 (FR-DASH-001/003/004) — captured payment amounts (paise)
+// within a date range, keyed by capturedAt (not createdAt/updatedAt — see
+// payments.model.ts's own comment on why). Includes payments that have since
+// been partially/fully refunded, since the capture itself still happened;
+// sumRefundsInRange below is what nets the refunded portion back out.
+export async function sumCapturedInRange(from: Date, to: Date): Promise<number> {
+  const [result] = await Payment.aggregate<{ total: number }>([
+    {
+      $match: {
+        capturedAt: { $gte: from, $lte: to },
+        status: { $in: ["captured", "partially_refunded", "refunded"] },
+      },
+    },
+    { $group: { _id: null, total: { $sum: "$amount" } } },
+  ]);
+  return result?.total ?? 0;
+}
+
+// Issue #171/M7.1 (FR-DASH-003) — refund amounts (paise) actually processed
+// within a date range, keyed by each refund's own createdAt (each refund
+// already carries its own precise timestamp — refunds.service.ts).
+export async function sumRefundsInRange(from: Date, to: Date): Promise<number> {
+  const [result] = await Payment.aggregate<{ total: number }>([
+    { $unwind: "$refunds" },
+    { $match: { "refunds.createdAt": { $gte: from, $lte: to } } },
+    { $group: { _id: null, total: { $sum: "$refunds.amount" } } },
+  ]);
+  return result?.total ?? 0;
+}
+
+// Issue #173/M7.3 — a buyer's lifetime refund total (paise), unscoped by
+// date, used to net lifetimeAmountSpent for the buyer account dashboard.
+export async function sumRefundsForOrders(orderIds: Types.ObjectId[]): Promise<number> {
+  if (orderIds.length === 0) return 0;
+  const [result] = await Payment.aggregate<{ total: number }>([
+    { $match: { order: { $in: orderIds } } },
+    { $unwind: "$refunds" },
+    { $group: { _id: null, total: { $sum: "$refunds.amount" } } },
+  ]);
+  return result?.total ?? 0;
 }

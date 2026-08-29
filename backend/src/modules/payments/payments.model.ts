@@ -42,6 +42,12 @@ export type PaymentDocument = {
   status: PaymentStatus;
   refunds: PaymentRefund[];
   webhookEvents: PaymentWebhookEvent[];
+  // Issue #171/M7.1 (FR-DASH-003) — the moment this payment actually
+  // transitioned to captured, set once inside markCaptured() and never
+  // touched again. Distinct from `updatedAt`, which a later refund's own
+  // $set re-bumps (addRefund) — capturedAt stays accurate for date-range-
+  // scoped revenue reporting even after a payment has since been refunded.
+  capturedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -77,6 +83,7 @@ const paymentSchema = new Schema<PaymentDocument>(
     status: { type: String, enum: PAYMENT_STATUSES, required: true, default: "created" },
     refunds: { type: [paymentRefundSchema], required: true, default: [] },
     webhookEvents: { type: [paymentWebhookEventSchema], required: true, default: [] },
+    capturedAt: { type: Date },
   },
   { timestamps: true },
 );

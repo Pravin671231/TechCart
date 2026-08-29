@@ -7,6 +7,7 @@ import { categorySpecificationsAdminModule } from "@/modules/product-catalog/fea
 import { categoryVariantsAdminModule } from "@/modules/product-catalog/features/categoryVariants/categoryVariants.module";
 import { productsAdminModule } from "@/modules/product-catalog/features/products/products.module";
 import { ordersAdminModule } from "@/modules/orders/orders.module";
+import { dashboardAdminModule } from "@/modules/dashboard/dashboard.module";
 
 // Issue #143/M3.5 — the temporary X-Admin-Key guard (adminAuth.ts) that used
 // to be applied once here for the whole router is gone; every module below
@@ -23,5 +24,6 @@ adminRouter.use(categorySpecificationsAdminModule.path, categorySpecificationsAd
 adminRouter.use(categoryVariantsAdminModule.path, categoryVariantsAdminModule.router);
 adminRouter.use(productsAdminModule.path, productsAdminModule.router);
 adminRouter.use(ordersAdminModule.path, ordersAdminModule.router);
+adminRouter.use(dashboardAdminModule.path, dashboardAdminModule.router);
 
 export default adminRouter;
