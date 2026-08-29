@@ -242,10 +242,14 @@ describe("Order detail", () => {
     const cancelButton = await screen.findByRole("button", { name: /^cancel order$/i });
     await userEvent.click(cancelButton);
 
+    // Wait for the mutation to actually resolve (status badge flips to
+    // "Cancelled"), not just for the button's own label to change to its
+    // disabled "Cancelling…" in-flight state — that transient label change
+    // alone would already satisfy a wait keyed on "cancel order" being gone.
     await waitFor(() => {
-      expect(screen.queryByRole("button", { name: /^cancel order$/i })).not.toBeInTheDocument();
+      expect(screen.getAllByText("Cancelled").length).toBeGreaterThan(0);
     });
-    expect(screen.getAllByText("Cancelled").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: /^cancel order$/i })).not.toBeInTheDocument();
   });
 
   it("does not show the cancel button for a delivered order", async () => {

@@ -45,11 +45,13 @@ async function renderButton(
 ) {
   const { makeStore } = await import("@/store/store");
   const { AddToCartButton } = await import("@/features/cart/AddToCartButton");
+  const store = makeStore();
   render(
-    <Provider store={makeStore()}>
+    <Provider store={store}>
       <AddToCartButton variantId={variantId} availability={availability} />
     </Provider>,
   );
+  return store;
 }
 
 describe("AddToCartButton", () => {
@@ -98,10 +100,24 @@ describe("AddToCartButton", () => {
       }),
     );
 
-    await renderButton("v1");
-    await userEvent.click(await screen.findByRole("button", { name: /add to cart/i }));
+    const store = await renderButton("v1");
+    await screen.findByRole("button", { name: /add to cart/i });
+    // Guard against a real race: the button renders "Add to Cart" regardless
+    // of session/cart state, but handleClick routes to /sign-in when
+    // `session` is still `undefined` (loading) rather than the resolved
+    // user, and the mutation's own cache patch needs getCart's query entry
+    // to already exist (it's skipped until session resolves). Wait for both
+    // to actually settle before clicking, so a slow round-trip under load
+    // can't make this click look signed-out or land with nowhere to patch.
+    await waitFor(() => {
+      const queries = (store.getState() as { api: { queries: Record<string, { status?: string }> } })
+        .api.queries;
+      expect(queries["getSession(undefined)"]?.status).toBe("fulfilled");
+      expect(queries["getCart(undefined)"]?.status).toBe("fulfilled");
+    });
+    await userEvent.click(screen.getByRole("button", { name: /add to cart/i }));
 
-    expect(await screen.findByRole("button", { name: /go to cart/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /go to cart/i }, { timeout: 3000 })).toBeInTheDocument();
   });
 
   it("navigates to /cart when the variant is already in the cart", async () => {
