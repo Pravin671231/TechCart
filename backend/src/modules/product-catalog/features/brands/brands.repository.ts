@@ -84,3 +84,13 @@ export async function list(
 export async function listActive(): Promise<BrandRecord[]> {
   return Brand.find({ status: true }).lean();
 }
+
+// Issue #172/M7.2 (FR-DASH-007) — live total/active counts for the admin
+// catalog summary dashboard, no denormalized counter anywhere.
+export async function countTotalsByStatus(): Promise<{ total: number; active: number }> {
+  const [total, active] = await Promise.all([
+    Brand.countDocuments({}),
+    Brand.countDocuments({ status: true }),
+  ]);
+  return { total, active };
+}

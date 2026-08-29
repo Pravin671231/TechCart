@@ -111,3 +111,13 @@ export async function listActiveChildIds(parentId: Types.ObjectId): Promise<Type
 export async function countByParent(parentId: Types.ObjectId): Promise<number> {
   return Category.countDocuments({ parentCategory: parentId });
 }
+
+// Issue #172/M7.2 (FR-DASH-007) — live total/active counts for the admin
+// catalog summary dashboard, no denormalized counter anywhere.
+export async function countTotalsByStatus(): Promise<{ total: number; active: number }> {
+  const [total, active] = await Promise.all([
+    Category.countDocuments({}),
+    Category.countDocuments({ status: true }),
+  ]);
+  return { total, active };
+}
