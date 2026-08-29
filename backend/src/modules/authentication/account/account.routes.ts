@@ -5,6 +5,7 @@ import {
   getProfileHandler,
   updateProfileHandler,
   changePasswordHandler,
+  getAccountDashboardHandler,
 } from "./account.controller";
 
 const router = Router();
@@ -16,5 +17,8 @@ const router = Router();
 router.get("/profile", rbac(["buyer"]), getProfileHandler);
 router.patch("/profile", rbac(["buyer"]), updateProfileHandler);
 router.post("/change-password", rbac(ADMIN_ROLES), changePasswordHandler);
+// Issue #173/M7.3 (FR-DASH-010–012) — buyer-only, mirrors the profile routes'
+// guard.
+router.get("/dashboard", rbac(["buyer"]), getAccountDashboardHandler);
 
 export default router;
