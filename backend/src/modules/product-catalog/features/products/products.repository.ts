@@ -1,5 +1,7 @@
 import type { QueryFilter, Types } from "mongoose";
 import { escapeRegExp } from "@/utils/text";
+import { AppError } from "@/utils/AppError";
+import { PRODUCTS_SEARCH_INDEX } from "./products.searchIndex";
 import {
   Product,
   type ProductDocument,
@@ -435,11 +437,73 @@ export async function searchPublicPaginated(
   itemsPipeline.push({ $skip: skip }, { $limit: page.limit });
 
   const pipeline = [
-    { $search: { compound: { must, filter: searchFilters } } },
+    { $search: { index: PRODUCTS_SEARCH_INDEX, compound: { must, filter: searchFilters } } },
     { $match: matchStage },
     { $facet: { items: itemsPipeline, totalCount: [{ $count: "count" }] } },
   ];
 
+  try {
+    return await runFacetedAggregate(pipeline);
+  } catch (error) {
+    if (isAtlasSearchUnavailable(error)) {
+      throw new AppError(
+        503,
+        "SEARCH_UNAVAILABLE",
+        "Product search is temporarily unavailable — the Atlas Search index is not provisioned. Run `npm run search:ensure`.",
+      );
+    }
+    throw error;
+  }
+}
+
+// A `$search` stage fails at the aggregation level against any MongoDB that
+// isn't an Atlas cluster with the products_search index built (community /
+// self-hosted MongoDB, or an Atlas cluster where `npm run search:ensure`
+// hasn't run yet). Only searchPublicPaginated emits `$search` — the other two
+// buyer listing paths (listPublicPaginated / searchPublicByRegex) never reach
+// this. Translate it into a clean 503 instead of a generic 500.
+function isAtlasSearchUnavailable(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /\$search|\$listSearchIndexes|Atlas Search|search index .*not found|Unrecognized pipeline stage/i.test(
+    message,
+  );
+}
+
+// Issue #322: the plain-query keyword search path — a case-insensitive regex
+// over name/description, structurally identical to listPublicPaginated but
+// with a keyword `$or` added to the `$match`. This is now the primary path
+// for `GET /api/products?q=` (see listPublicProductsCore): buyer keyword
+// search must work whether or not an Atlas Search index is provisioned, and
+// searchPublicPaginated's `$search` stage errors outright where it isn't.
+// Atlas Search stays reserved for variant-attribute / filterable-spec
+// filters, which have no plain-query equivalent. No relevance score exists
+// here, so a `relevance` sort falls back to newest-first — the same default
+// listPublicPaginated already uses.
+export async function searchPublicByRegex(
+  q: string,
+  filter: PublicProductFilter,
+  sort: PublicSort,
+  page: ProductListPage,
+): Promise<{ items: PublicProductDoc[]; total: number }> {
+  const query = buildMatchStage(filter);
+  const escaped = escapeRegExp(q);
+  query.$or = [
+    { name: { $regex: escaped, $options: "i" } },
+    { description: { $regex: escaped, $options: "i" } },
+  ];
+  const skip = (page.page - 1) * page.limit;
+
+  const sortStages = isPriceSort(sort) ? priceSortStages(sort) : newestSortStages();
+  const pipeline = [
+    { $match: query },
+    ...sortStages,
+    {
+      $facet: {
+        items: [{ $skip: skip }, { $limit: page.limit }],
+        totalCount: [{ $count: "count" }],
+      },
+    },
+  ];
   return runFacetedAggregate(pipeline);
 }
 

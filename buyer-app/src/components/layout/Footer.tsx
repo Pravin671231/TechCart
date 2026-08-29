@@ -1,4 +1,15 @@
 import Link from "next/link";
+import { Logo } from "./Logo";
+import {
+  FacebookIcon,
+  InstagramIcon,
+  MastercardMark,
+  RuPayMark,
+  UpiMark,
+  VisaMark,
+  XIcon,
+  YouTubeIcon,
+} from "./footerIcons";
 
 const QUICK_LINKS = [
   { label: "Home", href: "/" },
@@ -14,9 +25,14 @@ const CUSTOMER_SERVICE_LINKS = [
   { label: "Returns & Refunds", href: "#" },
 ];
 
-const SOCIAL_LINKS = ["FB", "IG", "X", "YT"];
+const SOCIAL_LINKS = [
+  { label: "Facebook", Icon: FacebookIcon },
+  { label: "Instagram", Icon: InstagramIcon },
+  { label: "X", Icon: XIcon },
+  { label: "YouTube", Icon: YouTubeIcon },
+];
 
-const PAYMENT_METHODS = ["Visa", "MasterCard", "PayPal", "UPI"];
+const PAYMENT_MARKS = [VisaMark, MastercardMark, RuPayMark, UpiMark];
 
 export function Footer() {
   return (
@@ -24,24 +40,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-4 py-10">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
           <div>
-            <div className="flex items-center gap-2">
-              <svg
-                className="h-5 w-5 text-accent-500"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
-                <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
-                <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
-              </svg>
-              <span className="text-base font-extrabold tracking-tight text-white">
-                Tech<span className="text-primary-400">Cart</span>
-              </span>
-            </div>
+            <Logo />
             <p className="mt-3 text-sm text-neutral-400">
               India-first electronics and accessories, at prices that make sense.
             </p>
@@ -90,13 +89,14 @@ export function Footer() {
               Follow Us
             </h3>
             <div className="flex gap-2">
-              {SOCIAL_LINKS.map((label) => (
+              {SOCIAL_LINKS.map(({ label, Icon }) => (
                 <a
                   key={label}
                   href="#"
-                  className="flex h-8 w-8 items-center justify-center rounded-md bg-neutral-800 text-[11px] font-medium hover:bg-primary-600 hover:text-white"
+                  aria-label={label}
+                  className="flex h-8 w-8 items-center justify-center rounded-md bg-neutral-800 text-neutral-300 hover:bg-primary-600 hover:text-white"
                 >
-                  {label}
+                  <Icon className="h-4 w-4" />
                 </a>
               ))}
             </div>
@@ -107,13 +107,8 @@ export function Footer() {
               We Accept
             </h3>
             <div className="flex flex-wrap gap-2">
-              {PAYMENT_METHODS.map((method) => (
-                <span
-                  key={method}
-                  className="rounded-md bg-neutral-800 px-2.5 py-1 text-[11px] font-medium"
-                >
-                  {method}
-                </span>
+              {PAYMENT_MARKS.map((Mark, index) => (
+                <Mark key={index} />
               ))}
             </div>
           </div>

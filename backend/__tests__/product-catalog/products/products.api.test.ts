@@ -24,6 +24,7 @@ vi.mock("@/modules/product-catalog/features/products/products.repository", () =>
   findPublishedBySlug: vi.fn(),
   listPublicPaginated: vi.fn(),
   searchPublicPaginated: vi.fn(),
+  searchPublicByRegex: vi.fn(),
 }));
 
 vi.mock("@/modules/product-catalog/features/brands/brands.service", () => ({
@@ -821,8 +822,10 @@ describe("GET /api/products", () => {
     });
   });
 
-  it("uses Atlas Search when q is present", async () => {
-    vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({
+  // Issue #322: a plain keyword search runs as a name/description regex
+  // (searchPublicByRegex), not Atlas `$search` — works with no Atlas index.
+  it("uses the regex keyword path when q is present", async () => {
+    vi.mocked(productsRepository.searchPublicByRegex).mockResolvedValue({
       items: [publicProductStub],
       total: 1,
     });
@@ -830,13 +833,33 @@ describe("GET /api/products", () => {
     const res = await request(app).get("/api/products?q=phone");
 
     expect(res.status).toBe(200);
+    expect(productsRepository.searchPublicByRegex).toHaveBeenCalledWith("phone", {}, "relevance", {
+      page: 1,
+      limit: 24,
+    });
+    expect(productsRepository.searchPublicPaginated).not.toHaveBeenCalled();
+    expect(productsRepository.listPublicPaginated).not.toHaveBeenCalled();
+  });
+
+  // Issue #322: a keyword combined with an Atlas-only filter still uses Atlas.
+  it("uses Atlas Search when q is combined with a variant-attribute filter", async () => {
+    vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({
+      items: [publicProductStub],
+      total: 1,
+    });
+
+    const res = await request(app).get(
+      "/api/products?q=phone&attributeName=Color&attributeValue=Red",
+    );
+
+    expect(res.status).toBe(200);
     expect(productsRepository.searchPublicPaginated).toHaveBeenCalledWith(
       "phone",
-      {},
+      { variantAttribute: { name: "Color", value: "Red" } },
       "relevance",
       { page: 1, limit: 24 },
     );
-    expect(productsRepository.listPublicPaginated).not.toHaveBeenCalled();
+    expect(productsRepository.searchPublicByRegex).not.toHaveBeenCalled();
   });
 
   it("filters by price range, brand, and on-sale, all composed together", async () => {

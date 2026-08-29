@@ -67,67 +67,33 @@
         <h2 class="mb-3 text-xs font-medium tracking-wide uppercase text-neutral-500">Logo</h2>
         <div class="flex flex-wrap items-end gap-8 border border-neutral-300 bg-neutral-50 p-6">
           <div class="flex items-center gap-2">
-            <svg
-              class="h-8 w-8 text-accent-600"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
-              <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
-              <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
-            </svg>
+            <img src="./techcart-cart.svg" alt="" class="h-9 w-9" />
             <span class="text-2xl font-extrabold tracking-tight text-neutral-900">
               Tech<span class="text-primary-600">Cart</span>
             </span>
           </div>
           <div class="flex items-center gap-2 opacity-70">
-            <svg
-              class="h-5 w-5 text-accent-600"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
-              <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
-              <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
-            </svg>
+            <img src="./techcart-cart.svg" alt="" class="h-6 w-6" />
             <span class="text-base font-extrabold tracking-tight text-neutral-900">
               Tech<span class="text-primary-600">Cart</span>
             </span>
           </div>
           <div
-            class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-600 text-white"
+            class="flex h-11 w-11 items-center justify-center rounded-lg bg-neutral-900 p-1.5"
           >
-            <svg
-              class="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
-              <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
-              <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
-            </svg>
+            <img src="./techcart-cart.svg" alt="TechCart" class="h-full w-full" />
           </div>
         </div>
         <ul class="mt-2 list-disc space-y-0.5 pl-4 text-[11px] text-neutral-400">
           <li>
-            Wordmark: "Tech" in neutral-900, "Cart" in primary-600 — always both words, never
-            recolored beyond this pair.
+            Wordmark: "Tech" in neutral-900 (white on dark), "Cart" in primary-600 (primary-400 on
+            dark) — always both words, never recolored beyond this pair.
           </li>
           <li>
-            Cart mark renders in accent-600 next to the wordmark, or alone (white on primary-600) as
-            a favicon / app-icon-sized mark.
+            Cart mark is the fixed multi-tone orange asset
+            <code>mock-ui/techcart-cart.svg</code> (mirrored at
+            <code>buyer-app/public/techcart-cart.svg</code>) — used next to the wordmark, or alone as
+            a favicon / app-icon-sized mark. Not recolored.
           </li>
           <li>
             Minimum clear space: the height of the "T" on all sides. Do not stretch, rotate, or

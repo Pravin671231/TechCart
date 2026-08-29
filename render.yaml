@@ -8,6 +8,13 @@ services:
     dockerfilePath: ./docker/Dockerfile.backend
     dockerContext: .
     healthCheckPath: /health
+    # The Atlas Search index backing GET /api/products' variant-attribute /
+    # filterable-spec filters is provisioned by an idempotent script, not on
+    # startup. Enable this once on a paid instance type (pre-deploy commands
+    # aren't available on the free plan); until then run it manually against
+    # the production MONGODB_URI (Render shell or locally) — see
+    # backend/atlas-search/README.md.
+    # preDeployCommand: node dist/src/scripts/searchIndexes/ensureSearchIndexes.js
     envVars:
       - key: NODE_ENV
         value: production

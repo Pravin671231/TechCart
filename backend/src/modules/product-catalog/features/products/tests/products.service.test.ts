@@ -15,6 +15,7 @@ vi.mock("../products.repository", () => ({
   findPublishedBySlug: vi.fn(),
   listPublicPaginated: vi.fn(),
   searchPublicPaginated: vi.fn(),
+  searchPublicByRegex: vi.fn(),
 }));
 
 vi.mock("@/modules/uploads/uploads.service", () => ({
@@ -872,23 +873,50 @@ describe("listPublicProducts", () => {
       limit: 24,
     });
     expect(productsRepository.searchPublicPaginated).not.toHaveBeenCalled();
+    expect(productsRepository.searchPublicByRegex).not.toHaveBeenCalled();
   });
 
-  it("uses searchPublicPaginated when q is present", async () => {
-    vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({
+  // Issue #322: a plain keyword search (no attr/spec filter) runs as a
+  // name/description regex, not Atlas `$search` — so it works whether or not
+  // an Atlas Search index is provisioned.
+  it("uses searchPublicByRegex for a plain keyword search", async () => {
+    vi.mocked(productsRepository.searchPublicByRegex).mockResolvedValue({
       items: [publicProductStub],
       total: 1,
     });
 
     await listPublicProducts({ page: 1, limit: 24, q: "phone" });
 
+    expect(productsRepository.searchPublicByRegex).toHaveBeenCalledWith("phone", {}, "relevance", {
+      page: 1,
+      limit: 24,
+    });
+    expect(productsRepository.searchPublicPaginated).not.toHaveBeenCalled();
+    expect(productsRepository.listPublicPaginated).not.toHaveBeenCalled();
+  });
+
+  // Issue #322: a keyword combined with a variant-attribute filter still
+  // needs Atlas — embeddedDocument filtering has no plain-query equivalent.
+  it("uses searchPublicPaginated when a keyword is combined with a variant-attribute filter", async () => {
+    vi.mocked(productsRepository.searchPublicPaginated).mockResolvedValue({
+      items: [publicProductStub],
+      total: 1,
+    });
+
+    await listPublicProducts({
+      page: 1,
+      limit: 24,
+      q: "phone",
+      variantAttribute: { name: "Color", value: "Red" },
+    });
+
     expect(productsRepository.searchPublicPaginated).toHaveBeenCalledWith(
       "phone",
-      {},
+      { variantAttribute: { name: "Color", value: "Red" } },
       "relevance",
       { page: 1, limit: 24 },
     );
-    expect(productsRepository.listPublicPaginated).not.toHaveBeenCalled();
+    expect(productsRepository.searchPublicByRegex).not.toHaveBeenCalled();
   });
 
   it("computes pagination from the repository's total", async () => {

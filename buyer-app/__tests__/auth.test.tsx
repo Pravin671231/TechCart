@@ -455,35 +455,34 @@ describe("Auth", () => {
     });
   });
 
-  describe("AuthStatus", () => {
-    it("renders sign-in link when not authenticated", async () => {
+  // Issue #322 — AuthStatus's text link is replaced by an initials avatar +
+  // signed-in dropdown menu (Account / Orders / Sign out).
+  describe("ProfileMenu", () => {
+    it("renders a sign-in icon link when not authenticated", async () => {
       const { makeStore } = await import("@/store/store");
-      const { AuthStatus } = await import("@/components/layout/AuthStatus");
+      const { ProfileMenu } = await import("@/components/layout/ProfileMenu");
       const store = makeStore();
 
       server.use(
         http.get("*/api/auth/get-session", () => {
-          return HttpResponse.json({
-            success: true,
-            data: { user: null },
-          });
+          return HttpResponse.json({ success: true, data: null });
         })
       );
 
       render(
         <Provider store={store}>
-          <AuthStatus />
+          <ProfileMenu />
         </Provider>
       );
 
       await waitFor(() => {
-        expect(screen.getByRole("link", { name: /sign in/i })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/sign-in");
       });
     });
 
-    it("renders user name and sign-out button when authenticated", async () => {
+    it("opens a menu with Account, Orders, and Sign out when authenticated", async () => {
       const { makeStore } = await import("@/store/store");
-      const { AuthStatus } = await import("@/components/layout/AuthStatus");
+      const { ProfileMenu } = await import("@/components/layout/ProfileMenu");
       const store = makeStore();
 
       server.use(
@@ -491,12 +490,7 @@ describe("Auth", () => {
           return HttpResponse.json({
             success: true,
             data: {
-              user: {
-                id: "user1",
-                name: "John Doe",
-                email: "john@example.com",
-                role: "buyer",
-              },
+              user: { id: "user1", name: "John Doe", email: "john@example.com", role: "buyer" },
             },
           });
         })
@@ -504,19 +498,26 @@ describe("Auth", () => {
 
       render(
         <Provider store={store}>
-          <AuthStatus />
+          <ProfileMenu />
         </Provider>
       );
 
-      await waitFor(() => {
-        expect(screen.getByText("John Doe")).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
-      });
+      const trigger = await screen.findByRole("button", { name: /account menu/i });
+      // Trigger shows the 2-letter initials avatar ("John Doe" -> "JO").
+      expect(screen.getByText("JO")).toBeInTheDocument();
+
+      fireEvent.click(trigger);
+
+      expect(screen.getByText("John Doe")).toBeInTheDocument();
+      expect(screen.getByText("john@example.com")).toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: /account/i })).toHaveAttribute("href", "/account");
+      expect(screen.getByRole("menuitem", { name: /orders/i })).toHaveAttribute("href", "/orders");
+      expect(screen.getByRole("menuitem", { name: /sign out/i })).toBeInTheDocument();
     });
 
     it("sign out clears token and navigates home", async () => {
       const { makeStore } = await import("@/store/store");
-      const { AuthStatus } = await import("@/components/layout/AuthStatus");
+      const { ProfileMenu } = await import("@/components/layout/ProfileMenu");
       const store = makeStore();
 
       localStorage.setItem("auth_token", "test_token");
@@ -527,35 +528,24 @@ describe("Auth", () => {
           return HttpResponse.json({
             success: true,
             data: {
-              user: {
-                id: "user1",
-                name: "John Doe",
-                email: "john@example.com",
-                role: "buyer",
-              },
+              user: { id: "user1", name: "John Doe", email: "john@example.com", role: "buyer" },
             },
           });
         }),
         http.post("*/api/auth/sign-out", () => {
-          return HttpResponse.json({
-            success: true,
-            data: null,
-          });
+          return HttpResponse.json({ success: true, data: null });
         })
       );
 
       render(
         <Provider store={store}>
-          <AuthStatus />
+          <ProfileMenu />
         </Provider>
       );
 
-      await waitFor(() => {
-        expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
-      });
-
-      const signOutButton = screen.getByRole("button", { name: /sign out/i });
-      fireEvent.click(signOutButton);
+      const trigger = await screen.findByRole("button", { name: /account menu/i });
+      fireEvent.click(trigger);
+      fireEvent.click(screen.getByRole("menuitem", { name: /sign out/i }));
 
       await waitFor(() => {
         expect(localStorage.getItem("auth_token")).toBeNull();

@@ -72,6 +72,15 @@ export const productsApi = api.injectEndpoints({
         response as PublicProductDetail,
       providesTags: ["Product"],
     }),
+    // Issue #322 — the header search-bar suggestions dropdown. A slim keyword
+    // query capped at 5 results; the pagination envelope is ignored (unlike
+    // the list endpoints above, which thread it through `meta`).
+    getProductSuggestions: builder.query<PublicProductListItem[], string>({
+      query: (q) => ({ url: "/api/products", params: { q, limit: 5 } }),
+      transformResponse: (response: unknown): PublicProductListItem[] =>
+        response as PublicProductListItem[],
+      providesTags: ["Product"],
+    }),
   }),
 });
 
@@ -80,4 +89,5 @@ export const {
   useGetCategoryProductsQuery,
   useSearchProductsQuery,
   useGetProductBySlugQuery,
+  useGetProductSuggestionsQuery,
 } = productsApi;
