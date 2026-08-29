@@ -18,6 +18,9 @@ vi.mock("../categories.repository", () => ({
 vi.mock("@/modules/product-catalog/features/products/products.repository", () => ({
   countByCategory: vi.fn(),
   countByCategoryIds: vi.fn(),
+  brandFacetsForCategories: vi.fn(),
+  priceRangeForCategories: vi.fn(),
+  specNumberRangesForCategories: vi.fn(),
 }));
 
 vi.mock("@/modules/uploads/uploads.service", () => ({
@@ -27,10 +30,12 @@ vi.mock("@/modules/uploads/uploads.service", () => ({
 
 vi.mock("@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service", () => ({
   deleteForCategory: vi.fn(),
+  getFilterableFieldsByCategory: vi.fn(),
 }));
 
 vi.mock("@/modules/product-catalog/features/categoryVariants/categoryVariants.service", () => ({
   deleteForCategory: vi.fn(),
+  getVariantAxes: vi.fn(),
 }));
 
 import * as categoriesRepository from "../categories.repository";
@@ -48,6 +53,7 @@ import {
   updateCategoryStatus,
   getActiveCategoryBySlug,
   listActiveSubcategoryIds,
+  getCategoryFilterOptions,
 } from "../categories.service";
 
 const idA = new Types.ObjectId();
@@ -552,5 +558,103 @@ describe("updateCategoryStatus", () => {
 
     expect(productsRepository.countByCategory).not.toHaveBeenCalled();
     expect(categoriesRepository.countByParent).not.toHaveBeenCalled();
+  });
+});
+
+describe("getCategoryFilterOptions", () => {
+  const idSub = new Types.ObjectId();
+
+  function stubResolvableCategory() {
+    vi.mocked(categoriesRepository.findActiveBySlug).mockResolvedValue(categoryA);
+    vi.mocked(categoriesRepository.listActiveChildIds).mockResolvedValue([idSub]);
+    vi.mocked(categoryVariantsService.getVariantAxes).mockResolvedValue({
+      category: idA,
+      variants: [],
+    });
+    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
+      new Map(),
+    );
+    vi.mocked(productsRepository.brandFacetsForCategories).mockResolvedValue([]);
+    vi.mocked(productsRepository.priceRangeForCategories).mockResolvedValue(null);
+    vi.mocked(productsRepository.specNumberRangesForCategories).mockResolvedValue(new Map());
+  }
+
+  it("scopes every aggregation to the category plus its active subcategories", async () => {
+    stubResolvableCategory();
+
+    await getCategoryFilterOptions("electronics");
+
+    expect(productsRepository.brandFacetsForCategories).toHaveBeenCalledWith([idA, idSub]);
+    expect(productsRepository.priceRangeForCategories).toHaveBeenCalledWith([idA, idSub]);
+    // Spec schema is read from the parent category id only.
+    expect(categorySpecificationsService.getFilterableFieldsByCategory).toHaveBeenCalledWith(idA);
+  });
+
+  it("composes brands, price range, spec facets and variant axes", async () => {
+    stubResolvableCategory();
+    vi.mocked(productsRepository.brandFacetsForCategories).mockResolvedValue([
+      { _id: idB, name: "Nova", slug: "nova", productCount: 3 },
+    ]);
+    vi.mocked(productsRepository.priceRangeForCategories).mockResolvedValue({
+      min: 9900,
+      max: 149900,
+    });
+    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
+      new Map([
+        ["RAM", { name: "RAM", type: "enum", options: ["8GB", "12GB"], required: false, filterable: true }],
+        ["Screen Size", { name: "Screen Size", type: "number", unit: "inch", required: false, filterable: true }],
+        ["5G", { name: "5G", type: "boolean", required: false, filterable: true }],
+      ]),
+    );
+    vi.mocked(productsRepository.specNumberRangesForCategories).mockResolvedValue(
+      new Map([["Screen Size", { min: 5.4, max: 6.9 }]]),
+    );
+    vi.mocked(categoryVariantsService.getVariantAxes).mockResolvedValue({
+      category: idA,
+      variants: [
+        { name: "Colour", code: "colour", type: "color", required: false, options: [{ label: "Black", value: "black" }] },
+      ],
+    });
+
+    const result = await getCategoryFilterOptions("electronics");
+
+    expect(result.category).toEqual({ _id: idA, name: "Electronics", slug: "electronics" });
+    expect(result.brands).toEqual([{ _id: idB, name: "Nova", slug: "nova", productCount: 3 }]);
+    expect(result.priceRange).toEqual({ min: 9900, max: 149900 });
+    expect(result.specifications).toEqual([
+      { name: "RAM", unit: null, type: "enum", options: ["8GB", "12GB"] },
+      { name: "Screen Size", unit: "inch", type: "number", min: 5.4, max: 6.9 },
+      { name: "5G", unit: null, type: "boolean" },
+    ]);
+    expect(productsRepository.specNumberRangesForCategories).toHaveBeenCalledWith(
+      [idA, idSub],
+      ["Screen Size"],
+    );
+    expect(result.variantAxes).toEqual([
+      { name: "Colour", code: "colour", type: "color", options: [{ label: "Black", value: "black" }] },
+    ]);
+  });
+
+  it("omits min/max for a number field with no in-scope numeric values", async () => {
+    stubResolvableCategory();
+    vi.mocked(categorySpecificationsService.getFilterableFieldsByCategory).mockResolvedValue(
+      new Map([
+        ["Weight", { name: "Weight", type: "number", unit: "g", required: false, filterable: true }],
+      ]),
+    );
+    vi.mocked(productsRepository.specNumberRangesForCategories).mockResolvedValue(new Map());
+
+    const result = await getCategoryFilterOptions("electronics");
+
+    expect(result.specifications).toEqual([{ name: "Weight", unit: "g", type: "number" }]);
+  });
+
+  it("throws CATEGORY_NOT_FOUND for an unknown or inactive slug", async () => {
+    vi.mocked(categoriesRepository.findActiveBySlug).mockResolvedValue(null);
+
+    await expect(getCategoryFilterOptions("ghost")).rejects.toMatchObject({
+      statusCode: 404,
+      code: "CATEGORY_NOT_FOUND",
+    });
   });
 });

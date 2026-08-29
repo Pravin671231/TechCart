@@ -685,3 +685,95 @@ export async function countByStatusGroups(): Promise<Record<string, number>> {
   ]);
   return Object.fromEntries(results.map((row) => [row._id, row.count]));
 }
+
+// ---------------------------------------------------------------------------
+// Category filter options (Issue #326, FR-CAT-101)
+// ---------------------------------------------------------------------------
+// These three aggregations back GET /api/categories/:slug/filters. They're
+// imported by categories.service.ts directly — the same documented peer
+// service→repository exception brands.service.ts's countByBrand established
+// (each repository still only touches its own model; the graph stays acyclic
+// since products.repository imports nothing from categories).
+
+export type CategoryBrandFacet = {
+  _id: Types.ObjectId;
+  name: string;
+  slug: string;
+  productCount: number;
+};
+
+// Every active brand with ≥1 published product in the given category set
+// (category + its active subcategories), ordered by name. Inactive brands
+// and brands with no in-scope published product are dropped by the $match
+// after the $lookup.
+export async function brandFacetsForCategories(
+  categoryIds: Types.ObjectId[],
+): Promise<CategoryBrandFacet[]> {
+  return Product.aggregate<CategoryBrandFacet>([
+    { $match: { status: "published", category: { $in: categoryIds } } },
+    { $group: { _id: "$brand", productCount: { $sum: 1 } } },
+    { $lookup: { from: "brands", localField: "_id", foreignField: "_id", as: "brand" } },
+    { $unwind: "$brand" },
+    { $match: { "brand.status": true } },
+    {
+      $project: {
+        _id: "$brand._id",
+        name: "$brand.name",
+        slug: "$brand.slug",
+        productCount: 1,
+      },
+    },
+    { $sort: { name: 1 } },
+  ]);
+}
+
+// { min, max } of sellingPrice across every active variant of every in-scope
+// published product — the "starting from … up to" band the filter rail seeds
+// its price inputs with. null when nothing in scope has an active variant.
+export async function priceRangeForCategories(
+  categoryIds: Types.ObjectId[],
+): Promise<{ min: number; max: number } | null> {
+  const [row] = await Product.aggregate<{ min: number; max: number }>([
+    { $match: { status: "published", category: { $in: categoryIds } } },
+    { $unwind: "$variants" },
+    { $match: { "variants.active": true } },
+    {
+      $group: {
+        _id: null,
+        min: { $min: "$variants.sellingPrice" },
+        max: { $max: "$variants.sellingPrice" },
+      },
+    },
+  ]);
+  return row ? { min: row.min, max: row.max } : null;
+}
+
+// Per-field { min, max } of the numeric values products in scope actually
+// carry for each named specification field — used to seed range inputs for
+// `number` filterable specs. Only fields present in `fieldNames` are
+// considered; a field with no numeric values in scope is absent from the map.
+export async function specNumberRangesForCategories(
+  categoryIds: Types.ObjectId[],
+  fieldNames: string[],
+): Promise<Map<string, { min: number; max: number }>> {
+  if (fieldNames.length === 0) return new Map();
+  const rows = await Product.aggregate<{ _id: string; min: number; max: number }>([
+    { $match: { status: "published", category: { $in: categoryIds } } },
+    { $unwind: "$specifications" },
+    { $unwind: "$specifications.values" },
+    {
+      $match: {
+        "specifications.values.name": { $in: fieldNames },
+        "specifications.values.value": { $type: "number" },
+      },
+    },
+    {
+      $group: {
+        _id: "$specifications.values.name",
+        min: { $min: "$specifications.values.value" },
+        max: { $max: "$specifications.values.value" },
+      },
+    },
+  ]);
+  return new Map(rows.map((row) => [row._id, { min: row.min, max: row.max }]));
+}

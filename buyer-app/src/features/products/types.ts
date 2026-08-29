@@ -39,12 +39,23 @@ export type ProductSort = "price_asc" | "price_desc" | "newest";
 export type GetProductsArgs = { page: number; sort: ProductSort };
 export type GetProductsResult = { items: PublicProductListItem[]; pagination: Pagination };
 
+// A specification-facet selection: a bare string for an `enum`/`boolean`
+// field (`spec[Field]=value`), or a numeric range for a `number` field
+// (`spec[Field][min|max]=`). One value per field — the backend listing
+// param is a `Record<string, string | range>` (FR-CAT-104).
+export type SpecFilterSelection = string | { min?: number; max?: number };
+
 export type CategoryProductFilters = {
   brand?: string[];
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
   onSale?: boolean;
+  spec?: Record<string, SpecFilterSelection>;
+  // One variant-attribute name/value pair total, across every axis
+  // (FR-CAT-104) — the backend accepts a single pair.
+  attributeName?: string;
+  attributeValue?: string;
 };
 
 export type GetCategoryProductsArgs = {

@@ -4,7 +4,7 @@ This folder is a set of hand-written, step-by-step guides for testing TechCart's
 
 Before opening any file below, do the one-time collection setup: the `base_url` variable ([`product-catalog/uploads.api.md`](./product-catalog/uploads.api.md#one-time-postman-setup)) and then [`authentication/auth.api.md`](./authentication/auth.api.md#one-time-postman-setup)'s `buyer_access_token`/`admin_access_token` variables — the latter hold the bearer tokens **every** admin and account request in this folder needs (`Authorization: Bearer <token>`), so complete an admin sign-in before working through `product-catalog/`. Every other doc assumes that setup is done and reuses the same collection.
 
-This index covers three domains: M2 (Product Catalog) — Issues #25 through #36, plus Issue #102 (SRS v0.2 amendment: variant-only pricing, stock/inventory tracking removed) and Issue #104 (SRS v0.2 amendment: shared admin list pagination/sort); M3 (Authentication) — buyer sign-in, admin sign-in + password reset, admin account provisioning, and account self-service (`FR-AUTH-001`–`045`); and M4 (Shopping Cart) — the buyer cart (`FR-CART-001`–`018`, Issues #150/#151).
+This index covers three domains: M2 (Product Catalog) — Issues #25 through #36, plus Issue #102 (SRS v0.2 amendment: variant-only pricing, stock/inventory tracking removed), Issue #104 (SRS v0.2 amendment: shared admin list pagination/sort), and Issue #326 (SRS v0.2 amendment: buyer faceted filter discovery, `GET /api/categories/:slug/filters`); M3 (Authentication) — buyer sign-in, admin sign-in + password reset, admin account provisioning, and account self-service (`FR-AUTH-001`–`045`); and M4 (Shopping Cart) — the buyer cart (`FR-CART-001`–`018`, Issues #150/#151).
 
 **Admin auth is session-based, not `X-Admin-Key`.** Issue #143/M3.5 replaced the temporary `X-Admin-Key` header with real session + role authentication (`src/middleware/rbac.ts`) on every `/api/admin/*` route, and Issue #264/M3.26 updated the `product-catalog/*.api.md` docs to match — a real request against `/api/admin/brands`, `/api/admin/categories`, etc. sends `Authorization: Bearer <token>` from [`authentication/auth.api.md`](./authentication/auth.api.md)'s admin sign-in flow. The backend auth engine itself was rewritten from Better Auth to a hand-rolled custom session/OTP engine in Issues #258–#261 (M3.19–23); the `/api/auth/*` wire contract was preserved, and the `authentication/*.api.md` docs were re-verified against it in #264.
 
@@ -73,6 +73,7 @@ Do [`authentication/auth.api.md`](./authentication/auth.api.md)'s admin sign-in 
 | GET    | `/api/categories`                  | public | [→](./product-catalog/categories.api.md#get-apicategories)                |
 | GET    | `/api/categories/search`           | public | [→](./product-catalog/categories.api.md#get-apicategoriessearch)          |
 | GET    | `/api/categories/:slug/products`   | public | [→](./product-catalog/categories.api.md#get-apicategoriesslugproducts)    |
+| GET    | `/api/categories/:slug/filters`    | public | [→](./product-catalog/categories.api.md#get-apicategoriesslugfilters)     |
 
 #### `categorySpecifications.api.md`
 
@@ -113,7 +114,7 @@ Same shape as specifications above — no public/status/search surface.
 
 ---
 
-**35 endpoints total** across the 6 files above (3 + 7 + 9 + 3 + 3 + 10 — `categories.api.md`'s two pointer tables aren't counted separately, since their real rows are already listed under `categorySpecifications.api.md`/`categoryVariants.api.md`; the count dropped by one, Issue #102, when the product-level stock-only endpoint was removed).
+**36 endpoints total** across the 6 files above (3 + 7 + 10 + 3 + 3 + 10 — `categories.api.md`'s two pointer tables aren't counted separately, since their real rows are already listed under `categorySpecifications.api.md`/`categoryVariants.api.md`; the count dropped by one, Issue #102, when the product-level stock-only endpoint was removed, then rose by one, Issue #326, with `GET /api/categories/:slug/filters`).
 
 ---
 
