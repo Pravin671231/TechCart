@@ -104,10 +104,23 @@ export async function findActiveBySlug(slug: string): Promise<CategoryRecord | n
 // Direct (one-level) active children only — categories are at most two
 // levels deep, so a parent's children never have children of their own.
 export async function listActiveChildIds(parentId: Types.ObjectId): Promise<Types.ObjectId[]> {
-  const children = await Category.find({ parentCategory: parentId, status: true }, { _id: 1 }).lean();
+  const children = await Category.find(
+    { parentCategory: parentId, status: true },
+    { _id: 1 },
+  ).lean();
   return children.map((child) => child._id);
 }
 
 export async function countByParent(parentId: Types.ObjectId): Promise<number> {
   return Category.countDocuments({ parentCategory: parentId });
+}
+
+// Issue #172/M7.2 (FR-DASH-007) — live total/active counts for the admin
+// catalog summary dashboard, no denormalized counter anywhere.
+export async function countTotalsByStatus(): Promise<{ total: number; active: number }> {
+  const [total, active] = await Promise.all([
+    Category.countDocuments({}),
+    Category.countDocuments({ status: true }),
+  ]);
+  return { total, active };
 }

@@ -574,3 +574,14 @@ export async function countBySpecificationField(
     specifications: { $elemMatch: { groupName, values: { $elemMatch: { name } } } },
   });
 }
+
+// Issue #172/M7.2 (FR-DASH-007) — a live count of products by status, for
+// the admin catalog summary dashboard. No caller-side default needed the way
+// countByBrandIds/countByCategoryIds have (a status absent from the result
+// just means zero products in that status).
+export async function countByStatusGroups(): Promise<Record<string, number>> {
+  const results = await Product.aggregate<{ _id: string; count: number }>([
+    { $group: { _id: "$status", count: { $sum: 1 } } },
+  ]);
+  return Object.fromEntries(results.map((row) => [row._id, row.count]));
+}

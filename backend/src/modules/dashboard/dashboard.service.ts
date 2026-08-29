@@ -12,6 +12,9 @@ import {
   topProductsInRange,
 } from "@/modules/orders/orders.repository";
 import { sumCapturedInRange, sumRefundsInRange } from "@/modules/payments/payments.repository";
+import { countByStatusGroups } from "@/modules/product-catalog/features/products/products.repository";
+import { countTotalsByStatus as countCategoryTotals } from "@/modules/product-catalog/features/categories/categories.repository";
+import { countTotalsByStatus as countBrandTotals } from "@/modules/product-catalog/features/brands/brands.repository";
 
 const CACHE_TTL_SECONDS = 60;
 
@@ -101,6 +104,42 @@ export async function getTopProducts(from?: string, to?: string): Promise<TopPro
   return getOrSetCache(key, CACHE_TTL_SECONDS, async () => {
     const rows = await topProductsInRange(range.from, range.to, TOP_PRODUCTS_LIMIT);
     return { range: toIsoRange(range), products: rows };
+  });
+}
+
+export type CatalogSummary = {
+  totalProducts: number;
+  productsByStatus: Record<string, number>;
+  totalCategories: number;
+  activeCategories: number;
+  totalBrands: number;
+  activeBrands: number;
+};
+
+const CATALOG_SUMMARY_CACHE_KEY = "dashboard:catalog-summary";
+
+// FR-DASH-007/020/021 — a live snapshot, not range-scoped and no
+// denormalized counter anywhere. Deliberately carries no outOfStockCount
+// field at all — that's SRS v0.10 (Inventory Management), not yet built; see
+// the M7 plan's own scope boundary.
+export async function getCatalogSummary(): Promise<CatalogSummary> {
+  return getOrSetCache(CATALOG_SUMMARY_CACHE_KEY, CACHE_TTL_SECONDS, async () => {
+    const [productsByStatus, categoryTotals, brandTotals] = await Promise.all([
+      countByStatusGroups(),
+      countCategoryTotals(),
+      countBrandTotals(),
+    ]);
+
+    const totalProducts = Object.values(productsByStatus).reduce((sum, count) => sum + count, 0);
+
+    return {
+      totalProducts,
+      productsByStatus,
+      totalCategories: categoryTotals.total,
+      activeCategories: categoryTotals.active,
+      totalBrands: brandTotals.total,
+      activeBrands: brandTotals.active,
+    };
   });
 }
 
