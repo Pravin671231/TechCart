@@ -73,11 +73,11 @@ export function OtpSignIn() {
   };
 
   return (
-    <div className="w-full max-w-sm">
+    <div className="w-full">
       {step === "email" ? (
         <form onSubmit={handleSendOtp} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="block text-sm font-medium text-neutral-700">
               Email Address
             </label>
             <input
@@ -86,7 +86,7 @@ export function OtpSignIn() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2.5 shadow-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
               placeholder="you@example.com"
             />
           </div>
@@ -94,18 +94,18 @@ export function OtpSignIn() {
           <button
             type="submit"
             disabled={isSendingOtp}
-            className="w-full bg-primary text-white py-2 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
+            className="w-full rounded-md bg-primary-600 py-2.5 font-medium text-white hover:bg-primary-700 disabled:opacity-50"
           >
             {isSendingOtp ? "Sending..." : "Send OTP"}
           </button>
         </form>
       ) : (
         <form onSubmit={handleVerifyOtp} className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-neutral-600">
             Enter the 6-digit code sent to <strong>{email}</strong>
           </p>
           <div>
-            <label htmlFor="otp" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="otp" className="block text-sm font-medium text-neutral-700">
               Verification Code
             </label>
             <input
@@ -115,7 +115,7 @@ export function OtpSignIn() {
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
               required
               maxLength={6}
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary text-center text-2xl tracking-widest"
+              className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2.5 text-center text-2xl tracking-widest shadow-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
               placeholder="000000"
             />
           </div>
@@ -123,7 +123,7 @@ export function OtpSignIn() {
           <button
             type="submit"
             disabled={isVerifyingOtp || otp.length !== 6}
-            className="w-full bg-primary text-white py-2 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
+            className="w-full rounded-md bg-primary-600 py-2.5 font-medium text-white hover:bg-primary-700 disabled:opacity-50"
           >
             {isVerifyingOtp ? "Verifying..." : "Verify & Sign In"}
           </button>
@@ -131,7 +131,7 @@ export function OtpSignIn() {
             type="button"
             onClick={handleResendOtp}
             disabled={resendCountdown > 0 || isSendingOtp}
-            className="w-full py-2 text-sm text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2 text-sm text-primary-600 hover:text-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : "Resend OTP"}
           </button>
@@ -142,7 +142,7 @@ export function OtpSignIn() {
               setOtp("");
               setCodeError(null);
             }}
-            className="w-full py-2 text-sm text-gray-600 hover:text-gray-900"
+            className="w-full py-2 text-sm text-neutral-600 hover:text-neutral-900"
           >
             Use different email
           </button>

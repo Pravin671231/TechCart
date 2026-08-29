@@ -63,7 +63,7 @@ export function CartIndicator() {
       </Link>
 
       {/* Mini-cart preview — opens on hover/focus of the group. */}
-      <div className="invisible absolute right-0 z-30 mt-2 w-80 rounded-lg border border-neutral-200 bg-white p-3 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+      <div className="invisible absolute right-0 z-30 mt-2 w-[min(20rem,calc(100vw-1.5rem))] rounded-lg border border-neutral-200 bg-white p-3 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
         {!cart || cart.items.length === 0 ? (
           <p className="px-1 py-4 text-center text-sm text-neutral-500">Your cart is empty.</p>
         ) : (

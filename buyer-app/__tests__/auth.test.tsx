@@ -32,7 +32,7 @@ describe("Auth", () => {
   });
 
   describe("GoogleSignIn", () => {
-    it("renders Google button container", async () => {
+    it("renders the sign-in card with the Google script and OTP flow", async () => {
       const { makeStore } = await import("@/store/store");
       const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
       const store = makeStore();
@@ -43,8 +43,11 @@ describe("Auth", () => {
         </Provider>
       );
 
-      const buttonContainer = screen.getByRole("heading", { name: /sign in with google/i });
-      expect(buttonContainer).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: /sign in to your account/i })
+      ).toBeInTheDocument();
+      // Google button + email OTP now read as one flow (no separate boxed sections).
+      expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
     });
   });
 
