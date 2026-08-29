@@ -10,9 +10,16 @@ export const MAX_QUANTITY_PER_VARIANT = 10;
 // (products.variants._id), never a bare product. No price/availability is
 // stored here: both are always resolved live from the referenced variant at
 // read time (FR-CART-010-014), never persisted on the cart document.
+//
+// Issue #190/M10.2 (FR-INV-009-011) — `warehouse` is the one warehouse this
+// line's quantity is allocated at; a line never splits its fulfillment
+// across warehouses. Required on every line going forward (no migration —
+// no real cart data exists pre-launch), set once at add-time and never
+// changed by a quantity update, only re-checked against for a delta.
 export type CartItem = {
   variant: Types.ObjectId;
   quantity: number;
+  warehouse: Types.ObjectId;
 };
 
 export type CartDocument = {
@@ -29,6 +36,7 @@ const cartItemSchema = new Schema<CartItem>(
       min: 1,
       max: MAX_QUANTITY_PER_VARIANT,
     },
+    warehouse: { type: Schema.Types.ObjectId, ref: "Warehouse", required: true },
   },
   { _id: false },
 );

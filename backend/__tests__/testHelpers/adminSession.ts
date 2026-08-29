@@ -1,8 +1,11 @@
 import type { Express } from "express";
 import type { MongoMemoryServer } from "mongodb-memory-server";
 import type mongooseType from "mongoose";
+import type { Types } from "mongoose";
 import type { Mock } from "vitest";
 import request from "supertest";
+import { Warehouse } from "../../src/modules/inventory/warehouses.model.js";
+import { Inventory } from "../../src/modules/inventory/inventory.model.js";
 
 // Shared real-DB test harness (Issue #143/M3.5) — extracted from
 // __tests__/adminUsers/adminUsers.api.test.ts's own signInFully/adminRequest
@@ -121,6 +124,27 @@ export async function signInBuyer(app: Express, email: string): Promise<string> 
   const token = verify.headers["set-auth-token"] as string;
   if (!token) throw new Error("No set-auth-token header on the sign-in/email-otp response");
   return token;
+}
+
+// Issue #190/M10.2 — cart.service's addItem/updateItem now allocate real
+// stock (cart.service.ts's allocateNewLine/allocateAdditionalStock), so
+// every Supertest suite that exercises the real POST /api/cart/items
+// endpoint to set up fixture state (not just cart's own suite — checkout,
+// order/payment/dashboard suites that build a cart en route to an order)
+// needs at least one warehouse with real stock for that call to succeed.
+// findOne-or-create keeps this idempotent across repeated calls within one
+// test file's own database.
+export async function seedTestWarehouseStock(
+  productId: Types.ObjectId,
+  variantIds: Types.ObjectId[],
+  stock = 999,
+): Promise<void> {
+  const warehouse =
+    (await Warehouse.findOne({ code: "TEST-WH" })) ??
+    (await Warehouse.create({ name: "Test Warehouse", code: "TEST-WH" }));
+  await Inventory.insertMany(
+    variantIds.map((variantId) => ({ productId, variantId, warehouseId: warehouse._id, stock })),
+  );
 }
 
 type Method = "get" | "post" | "patch" | "put" | "delete";

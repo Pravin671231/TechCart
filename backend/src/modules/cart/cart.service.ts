@@ -9,6 +9,11 @@ import type {
   ProductImage,
   ProductVariant,
 } from "@/modules/product-catalog/features/products/products.model";
+import {
+  allocateNewLine,
+  allocateAdditionalStock,
+  restoreStock,
+} from "@/modules/inventory/inventory.service";
 import { MAX_QUANTITY_PER_VARIANT, type CartItem } from "./cart.model";
 import type { CartRecord } from "./cart.repository";
 import { findByUser, getOrCreateByUser, replaceItems } from "./cart.repository";
@@ -177,11 +182,25 @@ export async function addItem(
         `Quantity per variant is capped at ${MAX_QUANTITY_PER_VARIANT}.`,
       );
     }
+    // FR-INV-011 — an increase re-checks only the line's already-allocated
+    // warehouse, never re-shopping others (no cross-warehouse splitting).
+    // Throws 409 INSUFFICIENT_STOCK on failure, before any cart mutation is
+    // persisted.
+    await allocateAdditionalStock(variantOid, existing.warehouse, quantity);
     existing.quantity = next;
   } else {
-    items.push({ variant: variantOid, quantity });
+    // FR-INV-009/010 — a brand-new line shops every active warehouse in
+    // creation order, stopping at the first with enough stock; throws 409
+    // INSUFFICIENT_STOCK (naming the largest available quantity, or that the
+    // item is out of stock entirely — FR-INV-008) when none fits.
+    const warehouse = await allocateNewLine(variantOid, quantity);
+    items.push({ variant: variantOid, quantity, warehouse });
   }
 
+  // Known, accepted race (documented, not fixed, matching this codebase's
+  // other TOCTOU gaps): stock is decremented above before this write lands —
+  // a crash in between would leak the decrement with no cart line to show
+  // for it. No transactions exist anywhere in this codebase yet.
   return buildCartResponse(await replaceItems(toObjectId(userId), items));
 }
 
@@ -202,6 +221,17 @@ export async function updateItem(
   const target = items.find((item) => item.variant.equals(variantOid));
   if (!target) throw lineNotFound(variantId);
 
+  // FR-INV-011 — an absolute-quantity update re-checks the delta only
+  // against this line's already-allocated warehouse: an increase must
+  // clear that one warehouse's remaining stock (409 INSUFFICIENT_STOCK on
+  // failure), a decrease always succeeds and restores the difference.
+  const delta = quantity - target.quantity;
+  if (delta > 0) {
+    await allocateAdditionalStock(variantOid, target.warehouse, delta);
+  } else if (delta < 0) {
+    await restoreStock(variantOid, target.warehouse, -delta);
+  }
+
   // FR-CART-006 — setting quantity to 0 removes the line, equivalent to an
   // explicit remove. Zod has already bounded quantity to 0-10.
   const nextItems =
@@ -217,9 +247,13 @@ export async function removeItem(userId: string, variantId: string): Promise<Car
   const cart = await findByUser(toObjectId(userId));
   if (!cart) throw lineNotFound(variantId);
 
-  const remaining = cart.items.filter((item) => !item.variant.equals(variantOid));
-  if (remaining.length === cart.items.length) throw lineNotFound(variantId);
+  const target = cart.items.find((item) => item.variant.equals(variantOid));
+  if (!target) throw lineNotFound(variantId);
 
+  // FR-INV-011 — restores the full line quantity to its recorded warehouse.
+  await restoreStock(variantOid, target.warehouse, target.quantity);
+
+  const remaining = cart.items.filter((item) => !item.variant.equals(variantOid));
   return buildCartResponse(await replaceItems(toObjectId(userId), remaining));
 }
 
@@ -229,5 +263,13 @@ export async function clearCart(userId: string): Promise<CartResponse> {
   const userOid = toObjectId(userId);
   const cart = await findByUser(userOid);
   if (!cart) return buildCartResponse(null);
+
+  // FR-INV-011 — every remaining line's quantity is restored to its own
+  // warehouse before the array is wiped; otherwise a full cart-clear would
+  // permanently leak the decremented stock with no way back.
+  await Promise.all(
+    cart.items.map((item) => restoreStock(item.variant, item.warehouse, item.quantity)),
+  );
+
   return buildCartResponse(await replaceItems(userOid, []));
 }

@@ -15,14 +15,23 @@ vi.mock("@/modules/product-catalog/features/products/products.repository", () =>
   findByVariantIds: vi.fn(),
 }));
 
+vi.mock("@/modules/inventory/inventory.service", () => ({
+  allocateNewLine: vi.fn(),
+  allocateAdditionalStock: vi.fn(),
+  restoreStock: vi.fn(),
+}));
+
 import * as cartRepository from "../cart.repository";
 import * as productsRepository from "@/modules/product-catalog/features/products/products.repository";
+import * as inventoryService from "@/modules/inventory/inventory.service";
 import { addItem, clearCart, getCart, removeItem, updateItem } from "../cart.service";
 
 const userId = new Types.ObjectId().toString();
 const variantA = new Types.ObjectId();
 const variantB = new Types.ObjectId();
 const productId = new Types.ObjectId();
+const warehouseA = new Types.ObjectId();
+const warehouseB = new Types.ObjectId();
 
 function makeVariant(overrides: Partial<ProductVariant> = {}): ProductVariant {
   return {
@@ -64,8 +73,11 @@ function makeProduct(
   } as ProductRecord;
 }
 
-function cartWith(items: { variant: Types.ObjectId; quantity: number }[]): CartRecord {
-  return { _id: new Types.ObjectId(), user: new Types.ObjectId(), items } as CartRecord;
+function cartWith(
+  items: { variant: Types.ObjectId; quantity: number; warehouse?: Types.ObjectId }[],
+): CartRecord {
+  const withWarehouse = items.map((item) => ({ warehouse: warehouseA, ...item }));
+  return { _id: new Types.ObjectId(), user: new Types.ObjectId(), items: withWarehouse } as CartRecord;
 }
 
 afterEach(() => {
@@ -107,6 +119,9 @@ describe("getCart", () => {
     });
     expect(cart.itemCount).toBe(2);
     expect(cart.subtotal).toBe(8000000);
+    // Issue #190/M10.2 — warehouse is an internal allocation detail, never
+    // surfaced on the buyer-facing cart line view.
+    expect(cart.items[0]).not.toHaveProperty("warehouse");
   });
 
   it("reflects a variant price change on the next read with no cart-side update", async () => {
@@ -185,11 +200,12 @@ describe("addItem", () => {
     });
   });
 
-  it("adds a new line", async () => {
+  it("adds a new line, allocating it to whichever warehouse allocateNewLine returns (FR-INV-009)", async () => {
     vi.mocked(productsRepository.findByVariantId).mockResolvedValue(makeProduct([makeVariant()]));
     vi.mocked(cartRepository.getOrCreateByUser).mockResolvedValue(cartWith([]));
+    vi.mocked(inventoryService.allocateNewLine).mockResolvedValue(warehouseB);
     vi.mocked(cartRepository.replaceItems).mockResolvedValue(
-      cartWith([{ variant: variantA, quantity: 2 }]),
+      cartWith([{ variant: variantA, quantity: 2, warehouse: warehouseB }]),
     );
     vi.mocked(productsRepository.findByVariantIds).mockResolvedValue([
       makeProduct([makeVariant()]),
@@ -197,18 +213,33 @@ describe("addItem", () => {
 
     await addItem(userId, variantA.toString(), 2);
 
+    expect(inventoryService.allocateNewLine).toHaveBeenCalledWith(variantA, 2);
     expect(cartRepository.replaceItems).toHaveBeenCalledWith(expect.anything(), [
-      { variant: expect.objectContaining({}), quantity: 2 },
+      { variant: variantA, quantity: 2, warehouse: warehouseB },
     ]);
   });
 
-  it("combines with an existing line rather than duplicating it", async () => {
+  it("propagates INSUFFICIENT_STOCK from allocateNewLine without persisting anything", async () => {
+    vi.mocked(productsRepository.findByVariantId).mockResolvedValue(makeProduct([makeVariant()]));
+    vi.mocked(cartRepository.getOrCreateByUser).mockResolvedValue(cartWith([]));
+    vi.mocked(inventoryService.allocateNewLine).mockRejectedValue(
+      Object.assign(new Error("out of stock"), { statusCode: 409, code: "INSUFFICIENT_STOCK" }),
+    );
+
+    await expect(addItem(userId, variantA.toString(), 2)).rejects.toMatchObject({
+      statusCode: 409,
+      code: "INSUFFICIENT_STOCK",
+    });
+    expect(cartRepository.replaceItems).not.toHaveBeenCalled();
+  });
+
+  it("combines with an existing line, re-checking only its own recorded warehouse (FR-INV-011)", async () => {
     vi.mocked(productsRepository.findByVariantId).mockResolvedValue(makeProduct([makeVariant()]));
     vi.mocked(cartRepository.getOrCreateByUser).mockResolvedValue(
-      cartWith([{ variant: variantA, quantity: 2 }]),
+      cartWith([{ variant: variantA, quantity: 2, warehouse: warehouseA }]),
     );
     vi.mocked(cartRepository.replaceItems).mockResolvedValue(
-      cartWith([{ variant: variantA, quantity: 5 }]),
+      cartWith([{ variant: variantA, quantity: 5, warehouse: warehouseA }]),
     );
     vi.mocked(productsRepository.findByVariantIds).mockResolvedValue([
       makeProduct([makeVariant()]),
@@ -216,43 +247,107 @@ describe("addItem", () => {
 
     await addItem(userId, variantA.toString(), 3);
 
+    expect(inventoryService.allocateAdditionalStock).toHaveBeenCalledWith(variantA, warehouseA, 3);
+    expect(inventoryService.allocateNewLine).not.toHaveBeenCalled();
     const passed = vi.mocked(cartRepository.replaceItems).mock.calls[0]?.[1];
     expect(passed).toHaveLength(1);
     expect(passed?.[0]?.quantity).toBe(5);
   });
 
-  it("rejects an accumulated quantity above the cap, not clamped", async () => {
+  it("rejects an accumulated quantity above the cap, not clamped, before checking stock", async () => {
     vi.mocked(productsRepository.findByVariantId).mockResolvedValue(makeProduct([makeVariant()]));
     vi.mocked(cartRepository.getOrCreateByUser).mockResolvedValue(
-      cartWith([{ variant: variantA, quantity: 8 }]),
+      cartWith([{ variant: variantA, quantity: 8, warehouse: warehouseA }]),
     );
 
     await expect(addItem(userId, variantA.toString(), 5)).rejects.toMatchObject({
       statusCode: 400,
       code: "QUANTITY_OUT_OF_RANGE",
     });
+    expect(inventoryService.allocateAdditionalStock).not.toHaveBeenCalled();
     expect(cartRepository.replaceItems).not.toHaveBeenCalled();
   });
 });
 
 describe("updateItem", () => {
-  it("removes the line when quantity is set to 0", async () => {
+  it("removes the line when quantity is set to 0, restoring its full quantity", async () => {
     vi.mocked(cartRepository.findByUser).mockResolvedValue(
       cartWith([
-        { variant: variantA, quantity: 2 },
-        { variant: variantB, quantity: 1 },
+        { variant: variantA, quantity: 2, warehouse: warehouseA },
+        { variant: variantB, quantity: 1, warehouse: warehouseB },
       ]),
     );
     vi.mocked(cartRepository.replaceItems).mockResolvedValue(
-      cartWith([{ variant: variantB, quantity: 1 }]),
+      cartWith([{ variant: variantB, quantity: 1, warehouse: warehouseB }]),
     );
     vi.mocked(productsRepository.findByVariantIds).mockResolvedValue([]);
 
     await updateItem(userId, variantA.toString(), 0);
 
+    expect(inventoryService.restoreStock).toHaveBeenCalledWith(variantA, warehouseA, 2);
     const passed = vi.mocked(cartRepository.replaceItems).mock.calls[0]?.[1];
     expect(passed).toHaveLength(1);
     expect(passed?.[0]?.variant.equals(variantB)).toBe(true);
+  });
+
+  it("allocates only the delta at the line's own warehouse on an increase", async () => {
+    vi.mocked(cartRepository.findByUser).mockResolvedValue(
+      cartWith([{ variant: variantA, quantity: 2, warehouse: warehouseA }]),
+    );
+    vi.mocked(cartRepository.replaceItems).mockResolvedValue(
+      cartWith([{ variant: variantA, quantity: 5, warehouse: warehouseA }]),
+    );
+    vi.mocked(productsRepository.findByVariantIds).mockResolvedValue([]);
+
+    await updateItem(userId, variantA.toString(), 5);
+
+    expect(inventoryService.allocateAdditionalStock).toHaveBeenCalledWith(variantA, warehouseA, 3);
+    expect(inventoryService.restoreStock).not.toHaveBeenCalled();
+  });
+
+  it("restores only the delta at the line's own warehouse on a decrease", async () => {
+    vi.mocked(cartRepository.findByUser).mockResolvedValue(
+      cartWith([{ variant: variantA, quantity: 5, warehouse: warehouseA }]),
+    );
+    vi.mocked(cartRepository.replaceItems).mockResolvedValue(
+      cartWith([{ variant: variantA, quantity: 2, warehouse: warehouseA }]),
+    );
+    vi.mocked(productsRepository.findByVariantIds).mockResolvedValue([]);
+
+    await updateItem(userId, variantA.toString(), 2);
+
+    expect(inventoryService.restoreStock).toHaveBeenCalledWith(variantA, warehouseA, 3);
+    expect(inventoryService.allocateAdditionalStock).not.toHaveBeenCalled();
+  });
+
+  it("touches neither allocate nor restore when the quantity is unchanged", async () => {
+    vi.mocked(cartRepository.findByUser).mockResolvedValue(
+      cartWith([{ variant: variantA, quantity: 3, warehouse: warehouseA }]),
+    );
+    vi.mocked(cartRepository.replaceItems).mockResolvedValue(
+      cartWith([{ variant: variantA, quantity: 3, warehouse: warehouseA }]),
+    );
+    vi.mocked(productsRepository.findByVariantIds).mockResolvedValue([]);
+
+    await updateItem(userId, variantA.toString(), 3);
+
+    expect(inventoryService.allocateAdditionalStock).not.toHaveBeenCalled();
+    expect(inventoryService.restoreStock).not.toHaveBeenCalled();
+  });
+
+  it("propagates INSUFFICIENT_STOCK from an increase without persisting anything", async () => {
+    vi.mocked(cartRepository.findByUser).mockResolvedValue(
+      cartWith([{ variant: variantA, quantity: 2, warehouse: warehouseA }]),
+    );
+    vi.mocked(inventoryService.allocateAdditionalStock).mockRejectedValue(
+      Object.assign(new Error("not enough"), { statusCode: 409, code: "INSUFFICIENT_STOCK" }),
+    );
+
+    await expect(updateItem(userId, variantA.toString(), 9)).rejects.toMatchObject({
+      statusCode: 409,
+      code: "INSUFFICIENT_STOCK",
+    });
+    expect(cartRepository.replaceItems).not.toHaveBeenCalled();
   });
 
   it("throws CART_ITEM_NOT_FOUND for a variant not in the cart", async () => {
@@ -276,20 +371,21 @@ describe("updateItem", () => {
 });
 
 describe("removeItem", () => {
-  it("drops the line", async () => {
+  it("drops the line and restores its full quantity to its recorded warehouse", async () => {
     vi.mocked(cartRepository.findByUser).mockResolvedValue(
       cartWith([
-        { variant: variantA, quantity: 2 },
-        { variant: variantB, quantity: 1 },
+        { variant: variantA, quantity: 2, warehouse: warehouseA },
+        { variant: variantB, quantity: 1, warehouse: warehouseB },
       ]),
     );
     vi.mocked(cartRepository.replaceItems).mockResolvedValue(
-      cartWith([{ variant: variantB, quantity: 1 }]),
+      cartWith([{ variant: variantB, quantity: 1, warehouse: warehouseB }]),
     );
     vi.mocked(productsRepository.findByVariantIds).mockResolvedValue([]);
 
     await removeItem(userId, variantA.toString());
 
+    expect(inventoryService.restoreStock).toHaveBeenCalledWith(variantA, warehouseA, 2);
     const passed = vi.mocked(cartRepository.replaceItems).mock.calls[0]?.[1];
     expect(passed).toHaveLength(1);
   });
@@ -302,18 +398,24 @@ describe("removeItem", () => {
     await expect(removeItem(userId, variantA.toString())).rejects.toMatchObject({
       code: "CART_ITEM_NOT_FOUND",
     });
+    expect(inventoryService.restoreStock).not.toHaveBeenCalled();
   });
 });
 
 describe("clearCart", () => {
-  it("replaces the items array with an empty one", async () => {
+  it("restores every remaining line's quantity to its own warehouse, then replaces items with an empty one", async () => {
     vi.mocked(cartRepository.findByUser).mockResolvedValue(
-      cartWith([{ variant: variantA, quantity: 2 }]),
+      cartWith([
+        { variant: variantA, quantity: 2, warehouse: warehouseA },
+        { variant: variantB, quantity: 4, warehouse: warehouseB },
+      ]),
     );
     vi.mocked(cartRepository.replaceItems).mockResolvedValue(cartWith([]));
 
     const cart = await clearCart(userId);
 
+    expect(inventoryService.restoreStock).toHaveBeenCalledWith(variantA, warehouseA, 2);
+    expect(inventoryService.restoreStock).toHaveBeenCalledWith(variantB, warehouseB, 4);
     expect(cartRepository.replaceItems).toHaveBeenCalledWith(expect.anything(), []);
     expect(cart).toMatchObject({ itemCount: 0, subtotal: 0, items: [] });
   });
@@ -323,6 +425,7 @@ describe("clearCart", () => {
 
     const cart = await clearCart(userId);
 
+    expect(inventoryService.restoreStock).not.toHaveBeenCalled();
     expect(cartRepository.replaceItems).not.toHaveBeenCalled();
     expect(cart).toEqual({ items: [], itemCount: 0, subtotal: 0 });
   });

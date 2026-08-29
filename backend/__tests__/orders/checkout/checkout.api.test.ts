@@ -16,6 +16,7 @@ import {
   teardownMemoryMongo,
   signInBuyer,
   authRequest,
+  seedTestWarehouseStock,
   type MemoryMongoContext,
 } from "../../testHelpers/adminSession";
 
@@ -58,6 +59,7 @@ async function seedProduct(
       },
     ],
   });
+  await seedTestWarehouseStock(doc._id, [doc.variants[0]!._id, doc.variants[1]!._id]);
   return { productId: doc._id, variantA: doc.variants[0]!._id, variantB: doc.variants[1]!._id };
 }
 

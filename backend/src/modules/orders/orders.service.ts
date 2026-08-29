@@ -12,7 +12,10 @@ import { AppError } from "@/utils/AppError";
 // because getCart() is a read-only, already-composed operation with no
 // side effects to duplicate incorrectly.
 import { getCart } from "@/modules/cart/cart.service";
-import { replaceItems as replaceCartItems } from "@/modules/cart/cart.repository";
+import {
+  findByUser as findCartByUser,
+  replaceItems as replaceCartItems,
+} from "@/modules/cart/cart.repository";
 import {
   addAddress,
   getDefaultAddress,
@@ -232,10 +235,17 @@ export async function checkout(userId: string, input: CheckoutInput): Promise<Ch
   // exception cart.service/brands.service already establish) since this is
   // a second, distinct write from order creation — see this module's PR
   // description for the accepted non-transactional-atomicity gap.
-  const remainingCartItems = droppedLines.map((line) => ({
-    variant: toObjectId(line.variant.id),
-    quantity: line.quantity,
-  }));
+  //
+  // Issue #190/M10.2 — re-fetches the raw cart record rather than
+  // reconstructing items from droppedLines (cart's CartLineView has no
+  // `warehouse` field; it's an internal allocation detail, never part of the
+  // buyer-facing cart response) so each dropped line's own allocated
+  // warehouse is preserved verbatim.
+  const droppedVariantIds = new Set(droppedLines.map((line) => line.variant.id));
+  const rawCart = await findCartByUser(toObjectId(userId));
+  const remainingCartItems = (rawCart?.items ?? []).filter((item) =>
+    droppedVariantIds.has(item.variant.toString()),
+  );
   await replaceCartItems(toObjectId(userId), remainingCartItems);
 
   // FR-ORD-021 — enqueued after the order is committed. Awaiting this only
