@@ -13,6 +13,8 @@ export const api = createApi({
     "Session",
     "AdminUser",
     "Order",
+    "Warehouse",
+    "Inventory",
   ],
   endpoints: () => ({}),
 });
