@@ -37,7 +37,6 @@ vi.mock("@/externalService/razorpay", async () => {
 import { createRazorpayOrder } from "@/externalService/razorpay";
 import { Product } from "@/modules/product-catalog/features/products/products.model";
 import * as ordersRepository from "@/modules/orders/orders.repository";
-import { resetDashboardCache } from "@/lib/cache";
 import {
   bootstrapMemoryMongo,
   teardownMemoryMongo,
@@ -166,6 +165,13 @@ beforeEach(async () => {
   await ctx.mongoose.connection.db!.collection("orders").deleteMany({});
   await ctx.mongoose.connection.db!.collection("counters").deleteMany({});
   await ctx.mongoose.connection.db!.collection("payments").deleteMany({});
+  // Dynamic import — @/lib/cache imports @/config/env at its own top level,
+  // and a static import here would force that module to evaluate as soon as
+  // this test file loads, before bootstrapMemoryMongo() (in beforeAll, which
+  // always runs first) sets the real MONGODB_URI — freezing env.MONGODB_URI
+  // on vitest.config.ts's placeholder for this file's whole run. Same bug
+  // class documented in orders.service.ts/refunds.api.test.ts.
+  const { resetDashboardCache } = await import("../../src/lib/cache.js");
   resetDashboardCache();
 });
 
