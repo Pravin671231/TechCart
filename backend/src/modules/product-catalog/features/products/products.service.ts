@@ -22,6 +22,11 @@ import {
   getFilterableFieldsByCategory,
   type CardSpecificationField,
 } from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service";
+import {
+  ensureInventoryRowsForVariant,
+  sumStockByVariantIds,
+  listVariantIdsWithStock,
+} from "@/modules/inventory/inventory.service";
 import type {
   ProductImage,
   ProductSpecificationGroup,
@@ -370,6 +375,14 @@ export async function addVariant(
     new Types.ObjectId(userId),
   );
   if (!updated) throw notFound(productId);
+
+  // Issue #189/M10.1 (FR-INV-002) — a new variant needs a stock:0 row per
+  // active warehouse; a peer service->service call (this codebase's one
+  // exception, documented alongside brands.service.ts's countByBrand-style
+  // peer service->repository imports), since this is a real side-effecting
+  // action, not a read.
+  await ensureInventoryRowsForVariant(productId, variant._id);
+
   return updated;
 }
 
@@ -460,6 +473,11 @@ export type PublicCardSpecification = {
 // where a published product ends up with zero active variants (deactivating
 // the last one isn't guarded — see updateProductStatus's publish guard
 // comment) and therefore has nothing to show.
+// Issue #189/M10.1 (FR-INV-007) — a simple 2-state buyer availability,
+// reinstated after #102 removed it system-wide. Never exposes any
+// warehouse-level detail.
+export type PublicAvailability = "in_stock" | "out_of_stock";
+
 export type PublicProductListItem = {
   _id: Types.ObjectId;
   name: string;
@@ -475,6 +493,9 @@ export type PublicProductListItem = {
   defaultVariantId?: Types.ObjectId;
   isFeatured: boolean;
   cardSpecifications: PublicCardSpecification[];
+  // Best state across every active variant's summed stock (FR-INV-007).
+  // Absent on the same zero-active-variant edge case the price fields are.
+  availability?: PublicAvailability;
 };
 
 export type PublicProductVariant = {
@@ -486,6 +507,18 @@ export type PublicProductVariant = {
   discount: number;
   sellingPrice: number;
   weight?: number;
+  // This variant's own summed stock across every warehouse (FR-INV-007) —
+  // never the raw quantity, just the 2-state enum.
+  availability: PublicAvailability;
+};
+
+// toPublicVariant's own synchronous return shape omits `availability` — it
+// has no stock data to compute it from; attachVariantAvailability fills it
+// in afterward via a single batched lookup, mirroring attachCardSpecifications'
+// list-side shape.
+type PublicProductVariantDraft = Omit<PublicProductVariant, "availability">;
+type PublicProductDetailDraft = Omit<PublicProductDetail, "variants"> & {
+  variants: PublicProductVariantDraft[];
 };
 
 // sku/images are deliberately absent here — #102 removed both from the
@@ -530,6 +563,8 @@ export type PublicProductListParams = {
   variantAttribute?: VariantAttributeFilter | undefined;
   specFilters?: SpecFilter[] | undefined;
   sort?: PublicSort | undefined;
+  // Issue #189/M10.1 (FR-INV-007/008) — reinstated buyer stock filter.
+  inStockOnly?: boolean | undefined;
 };
 
 export type PublicCategoryProductListParams = Omit<PublicProductListParams, "q" | "categorySlug">;
@@ -581,10 +616,10 @@ function selectDefaultVariant(variants: ProductVariant[]): ProductVariant | unde
 }
 
 // #102: no parent-images fallback anymore — a variant's images are always
-// required (FR-CAT-083), and no availability field exists (stock/inventory
-// tracking is removed system-wide).
-function toPublicVariant(variant: ProductVariant): PublicProductVariant {
-  const publicVariant: PublicProductVariant = {
+// required (FR-CAT-083). Availability is attached afterward by
+// attachVariantAvailability, not computed here (see PublicProductVariantDraft).
+function toPublicVariant(variant: ProductVariant): PublicProductVariantDraft {
+  const publicVariant: PublicProductVariantDraft = {
     _id: variant._id,
     sku: variant.sku,
     attributes: variant.attributes,
@@ -684,18 +719,59 @@ async function attachCardSpecifications(
   });
 }
 
+// Issue #189/M10.1 (FR-INV-007) — one batched stock lookup per result page,
+// same shape as attachCardSpecifications above. A product's availability is
+// the best state across every *active* variant's summed stock; absent
+// entirely (never defaulted) on the zero-active-variant edge case, matching
+// how the price fields already behave.
+async function attachAvailability(
+  items: PublicProductListItem[],
+  docs: PublicProductDoc[],
+): Promise<PublicProductListItem[]> {
+  const variantIds = docs.flatMap((doc) =>
+    doc.variants.filter((variant) => variant.active).map((variant) => variant._id),
+  );
+  if (variantIds.length === 0) return items;
+
+  const stockByVariant = await sumStockByVariantIds(variantIds);
+
+  return items.map((item, index) => {
+    const doc = docs[index]!;
+    const activeVariants = doc.variants.filter((variant) => variant.active);
+    if (activeVariants.length === 0) return item;
+    const inStock = activeVariants.some(
+      (variant) => (stockByVariant.get(variant._id.toString()) ?? 0) > 0,
+    );
+    return { ...item, availability: inStock ? "in_stock" : "out_of_stock" };
+  });
+}
+
+// Issue #189/M10.1 (FR-INV-007) — the detail page's per-variant equivalent:
+// each variant's own summed stock, not a rolled-up best-of-everything value.
+async function attachVariantAvailability(
+  detail: PublicProductDetailDraft,
+): Promise<PublicProductDetail> {
+  const variantIds = detail.variants.map((variant) => variant._id);
+  const stockByVariant = await sumStockByVariantIds(variantIds);
+  const variants: PublicProductVariant[] = detail.variants.map((variant) => ({
+    ...variant,
+    availability: (stockByVariant.get(variant._id.toString()) ?? 0) > 0 ? "in_stock" : "out_of_stock",
+  }));
+  return { ...detail, variants };
+}
+
 // #102: the product has no sku/images/mrp/discount/sellingPrice of its own
 // — the detail page's initially-displayed price comes from the default
 // variant (FR-CAT-064), and there's no parent gallery to fall back to
 // (buyer-app reads the selected/default variant's own images via
 // variants[]). Price fields and defaultVariantId stay absent on the one
 // documented edge case where a published product has no active variant.
-function toPublicDetail(product: PublicProductDoc): PublicProductDetail {
+function toPublicDetail(product: PublicProductDoc): PublicProductDetailDraft {
   const defaultVariant = selectDefaultVariant(product.variants);
   const activeVariants = product.variants.filter((variant) => variant.active);
   const { metaTitle, metaDescription } = resolveMeta(product);
 
-  const detail: PublicProductDetail = {
+  const detail: PublicProductDetailDraft = {
     _id: product._id,
     name: product.name,
     slug: product.slug,
@@ -776,6 +852,7 @@ async function listPublicProductsCore(
   if (params.maxPrice !== undefined) filter.maxPrice = params.maxPrice;
   if (params.onSaleOnly) filter.onSaleOnly = true;
   if (params.variantAttribute) filter.variantAttribute = params.variantAttribute;
+  if (params.inStockOnly) filter.inStockVariantIds = await listVariantIdsWithStock();
 
   const specFilters = await resolveSpecFilters(categoryId, params.specFilters);
   if (specFilters) filter.specFilters = specFilters;
@@ -798,7 +875,8 @@ async function listPublicProductsCore(
     ? await searchPublicPaginated(params.q, filter, sort, page)
     : await listPublicPaginated(filter, sort, page);
 
-  const listItems = await attachCardSpecifications(items.map(toPublicListItem), items);
+  const withCardSpecs = await attachCardSpecifications(items.map(toPublicListItem), items);
+  const listItems = await attachAvailability(withCardSpecs, items);
 
   return { items: listItems, pagination: buildPagination(params.page, params.limit, total) };
 }
@@ -829,5 +907,5 @@ export async function listPublicProductsByCategorySlug(
 export async function getPublicProductBySlug(slug: string): Promise<PublicProductDetail> {
   const product = await findPublishedBySlug(slug);
   if (!product) throw notFoundBySlug(slug);
-  return toPublicDetail(product);
+  return attachVariantAvailability(toPublicDetail(product));
 }

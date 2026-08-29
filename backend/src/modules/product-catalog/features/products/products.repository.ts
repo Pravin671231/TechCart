@@ -62,6 +62,29 @@ export async function findByVariantIds(variantIds: Types.ObjectId[]): Promise<Pr
   return Product.find({ "variants._id": { $in: variantIds } }).lean();
 }
 
+// Issue #189/M10.1 — batch product lookup for the admin inventory table's
+// enrichment step (product name + variant sku), mirroring findByVariantIds'
+// shape but keyed by the product's own _id rather than a variant's.
+export async function findByIds(ids: Types.ObjectId[]): Promise<ProductRecord[]> {
+  if (ids.length === 0) return [];
+  return Product.find({ _id: { $in: ids } }).lean();
+}
+
+// Issue #189/M10.1 (FR-INV-002) — a brand-new warehouse needs a stock:0 row
+// for every existing variant across every product, not just future ones.
+// Kept here (not queried directly from inventory.service.ts) to match this
+// codebase's established peer service->repository cross-module convention
+// (brands.service.ts importing countByBrand, cart.service.ts importing
+// findByVariantId/findByVariantIds).
+export async function listAllVariantRefs(): Promise<
+  { productId: Types.ObjectId; variantId: Types.ObjectId }[]
+> {
+  const products = await Product.find({}, { "variants._id": 1 }).lean();
+  return products.flatMap((product) =>
+    product.variants.map((variant) => ({ productId: product._id, variantId: variant._id })),
+  );
+}
+
 // Buyer-facing detail/list responses need the brand's/category's own name
 // and slug, not just the raw ref id — the first use of Mongoose `.populate()`
 // in this codebase (every admin read so far has been happy with the raw ref).
@@ -104,6 +127,10 @@ export type PublicProductFilter = {
   onSaleOnly?: boolean;
   variantAttribute?: VariantAttributeFilter;
   specFilters?: SpecFilter[];
+  // Issue #189/M10.1 (FR-INV-007/008) — every variant id with summed stock >
+  // 0, resolved by the service layer (inventory.service.ts's
+  // listVariantIdsWithStock) before this filter object is built.
+  inStockVariantIds?: Types.ObjectId[];
 };
 
 export type PublicSort = "relevance" | "price_asc" | "price_desc" | "newest";
@@ -115,7 +142,12 @@ export type PublicSort = "relevance" | "price_asc" | "price_desc" | "newest";
 // variant matches on-sale." Returns undefined when neither is requested, so
 // callers can skip adding a `variants` key to the query at all.
 function buildVariantElemMatch(filter: PublicProductFilter): Record<string, unknown> | undefined {
-  if (filter.minPrice === undefined && filter.maxPrice === undefined && !filter.onSaleOnly) {
+  if (
+    filter.minPrice === undefined &&
+    filter.maxPrice === undefined &&
+    !filter.onSaleOnly &&
+    filter.inStockVariantIds === undefined
+  ) {
     return undefined;
   }
   const elemMatch: Record<string, unknown> = { active: true };
@@ -126,6 +158,10 @@ function buildVariantElemMatch(filter: PublicProductFilter): Record<string, unkn
     elemMatch.sellingPrice = range;
   }
   if (filter.onSaleOnly) elemMatch.discount = { $gt: 0 };
+  // FR-CAT-076-style composition: a single variant must satisfy price/on-sale
+  // AND be in-stock together, not "some variant is in-stock, some other
+  // variant matches price."
+  if (filter.inStockVariantIds !== undefined) elemMatch._id = { $in: filter.inStockVariantIds };
   return elemMatch;
 }
 

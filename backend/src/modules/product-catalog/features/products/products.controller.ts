@@ -257,6 +257,8 @@ const publicFilterFieldsSchema = z.object({
   minPrice: z.coerce.number().int().min(0).optional(),
   maxPrice: z.coerce.number().int().min(0).optional(),
   onSale: z.enum(["true"]).optional(),
+  // Issue #189/M10.1 (FR-INV-007/008) — reinstated buyer stock filter.
+  inStock: z.enum(["true"]).optional(),
   // FR-CAT-071: a single name/value pair (the SRS's own wording is
   // singular, "a variant attribute name and value") — both or neither, not
   // one alone, enforced by the .refine() below rather than making one
@@ -348,6 +350,7 @@ export async function listPublicProductsHandler(req: Request, res: Response): Pr
     minPrice: query.minPrice,
     maxPrice: query.maxPrice,
     onSaleOnly: query.onSale === "true",
+    inStockOnly: query.inStock === "true",
     variantAttribute: parseVariantAttribute(query.attributeName, query.attributeValue),
     specFilters: parseSpecFilters(query.spec),
     sort: query.sort,
@@ -378,6 +381,7 @@ export async function listProductsByCategorySlugHandler(
     minPrice: query.minPrice,
     maxPrice: query.maxPrice,
     onSaleOnly: query.onSale === "true",
+    inStockOnly: query.inStock === "true",
     variantAttribute: parseVariantAttribute(query.attributeName, query.attributeValue),
     specFilters: parseSpecFilters(query.spec),
     sort: query.sort,
