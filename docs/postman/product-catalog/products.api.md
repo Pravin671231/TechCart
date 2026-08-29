@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the Product core CRUD, pricing, and variant endpoints in Postman.
 
-**Scope:** this document covers what's implemented as of Issue #31 (M2.7 — Product core CRUD and pricing, `FR-CAT-001`–`013`, `FR-CAT-085`–`087`), Issue #32 (M2.8 — Product variants, `FR-CAT-039`–`044`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-045`, `048`–`049` for this entity), Issue #34 (M2.10 — Admin search, `FR-CAT-050`, `053` for this entity), Issue #35 (M2.11 — Buyer browsing, search & inventory visibility, `FR-CAT-054`–`067`, `095`–`096`), Issue #36 (M2.12 — Buyer filtering, sorting & card content, `FR-CAT-068`–`076`, `091`–`092`), and Issue #102 (SRS v0.2 amendment — variant-only pricing, stock/inventory tracking removed system-wide): the four product-level admin CRUD endpoints under `/api/admin/products` (create/update/get/list — there is no product-level stock-update path anymore), the status-transition path, the two embedded-variant endpoints, `search`/`status` filtering on the admin list, and the two buyer-facing endpoints — `GET /api/products` (paginated, `published`-only, filterable, sortable, optional Atlas Search `?q=`) and `GET /api/products/:slug` (detail). `GET /api/products?q=` and its variant-attribute/specification filters all depend on a MongoDB Atlas Search index this repo cannot provision for you — see [`../../backend/atlas-search/README.md`](../../backend/atlas-search/README.md) before testing those specifically; every other query on this endpoint (category/brand/price/on-sale/sort) needs no Atlas cluster at all. See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup; see [`brands.api.md`](./brands.api.md) and [`categories.api.md`](./categories.api.md) for the two entities every product references (including categories.api.md's own `GET /api/categories/:slug/products`, which lists *this* module's data and shares this endpoint's filter/sort surface); see [`categorySpecifications.api.md`](./categorySpecifications.api.md) for the schema a product's `specifications` — and the `filterable` flag driving both the specification filter and `cardSpecifications` below — are validated against. This doc assumes collection setup is already done and reuses the same collection.
+**Scope:** this document covers what's implemented as of Issue #31 (M2.7 — Product core CRUD and pricing, `FR-CAT-001`–`013`, `FR-CAT-085`–`087`), Issue #32 (M2.8 — Product variants, `FR-CAT-039`–`044`), Issue #33 (M2.9 — Status update APIs, `FR-CAT-045`, `048`–`049` for this entity), Issue #34 (M2.10 — Admin search, `FR-CAT-050`, `053` for this entity), Issue #35 (M2.11 — Buyer browsing, search & inventory visibility, `FR-CAT-054`–`067`, `095`–`096`), Issue #36 (M2.12 — Buyer filtering, sorting & card content, `FR-CAT-068`–`076`, `091`–`092`), and Issue #102 (SRS v0.2 amendment — variant-only pricing, stock/inventory tracking removed system-wide): the four product-level admin CRUD endpoints under `/api/admin/products` (create/update/get/list — there is no product-level stock-update path anymore), the status-transition path, the two embedded-variant endpoints, `search`/`status` filtering on the admin list, and the two buyer-facing endpoints — `GET /api/products` (paginated, `published`-only, filterable, sortable, keyword `?q=`) and `GET /api/products/:slug` (detail). _(Issue #322: a standalone `?q=` keyword search is a plain MongoDB regex over `name`/`description` and works against any MongoDB. Only the variant-attribute/specification filters — and `?q=` combined with one of them — need a MongoDB **Atlas** cluster plus a one-time `npm run search:ensure --workspace backend` to build the `products_search` index; run against anything else they return `503 SEARCH_UNAVAILABLE`. See [Testing the Atlas Search filters](#testing-the-atlas-search-filters) below.)_ Every other query on this endpoint (category/brand/price/on-sale/sort) needs no Atlas cluster at all. See [`uploads.api.md`](./uploads.api.md) for `GET /health`, the R2 upload endpoints, and the one-time Postman collection setup; see [`brands.api.md`](./brands.api.md) and [`categories.api.md`](./categories.api.md) for the two entities every product references (including categories.api.md's own `GET /api/categories/:slug/products`, which lists *this* module's data and shares this endpoint's filter/sort surface); see [`categorySpecifications.api.md`](./categorySpecifications.api.md) for the schema a product's `specifications` — and the `filterable` flag driving both the specification filter and `cardSpecifications` below — are validated against. This doc assumes collection setup is already done and reuses the same collection.
 
 **Issue #102 in one paragraph:** a product itself now carries no `sku`, `images`, `mrp`, `discount`, `sellingPrice`, or stock of any kind — it is pure metadata (name/description/brand/category/specifications/SEO/`isFeatured`). Every sellable, priced, imaged unit is a variant, and a product needs at least one **active** variant before it can be published. Stock/inventory tracking (and the derived buyer-facing `availability` field) is removed from this system entirely, not moved to the variant — every catalog entry is treated as always orderable from a catalog standpoint.
 
@@ -655,7 +655,7 @@ No headers required, no body.
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------- |
 | `page`                                    | integer ≥ 1                                                                                                           | `1`       |
 | `limit`                                   | integer ≥ 1 — a value over `48` is **clamped** to `48`, not rejected                                                  | `24`      |
-| `q`                                       | keyword search over `name`/`description` via MongoDB Atlas Search, fuzzy-matched (`FR-CAT-065`)                       | omitted   |
+| `q`                                       | keyword search over `name`/`description`, case-insensitive partial match — a plain MongoDB regex (`FR-CAT-065`, amended Issue #322); uses Atlas Search fuzzy matching only when combined with an `attribute`/`spec` filter | omitted   |
 | `category`                                | a category **slug** — scopes the listing to that category plus its active subcategories (`FR-CAT-070`)                | omitted   |
 | `brand`                                   | one or more brand ids — repeat the param (`?brand=a&brand=b`) or comma-join (`?brand=a,b`) (`FR-CAT-069`)             | omitted   |
 | `minPrice`                                | integer paise, inclusive — matches a product with at least one active variant's `sellingPrice` in range (`FR-CAT-068`) | omitted   |
@@ -669,7 +669,7 @@ No headers required, no body.
 
 _Amended, Issue #102: `inStock` is gone — there is no stock concept, so no in-stock filter exists._
 
-`sort`'s default: `relevance` when `q` is present, `newest` otherwise. `attributeName`/`attributeValue` and any `spec[...]` filter route the query through Atlas Search even with no `q` at all — see the scope note above. `minPrice`/`maxPrice`/`onSale` are plain-query filters and work with no Atlas cluster, same as before.
+`sort`'s default: `relevance` when `q` is present, `newest` otherwise. A standalone `q` runs as a plain regex and works with no Atlas cluster (Issue #322 — the `relevance` sort degrades to `newest`, since a regex has no score). `attributeName`/`attributeValue` and any `spec[...]` filter route the query through the `products_search` Atlas Search index even with no `q` at all — and a `q` combined with one of those also goes through Atlas. That index needs an Atlas cluster and `npm run search:ensure` (a one-time build) — otherwise these requests return `503 SEARCH_UNAVAILABLE`; see [Testing the Atlas Search filters](#testing-the-atlas-search-filters) below. `minPrice`/`maxPrice`/`onSale` are plain-query filters and work with no Atlas cluster, same as before.
 
 **Click Send. Try:** `{{base_url}}/api/products?category=smartphones&minPrice=20000&maxPrice=100000&sort=price_asc`
 
@@ -743,6 +743,134 @@ _Amended, Issue #102: `inStock` is gone — there is no stock concept, so no in-
 ```
 
 Same code for a shape mismatch — e.g. `spec[RAM]=8GB` against a field whose type is actually `number` (which only accepts `spec[RAM][min]`/`[max]`), or a range filter against an `enum`/`boolean` field.
+
+---
+
+## Testing the Atlas Search filters
+
+The `?attributeName=`/`?attributeValue=` (variant-attribute) and `?spec[...]=` (filterable-specification) filters on `GET /api/products` — and any `?q=` sent **together with** one of them — run a MongoDB `$search` aggregation against an Atlas Search index named `products_search`. `$search` only exists on **MongoDB Atlas** (a free M0 cluster is enough), never on community / self-hosted MongoDB, and the index must be built once with a script. Every other query on this endpoint (`category`/`brand`/`minPrice`/`maxPrice`/`onSale`/`sort`, and a standalone `?q=`) is a plain MongoDB query and needs none of this.
+
+See [`../../backend/atlas-search/README.md`](../../backend/atlas-search/README.md) for the index internals; this section is just the hands-on test flow.
+
+### One-time setup
+
+1. **Point `MONGODB_URI` at an Atlas cluster.** Create a free M0 at [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas), add your IP to its Network Access list, create a database user, and copy the `mongodb+srv://…` connection string. Put it in `backend/.env`:
+
+   ```
+   MONGODB_URI=mongodb+srv://<user>:<pw>@<cluster>.mongodb.net/techcart-local
+   ```
+
+2. **Seed catalog data:** `npm run seed --workspace backend`. This gives you published products whose variants carry `Color` (`Black`/`Silver`/`Blue`) and `Storage`/`Configuration` attributes — enough for Test A. It does **not** populate per-product `specifications`, so Tests B and C need a product you create by hand (noted there).
+
+3. **Build the index:** `npm run search:ensure --workspace backend`. It logs `building…` lines and then `Atlas Search index "products_search" is queryable.` Idempotent — safe to re-run any time (it no-ops when the index already exists). Optional smoke check: `npm run search:verify --workspace backend` prints how many products the index has picked up.
+
+4. **Restart the API** (`npm run dev --workspace backend`) if it was already running against the old `MONGODB_URI`.
+
+5. **Give `mongot` a moment.** After you create or publish a product, allow ~10–30 seconds before it shows up in `$search` results — the search index catches up asynchronously, slightly behind the main collection.
+
+### Test A — variant-attribute filter
+
+| Field  | Value                                                                   |
+| ------ | ---------------------------------------------------------------------- |
+| Method | `GET`                                                                 |
+| URL    | `{{base_url}}/api/products?attributeName=Color&attributeValue=Black`   |
+| Name   | `Buyer — Filter by variant attribute`                                 |
+
+No headers, no body. `attributeName` and `attributeValue` **must** be sent together (sending one alone is a `400 VALIDATION_ERROR` — see `GET /api/products` error cases above).
+
+**Click Send. Expected response — `200 OK`:** the same list-item shape as `GET /api/products`, narrowed to products that have an **active** variant whose attribute set includes `Color = Black`:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "66a1f0c9e4b0a1a2b3c4d5e6",
+      "name": "Nova Phone X1",
+      "slug": "nova-phone-x1",
+      "brand": { "_id": "66a1f0c9e4b0a1a2b3c4d5e1", "name": "Nova", "slug": "nova" },
+      "primaryImage": { "url": "https://cdn.example.com/product-image/a.webp" },
+      "mrp": 104900,
+      "discount": 10,
+      "sellingPrice": 94410,
+      "isFeatured": false,
+      "cardSpecifications": []
+    }
+  ],
+  "pagination": { "page": 1, "limit": 24, "total": 1, "totalPages": 1, "hasNextPage": false }
+}
+```
+
+- The match is **per array element** — a product only matches if a *single* variant carries `Color = Black`, not if one variant is `Color` and a different one is `Black`.
+- Only active variants count. A product whose only `Black` variant is deactivated does not match.
+- No match → a normal `200` with `data: []`, never a `404`.
+- Compose it with anything: `?attributeName=Color&attributeValue=Black&minPrice=20000&sort=price_asc`.
+
+### Test B — filterable-specification value filter
+
+Needs a product carrying a specification value, which the seed doesn't create. Set it up once:
+
+1. **Define a filterable field on a category** — `PUT /api/admin/categories/:id/specifications` (see [`categorySpecifications.api.md`](./categorySpecifications.api.md)) with a group containing e.g. `{ "name": "RAM", "type": "enum", "options": ["8GB", "12GB", "16GB"], "filterable": true }`. Note the category's **slug**.
+2. **Create a product in that category** carrying the value — `POST /api/admin/products` (above) with:
+   ```json
+   "specifications": [
+     { "groupName": "Technical", "values": [ { "name": "RAM", "value": "8GB" } ] }
+   ]
+   ```
+3. **Add an active variant** — `POST /api/admin/products/:id/variants` (above).
+4. **Publish it** — `PATCH /api/admin/products/:id/status` with `{ "status": "published" }`.
+5. Wait ~10–30 s for the index to catch up.
+
+| Field  | Value                                                            |
+| ------ | -------------------------------------------------------------- |
+| Method | `GET`                                                          |
+| URL    | `{{base_url}}/api/products?category=<your-category-slug>&spec[RAM]=8GB` |
+| Name   | `Buyer — Filter by specification value`                       |
+
+**Click Send. Expected response — `200 OK`:** the list narrowed to products in that category whose `specifications` include `RAM = 8GB`, same list-item shape as above.
+
+- `spec[<name>]` is a bracket-notation query param — Postman's Params tab: key `spec[RAM]`, value `8GB`.
+- Sending `spec[...]` **without** `category` skips the "is this field filterable?" check and matches the name/value literally (still only ever narrows results). With `category`, an unknown or non-`filterable` field name is a `400 INVALID_SPECIFICATION_FILTER` (see `GET /api/products` error cases).
+
+### Test C — specification numeric range
+
+Same setup as Test B, but define the field as `{ "name": "ScreenSize", "type": "number", "filterable": true }` and store a numeric value (`{ "name": "ScreenSize", "value": 6.1 }`).
+
+| Field  | Value                                                                                   |
+| ------ | ------------------------------------------------------------------------------------- |
+| Method | `GET`                                                                                |
+| URL    | `{{base_url}}/api/products?category=<slug>&spec[ScreenSize][min]=6&spec[ScreenSize][max]=6.5` |
+| Name   | `Buyer — Filter by specification range`                                              |
+
+Params tab: `spec[ScreenSize][min]` = `6`, `spec[ScreenSize][max]` = `6.5`. Either bound alone is valid. Returns products whose stored `ScreenSize` falls in `[6, 6.5]`.
+
+### Test D — keyword + facet combined
+
+| Field  | Value                                                                     |
+| ------ | ---------------------------------------------------------------------- |
+| Method | `GET`                                                                 |
+| URL    | `{{base_url}}/api/products?q=nva&attributeName=Color&attributeValue=Black` |
+| Name   | `Buyer — Keyword + attribute filter`                                  |
+
+When `?q=` is combined with a facet filter it goes through Atlas Search's `text` operator with **fuzzy** matching — so `q=nva` still matches "Nova". A standalone `?q=nova` (no facet filter) uses the plain regex path instead and needs no Atlas cluster.
+
+### Error case — `503 SEARCH_UNAVAILABLE`
+
+Run any of Tests A–D against a `MONGODB_URI` that isn't an Atlas cluster, or against Atlas before `npm run search:ensure` has built the index:
+
+```
+503 Service Unavailable
+```
+
+```json
+{
+  "success": false,
+  "code": "SEARCH_UNAVAILABLE",
+  "message": "Product search is temporarily unavailable — the Atlas Search index is not provisioned. Run `npm run search:ensure`."
+}
+```
+
+This is `products.repository.ts`'s guard turning a raw `$search` aggregation failure into a clean, diagnosable response. The fix is always the same: point `MONGODB_URI` at Atlas and run `npm run search:ensure --workspace backend`.
 
 ---
 
@@ -850,6 +978,7 @@ Product-specific codes, in addition to the ones already documented in [`uploads.
 | `PRODUCT_HAS_NO_VARIANTS`         | 400    | `products.service.ts`'s `updateProductStatus()` — `PATCH .../status` to `"published"` on a product with zero active variants (Issue #102)                                                                 | Yes                                                                       |
 | `INVALID_SLUG`                    | 400    | `src/utils/routeParams.ts`'s `parseSlugParam()` — the `:slug` segment is empty/malformed                                                                                                                  | Yes                                                                       |
 | `INVALID_SPECIFICATION_FILTER`    | 400    | `products.service.ts`'s `resolveSpecFilters()` — a `spec[...]` query filter names a field that isn't filterable for the resolved category, or uses the wrong shape (value vs. range) for the field's type | Yes — only checked when `category`/the nested route resolves one category |
+| `SEARCH_UNAVAILABLE`              | 503    | `products.repository.ts`'s `searchPublicPaginated()` — a `$search` aggregation failed because `MONGODB_URI` isn't a MongoDB Atlas cluster, or the `products_search` index hasn't been built yet (`npm run search:ensure`)                | Yes — `GET /api/products` with an `attributeName`/`spec[...]` filter, or `?q=` combined with one |
 
 ---
 
@@ -862,5 +991,7 @@ Same `errors`-object shape as [`uploads.api.md`](./uploads.api.md#understanding-
 ## What's Not Here Yet
 
 This document is a snapshot of Issues #31, #32, #33 (status endpoint), #34 (`search`/`status` filtering), #35 (buyer browsing), #36 (buyer filtering/sorting/card content), and #102 (SRS v0.2 amendment — variant-only pricing, folded into this same doc) — this is the full Product Catalog API (M2 + the #102 amendment) for this entity.
+
+The Atlas Search provisioning work (the `products_search` index, `npm run search:ensure` / `npm run search:verify`, and the `SEARCH_UNAVAILABLE` guard — see [Testing the Atlas Search filters](#testing-the-atlas-search-filters)) adds no new endpoint; it makes the already-documented `attributeName`/`spec[...]` filters on `GET /api/products` actually usable. `buyer-app` still sends none of those params — the filter-rail UI that would is a separate frontend task.
 
 Admin authentication is real session + RBAC — send `Authorization: Bearer <token>` from an admin sign-in (`src/middleware/rbac.ts`), see [`../authentication/auth.api.md`](../authentication/auth.api.md). The former `X-Admin-Key` placeholder was removed by Issue #143/M3.5.

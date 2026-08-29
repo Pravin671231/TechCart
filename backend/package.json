@@ -11,6 +11,8 @@
     "seed:upsert": "tsx src/scripts/seed/upsert.ts",
     "seed:super-admin": "tsx src/scripts/seed/superAdmin.ts",
     "seed:users": "tsx src/scripts/seed/seedUsers.ts",
+    "search:ensure": "tsx src/scripts/searchIndexes/ensureSearchIndexes.ts",
+    "search:verify": "tsx src/scripts/searchIndexes/verifySearchIndexes.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

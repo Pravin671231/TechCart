@@ -42,6 +42,12 @@ jobs:
           path: ~/.cache/mongodb-binaries
           key: mongodb-binaries-${{ runner.os }}
       - run: npm run test --workspace ${{ matrix.workspace }}
+        env:
+          # Points the backend leg's search.integration.test.ts at a dedicated
+          # free Atlas M0 (repo secret). Absent (fork PRs, or before the secret
+          # is configured) → that suite self-skips; every other suite is
+          # unaffected. buyer-app/admin-app legs ignore it.
+          ATLAS_SEARCH_TEST_URI: ${{ secrets.ATLAS_SEARCH_TEST_URI }}
 
   build:
     runs-on: ubuntu-latest

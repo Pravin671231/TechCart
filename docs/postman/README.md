@@ -25,14 +25,14 @@ Two standing rules for this folder, in effect from Issue #224 onward:
 
 Do [`authentication/auth.api.md`](./authentication/auth.api.md)'s admin sign-in first — every `/api/admin/*` request below needs the `admin_access_token` it produces. Then, since a product can't exist without a brand and a category, work through these roughly in order the first time:
 
-| #   | File                                                                               | Covers                                                                                                     | Issues                             |
-| --- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| 1   | [`uploads.api.md`](./product-catalog/uploads.api.md)                               | Health check, collection setup, R2 presigned/direct image uploads                                          | #25, #26                           |
-| 2   | [`brands.api.md`](./product-catalog/brands.api.md)                                 | Brand CRUD, status toggle, admin search, public list                                                       | #27, #33, #34                      |
-| 3   | [`categories.api.md`](./product-catalog/categories.api.md)                         | Category CRUD + hierarchy, status toggle, admin search, public list/search, buyer category-product listing | #28, #33, #34, #35, #36            |
-| 4   | [`categorySpecifications.api.md`](./product-catalog/categorySpecifications.api.md) | Per-category specification schema (define/update/delete fields & groups)                                   | #29                                |
-| 5   | [`categoryVariants.api.md`](./product-catalog/categoryVariants.api.md)             | Per-category variant axes (e.g. Color, Size) that drive the admin variant editor                           | #30                                |
-| 6   | [`products.api.md`](./product-catalog/products.api.md)                             | Product CRUD, embedded variant pricing, status transitions, admin search, buyer browsing/filtering/sorting | #31, #32, #33, #34, #35, #36, #102 |
+| #   | File                                                                               | Covers                                                                                                                                       | Issues                             |
+| --- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| 1   | [`uploads.api.md`](./product-catalog/uploads.api.md)                               | Health check, collection setup, R2 presigned/direct image uploads                                                                            | #25, #26                           |
+| 2   | [`brands.api.md`](./product-catalog/brands.api.md)                                 | Brand CRUD, status toggle, admin search, public list                                                                                         | #27, #33, #34                      |
+| 3   | [`categories.api.md`](./product-catalog/categories.api.md)                         | Category CRUD + hierarchy, status toggle, admin search, public list/search, buyer category-product listing                                   | #28, #33, #34, #35, #36            |
+| 4   | [`categorySpecifications.api.md`](./product-catalog/categorySpecifications.api.md) | Per-category specification schema (define/update/delete fields & groups)                                                                     | #29                                |
+| 5   | [`categoryVariants.api.md`](./product-catalog/categoryVariants.api.md)             | Per-category variant axes (e.g. Color, Size) that drive the admin variant editor                                                             | #30                                |
+| 6   | [`products.api.md`](./product-catalog/products.api.md)                             | Product CRUD, embedded variant pricing, status transitions, admin search, buyer browsing/filtering/sorting, Atlas Search filter provisioning | #31, #32, #33, #34, #35, #36, #102 |
 
 `categories.api.md` also carries two short pointer tables ("Related Endpoints — Specifications" / "— Variant Types") that just link out to files 4 and 5 above — their real documentation lives there, not in `categories.api.md` itself.
 
@@ -109,7 +109,7 @@ Same shape as specifications above — no public/status/search surface.
 | GET    | `/api/products`                               | public | [→](./product-catalog/products.api.md#get-apiproducts)                           |
 | GET    | `/api/products/:slug`                         | public | [→](./product-catalog/products.api.md#get-apiproductsslug)                       |
 
-`GET /api/products?q=` and its variant-attribute/specification filters depend on a MongoDB Atlas Search index this repo can't provision for you locally — see [`../../backend/atlas-search/README.md`](../../backend/atlas-search/README.md) before testing those specifically.
+`GET /api/products`'s variant-attribute (`?attributeName=`) and filterable-specification (`?spec[...]=`) filters need a MongoDB Atlas cluster (a free M0) plus a one-time `npm run search:ensure --workspace backend` to build the `products_search` index — [`products.api.md` → Testing the Atlas Search filters](./product-catalog/products.api.md#testing-the-atlas-search-filters) is the step-by-step. A standalone `?q=` keyword search needs none of that (plain regex, Issue #322). Index internals: [`../../backend/atlas-search/README.md`](../../backend/atlas-search/README.md).
 
 ---
 

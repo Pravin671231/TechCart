@@ -45,6 +45,7 @@ import {
   findPublishedBySlug,
   listPublicPaginated,
   searchPublicPaginated,
+  searchPublicByRegex,
   type ProductRecord,
   type CreateProductDoc,
   type UpdateProductDoc,
@@ -864,16 +865,24 @@ async function listPublicProductsCore(
   const sort: PublicSort = params.sort ?? (params.q ? "relevance" : "newest");
   const page = { page: params.page, limit: params.limit };
 
-  // FR-CAT-071/072: a variant-attribute or specification filter forces the
-  // Atlas Search path even with no keyword query at all, since
-  // embeddedDocument filtering has no plain-query equivalent here. FR-CAT-058:
-  // an empty result is a normal empty page either way, never an error.
+  // Issue #322: routing between the three listing paths.
+  // - A variant-attribute or filterable-spec filter has no plain-query
+  //   equivalent (Atlas embeddedDocument operators), so it forces the Atlas
+  //   `$search` path — which carries the keyword too when both are present.
+  // - A plain keyword search (no such filter) runs as a case-insensitive
+  //   name/description regex, so buyer search works with or without an Atlas
+  //   Search index provisioned (searchPublicPaginated's `$search` stage
+  //   errors outright where the index is missing).
+  // - No keyword at all → the plain listing.
+  // FR-CAT-058: an empty result is a normal empty page in every path.
   const needsAtlasSearch = Boolean(
-    params.q || filter.variantAttribute || (filter.specFilters?.length ?? 0) > 0,
+    filter.variantAttribute || (filter.specFilters?.length ?? 0) > 0,
   );
   const { items, total } = needsAtlasSearch
     ? await searchPublicPaginated(params.q, filter, sort, page)
-    : await listPublicPaginated(filter, sort, page);
+    : params.q
+      ? await searchPublicByRegex(params.q, filter, sort, page)
+      : await listPublicPaginated(filter, sort, page);
 
   const withCardSpecs = await attachCardSpecifications(items.map(toPublicListItem), items);
   const listItems = await attachAvailability(withCardSpecs, items);

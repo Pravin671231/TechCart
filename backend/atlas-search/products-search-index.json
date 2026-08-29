@@ -1,33 +1,34 @@
 {
   "name": "products_search",
-  "collectionName": "products",
-  "mappings": {
-    "dynamic": false,
-    "fields": {
-      "name": { "type": "string" },
-      "description": { "type": "string" },
-      "variants": {
-        "type": "embeddedDocuments",
-        "fields": {
-          "active": { "type": "boolean" },
-          "attributes": {
-            "type": "embeddedDocuments",
-            "fields": {
-              "name": { "type": "token" },
-              "value": { "type": "token" }
+  "definition": {
+    "mappings": {
+      "dynamic": false,
+      "fields": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "variants": {
+          "type": "embeddedDocuments",
+          "fields": {
+            "active": { "type": "boolean" },
+            "attributes": {
+              "type": "embeddedDocuments",
+              "fields": {
+                "name": { "type": "token" },
+                "value": { "type": "token" }
+              }
             }
           }
-        }
-      },
-      "specifications": {
-        "type": "embeddedDocuments",
-        "fields": {
-          "groupName": { "type": "token" },
-          "values": {
-            "type": "embeddedDocuments",
-            "fields": {
-              "name": { "type": "token" },
-              "value": [{ "type": "token" }, { "type": "number" }, { "type": "boolean" }]
+        },
+        "specifications": {
+          "type": "embeddedDocuments",
+          "fields": {
+            "groupName": { "type": "token" },
+            "values": {
+              "type": "embeddedDocuments",
+              "fields": {
+                "name": { "type": "token" },
+                "value": [{ "type": "token" }, { "type": "number" }, { "type": "boolean" }]
+              }
             }
           }
         }
