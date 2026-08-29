@@ -45,11 +45,18 @@ vi.mock(
   }),
 );
 
+vi.mock("@/modules/inventory/inventory.service", () => ({
+  ensureInventoryRowsForVariant: vi.fn(),
+  sumStockByVariantIds: vi.fn().mockResolvedValue(new Map()),
+  listVariantIdsWithStock: vi.fn().mockResolvedValue([]),
+}));
+
 import * as productsRepository from "../products.repository";
 import * as uploadsService from "@/modules/uploads/uploads.service";
 import * as brandsService from "@/modules/product-catalog/features/brands/brands.service";
 import * as categoriesService from "@/modules/product-catalog/features/categories/categories.service";
 import * as categorySpecificationsService from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service";
+import * as inventoryService from "@/modules/inventory/inventory.service";
 import {
   createProduct,
   updateProduct,
@@ -662,6 +669,8 @@ describe("addVariant", () => {
     });
     expect(added).not.toHaveProperty("stock");
     expect(added?._id).toBeDefined();
+    // Issue #189/M10.1 (FR-INV-002) — the new variant's id, not the product's.
+    expect(inventoryService.ensureInventoryRowsForVariant).toHaveBeenCalledWith(productId, added?._id);
   });
 
   // Issue #121: replaceVariants persists the whole array in one write, so a
