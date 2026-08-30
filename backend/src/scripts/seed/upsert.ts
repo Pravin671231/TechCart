@@ -189,9 +189,12 @@ export async function upsertProducts(
   return { created, updated };
 }
 
+// Assumes an open connection (Issue #330 — refactored so seed:all can share
+// one connection across every seed script, mirroring
+// searchIndexes/ensureSearchIndexes.ts's run*()-plus-CLI-wrapper split); the
+// CLI guard at the bottom owns connect/disconnect for the standalone
+// `npm run seed:upsert` entry point.
 export async function runUpsertSeed(): Promise<void> {
-  await connectDB();
-
   console.log("Upserting brands...");
   const brands = await upsertBrands(BRAND_NAMES);
 
@@ -225,13 +228,15 @@ export async function runUpsertSeed(): Promise<void> {
   console.log(`  Category specs:         created ${specCreated}, updated ${specUpdated}`);
   console.log(`  Category variant types: created ${variantCreated}, updated ${variantUpdated}`);
   console.log(`  Products:               created ${products.created}, updated ${products.updated}`);
-
-  await disconnectDB();
 }
 
 if (require.main === module) {
-  runUpsertSeed().catch((error: unknown) => {
-    console.error("Upsert seed failed:", error);
-    process.exit(1);
-  });
+  connectDB()
+    .then(runUpsertSeed)
+    .then(() => disconnectDB())
+    .then(() => process.exit(0))
+    .catch((error: unknown) => {
+      console.error("Upsert seed failed:", error);
+      process.exit(1);
+    });
 }

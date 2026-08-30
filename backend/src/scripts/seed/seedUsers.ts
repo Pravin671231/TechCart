@@ -8,9 +8,14 @@
 // credentials for a real deployment.
 //
 // Idempotent — safe to re-run repeatedly, matching upsert.ts's precedent
-// over run.ts's destructive full-reset one. Same connect-then-run-then-
-// disconnect shape as every other seed script.
-import mongoose from "mongoose";
+// over run.ts's destructive full-reset one.
+//
+// runSeedUsers() assumes an open connection (Issue #330 — refactored so
+// seed:all can share one connection across every seed script, mirroring
+// searchIndexes/ensureSearchIndexes.ts's run*()-plus-CLI-wrapper split); the
+// CLI guard at the bottom owns connect/disconnect for the standalone
+// `npm run seed:users` entry point.
+import mongoose, { Types } from "mongoose";
 import { connectDB, disconnectDB } from "@/config/db";
 import { provisionAdminUser, type AdminRole } from "./createAdminUser";
 
@@ -18,7 +23,9 @@ import { provisionAdminUser, type AdminRole } from "./createAdminUser";
 // so these are inserted directly against the `users` collection via the raw
 // MongoDB driver with the same base fields provisionAdminUser writes
 // (name/email/emailVerified/role/status/timestamps), minus passwordHash.
-const SAMPLE_BUYERS = [
+// Exported (Issue #330) so seed/orders.ts can resolve these same buyers by
+// email when run standalone, without needing seed:users in the same process.
+export const SAMPLE_BUYERS = [
   { name: "Asha Rao", email: "buyer1@example.com" },
   { name: "Rohan Mehta", email: "buyer2@example.com" },
   { name: "Priya Nair", email: "buyer3@example.com" },
@@ -42,6 +49,7 @@ const SAMPLE_ADMINS: { name: string; email: string; password: string; role: Admi
 ];
 
 async function upsertBuyer(buyer: { name: string; email: string }): Promise<{
+  id: Types.ObjectId;
   email: string;
   created: boolean;
 }> {
@@ -65,19 +73,28 @@ async function upsertBuyer(buyer: { name: string; email: string }): Promise<{
     { upsert: true },
   );
 
-  return { email: buyer.email, created: !existing };
+  // updateOne's own result carries no document back — one follow-up lookup
+  // gets the (possibly just-inserted) _id for the caller (Issue #330).
+  const stored = await usersCollection.findOne({ email: buyer.email });
+  return { id: stored!._id as Types.ObjectId, email: buyer.email, created: !existing };
 }
 
-export async function seedUsers(): Promise<void> {
-  await connectDB();
+export type SeedUsersResult = {
+  buyers: { id: Types.ObjectId; email: string }[];
+  admins: { id: Types.ObjectId; email: string; role: AdminRole }[];
+};
 
+export async function runSeedUsers(): Promise<SeedUsersResult> {
+  const buyers: SeedUsersResult["buyers"] = [];
   for (const buyer of SAMPLE_BUYERS) {
     const result = await upsertBuyer(buyer);
     console.log(
       result.created ? `Created buyer: ${result.email}` : `Buyer already existed: ${result.email}`,
     );
+    buyers.push({ id: result.id, email: result.email });
   }
 
+  const admins: SeedUsersResult["admins"] = [];
   for (const admin of SAMPLE_ADMINS) {
     const result = await provisionAdminUser(admin);
     console.log(
@@ -85,15 +102,18 @@ export async function seedUsers(): Promise<void> {
         ? `Created ${result.role}: ${result.email}`
         : `${result.role} already existed, role/2FA confirmed: ${result.email}`,
     );
+    admins.push({ id: result.id, email: result.email, role: result.role });
   }
 
-  await disconnectDB();
+  return { buyers, admins };
 }
 
 if (require.main === module) {
   // Explicit exit on success — defensive, in case any transitive import ever
   // keeps an open handle (e.g. a socket) after disconnectDB() resolves.
-  seedUsers()
+  connectDB()
+    .then(runSeedUsers)
+    .then(() => disconnectDB())
     .then(() => process.exit(0))
     .catch((error: unknown) => {
       console.error("seed:users failed:", error);
