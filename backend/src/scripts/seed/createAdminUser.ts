@@ -31,6 +31,7 @@ export interface ProvisionAdminUserInput {
 }
 
 export interface ProvisionAdminUserResult {
+  id: Types.ObjectId;
   email: string;
   role: AdminRole;
   created: boolean;
@@ -59,8 +60,9 @@ export async function provisionAdminUser(
   const passwordHash = await hashPassword(input.password);
 
   if (!existing) {
+    const id = new Types.ObjectId();
     await usersCollection.insertOne({
-      _id: new Types.ObjectId(),
+      _id: id,
       name: input.name,
       email: input.email,
       role: input.role,
@@ -71,7 +73,7 @@ export async function provisionAdminUser(
       createdAt: now,
       updatedAt: now,
     });
-    return { email: input.email, role: input.role, created: true };
+    return { id, email: input.email, role: input.role, created: true };
   }
 
   // Idempotent re-run (superAdmin.ts / seedUsers.ts run repeatedly). `status`
@@ -90,5 +92,5 @@ export async function provisionAdminUser(
     },
   );
 
-  return { email: input.email, role: input.role, created: false };
+  return { id: existing._id, email: input.email, role: input.role, created: false };
 }
