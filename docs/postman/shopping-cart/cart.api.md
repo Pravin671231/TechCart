@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing the buyer shopping cart in Postman.
 
-**Scope:** this document covers the cart module (SRS v0.4, `FR-CART-001`–`018` — Issues #150/#151): one persistent cart per authenticated buyer, variant-only line items, and live pricing/availability resolution on every read. Every endpoint is buyer-session-only (`rbac(["buyer"])`, `src/middleware/rbac.ts`); there is **no admin surface** — nobody manages another person's cart. No price or availability is ever stored on the cart: both are always re-derived from the referenced product variant at read time (`FR-CART-010`–`014`), so a catalog price change or a variant deactivation shows up on the next `GET /api/cart` with no cart-side write. See [`../../../backend/CLAUDE.md`](../../../backend/CLAUDE.md)'s Cart section for full implementation detail.
+**Scope:** this document covers the cart module (SRS v0.4, `FR-CART-001`–`018` — Issues #150/#151, plus SRS v0.10's warehouse-stock allocation, Issue #190/M10.2, `FR-INV-009`–`011`): one persistent cart per authenticated buyer, variant-only line items, live pricing/availability resolution on every read, and stock allocated from a specific warehouse behind the scenes on every add/increase. Every endpoint is buyer-session-only (`rbac(["buyer"])`, `src/middleware/rbac.ts`); there is **no admin surface** — nobody manages another person's cart. No price or availability is ever stored on the cart: both are always re-derived from the referenced product variant at read time (`FR-CART-010`–`014`), so a catalog price change or a variant deactivation shows up on the next `GET /api/cart` with no cart-side write. See [`../../../backend/CLAUDE.md`](../../../backend/CLAUDE.md)'s Cart and Inventory sections for full implementation detail.
 
 ---
 
@@ -81,6 +81,7 @@ After adding items (see `POST` below), the same call returns:
 - `subtotal` **excludes** `unavailable` lines (their `lineTotal` is `0`) — this is what checkout will actually charge. The two numbers deliberately tell different stories.
 - `primaryImage` is `null` when the variant has no image.
 - No `pagination` key ever appears on a cart response (`FR-CART-018`) — `data` is always one cart object.
+- **Warehouse allocation is entirely internal** (Issue #190/M10.2) — every cart line is silently pinned to whichever warehouse it was allocated from on add, but that warehouse is **never included in any cart JSON response** here, on `POST`, `PATCH`, or `DELETE` below. The only visible effect is the `409 INSUFFICIENT_STOCK` error case those endpoints can now return.
 
 ### Error cases
 
@@ -165,6 +166,21 @@ Content-Type: application/json
 
 **A `variantId` that isn't a valid ObjectId string:** `400 VALIDATION_ERROR`, keyed on `variantId`.
 
+**Not enough stock to cover the requested quantity** (Issue #190/M10.2, `FR-INV-009`): a brand-new line shops every **active** warehouse in creation order, looking for one whose stock alone covers the full requested quantity — it never splits one line across multiple warehouses:
+
+```
+409 Conflict
+```
+
+```json
+{ "success": false, "code": "INSUFFICIENT_STOCK", "message": "Only 2 unit(s) available for this item." }
+```
+
+- The message names the **largest single-warehouse quantity actually available** — `2` here means no one warehouse has more than 2, even if the sum across warehouses is higher.
+- When every warehouse is at `0`, the message is `"This item is currently out of stock."` instead of naming a count.
+- **No partial decrement happens on failure** — the warehouse's stock is left completely untouched when this error fires.
+- Adding to an **existing** line re-checks only that line's already-recorded warehouse (never re-shops others): `` `Only ${available} more unit(s) available for this item.` `` — same code, message phrased as "more" since it's on top of what's already reserved.
+
 ---
 
 ## `PATCH /api/cart/items/:variantId`
@@ -202,6 +218,18 @@ Sets a line's quantity to an exact value.
 ```
 
 **`quantity` above 10 or below 0:** `400 VALIDATION_ERROR`.
+
+**Increasing quantity beyond what's available at this line's already-recorded warehouse** (Issue #190/M10.2) — checked only against that one warehouse, never re-shopping others:
+
+```
+409 Conflict
+```
+
+```json
+{ "success": false, "code": "INSUFFICIENT_STOCK", "message": "Only 1 more unit(s) available for this item." }
+```
+
+A quantity **decrease** (including down to `0`, which removes the line) always succeeds — stock is simply restored back to the line's recorded warehouse, with no lower bound to hit.
 
 ---
 
@@ -267,6 +295,7 @@ Safe to call when the cart is already empty or was never created — still retur
 | `VARIANT_NOT_FOUND`     | 400    | `cart.service.ts` `addItem` — the `variantId` matches no product variant (`FR-CART-009`)        |
 | `QUANTITY_OUT_OF_RANGE` | 400    | `cart.service.ts` `addItem` — the combined line quantity would exceed the per-variant cap of 10 |
 | `CART_ITEM_NOT_FOUND`   | 404    | `cart.service.ts` `updateItem`/`removeItem` — the variant is not a line in this buyer's cart    |
+| `INSUFFICIENT_STOCK`    | 409    | `inventory.service.ts`'s `allocateNewLine`/`allocateAdditionalStock`, called from `cart.service.ts` `addItem`/`updateItem` — not enough warehouse stock to cover the requested/added quantity (Issue #190/M10.2) |
 
 ---
 

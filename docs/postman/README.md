@@ -4,7 +4,9 @@ This folder is a set of hand-written, step-by-step guides for testing TechCart's
 
 Before opening any file below, do the one-time collection setup: the `base_url` variable ([`product-catalog/uploads.api.md`](./product-catalog/uploads.api.md#one-time-postman-setup)) and then [`authentication/auth.api.md`](./authentication/auth.api.md#one-time-postman-setup)'s `buyer_access_token`/`admin_access_token` variables — the latter hold the bearer tokens **every** admin and account request in this folder needs (`Authorization: Bearer <token>`), so complete an admin sign-in before working through `product-catalog/`. Every other doc assumes that setup is done and reuses the same collection.
 
-This index covers three domains: M2 (Product Catalog) — Issues #25 through #36, plus Issue #102 (SRS v0.2 amendment: variant-only pricing, stock/inventory tracking removed), Issue #104 (SRS v0.2 amendment: shared admin list pagination/sort), and Issue #326 (SRS v0.2 amendment: buyer faceted filter discovery, `GET /api/categories/:slug/filters`); M3 (Authentication) — buyer sign-in, admin sign-in + password reset, admin account provisioning, and account self-service (`FR-AUTH-001`–`045`); and M4 (Shopping Cart) — the buyer cart (`FR-CART-001`–`018`, Issues #150/#151).
+This index covers seven domains: M2 (Product Catalog) — Issues #25 through #36, plus Issue #102 (SRS v0.2 amendment: variant-only pricing, stock/inventory tracking removed), Issue #104 (SRS v0.2 amendment: shared admin list pagination/sort), Issue #189 (SRS v0.10/M10.1 amendment: `availability`/`inStock` reinstated, inventory-backed), and Issue #326 (SRS v0.2 amendment: buyer faceted filter discovery, `GET /api/categories/:slug/filters`); M3 (Authentication) — buyer sign-in, admin sign-in + password reset, admin account provisioning, and account self-service (`FR-AUTH-001`–`045`), plus the buyer dashboard read (Issue #173); M4 (Shopping Cart) — the buyer cart (`FR-CART-001`–`018`, Issues #150/#151), plus warehouse-stock allocation (Issue #190/M10.2); M5 (Order Management) — the buyer address book, checkout, order history, and admin order management (Issues #154–#158); M6 (Payments) — Razorpay payment mint/verify, refunds, and the async webhook (Issues #164–#167); M7 (Dashboard) — admin sales/catalog aggregation reads (Issues #171–#172); and M10 (Inventory) — per-warehouse stock tracking (Issue #189).
+
+**M5–M10 shipped ahead of their own Postman docs** — Issue #329 is the catch-up that added the Order Management, Payments, Dashboard, and Inventory sections below, plus refreshed three docs that had drifted (`product-catalog/products.api.md`'s `availability`/`inStock`, `authentication/account.api.md`'s dashboard endpoint, `shopping-cart/cart.api.md`'s `INSUFFICIENT_STOCK` case).
 
 **Admin auth is session-based, not `X-Admin-Key`.** Issue #143/M3.5 replaced the temporary `X-Admin-Key` header with real session + role authentication (`src/middleware/rbac.ts`) on every `/api/admin/*` route, and Issue #264/M3.26 updated the `product-catalog/*.api.md` docs to match — a real request against `/api/admin/brands`, `/api/admin/categories`, etc. sends `Authorization: Bearer <token>` from [`authentication/auth.api.md`](./authentication/auth.api.md)'s admin sign-in flow. The backend auth engine itself was rewritten from Better Auth to a hand-rolled custom session/OTP engine in Issues #258–#261 (M3.19–23); the `/api/auth/*` wire contract was preserved, and the `authentication/*.api.md` docs were re-verified against it in #264.
 
@@ -128,7 +130,7 @@ Same shape as specifications above — no public/status/search surface.
 | --- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
 | 1   | [`auth.api.md`](./authentication/auth.api.md)             | Buyer sign-in (Google One Tap, email OTP), admin sign-in (password + mandatory OTP), session (`get-session`/`sign-out`), admin password reset | #139, #140, #141, #258–#261, #264 |
 | 2   | [`adminUsers.api.md`](./authentication/adminUsers.api.md) | Admin account provisioning — create/list/update further admin accounts (super-admin only)                                                     | #142                              |
-| 3   | [`account.api.md`](./authentication/account.api.md)       | "My own account" — buyer profile, admin change-password                                                                                       | #144                              |
+| 3   | [`account.api.md`](./authentication/account.api.md)       | "My own account" — buyer profile, admin change-password, buyer dashboard                                                                       | #144, #173                        |
 
 ### Full endpoint index
 
@@ -162,10 +164,11 @@ Same shape as specifications above — no public/status/search surface.
 | GET    | `/api/account/profile`         | buyer            | [→](./authentication/account.api.md#get-apiaccountprofile)          |
 | PATCH  | `/api/account/profile`         | buyer            | [→](./authentication/account.api.md#patch-apiaccountprofile)        |
 | POST   | `/api/account/change-password` | admin (any role) | [→](./authentication/account.api.md#post-apiaccountchange-password) |
+| GET    | `/api/account/dashboard`       | buyer            | [→](./authentication/account.api.md#get-apiaccountdashboard)        |
 
 ---
 
-**16 endpoints total** across the 3 files above (10 + 3 + 3). The full-page Google OAuth redirect flow (`POST /api/auth/sign-in/social` + `GET /api/auth/callback/google`) was **not** rebuilt on the custom session engine (Issues #258/#260) — those two paths now return 404; One Tap and email OTP are the buyer sign-in methods. Google One Tap's `idToken` still can't be fabricated by hand — see [`auth.api.md`](./authentication/auth.api.md#post-apiauthone-tapcallback).
+**17 endpoints total** across the 3 files above (10 + 3 + 4). The full-page Google OAuth redirect flow (`POST /api/auth/sign-in/social` + `GET /api/auth/callback/google`) was **not** rebuilt on the custom session engine (Issues #258/#260) — those two paths now return 404; One Tap and email OTP are the buyer sign-in methods. Google One Tap's `idToken` still can't be fabricated by hand — see [`auth.api.md`](./authentication/auth.api.md#post-apiauthone-tapcallback).
 
 ---
 
@@ -191,4 +194,149 @@ Needs a `buyer_access_token` (from [`authentication/auth.api.md`](./authenticati
 | DELETE | `/api/cart/items/:variantId` | buyer | [→](./shopping-cart/cart.api.md#delete-apicartitemsvariantid) |
 | DELETE | `/api/cart`                  | buyer | [→](./shopping-cart/cart.api.md#delete-apicart)               |
 
-**5 endpoints**, all buyer-session-only — no admin surface (SRS v0.4 §7).
+**5 endpoints**, all buyer-session-only — no admin surface (SRS v0.4 §7). `POST`/`PATCH .../items` can also return a `409 INSUFFICIENT_STOCK` (Issue #190/M10.2) — see [`cart.api.md`](./shopping-cart/cart.api.md#error-code-reference).
+
+---
+
+## Order Management
+
+### Files, in recommended setup order
+
+Needs a `buyer_access_token` for the buyer-facing files and an `admin_access_token` (as `order-manager`/`super-admin`) for the admin one — both from [`authentication/auth.api.md`](./authentication/auth.api.md). Address book first, since checkout can reference a saved address:
+
+| #   | File                                                          | Covers                                                                                  | Issues     |
+| --- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------- |
+| 1   | [`addresses.api.md`](./order-management/addresses.api.md)     | Buyer address book — create/list/update/delete, set-default                              | #154       |
+| 2   | [`orders.api.md`](./order-management/orders.api.md)           | Buyer checkout, order history/detail, self-cancel; the order status lifecycle reference   | #155–#157  |
+| 3   | [`ordersAdmin.api.md`](./order-management/ordersAdmin.api.md) | Admin order list/detail, status advance, admin-cancel                                    | #158       |
+
+`orders.api.md`/`ordersAdmin.api.md` each carry a pointer table to [`payments/payments.api.md`](./payments/payments.api.md) for the payment/refund endpoints wired onto their routers.
+
+### Full endpoint index
+
+#### `addresses.api.md`
+
+| Method | Path                          | Scope | Doc                                                                     |
+| ------ | ----------------------------- | ----- | -------------------------------------------------------------------------- |
+| GET    | `/api/addresses`              | buyer | [→](./order-management/addresses.api.md#get-apiaddresses)                |
+| POST   | `/api/addresses`              | buyer | [→](./order-management/addresses.api.md#post-apiaddresses)               |
+| PATCH  | `/api/addresses/:id`          | buyer | [→](./order-management/addresses.api.md#patch-apiaddressesid)            |
+| DELETE | `/api/addresses/:id`          | buyer | [→](./order-management/addresses.api.md#delete-apiaddressesid)           |
+| PATCH  | `/api/addresses/:id/default`  | buyer | [→](./order-management/addresses.api.md#patch-apiaddressesiddefault)     |
+
+#### `orders.api.md`
+
+| Method | Path                     | Scope | Doc                                                          |
+| ------ | ------------------------ | ----- | -------------------------------------------------------------- |
+| POST   | `/api/orders`            | buyer | [→](./order-management/orders.api.md#post-apiorders)          |
+| GET    | `/api/orders`            | buyer | [→](./order-management/orders.api.md#get-apiorders)           |
+| GET    | `/api/orders/:id`        | buyer | [→](./order-management/orders.api.md#get-apiordersid)         |
+| POST   | `/api/orders/:id/cancel` | buyer | [→](./order-management/orders.api.md#post-apiordersidcancel)  |
+
+#### `ordersAdmin.api.md`
+
+| Method | Path                              | Scope | Doc                                                                          |
+| ------ | ---------------------------------- | ----- | --------------------------------------------------------------------------------- |
+| GET    | `/api/admin/orders`               | admin | [→](./order-management/ordersAdmin.api.md#get-apiadminorders)                    |
+| GET    | `/api/admin/orders/:id`           | admin | [→](./order-management/ordersAdmin.api.md#get-apiadminordersid)                  |
+| PATCH  | `/api/admin/orders/:id/status`    | admin | [→](./order-management/ordersAdmin.api.md#patch-apiadminordersidstatus)          |
+| POST   | `/api/admin/orders/:id/cancel`    | admin | [→](./order-management/ordersAdmin.api.md#post-apiadminordersidcancel)           |
+
+---
+
+**13 endpoints total** across the 3 files above (5 + 4 + 4). The two payment endpoints wired onto `orders.api.md`'s router and the refund endpoint wired onto `ordersAdmin.api.md`'s router are counted under Payments below, not here.
+
+---
+
+## Payments
+
+### Files, in recommended setup order
+
+Needs a `buyer_access_token` for initiate/verify and an `admin_access_token` (`order-manager`/`super-admin`) for refund, both from [`authentication/auth.api.md`](./authentication/auth.api.md), plus an order in `pending_payment` status from [`order-management/orders.api.md`](./order-management/orders.api.md). Built and verified against dummy Razorpay test credentials:
+
+| #   | File                                          | Covers                                                                        | Issues            |
+| --- | ---------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------ |
+| 1   | [`payments.api.md`](./payments/payments.api.md) | Mint a Razorpay order, verify the Checkout widget callback, admin full/partial refund | #164, #165, #167  |
+| 2   | [`webhooks.api.md`](./payments/webhooks.api.md) | The async Razorpay webhook — signature-authenticated, idempotent                    | #166              |
+
+Note the **paise** unit boundary — `payments.amount`/`refunds[].amount` are the only paise-denominated fields anywhere in this API; every other money field in this whole index is whole rupees.
+
+### Full endpoint index
+
+#### `payments.api.md`
+
+| Method | Path                                | Scope | Doc                                                           |
+| ------ | ------------------------------------ | ----- | ------------------------------------------------------------- |
+| POST   | `/api/orders/:id/payment`           | buyer | [→](./payments/payments.api.md#post-apiordersidpayment)      |
+| POST   | `/api/orders/:id/payment/verify`    | buyer | [→](./payments/payments.api.md#post-apiordersidpaymentverify) |
+| POST   | `/api/admin/orders/:id/refund`      | admin | [→](./payments/payments.api.md#post-apiadminordersidrefund)  |
+
+#### `webhooks.api.md`
+
+| Method | Path                       | Scope             | Doc                                                    |
+| ------ | -------------------------- | ------------------ | --------------------------------------------------------- |
+| POST   | `/api/webhooks/razorpay`  | signature-auth only | [→](./payments/webhooks.api.md#post-apiwebhooksrazorpay) |
+
+---
+
+**4 endpoints total** across the 2 files above (3 + 1).
+
+---
+
+## Dashboard
+
+### Files
+
+Needs an `admin_access_token` from [`authentication/auth.api.md`](./authentication/auth.api.md) — `order-manager`/`super-admin` for `summary`/`sales`/`top-products`, `catalog-manager`/`super-admin` for `catalog-summary` (a deliberate reciprocal role split, not a typo). The separate buyer-facing dashboard lives in [`authentication/account.api.md`](./authentication/account.api.md#get-apiaccountdashboard), not here:
+
+| #   | File                                             | Covers                                                                                  | Issues     |
+| --- | -------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------- |
+| 1   | [`dashboard.api.md`](./dashboard/dashboard.api.md) | Admin sales summary/over-time/top-products, catalog summary — all read-only aggregations | #171, #172 |
+
+### Full endpoint index
+
+#### `dashboard.api.md`
+
+| Method | Path                                        | Scope             | Doc                                                              |
+| ------ | -------------------------------------------- | ------------------ | --------------------------------------------------------------------- |
+| GET    | `/api/admin/dashboard/summary`             | admin (order-manager) | [→](./dashboard/dashboard.api.md#get-apiadmindashboardsummary)      |
+| GET    | `/api/admin/dashboard/sales`               | admin (order-manager) | [→](./dashboard/dashboard.api.md#get-apiadmindashboardsales)        |
+| GET    | `/api/admin/dashboard/top-products`        | admin (order-manager) | [→](./dashboard/dashboard.api.md#get-apiadmindashboardtop-products) |
+| GET    | `/api/admin/dashboard/catalog-summary`     | admin (catalog-manager) | [→](./dashboard/dashboard.api.md#get-apiadmindashboardcatalog-summary) |
+
+---
+
+**4 endpoints total.** The buyer's own `GET /api/account/dashboard` is a fifth dashboard-shaped read, but is counted under Authentication above since it lives in that module's file.
+
+---
+
+## Inventory
+
+### Files, in recommended setup order
+
+Needs an `admin_access_token` (`catalog-manager`/`super-admin`) from [`authentication/auth.api.md`](./authentication/auth.api.md). Warehouses first, since inventory rows reference them:
+
+| #   | File                                                | Covers                                                          | Issues |
+| --- | ----------------------------------------------------- | -------------------------------------------------------------------- | ------ |
+| 1   | [`warehouses.api.md`](./inventory/warehouses.api.md) | Warehouse create + list only — no edit/delete/status endpoint exists | #189   |
+| 2   | [`inventory.api.md`](./inventory/inventory.api.md)   | Per-`(variant, warehouse)` stock rows — list + stock-only update    | #189   |
+
+### Full endpoint index
+
+#### `warehouses.api.md`
+
+| Method | Path                       | Scope | Doc                                                              |
+| ------ | --------------------------- | ----- | --------------------------------------------------------------------- |
+| POST   | `/api/admin/warehouses`   | admin | [→](./inventory/warehouses.api.md#post-apiadminwarehouses)           |
+| GET    | `/api/admin/warehouses`   | admin | [→](./inventory/warehouses.api.md#get-apiadminwarehouses)            |
+
+#### `inventory.api.md`
+
+| Method | Path                                | Scope | Doc                                                                |
+| ------ | ------------------------------------- | ----- | ----------------------------------------------------------------------- |
+| GET    | `/api/admin/inventory`               | admin | [→](./inventory/inventory.api.md#get-apiadmininventory)                |
+| PATCH  | `/api/admin/inventory/:inventoryId`  | admin | [→](./inventory/inventory.api.md#patch-apiadmininventoryinventoryid)   |
+
+---
+
+**4 endpoints total** across the 2 files above (2 + 2), both `catalog-manager`/`super-admin`-gated. Buyer-facing stock visibility (`availability`, `?inStock=true`) is documented in [`product-catalog/products.api.md`](./product-catalog/products.api.md), not here — this section is admin-only stock management.

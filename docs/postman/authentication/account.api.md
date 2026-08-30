@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing session-scoped "my own account" endpoints in Postman.
 
-**Scope:** this document covers account self-service (`FR-AUTH-036`–`039`): a buyer profile (view/update own `name`/`phone`) and an admin change-password capability. Distinct from [`adminUsers.api.md`](./adminUsers.api.md) — this module is always "my own account," never someone else's, and its two halves have genuinely different role guards on the same mount: `GET`/`PATCH /api/account/profile` requires a **buyer** session, `POST /api/account/change-password` requires **any** admin session (`catalog-manager`, `order-manager`, or `super-admin` — not buyer-only like the profile routes, and not super-admin-only like `adminUsers.api.md`). Both are gated by `src/middleware/rbac.ts` against a session from TechCart's custom session engine (Better Auth was removed in Issues #258–#261); `POST /api/account/change-password` bcrypt-verifies `users.passwordHash` directly (Issue #259/M3.21). See [`../../../backend/CLAUDE.md`](../../../backend/CLAUDE.md)'s Account Self-Service section for full implementation detail.
+**Scope:** this document covers account self-service (`FR-AUTH-036`–`039`): a buyer profile (view/update own `name`/`phone`) and an admin change-password capability. Distinct from [`adminUsers.api.md`](./adminUsers.api.md) — this module is always "my own account," never someone else's, and its two halves have genuinely different role guards on the same mount: `GET`/`PATCH /api/account/profile` requires a **buyer** session, `POST /api/account/change-password` requires **any** admin session (`catalog-manager`, `order-manager`, or `super-admin` — not buyer-only like the profile routes, and not super-admin-only like `adminUsers.api.md`). Both are gated by `src/middleware/rbac.ts` against a session from TechCart's custom session engine (Better Auth was removed in Issues #258–#261); `POST /api/account/change-password` bcrypt-verifies `users.passwordHash` directly (Issue #259/M3.21). This module also carries `GET /api/account/dashboard` (SRS v0.7, Issue #173) — a buyer-only "my orders at a glance" read, added later but living on this same mount since it's session-scoped "my own account" data too. See [`../../../backend/CLAUDE.md`](../../../backend/CLAUDE.md)'s Account Self-Service and Dashboard sections for full implementation detail.
 
 ---
 
@@ -126,6 +126,66 @@ Both fields are optional individually, but **at least one is required**.
 ```
 
 Same `UNAUTHENTICATED`/`FORBIDDEN` shapes as `GET` above for a missing session or a non-buyer session.
+
+---
+
+## `GET /api/account/dashboard`
+
+The signed-in **buyer's** own "at a glance" dashboard — profile, 5 most recent orders, and lifetime stats (`FR-DASH-010`–`012`).
+
+| Field  | Value                                 |
+| ------ | --------------------------------------- |
+| Method | `GET`                                  |
+| URL    | `{{base_url}}/api/account/dashboard`   |
+| Name   | `My Dashboard (Buyer)`                 |
+
+**Headers tab:** `Authorization: Bearer {{buyer_access_token}}`. No body, no query params.
+
+**Click Send. Expected response — `200 OK`** for a buyer with order history:
+
+```json
+{
+  "success": true,
+  "data": {
+    "profile": { "_id": "66a1f0c9e4b0a1a2b3c4d5e6", "name": "Asha Rao", "email": "buyer@example.com", "phone": "9876543210" },
+    "recentOrders": [
+      {
+        "id": "66d2b3c4d5e6f7a8b9c0d1e2",
+        "orderNumber": "TC-2026-000001",
+        "status": "paid",
+        "items": [{ "...": "... see ../order-management/orders.api.md for the full item shape ..." }],
+        "totalAmount": 80000,
+        "statusHistory": [{ "status": "pending_payment", "at": "..." }, { "status": "paid", "at": "..." }],
+        "createdAt": "2026-08-30T10:00:00.000Z"
+      }
+    ],
+    "lifetimeOrderCount": 2,
+    "lifetimeAmountSpent": 40000
+  }
+}
+```
+
+- `recentOrders` — up to **5** orders, newest first, the identical shape as [`../order-management/orders.api.md`](../order-management/orders.api.md#get-apiordersid)'s own detail (minus `payment`).
+- `lifetimeOrderCount`/`lifetimeAmountSpent` — count/sum across **every** order that ever reached a revenue-counting status (excludes `pending_payment` and `cancelled` orders), net of any refunds against those same orders. Whole rupees, like every order-derived figure in this API.
+- Cached for **60 seconds** per buyer, same mechanism as [`../dashboard/dashboard.api.md`](../dashboard/dashboard.api.md#caching).
+
+**Expected response — `200 OK` — a brand-new buyer with zero orders (empty state, never an error):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "profile": { "_id": "66a1f0c9e4b0a1a2b3c4d5e7", "name": "New Buyer", "email": "new-buyer@example.com" },
+    "recentOrders": [],
+    "lifetimeOrderCount": 0,
+    "lifetimeAmountSpent": 0
+  }
+}
+```
+
+### Error cases
+
+Same `UNAUTHENTICATED`/`FORBIDDEN` (non-buyer session) shapes as `GET /api/account/profile` above.
 
 ---
 
