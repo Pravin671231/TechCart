@@ -132,21 +132,45 @@ export const SpecificationGroupCard = ({
               </td>
               <td className="px-3 py-2">
                 {field.type === "enum" ? (
-                  <input
-                    type="text"
-                    value={(field.options ?? []).join(", ")}
-                    aria-label={`Options for ${field.name}`}
-                    placeholder="e.g. 6GB, 8GB, 12GB"
-                    onChange={(event) =>
-                      updateField(index, {
-                        options: event.target.value
-                          .split(",")
-                          .map((option) => option.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                    className="w-40 rounded-md border border-neutral-300 px-2 py-1"
-                  />
+                  <div className="flex min-w-48 flex-wrap gap-1">
+                    {(field.options ?? []).map((option, optionIndex) => (
+                      <span
+                        key={option}
+                        className="inline-flex items-center gap-1 rounded-md bg-neutral-100 px-2 py-1 text-xs"
+                      >
+                        {option}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const options = [...(field.options ?? [])];
+                            options.splice(optionIndex, 1);
+
+                            updateField(index, { options });
+                          }}
+                          className="text-neutral-500 hover:text-red-600"
+                          aria-label={`Remove ${option}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const value = window.prompt("Enter enum value")?.trim();
+
+                        if (!value || field.options?.includes(value)) return;
+
+                        updateField(index, {
+                          options: [...(field.options ?? []), value],
+                        });
+                      }}
+                      className="rounded-md border border-neutral-300 px-2 py-1 text-xs hover:bg-neutral-50"
+                    >
+                      +
+                    </button>
+                  </div>
                 ) : (
                   <span className="text-neutral-400">—</span>
                 )}
