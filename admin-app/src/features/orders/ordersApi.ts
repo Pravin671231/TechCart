@@ -7,6 +7,7 @@ import type { AdminOrder, OrderSort, OrderStatus } from "./types";
 
 export interface ListOrdersParams {
   page?: number;
+  limit?: number;
   sort?: OrderSort;
   search?: string;
   status?: OrderStatus;
@@ -56,6 +57,7 @@ export const ordersApi = api.injectEndpoints({
           url: ORDERS_ENDPOINTS.list,
           params: {
             page: params?.page,
+            limit: params?.limit,
             sortBy,
             orderBy,
             search: params?.search || undefined,

@@ -18,7 +18,7 @@ export const DataTableToolbar = ({ search, filters, children }: DataTableToolbar
   if (!search && !filters && !children) return null;
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-neutral-200 px-3 py-2">
+    <div className="flex shrink-0 flex-wrap items-center gap-3 border-b-2 border-neutral-500 px-3 py-3 ">
       {search && <DataTableSearch {...search} />}
       {filters && <DataTableFilters {...filters} />}
       {children}

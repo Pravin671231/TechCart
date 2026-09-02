@@ -92,7 +92,7 @@ export const DataTable = <TRow,>({
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white",
+        "flex h-full min-h-0 flex-col overflow-hidden rounded-lg border-2 border-neutral-400 bg-white shadow-lg",
         className,
       )}
     >

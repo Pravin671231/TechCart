@@ -142,7 +142,7 @@ export const DataTableBody = <TRow,>({
                 <td
                   key={column.id}
                   className={cn(
-                    "border-b border-neutral-100 px-3 py-2 text-sm text-neutral-700",
+                    "border-b-2 border-neutral-300 px-3 py-2 text-sm text-neutral-700",
                     getAlignClass(column.align),
                     cellClassName,
                   )}

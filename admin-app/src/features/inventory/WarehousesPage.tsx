@@ -1,23 +1,52 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { LoadingState } from "@/components/ui/LoadingState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
 import { TextField } from "@/components/form/FormField";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { useCreateWarehouseMutation, useGetWarehousesQuery } from "./inventoryApi";
+import type { Warehouse } from "./types";
 
 // Issue #191/M10.3 — a small, fixed set of 2-3 warehouses (FR-INV-001):
 // list + create only, no edit/delete, matching the backend's own scope.
 export const WarehousesPage = () => {
-  const { data: warehouses, isLoading } = useGetWarehousesQuery();
+  const { data: warehouses, isLoading, isFetching, isError, refetch } = useGetWarehousesQuery();
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [createWarehouse, { isLoading: isCreating, error: createError }] =
     useCreateWarehouseMutation();
   const saveError = getApiErrorEnvelope(createError);
+
+  const columns = useMemo<DataTableColumn<Warehouse>[]>(
+    () => [
+      {
+        id: "name",
+        header: "Name",
+        cell: (warehouse) => (
+          <span className="font-medium text-neutral-900">{warehouse.name}</span>
+        ),
+      },
+      {
+        id: "code",
+        header: "Code",
+        cell: (warehouse) => (
+          <span className="font-mono text-xs text-neutral-600">{warehouse.code}</span>
+        ),
+      },
+      {
+        id: "status",
+        header: "Status",
+        cell: (warehouse) => (
+          <StatusBadge tone={warehouse.active ? "success" : "neutral"} shape="pill">
+            {warehouse.active ? "Active" : "Inactive"}
+          </StatusBadge>
+        ),
+      },
+    ],
+    [],
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,41 +64,23 @@ export const WarehousesPage = () => {
   }
 
   return (
-    <main className="p-6">
+    <main className="flex h-full min-h-0 flex-col p-6">
       <PageHeader title="Warehouses" />
 
-      <div className="flex flex-col gap-6 xl:flex-row">
-        <section className="min-w-0 flex-1">
-          {isLoading ? (
-            <LoadingState />
-          ) : (
-            <Table minWidthClassName="min-w-[420px]">
-              <TableHeadRow>
-                <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Code</th>
-                <th className="px-3 py-2">Status</th>
-              </TableHeadRow>
-              <tbody>
-                {(warehouses ?? []).map((warehouse) => (
-                  <tr key={warehouse._id} className="border-b border-neutral-100">
-                    <td className="px-3 py-2 font-medium text-neutral-900">{warehouse.name}</td>
-                    <td className="px-3 py-2 font-mono text-xs text-neutral-600">
-                      {warehouse.code}
-                    </td>
-                    <td className="px-3 py-2">
-                      <StatusBadge tone={warehouse.active ? "success" : "neutral"} shape="pill">
-                        {warehouse.active ? "Active" : "Inactive"}
-                      </StatusBadge>
-                    </td>
-                  </tr>
-                ))}
-                {(warehouses ?? []).length === 0 && (
-                  <EmptyRow colSpan={3} message="No warehouses found." />
-                )}
-              </tbody>
-            </Table>
-          )}
-        </section>
+      <div className="mt-4 flex min-h-0 flex-1 flex-col gap-6 xl:flex-row">
+        <DataTable<Warehouse>
+          className="min-h-0 flex-1"
+          columns={columns}
+          rows={warehouses ?? []}
+          getRowId={(warehouse) => warehouse._id}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          isError={isError}
+          onRetry={refetch}
+          emptyMessage="No warehouses found."
+          caption="Warehouse list"
+          minWidth="24rem"
+        />
 
         <Card className="w-full shrink-0 xl:w-96">
           <CardHeading>New warehouse</CardHeading>

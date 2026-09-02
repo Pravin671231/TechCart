@@ -9,6 +9,7 @@ export interface ListInventoryParams {
   warehouseId?: string;
   search?: string;
   page?: number;
+  limit?: number;
 }
 
 export interface UpdateInventoryStockArgs {
@@ -46,6 +47,7 @@ export const inventoryApi = api.injectEndpoints({
           warehouseId: params?.warehouseId || undefined,
           search: params?.search || undefined,
           page: params?.page,
+          limit: params?.limit,
         },
       }),
       transformResponse: (response: ApiSuccessListEnvelope<InventoryItem>) => unwrapList(response),

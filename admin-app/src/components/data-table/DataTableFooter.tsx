@@ -34,7 +34,7 @@ export const DataTableFooter = ({
   );
 
   return (
-    <div className="flex shrink-0 items-center justify-between gap-3 border-t border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-500">
+    <div className="flex shrink-0 items-center justify-between gap-3 border-t border-neutral-600 bg-white px-3 py-2 text-sm text-neutral-500">
       {/* Record range */}
       <span className="whitespace-nowrap">
         Showing {getRangeLabel(pagination)}

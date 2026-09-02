@@ -56,7 +56,7 @@ const SelectFilter = ({ field, value, onChange }: SelectFilterProps) => {
         id={selectId}
         value={value}
         onChange={(event) => onChange(field.key, event.target.value)}
-        className="h-9 rounded-md border border-neutral-300 bg-white px-3 text-sm text-neutral-600 focus:border-primary-600 focus:outline-none"
+        className="h-9 rounded-md border border-neutral-600 bg-white px-3 text-sm text-black-600 focus:border-primary-600 focus:outline-none shadow-2xl"
       >
         <option value="">{field.placeholder ?? "All"}</option>
         {field.options.map((option) => (

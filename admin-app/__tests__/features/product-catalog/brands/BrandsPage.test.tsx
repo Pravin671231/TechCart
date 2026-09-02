@@ -121,7 +121,7 @@ describe("BrandsPage", () => {
     expect(await screen.findByText("Acme Renamed")).toBeInTheDocument();
   });
 
-  it("shows the blocked-delete guard inline instead of a generic error", async () => {
+  it("shows the blocked-delete guard in a modal instead of a generic error", async () => {
     setupBrandHandlers([makeBrand({ _id: "brand-1", name: "Acme", productCount: 3 })]);
 
     renderWithStore(<BrandsPage />);
@@ -129,12 +129,18 @@ describe("BrandsPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-    const dialog = await screen.findByRole("alertdialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+    const confirmDialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(confirmDialog).getByRole("button", { name: "Delete" }));
 
-    const alert = await screen.findByRole("alert");
-    expect(within(alert).getByText(/referenced by 3 product\(s\)/)).toBeInTheDocument();
+    const guardDialog = await screen.findByRole("alertdialog");
+    expect(within(guardDialog).getByText("Cannot delete brand")).toBeInTheDocument();
+    expect(within(guardDialog).getByText(/referenced by 3 product\(s\)/)).toBeInTheDocument();
     expect(screen.getByText("Acme")).toBeInTheDocument();
+
+    fireEvent.click(within(guardDialog).getByRole("button", { name: "OK" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    });
   });
 
   it("toggles brand status", async () => {
@@ -262,7 +268,7 @@ describe("BrandsPage", () => {
     expect(await screen.findByText("Nova")).toBeInTheDocument();
   });
 
-  it("pages past the first page and renders the Pagination component from the response", async () => {
+  it("pages past the first page and renders the DataTable footer from the response", async () => {
     const requestedPages: (string | null)[] = [];
     server.use(
       http.get(`${BASE}/brands`, ({ request }) => {
@@ -280,7 +286,7 @@ describe("BrandsPage", () => {
     await screen.findByText("Acme");
 
     expect(screen.getByText(/Showing 1–20 of 47/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Next ›" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
 
     await waitFor(() => {
       expect(requestedPages).toContain("2");

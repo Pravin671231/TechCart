@@ -34,7 +34,7 @@ export const DataTableHeader = <TRow,>({
   onToggleAll,
 }: DataTableHeaderProps<TRow>) => {
   const thBase = cn(
-    "border-b border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-500",
+    "border-b border-neutral-200 bg-neutral-50 px-3 py-2 text-md font-semibold uppercase tracking-wide text-neutral-500",
     stickyHeader && "sticky top-0 z-10",
   );
 

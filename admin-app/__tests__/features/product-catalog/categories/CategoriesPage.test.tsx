@@ -218,11 +218,14 @@ describe("CategoriesPage", () => {
     const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
     fireEvent.click(deleteButtons[0]);
 
-    const dialog = await screen.findByRole("alertdialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+    const confirmDialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(confirmDialog).getByRole("button", { name: "Delete" }));
 
-    const alert = await screen.findByRole("alert");
-    expect(within(alert).getByText(/1 product\(s\) and 1 subcategory\(ies\)/)).toBeInTheDocument();
+    const guardDialog = await screen.findByRole("alertdialog");
+    expect(within(guardDialog).getByText("Cannot delete category")).toBeInTheDocument();
+    expect(
+      within(guardDialog).getByText(/1 product\(s\) and 1 subcategory\(ies\)/),
+    ).toBeInTheDocument();
   });
 
   it("toggles category status", async () => {
@@ -314,7 +317,7 @@ describe("CategoriesPage", () => {
     });
   });
 
-  it("pages past the first page and renders the Pagination component from the response", async () => {
+  it("pages past the first page and renders the DataTable footer from the response", async () => {
     const requestedPages: (string | null)[] = [];
     server.use(
       http.get(`${BASE}/categories`, ({ request }) => {
@@ -332,7 +335,7 @@ describe("CategoriesPage", () => {
     await screen.findByText("Electronics");
 
     expect(screen.getByText(/Showing 1–20 of 33/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Next ›" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
 
     await waitFor(() => {
       expect(requestedPages).toContain("2");
