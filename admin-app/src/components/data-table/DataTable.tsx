@@ -162,7 +162,6 @@ export const DataTable = <TRow,>({
         pagination={pagination}
         onPaginationChange={onPaginationChange}
         pageSizeOptions={pageSizeOptions}
-        selectedCount={selectedIds.size}
       />
     </div>
   );

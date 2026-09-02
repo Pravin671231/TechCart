@@ -277,6 +277,41 @@ describe("ProductsPage", () => {
     });
   });
 
+  it("navigates to the next page via the footer", async () => {
+    let lastListUrl: URL | null = null;
+    server.use(
+      http.get(`${BASE}/brands`, () =>
+        HttpResponse.json({
+          success: true,
+          data: [{ _id: "brand-1", name: "Brand A", slug: "brand-a" }],
+          pagination: LOOKUP_PAGINATION,
+        }),
+      ),
+      http.get(`${BASE}/categories`, () =>
+        HttpResponse.json({ success: true, data: [], pagination: LOOKUP_PAGINATION }),
+      ),
+      http.get(`${BASE}/products`, ({ request }) => {
+        lastListUrl = new URL(request.url);
+        const page = Number(lastListUrl.searchParams.get("page") ?? "1");
+        return HttpResponse.json({
+          success: true,
+          data: [makeProduct({ _id: `p-${page}`, name: `Phone page ${page}` })],
+          pagination: { page, limit: 20, total: 45, totalPages: 3, hasNextPage: page < 3 },
+        });
+      }),
+    );
+
+    renderProductsApp();
+    await screen.findByText("Phone page 1");
+
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+
+    await waitFor(() => {
+      expect(lastListUrl!.searchParams.get("page")).toBe("2");
+    });
+    expect(await screen.findByText("Phone page 2")).toBeInTheDocument();
+  });
+
   it("clears the status filter via 'Clear filters'", async () => {
     const handlers = setupHandlers([makeProduct()]);
     renderProductsApp();
