@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, delay } from "msw";
 import { Provider } from "react-redux";
 import { server } from "./mocks/server";
 import type { PublicProductListItem } from "@/features/products/types";
@@ -305,6 +305,43 @@ describe("CategoryContent", () => {
     // A filter change resets back to page 1.
     await user.click(await screen.findByLabelText("TestBrand (5)"));
     await waitFor(() => expect(pagesRequested).toContain("1-brand"));
+  });
+
+  it("keeps the current list visible with an 'Updating…' indicator during a page change", async () => {
+    mockCategoryPage();
+    server.use(
+      http.get(`${API_URL}/api/categories/smartphones/products`, async ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get("page") ?? "1");
+        if (page > 1) await delay(60);
+        return HttpResponse.json(
+          listBody([makeProduct({ _id: `p${page}`, name: `Phone page ${page}` })], {
+            page,
+            total: 14,
+            totalPages: 2,
+            hasNextPage: page < 2,
+          }),
+        );
+      }),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { CategoryContent } = await import("@/features/category/CategoryContent");
+    render(
+      <Provider store={makeStore()}>
+        <CategoryContent slug="smartphones" />
+      </Provider>,
+    );
+
+    expect(await screen.findByText("Phone page 1")).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "2" }));
+
+    // While page 2 is in flight: page 1 still shown + the indicator appears.
+    expect(await screen.findByText("Updating…")).toBeInTheDocument();
+    expect(screen.getByText("Phone page 1")).toBeInTheDocument();
+
+    // Once it resolves: page 2 swapped in, indicator gone.
+    expect(await screen.findByText("Phone page 2")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
   });
 
   it("opens the mobile filter drawer from the Filters button", async () => {

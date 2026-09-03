@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { NotFoundState } from "@/components/ui/NotFoundState";
+import { FetchingOverlay } from "@/components/ui/FetchingOverlay";
 import { useGetCategoryProductsQuery } from "@/features/products/api";
 import type { CategoryProductFilters, ProductSort } from "@/features/products/types";
 import { ProductListEmpty } from "@/features/products/ProductListEmpty";
@@ -22,7 +23,7 @@ export function CategoryContent({ slug }: { slug: string }) {
   const [sort, setSort] = useState<ProductSort>("newest");
   const [filters, setFilters] = useState<CategoryProductFilters>({});
 
-  const { data, isLoading, isError, error, refetch } = useGetCategoryProductsQuery({
+  const { data, isLoading, isFetching, isError, error, refetch } = useGetCategoryProductsQuery({
     slug,
     page,
     sort,
@@ -90,11 +91,14 @@ export function CategoryContent({ slug }: { slug: string }) {
           ) : data && data.items.length === 0 ? (
             <ProductListEmpty />
           ) : (
-            data && <CategoryProductList products={data.items} />
-          )}
-
-          {data && data.pagination.totalPages > 1 && (
-            <Pagination pagination={data.pagination} onPageChange={setPage} />
+            data && (
+              <FetchingOverlay isFetching={isFetching && !isLoading}>
+                <CategoryProductList products={data.items} />
+                {data.pagination.totalPages > 1 && (
+                  <Pagination pagination={data.pagination} onPageChange={setPage} />
+                )}
+              </FetchingOverlay>
+            )
           )}
         </section>
       </div>

@@ -8,6 +8,7 @@ import { ProductGrid } from "@/features/products/ProductGrid";
 import { ProductListSkeleton } from "@/features/products/ProductListSkeleton";
 import { ProductListError } from "@/features/products/ProductListError";
 import { Pagination, describeRange } from "@/features/products/Pagination";
+import { FetchingOverlay } from "@/components/ui/FetchingOverlay";
 import { useGetCategoriesQuery } from "@/features/categories/api";
 import { useGetBrandsQuery } from "@/features/brands/api";
 import { SearchEmpty } from "./SearchEmpty";
@@ -30,7 +31,7 @@ export function SearchContent({ q }: { q: string }) {
   const [sort, setSort] = useState<SearchProductSort>("relevance");
   const [filters, setFilters] = useState<SearchProductFilters>({});
 
-  const { data, isLoading, isError, refetch } = useSearchProductsQuery(
+  const { data, isLoading, isFetching, isError, refetch } = useSearchProductsQuery(
     { q, page, sort, ...filters },
     { skip: q.length === 0 },
   );
@@ -82,11 +83,14 @@ export function SearchContent({ q }: { q: string }) {
           ) : data && data.items.length === 0 ? (
             <SearchEmpty q={q} hasActiveFilters={hasActiveFilters(filters)} />
           ) : (
-            data && <ProductGrid products={data.items} />
-          )}
-
-          {data && data.pagination.totalPages > 1 && (
-            <Pagination pagination={data.pagination} onPageChange={setPage} />
+            data && (
+              <FetchingOverlay isFetching={isFetching && !isLoading}>
+                <ProductGrid products={data.items} />
+                {data.pagination.totalPages > 1 && (
+                  <Pagination pagination={data.pagination} onPageChange={setPage} />
+                )}
+              </FetchingOverlay>
+            )
           )}
         </section>
       </div>
