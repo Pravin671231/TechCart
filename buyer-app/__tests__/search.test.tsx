@@ -146,6 +146,25 @@ describe("SearchContent", () => {
     expect(screen.queryByText("No results for “smartphon”")).not.toBeInTheDocument();
   });
 
+  it("shows plain Min/Max price inputs (no slider) — the search payload has no price bounds", async () => {
+    mockCategoriesAndBrands();
+    server.use(
+      http.get(`${API_URL}/api/products`, () => HttpResponse.json(listBody([makeProduct()]))),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { SearchContent } = await import("@/features/search/SearchContent");
+    render(
+      <Provider store={makeStore()}>
+        <SearchContent q="smartphon" />
+      </Provider>,
+    );
+
+    await screen.findByText("Test Phone");
+    expect(screen.getByLabelText("Minimum price")).toHaveAttribute("type", "number");
+    expect(screen.queryByRole("slider")).not.toBeInTheDocument();
+  });
+
   it("keeps results visible with an 'Updating…' indicator during a page change", async () => {
     mockCategoriesAndBrands();
     server.use(

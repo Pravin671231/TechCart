@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse, delay } from "msw";
 import { Provider } from "react-redux";
@@ -180,6 +180,41 @@ describe("CategoryContent", () => {
 
     await screen.findByText("Test Phone");
     expect(await screen.findByLabelText("TestBrand (5)")).toBeInTheDocument();
+  });
+
+  it("renders the price filter as a two-handle slider and commits minPrice from a drag", async () => {
+    mockCategoryPage();
+    let lastUrl: URL | null = null;
+    server.use(
+      http.get(`${API_URL}/api/categories/smartphones/products`, ({ request }) => {
+        lastUrl = new URL(request.url);
+        return HttpResponse.json(listBody([makeProduct()]));
+      }),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { CategoryContent } = await import("@/features/category/CategoryContent");
+    render(
+      <Provider store={makeStore()}>
+        <CategoryContent slug="smartphones" />
+      </Provider>,
+    );
+
+    await screen.findByText("Test Phone");
+    // FILTER_OPTIONS.priceRange = { min: 9900, max: 149900 } → slider, not inputs.
+    const [minSlider] = screen.getAllByRole("slider");
+    expect(minSlider).toHaveAttribute("aria-label", "Minimum price");
+
+    fireEvent.change(minSlider, { target: { value: "40900" } });
+    fireEvent.blur(minSlider);
+
+    // jsdom may snap the range value to the step grid; assert it committed a
+    // sane in-bounds minPrice and reset to page 1, not an exact figure.
+    await waitFor(() => expect(lastUrl!.searchParams.get("minPrice")).not.toBeNull());
+    const committed = Number(lastUrl!.searchParams.get("minPrice"));
+    expect(committed).toBeGreaterThan(9900);
+    expect(committed).toBeLessThanOrEqual(149900);
+    expect(lastUrl!.searchParams.get("page")).toBe("1");
   });
 
   it("re-fetches with the corresponding query param when a brand filter is applied, resetting to page 1", async () => {

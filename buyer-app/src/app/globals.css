@@ -69,3 +69,102 @@
     animation: none;
   }
 }
+
+/* Two-handle range slider for the buyer filter rail (fix/buyer-app-ui-bug).
+ * Native <input type="range"> pseudo-elements can't be Tailwind utilities. */
+.range-slider {
+  position: relative;
+  padding-top: 1.75rem;
+  padding-bottom: 0.25rem;
+}
+.range-slider__rail {
+  position: relative;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--color-neutral-200);
+}
+.range-slider__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 9999px;
+  background: var(--color-primary-600);
+}
+.range-slider__input {
+  position: absolute;
+  left: 0;
+  top: 1.75rem;
+  width: 100%;
+  height: 4px;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.range-slider__input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  height: 18px;
+  width: 18px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid var(--color-primary-600);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  cursor: grab;
+}
+.range-slider__input::-moz-range-thumb {
+  pointer-events: auto;
+  height: 18px;
+  width: 18px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid var(--color-primary-600);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  cursor: grab;
+}
+.range-slider__input:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+.range-slider__input:focus {
+  outline: none;
+}
+.range-slider__input:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+.range-slider__input:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+.range-slider__bubble {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  border-radius: 6px;
+  background: var(--color-primary-600);
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.range-slider__bounds {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 11px;
+  color: var(--color-neutral-400);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .range-slider__fill {
+    transition:
+      left 90ms linear,
+      right 90ms linear;
+  }
+  .range-slider__bubble {
+    transition: left 90ms linear;
+  }
+}

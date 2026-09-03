@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { RangeSlider } from "./RangeSlider";
 
 export function PriceRangeInput({
   minPrice,
@@ -7,15 +8,64 @@ export function PriceRangeInput({
   maxBound,
   minLabel = "Minimum price",
   maxLabel = "Maximum price",
+  formatValue,
   onCommit,
 }: {
   minPrice: number | undefined;
   maxPrice: number | undefined;
-  // Optional real-data bounds (Issue #326) — shown as placeholder hints.
+  // Real-data bounds (Issue #326). When both are known, the control renders as
+  // a two-handle slider (category rail + drawer); without them it falls back to
+  // the plain Min/Max inputs (search rail — that payload carries no bounds).
   minBound?: number;
   maxBound?: number;
   minLabel?: string;
   maxLabel?: string;
+  formatValue?: (value: number) => string;
+  onCommit: (minPrice: number | undefined, maxPrice: number | undefined) => void;
+}) {
+  if (minBound !== undefined && maxBound !== undefined && maxBound > minBound) {
+    return (
+      <RangeSlider
+        min={minBound}
+        max={maxBound}
+        low={minPrice}
+        high={maxPrice}
+        minLabel={minLabel}
+        maxLabel={maxLabel}
+        formatValue={formatValue}
+        onCommit={onCommit}
+      />
+    );
+  }
+
+  return (
+    <MinMaxInputs
+      minPrice={minPrice}
+      maxPrice={maxPrice}
+      minBound={minBound}
+      maxBound={maxBound}
+      minLabel={minLabel}
+      maxLabel={maxLabel}
+      onCommit={onCommit}
+    />
+  );
+}
+
+function MinMaxInputs({
+  minPrice,
+  maxPrice,
+  minBound,
+  maxBound,
+  minLabel,
+  maxLabel,
+  onCommit,
+}: {
+  minPrice: number | undefined;
+  maxPrice: number | undefined;
+  minBound?: number;
+  maxBound?: number;
+  minLabel: string;
+  maxLabel: string;
   onCommit: (minPrice: number | undefined, maxPrice: number | undefined) => void;
 }) {
   const [minInput, setMinInput] = useState(minPrice?.toString() ?? "");
