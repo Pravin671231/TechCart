@@ -123,14 +123,52 @@ describe("CategoryContent", () => {
       </Provider>,
     );
 
-    expect(await screen.findByText("Test Phone")).toBeInTheDocument();
+    // The detailed category card renders the title twice (desktop details +
+    // mobile block below the price), so this is findAllByText.
+    expect((await screen.findAllByText("Test Phone")).length).toBeGreaterThan(0);
     expect(screen.getByText("Electronics")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Smartphones" })).toBeInTheDocument();
     expect(screen.getByText("RAM: 8GB")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Test Phone/ })).toHaveAttribute(
+    const article = screen.getAllByText("Test Phone")[0]!.closest("article")!;
+    expect(within(article).getAllByRole("link", { name: /Test Phone/ })[0]).toHaveAttribute(
       "href",
       "/products/test-phone",
     );
+  });
+
+  it("shows the detailed card layout for a product with card specifications", async () => {
+    mockCategoryPage();
+    server.use(
+      http.get(`${API_URL}/api/categories/smartphones/products`, () =>
+        HttpResponse.json(
+          listBody([
+            makeProduct({
+              cardSpecifications: [
+                { name: "RAM", value: "8GB", unit: null },
+                { name: "Display", value: 6.7, unit: "in" },
+              ],
+            }),
+          ]),
+        ),
+      ),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { CategoryContent } = await import("@/features/category/CategoryContent");
+    render(
+      <Provider store={makeStore()}>
+        <CategoryContent slug="smartphones" />
+      </Provider>,
+    );
+
+    const article = (await screen.findAllByText("Test Phone"))[0]!.closest("article")!;
+    // Title in the desktop details column AND the mobile block below the price.
+    expect(within(article).getAllByText("Test Phone")).toHaveLength(2);
+    // The spec list renders once (desktop only — dropped on mobile).
+    expect(within(article).getAllByRole("list")).toHaveLength(1);
+    expect(within(article).getByText("Display: 6.7 in")).toBeInTheDocument();
+    // The reserved 4th column exists.
+    expect(article.querySelector('div[aria-hidden="true"]')).not.toBeNull();
   });
 
   it("renders only the filterable specs a product has, with no placeholder padding", async () => {
@@ -158,7 +196,9 @@ describe("CategoryContent", () => {
       </Provider>,
     );
 
-    const article = await screen.findByText("Test Phone").then((el) => el.closest("article")!);
+    const article = await screen
+      .findAllByText("Test Phone")
+      .then((els) => els[0]!.closest("article")!);
     expect(within(article).getAllByRole("listitem")).toHaveLength(2);
   });
 

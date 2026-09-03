@@ -339,7 +339,12 @@ export async function validateProductSpecifications(
 
 export type CardSpecificationField = { name: string; unit?: string };
 
-// FR-CAT-092: the first four *filterable* fields per category, in schema
+// FR-CAT-092: the display cap for a category card's specification pairs —
+// raised from 4 to 6 by the category card layout rework. It constrains
+// display only; a category may mark any number of fields filterable.
+export const MAX_CARD_SPECIFICATION_FIELDS = 6;
+
+// FR-CAT-092: the first six *filterable* fields per category, in schema
 // declaration order — computed in bulk for a whole listing page (#36's
 // products.service.ts is the one consumer). Matched against a product's own
 // specifications by name only (not groupName + name) when building the
@@ -362,7 +367,7 @@ export async function getCardFieldsByCategoryIds(
         fields.push(cardField);
       }
     }
-    result.set(categoryId, fields.slice(0, 4));
+    result.set(categoryId, fields.slice(0, MAX_CARD_SPECIFICATION_FIELDS));
   }
 
   return result;

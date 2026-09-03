@@ -253,102 +253,126 @@
             </div>
           </div>
 
-          <!-- Category card = image + name + up to 4 filterable spec pairs + price, in three columns. FR-CAT-092 -->
+          <!-- Detailed category card (category defines filterable specs): a 4-region horizontal
+               row on desktop — image · title+specs · dedicated price section · reserved gutter.
+               Below md the spec list is dropped and the right column stacks the price section
+               above the title. FR-CAT-092 -->
           <div class="flex flex-col">
-            <article class="flex gap-6 border-b border-neutral-200 py-6 first:pt-0">
-              <!-- Column 1: image -->
-              <div
-                class="flex aspect-[4/5] w-40 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-xs text-neutral-400 sm:w-52"
-              >
-                Primary image
-              </div>
-              <!-- Column 2: name + specifications, listed vertically -->
-              <div class="flex flex-1 flex-col gap-2">
-                <p class="text-base font-medium text-neutral-900">Product name</p>
-                <ul class="mt-1 space-y-1 text-xs text-neutral-500">
-                  <li>RAM: 8GB</li>
-                  <li>Storage: 128GB</li>
-                  <li>Screen Size: 6.1 in</li>
-                  <li>5G: Yes</li>
-                </ul>
-              </div>
-              <!-- Column 3: dedicated price section -->
-              <div
-                class="flex w-32 shrink-0 flex-col items-start gap-0.5 rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-right sm:w-40"
-              >
-                <p class="text-lg font-bold text-neutral-900">₹49,900</p>
-              </div>
-            </article>
-
-            <article class="flex gap-6 border-b border-neutral-200 py-6">
-              <div
-                class="flex aspect-[4/5] w-40 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-xs text-neutral-400 sm:w-52"
-              >
-                Primary image
-              </div>
-              <div class="flex flex-1 flex-col gap-2">
-                <p class="text-base font-medium text-neutral-900">Product name</p>
-                <ul class="mt-1 space-y-1 text-xs text-neutral-500">
-                  <li>RAM: 12GB</li>
-                  <li>Storage: 256GB</li>
-                  <li>Screen Size: 6.7 in</li>
-                  <li>5G: Yes</li>
-                </ul>
-              </div>
-              <div
-                class="flex w-32 shrink-0 flex-col items-start gap-0.5 rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-right sm:w-40"
-              >
-                <p class="text-lg font-bold text-neutral-900">₹44,910</p>
-                <p class="text-xs text-neutral-400 line-through">₹49,900</p>
-                <span
-                  class="rounded-md bg-accent-100 px-1.5 py-0.5 text-[10px] font-medium text-accent-700"
+            <article
+              class="flex gap-4 border-b border-neutral-200 py-6 first:pt-0 sm:gap-6 md:items-start"
+            >
+              <!-- Image (+ desktop title/specs) — one link -->
+              <div class="flex min-w-0 gap-4 sm:gap-6 md:flex-1">
+                <div
+                  class="flex aspect-[4/5] w-28 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-xs text-neutral-400 sm:w-40 md:w-44"
                 >
-                  10% off
-                </span>
+                  Primary image
+                </div>
+                <!-- Column 2: title + specs — hidden below md -->
+                <div class="hidden min-w-0 flex-1 flex-col gap-2 md:flex">
+                  <p class="text-base font-medium text-neutral-900">Product name</p>
+                  <ul class="mt-1 space-y-1 text-xs text-neutral-500">
+                    <li>RAM: 8GB</li>
+                    <li>Storage: 128GB</li>
+                    <li>Screen Size: 6.1 in</li>
+                    <li>Rear Camera: 50MP</li>
+                    <li>Battery: 5000 mAh</li>
+                    <li>5G: Yes</li>
+                  </ul>
+                </div>
               </div>
+              <!-- Column 3: dedicated price section. Below md the title stacks under it. -->
+              <div class="flex min-w-0 flex-1 flex-col gap-2 md:w-40 md:flex-none">
+                <div
+                  class="flex flex-col items-stretch gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-right"
+                >
+                  <p class="text-lg font-bold text-neutral-900">₹49,900</p>
+                  <span
+                    class="mt-1 inline-flex items-center justify-center rounded-md bg-primary-600 px-3 py-1.5 text-xs font-medium text-white"
+                  >
+                    Add to Cart
+                  </span>
+                </div>
+                <p class="text-sm font-medium text-neutral-900 md:hidden">Product name</p>
+              </div>
+              <!-- Column 4: reserved gutter — desktop only -->
+              <div class="hidden md:block md:w-24 md:shrink-0" aria-hidden="true"></div>
             </article>
 
-            <!-- Fewer than four filterable fields: renders only what it has -->
-            <article class="flex gap-6 border-b border-neutral-200 py-6">
-              <div
-                class="flex aspect-[4/5] w-40 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-xs text-neutral-400 sm:w-52"
-              >
-                Primary image
+            <!-- Discounted price example -->
+            <article
+              class="flex gap-4 border-b border-neutral-200 py-6 sm:gap-6 md:items-start"
+            >
+              <div class="flex min-w-0 gap-4 sm:gap-6 md:flex-1">
+                <div
+                  class="flex aspect-[4/5] w-28 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-xs text-neutral-400 sm:w-40 md:w-44"
+                >
+                  Primary image
+                </div>
+                <div class="hidden min-w-0 flex-1 flex-col gap-2 md:flex">
+                  <p class="text-base font-medium text-neutral-900">Product name</p>
+                  <ul class="mt-1 space-y-1 text-xs text-neutral-500">
+                    <li>RAM: 12GB</li>
+                    <li>Storage: 256GB</li>
+                    <li>Screen Size: 6.7 in</li>
+                    <li>Rear Camera: 108MP</li>
+                    <li>Battery: 5100 mAh</li>
+                    <li>5G: Yes</li>
+                  </ul>
+                </div>
               </div>
-              <div class="flex flex-1 flex-col gap-2">
-                <p class="text-base font-medium text-neutral-900">Product name</p>
-                <ul class="mt-1 space-y-1 text-xs text-neutral-500">
-                  <li>RAM: 6GB</li>
-                  <li>5G: No</li>
-                </ul>
+              <div class="flex min-w-0 flex-1 flex-col gap-2 md:w-40 md:flex-none">
+                <div
+                  class="flex flex-col items-stretch gap-1 rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-right"
+                >
+                  <p class="text-lg font-bold text-neutral-900">₹44,910</p>
+                  <p class="text-xs text-neutral-400 line-through">₹49,900</p>
+                  <span
+                    class="self-end rounded-md bg-accent-100 px-1.5 py-0.5 text-[10px] font-medium text-accent-700"
+                  >
+                    10% off
+                  </span>
+                  <span
+                    class="mt-1 inline-flex items-center justify-center rounded-md bg-primary-600 px-3 py-1.5 text-xs font-medium text-white"
+                  >
+                    Add to Cart
+                  </span>
+                </div>
+                <p class="text-sm font-medium text-neutral-900 md:hidden">Product name</p>
               </div>
-              <div
-                class="flex w-32 shrink-0 flex-col items-start gap-0.5 rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-right sm:w-40"
-              >
-                <p class="text-lg font-bold text-neutral-900">₹12,499</p>
-              </div>
+              <div class="hidden md:block md:w-24 md:shrink-0" aria-hidden="true"></div>
             </article>
 
-            <article class="flex gap-6 py-6">
-              <div
-                class="flex aspect-[4/5] w-40 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-xs text-neutral-400 sm:w-52"
-              >
-                Primary image
+            <!-- Fewer than six filterable fields: renders only what it has -->
+            <article class="flex gap-4 py-6 sm:gap-6 md:items-start">
+              <div class="flex min-w-0 gap-4 sm:gap-6 md:flex-1">
+                <div
+                  class="flex aspect-[4/5] w-28 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-xs text-neutral-400 sm:w-40 md:w-44"
+                >
+                  Primary image
+                </div>
+                <div class="hidden min-w-0 flex-1 flex-col gap-2 md:flex">
+                  <p class="text-base font-medium text-neutral-900">Product name</p>
+                  <ul class="mt-1 space-y-1 text-xs text-neutral-500">
+                    <li>RAM: 6GB</li>
+                    <li>5G: No</li>
+                  </ul>
+                </div>
               </div>
-              <div class="flex flex-1 flex-col gap-2">
-                <p class="text-base font-medium text-neutral-900">Product name</p>
-                <ul class="mt-1 space-y-1 text-xs text-neutral-500">
-                  <li>RAM: 8GB</li>
-                  <li>Storage: 128GB</li>
-                  <li>Screen Size: 6.4 in</li>
-                  <li>5G: Yes</li>
-                </ul>
+              <div class="flex min-w-0 flex-1 flex-col gap-2 md:w-40 md:flex-none">
+                <div
+                  class="flex flex-col items-stretch gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-right"
+                >
+                  <p class="text-lg font-bold text-neutral-900">₹12,499</p>
+                  <span
+                    class="mt-1 inline-flex items-center justify-center rounded-md bg-primary-600 px-3 py-1.5 text-xs font-medium text-white"
+                  >
+                    Add to Cart
+                  </span>
+                </div>
+                <p class="text-sm font-medium text-neutral-900 md:hidden">Product name</p>
               </div>
-              <div
-                class="flex w-32 shrink-0 flex-col items-start gap-0.5 rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-right sm:w-40"
-              >
-                <p class="text-lg font-bold text-neutral-900">₹31,999</p>
-              </div>
+              <div class="hidden md:block md:w-24 md:shrink-0" aria-hidden="true"></div>
             </article>
           </div>
 
@@ -358,21 +382,25 @@
             <p class="mb-1 font-medium text-neutral-600">Card rules — FR-CAT-092</p>
             <ul class="list-disc space-y-0.5 pl-4">
               <li>
-                Up to the <strong>first four</strong> <code>filterable</code> pairs, in schema
-                declaration order — admins choose which four by reordering the schema.
+                Up to the <strong>first six</strong> <code>filterable</code> pairs, in schema
+                declaration order — admins choose which six by reordering the schema.
               </li>
-              <li>Fewer than four filterable fields renders only those it has (card 3 above).</li>
+              <li>Fewer than six filterable fields renders only those it has (card 3 above).</li>
               <li>
-                A category marking none filterable renders a card identical to the home variant.
+                A category marking none filterable renders the plain home-style card
+                (<code>PlainCategoryProductCard</code>), unchanged at every breakpoint.
               </li>
               <li>
-                The limit of four is display-only — it never caps how many fields may be marked
+                The limit of six is display-only — it never caps how many fields may be marked
                 filterable.
               </li>
-              <li>Pairs sit in the middle column, between the name and the price section.</li>
               <li>
-                The price section is visually set apart (bordered, tinted) from the details column —
-                a "dedicated price section," not a plain right-aligned figure.
+                <strong>Desktop (md+):</strong> 4 regions — image · title+specs · dedicated price
+                section (bordered, tinted, holds the Add-to-Cart button) · an empty reserved gutter.
+              </li>
+              <li>
+                <strong>Mobile (&lt; md):</strong> image left; the right column stacks the price
+                section above the title; the spec list is dropped.
               </li>
               <li>
                 Every facet in the rail composes together, with sort, and pagination · FR-CAT-076
