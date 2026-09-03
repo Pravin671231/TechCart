@@ -1,10 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { Provider } from "react-redux";
 import { server } from "./mocks/server";
-import { triggerIntersection } from "../vitest.setup";
 import type { PublicProductListItem } from "@/features/products/types";
 
 // CategoryProductCard now renders the shared AddToCartButton (next/navigation).
@@ -39,7 +38,7 @@ function listBody(items: unknown[], pagination: Record<string, unknown> = {}) {
     data: items,
     pagination: {
       page: 1,
-      limit: 24,
+      limit: 10,
       total: items.length,
       totalPages: 1,
       hasNextPage: false,
@@ -204,6 +203,7 @@ describe("CategoryContent", () => {
     await screen.findByText("Test Phone");
     expect(lastUrl!.searchParams.get("page")).toBe("1");
     expect(lastUrl!.searchParams.get("sort")).toBe("newest");
+    expect(lastUrl!.searchParams.get("limit")).toBe("10");
 
     await userEvent.setup().click(await screen.findByLabelText("TestBrand (5)"));
 
@@ -266,7 +266,7 @@ describe("CategoryContent", () => {
     expect(await screen.findByText("Product (price_asc)")).toBeInTheDocument();
   });
 
-  it("appends the next page on scroll and resets to page 1 on a filter change", async () => {
+  it("navigates pages via the Pagination control and resets to page 1 on a filter change", async () => {
     mockCategoryPage();
     const pagesRequested: string[] = [];
     server.use(
@@ -277,7 +277,7 @@ describe("CategoryContent", () => {
         return HttpResponse.json(
           listBody([makeProduct({ _id: `p${page}`, name: `Phone page ${page}` })], {
             page,
-            total: 4,
+            total: 14,
             totalPages: 2,
             hasNextPage: page < 2,
           }),
@@ -295,14 +295,15 @@ describe("CategoryContent", () => {
 
     expect(await screen.findByText("Phone page 1")).toBeInTheDocument();
 
-    await act(async () => {
-      triggerIntersection();
-    });
-    expect(await screen.findByText("Phone page 2")).toBeInTheDocument();
-    expect(screen.getByText("Phone page 1")).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "2" }));
 
-    // A filter change resets the accumulated list back to page 1.
-    await userEvent.setup().click(await screen.findByLabelText("TestBrand (5)"));
+    // Page 2 replaces page 1 (no infinite-scroll accumulation).
+    expect(await screen.findByText("Phone page 2")).toBeInTheDocument();
+    expect(screen.queryByText("Phone page 1")).not.toBeInTheDocument();
+
+    // A filter change resets back to page 1.
+    await user.click(await screen.findByLabelText("TestBrand (5)"));
     await waitFor(() => expect(pagesRequested).toContain("1-brand"));
   });
 

@@ -19,11 +19,16 @@ function transformListResponse(
   return { items: response as PublicProductListItem[], pagination: meta.pagination };
 }
 
-// Infinite-scroll cache behaviour (Issue #326): all pages of one
-// sort+filter combination collapse into a single cache entry — `page` is
-// dropped from the serialized key, `forceRefetch` fires the next-page
-// request, and `merge` appends. A sort or filter change produces a
-// different key, so it naturally starts a fresh list at page 1.
+// Page size for the category page's numbered pagination — home and search
+// stay on the backend's own default (PUBLIC_PAGE_SIZE_DEFAULT).
+export const CATEGORY_PRODUCTS_PAGE_SIZE = 10;
+
+// Infinite-scroll cache behaviour (Issue #326) — used by `getProducts`
+// (home) only: all pages of one sort+filter combination collapse into a
+// single cache entry — `page` is dropped from the serialized key,
+// `forceRefetch` fires the next-page request, and `merge` appends. A sort
+// change produces a different key, so it naturally starts a fresh list at
+// page 1.
 function serializeInfiniteArgs(args: { endpointName: string; queryArgs: unknown }): string {
   const { page: _page, ...rest } = (args.queryArgs ?? {}) as Record<string, unknown>;
   return `${args.endpointName}(${JSON.stringify(rest)})`;
@@ -85,13 +90,15 @@ export const productsApi = api.injectEndpoints({
     getCategoryProducts: builder.query<GetProductsResult, GetCategoryProductsArgs>({
       query: ({ slug, page, sort, ...filters }) => ({
         url: `/api/categories/${slug}/products`,
-        params: { page, sort, ...categoryFilterParams(filters) },
+        params: {
+          page,
+          sort,
+          limit: CATEGORY_PRODUCTS_PAGE_SIZE,
+          ...categoryFilterParams(filters),
+        },
       }),
       transformResponse: (response: unknown, meta): GetProductsResult =>
         transformListResponse(response, meta),
-      serializeQueryArgs: serializeInfiniteArgs,
-      merge: mergeInfinitePages,
-      forceRefetch: ({ currentArg, previousArg }) => currentArg?.page !== previousArg?.page,
       providesTags: ["Product"],
     }),
     searchProducts: builder.query<GetProductsResult, GetSearchProductsArgs>({
