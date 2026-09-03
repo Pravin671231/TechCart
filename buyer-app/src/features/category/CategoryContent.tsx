@@ -3,13 +3,12 @@
 import { useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { NotFoundState } from "@/components/ui/NotFoundState";
-import { useInfiniteScrollSentinel } from "@/hooks/useInfiniteScrollSentinel";
+import { FetchingOverlay } from "@/components/ui/FetchingOverlay";
 import { useGetCategoryProductsQuery } from "@/features/products/api";
 import type { CategoryProductFilters, ProductSort } from "@/features/products/types";
 import { ProductListEmpty } from "@/features/products/ProductListEmpty";
 import { ProductListError } from "@/features/products/ProductListError";
-import { InfiniteScrollFooter } from "@/features/products/InfiniteScrollFooter";
-import { describeLoadedCount } from "@/features/products/Pagination";
+import { Pagination, describeRange } from "@/features/products/Pagination";
 import { SortSelect } from "@/features/products/SortSelect";
 import { useGetCategoriesQuery, useGetCategoryFiltersQuery } from "@/features/categories/api";
 import type { NormalizedApiError } from "@/store/api";
@@ -35,13 +34,6 @@ export function CategoryContent({ slug }: { slug: string }) {
 
   const isNotFound =
     isError && (error as NormalizedApiError | undefined)?.code === "CATEGORY_NOT_FOUND";
-
-  const hasNextPage = data?.pagination.hasNextPage ?? false;
-  const sentinelRef = useInfiniteScrollSentinel({
-    hasNextPage,
-    isFetching: isLoading || isFetching,
-    onLoadMore: () => setPage((current) => current + 1),
-  });
 
   function handleFilterChange(next: CategoryProductFilters) {
     setFilters(next);
@@ -86,9 +78,7 @@ export function CategoryContent({ slug }: { slug: string }) {
                 onChange={handleFilterChange}
               />
               <p className="text-sm text-neutral-500">
-                {data
-                  ? describeLoadedCount(data.items.length, data.pagination.total)
-                  : "Loading products…"}
+                {data ? describeRange(data.pagination) : "Loading products…"}
               </p>
             </div>
             <SortSelect value={sort} onChange={handleSortChange} />
@@ -102,15 +92,12 @@ export function CategoryContent({ slug }: { slug: string }) {
             <ProductListEmpty />
           ) : (
             data && (
-              <>
+              <FetchingOverlay isFetching={isFetching && !isLoading}>
                 <CategoryProductList products={data.items} />
-                <InfiniteScrollFooter
-                  sentinelRef={sentinelRef}
-                  isLoadingMore={isFetching && page > 1}
-                  hasNextPage={hasNextPage}
-                  hasItems={data.items.length > 0}
-                />
-              </>
+                {data.pagination.totalPages > 1 && (
+                  <Pagination pagination={data.pagination} onPageChange={setPage} />
+                )}
+              </FetchingOverlay>
             )
           )}
         </section>

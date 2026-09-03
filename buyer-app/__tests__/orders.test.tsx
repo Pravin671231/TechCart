@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, delay } from "msw";
 import { Provider } from "react-redux";
 import { server } from "./mocks/server";
 import type { OrderResponse } from "@/features/orders/types";
@@ -156,6 +156,41 @@ describe("Order history", () => {
     await waitFor(() => {
       expect(screen.getByText(/TC-2026-000002/)).toBeInTheDocument();
     });
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+  });
+
+  it("keeps the list visible with an 'Updating…' indicator during a page change", async () => {
+    signedIn();
+    server.use(
+      http.get(`${API_URL}/api/orders`, async ({ request }) => {
+        const page = new URL(request.url).searchParams.get("page") ?? "1";
+        if (page === "2") {
+          await delay(60);
+          return HttpResponse.json(
+            listBody([order({ id: "o2", orderNumber: "TC-2026-000002" })], {
+              page: 2,
+              total: 25,
+              totalPages: 2,
+              hasNextPage: false,
+            }),
+          );
+        }
+        return HttpResponse.json(
+          listBody([order()], { page: 1, total: 25, totalPages: 2, hasNextPage: true }),
+        );
+      }),
+    );
+
+    await renderHistory();
+
+    expect(await screen.findByText(/TC-2026-000001/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^2$/ }));
+
+    expect(await screen.findByText("Updating…")).toBeInTheDocument();
+    expect(screen.getByText(/TC-2026-000001/)).toBeInTheDocument();
+
+    expect(await screen.findByText(/TC-2026-000002/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
   });
 
   it("shows an error state with retry when the list request fails", async () => {

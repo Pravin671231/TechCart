@@ -41,6 +41,14 @@ class MockIntersectionObserver {
 
 vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
 
+// jsdom implements neither — `Pagination` calls both on a page change.
+window.scrollTo = vi.fn();
+window.matchMedia ??= vi.fn().mockReturnValue({
+  matches: false,
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+}) as unknown as typeof window.matchMedia;
+
 export function triggerIntersection(): void {
   for (const callback of observerCallbacks) {
     callback([{ isIntersecting: true }]);
@@ -52,5 +60,6 @@ afterEach(() => {
   server.resetHandlers();
   cleanup();
   observerCallbacks.clear();
+  vi.mocked(window.scrollTo).mockClear();
 });
 afterAll(() => server.close());

@@ -1,10 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, delay } from "msw";
 import { Provider } from "react-redux";
 import { server } from "./mocks/server";
-import { triggerIntersection } from "../vitest.setup";
 import type { PublicProductListItem } from "@/features/products/types";
 
 // CategoryProductCard now renders the shared AddToCartButton (next/navigation).
@@ -39,7 +38,7 @@ function listBody(items: unknown[], pagination: Record<string, unknown> = {}) {
     data: items,
     pagination: {
       page: 1,
-      limit: 24,
+      limit: 10,
       total: items.length,
       totalPages: 1,
       hasNextPage: false,
@@ -183,6 +182,41 @@ describe("CategoryContent", () => {
     expect(await screen.findByLabelText("TestBrand (5)")).toBeInTheDocument();
   });
 
+  it("renders the price filter as a two-handle slider and commits minPrice from a drag", async () => {
+    mockCategoryPage();
+    let lastUrl: URL | null = null;
+    server.use(
+      http.get(`${API_URL}/api/categories/smartphones/products`, ({ request }) => {
+        lastUrl = new URL(request.url);
+        return HttpResponse.json(listBody([makeProduct()]));
+      }),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { CategoryContent } = await import("@/features/category/CategoryContent");
+    render(
+      <Provider store={makeStore()}>
+        <CategoryContent slug="smartphones" />
+      </Provider>,
+    );
+
+    await screen.findByText("Test Phone");
+    // FILTER_OPTIONS.priceRange = { min: 9900, max: 149900 } → slider, not inputs.
+    const [minSlider] = screen.getAllByRole("slider");
+    expect(minSlider).toHaveAttribute("aria-label", "Minimum price");
+
+    fireEvent.change(minSlider, { target: { value: "40900" } });
+    fireEvent.blur(minSlider);
+
+    // jsdom may snap the range value to the step grid; assert it committed a
+    // sane in-bounds minPrice and reset to page 1, not an exact figure.
+    await waitFor(() => expect(lastUrl!.searchParams.get("minPrice")).not.toBeNull());
+    const committed = Number(lastUrl!.searchParams.get("minPrice"));
+    expect(committed).toBeGreaterThan(9900);
+    expect(committed).toBeLessThanOrEqual(149900);
+    expect(lastUrl!.searchParams.get("page")).toBe("1");
+  });
+
   it("re-fetches with the corresponding query param when a brand filter is applied, resetting to page 1", async () => {
     mockCategoryPage();
     let lastUrl: URL | null = null;
@@ -204,6 +238,7 @@ describe("CategoryContent", () => {
     await screen.findByText("Test Phone");
     expect(lastUrl!.searchParams.get("page")).toBe("1");
     expect(lastUrl!.searchParams.get("sort")).toBe("newest");
+    expect(lastUrl!.searchParams.get("limit")).toBe("10");
 
     await userEvent.setup().click(await screen.findByLabelText("TestBrand (5)"));
 
@@ -266,7 +301,7 @@ describe("CategoryContent", () => {
     expect(await screen.findByText("Product (price_asc)")).toBeInTheDocument();
   });
 
-  it("appends the next page on scroll and resets to page 1 on a filter change", async () => {
+  it("navigates pages via the Pagination control and resets to page 1 on a filter change", async () => {
     mockCategoryPage();
     const pagesRequested: string[] = [];
     server.use(
@@ -277,7 +312,7 @@ describe("CategoryContent", () => {
         return HttpResponse.json(
           listBody([makeProduct({ _id: `p${page}`, name: `Phone page ${page}` })], {
             page,
-            total: 4,
+            total: 14,
             totalPages: 2,
             hasNextPage: page < 2,
           }),
@@ -295,15 +330,54 @@ describe("CategoryContent", () => {
 
     expect(await screen.findByText("Phone page 1")).toBeInTheDocument();
 
-    await act(async () => {
-      triggerIntersection();
-    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "2" }));
+
+    // Page 2 replaces page 1 (no infinite-scroll accumulation).
     expect(await screen.findByText("Phone page 2")).toBeInTheDocument();
+    expect(screen.queryByText("Phone page 1")).not.toBeInTheDocument();
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+
+    // A filter change resets back to page 1.
+    await user.click(await screen.findByLabelText("TestBrand (5)"));
+    await waitFor(() => expect(pagesRequested).toContain("1-brand"));
+  });
+
+  it("keeps the current list visible with an 'Updating…' indicator during a page change", async () => {
+    mockCategoryPage();
+    server.use(
+      http.get(`${API_URL}/api/categories/smartphones/products`, async ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get("page") ?? "1");
+        if (page > 1) await delay(60);
+        return HttpResponse.json(
+          listBody([makeProduct({ _id: `p${page}`, name: `Phone page ${page}` })], {
+            page,
+            total: 14,
+            totalPages: 2,
+            hasNextPage: page < 2,
+          }),
+        );
+      }),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { CategoryContent } = await import("@/features/category/CategoryContent");
+    render(
+      <Provider store={makeStore()}>
+        <CategoryContent slug="smartphones" />
+      </Provider>,
+    );
+
+    expect(await screen.findByText("Phone page 1")).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "2" }));
+
+    // While page 2 is in flight: page 1 still shown + the indicator appears.
+    expect(await screen.findByText("Updating…")).toBeInTheDocument();
     expect(screen.getByText("Phone page 1")).toBeInTheDocument();
 
-    // A filter change resets the accumulated list back to page 1.
-    await userEvent.setup().click(await screen.findByLabelText("TestBrand (5)"));
-    await waitFor(() => expect(pagesRequested).toContain("1-brand"));
+    // Once it resolves: page 2 swapped in, indicator gone.
+    expect(await screen.findByText("Phone page 2")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
   });
 
   it("opens the mobile filter drawer from the Filters button", async () => {

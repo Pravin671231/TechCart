@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { PriceRangeInput } from "@/components/ui/PriceRangeInput";
+import { formatPrice } from "@/features/products/money";
 import type { CategoryProductFilters } from "@/features/products/types";
 import type { CategoryFilterOptions } from "@/features/categories/types";
 
@@ -76,6 +77,7 @@ export function CategoryFilterRail({
           maxPrice={filters.maxPrice}
           minBound={priceRange?.min}
           maxBound={priceRange?.max}
+          formatValue={formatPrice}
           onCommit={(minPrice, maxPrice) => onChange({ ...filters, minPrice, maxPrice })}
         />
       </Section>
@@ -106,6 +108,7 @@ export function CategoryFilterRail({
               maxBound={spec.max}
               minLabel={`Minimum ${spec.name}`}
               maxLabel={`Maximum ${spec.name}`}
+              formatValue={(value) => (spec.unit ? `${value} ${spec.unit}` : String(value))}
               onCommit={(min, max) =>
                 setSpec(
                   spec.name,

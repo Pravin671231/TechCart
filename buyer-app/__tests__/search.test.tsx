@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, delay } from "msw";
 import { Provider } from "react-redux";
 import { server } from "./mocks/server";
 import type { PublicProductListItem } from "@/features/products/types";
@@ -144,5 +144,60 @@ describe("SearchContent", () => {
 
     await waitFor(() => expect(screen.getByText("No products match your filters")).toBeInTheDocument());
     expect(screen.queryByText("No results for “smartphon”")).not.toBeInTheDocument();
+  });
+
+  it("shows plain Min/Max price inputs (no slider) — the search payload has no price bounds", async () => {
+    mockCategoriesAndBrands();
+    server.use(
+      http.get(`${API_URL}/api/products`, () => HttpResponse.json(listBody([makeProduct()]))),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { SearchContent } = await import("@/features/search/SearchContent");
+    render(
+      <Provider store={makeStore()}>
+        <SearchContent q="smartphon" />
+      </Provider>,
+    );
+
+    await screen.findByText("Test Phone");
+    expect(screen.getByLabelText("Minimum price")).toHaveAttribute("type", "number");
+    expect(screen.queryByRole("slider")).not.toBeInTheDocument();
+  });
+
+  it("keeps results visible with an 'Updating…' indicator during a page change", async () => {
+    mockCategoriesAndBrands();
+    server.use(
+      http.get(`${API_URL}/api/products`, async ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get("page") ?? "1");
+        if (page > 1) await delay(60);
+        return HttpResponse.json(
+          listBody([makeProduct({ _id: `p${page}`, name: `Result page ${page}` })], {
+            page,
+            total: 30,
+            totalPages: 2,
+            hasNextPage: page < 2,
+          }),
+        );
+      }),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { SearchContent } = await import("@/features/search/SearchContent");
+    render(
+      <Provider store={makeStore()}>
+        <SearchContent q="smartphon" />
+      </Provider>,
+    );
+
+    expect(await screen.findByText("Result page 1")).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "2" }));
+
+    expect(await screen.findByText("Updating…")).toBeInTheDocument();
+    expect(screen.getByText("Result page 1")).toBeInTheDocument();
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+
+    expect(await screen.findByText("Result page 2")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
   });
 });

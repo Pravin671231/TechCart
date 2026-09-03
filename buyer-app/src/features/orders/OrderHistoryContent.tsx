@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { FetchingOverlay } from "@/components/ui/FetchingOverlay";
 import { ProductListError } from "@/features/products/ProductListError";
 import { Pagination } from "@/features/products/Pagination";
 import type { Pagination as PaginationData } from "@/store/api";
@@ -33,7 +34,10 @@ export function OrderHistoryContent() {
     }
   }, [session, router]);
 
-  const { data, isLoading, isError, refetch } = useGetOrdersQuery({ page }, { skip: !session });
+  const { data, isLoading, isFetching, isError, refetch } = useGetOrdersQuery(
+    { page },
+    { skip: !session },
+  );
 
   return (
     <PageContainer className="flex flex-col">
@@ -46,7 +50,7 @@ export function OrderHistoryContent() {
       ) : data.items.length === 0 ? (
         <OrdersEmpty />
       ) : (
-        <>
+        <FetchingOverlay isFetching={isFetching && !isLoading}>
           <p className="mb-4 text-sm text-neutral-500">{describeOrdersRange(data.pagination)}</p>
           <div className="flex flex-col gap-4">
             {data.items.map((order) => (
@@ -56,7 +60,7 @@ export function OrderHistoryContent() {
           {data.pagination.totalPages > 1 && (
             <Pagination pagination={data.pagination} onPageChange={setPage} />
           )}
-        </>
+        </FetchingOverlay>
       )}
     </PageContainer>
   );
