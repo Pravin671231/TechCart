@@ -156,6 +156,7 @@ describe("Order history", () => {
     await waitFor(() => {
       expect(screen.getByText(/TC-2026-000002/)).toBeInTheDocument();
     });
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
   });
 
   it("keeps the list visible with an 'Updating…' indicator during a page change", async () => {

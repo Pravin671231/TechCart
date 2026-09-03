@@ -25,11 +25,20 @@ export function Pagination({
 }) {
   const { page, totalPages } = pagination;
 
+  function goToPage(next: number) {
+    if (next < 1 || next > totalPages || next === page) return;
+    onPageChange(next);
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
   return (
     <nav className="mt-6 flex items-center justify-center gap-2 text-sm" aria-label="Pagination">
       <button
         type="button"
-        onClick={() => onPageChange(page - 1)}
+        onClick={() => goToPage(page - 1)}
         disabled={page <= 1}
         className="rounded-md border border-neutral-200 px-3 py-1 text-neutral-500 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:text-neutral-300 disabled:hover:bg-transparent"
       >
@@ -39,7 +48,7 @@ export function Pagination({
         <button
           type="button"
           key={pageNumber}
-          onClick={() => onPageChange(pageNumber)}
+          onClick={() => goToPage(pageNumber)}
           aria-current={pageNumber === page ? "page" : undefined}
           className={
             pageNumber === page
@@ -52,7 +61,7 @@ export function Pagination({
       ))}
       <button
         type="button"
-        onClick={() => onPageChange(page + 1)}
+        onClick={() => goToPage(page + 1)}
         disabled={page >= totalPages}
         className="rounded-md border border-neutral-300 px-3 py-1 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:text-neutral-300 disabled:hover:bg-transparent"
       >

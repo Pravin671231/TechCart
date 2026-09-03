@@ -301,6 +301,7 @@ describe("CategoryContent", () => {
     // Page 2 replaces page 1 (no infinite-scroll accumulation).
     expect(await screen.findByText("Phone page 2")).toBeInTheDocument();
     expect(screen.queryByText("Phone page 1")).not.toBeInTheDocument();
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
 
     // A filter change resets back to page 1.
     await user.click(await screen.findByLabelText("TestBrand (5)"));

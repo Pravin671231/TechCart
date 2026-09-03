@@ -176,6 +176,7 @@ describe("SearchContent", () => {
 
     expect(await screen.findByText("Updating…")).toBeInTheDocument();
     expect(screen.getByText("Result page 1")).toBeInTheDocument();
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
 
     expect(await screen.findByText("Result page 2")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText("Updating…")).not.toBeInTheDocument());
