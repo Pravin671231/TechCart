@@ -1,132 +1,142 @@
+import { useMemo } from "react";
 import { Link } from "react-router";
-import { LoadingState } from "@/components/ui/LoadingState";
-import { Pagination } from "@/components/ui/Pagination";
-import { SearchInput } from "@/components/form/SearchInput";
-import { SortableHeader } from "@/components/ui/SortableHeader";
+import { DataTable, type DataTableColumn, type SortState } from "@/components/data-table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useListQueryState } from "@/hooks/useListQueryState";
 import { formatPrice } from "@/features/product-catalog/products/money";
 import { useGetOrdersQuery } from "./ordersApi";
 import { ORDERS_ROUTES } from "./routePaths";
-import { ORDER_STATUSES, type OrderSort, type OrderStatus } from "./types";
+import { ORDER_STATUSES, type AdminOrder, type OrderSort, type OrderStatus } from "./types";
 import { STATUS_LABEL, STATUS_TONE } from "./statusPresentation";
 
-export interface OrderListProps {
+interface OrderFilters {
   search: string;
-  onSearchChange: (value: string) => void;
   status: OrderStatus | "";
-  onStatusChange: (value: OrderStatus | "") => void;
-  sort: OrderSort | undefined;
-  onSortChange: (sort: OrderSort | undefined) => void;
-  page: number;
-  onPageChange: (page: number) => void;
+  sort?: OrderSort;
 }
+
+const STATUS_OPTIONS = ORDER_STATUSES.map((value) => ({ label: STATUS_LABEL[value], value }));
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", { dateStyle: "medium" });
 }
 
-export const OrderList = ({
-  search,
-  onSearchChange,
-  status,
-  onStatusChange,
-  sort,
-  onSortChange,
-  page,
-  onPageChange,
-}: OrderListProps) => {
-  const debouncedSearch = useDebouncedValue(search, 300);
-  const { data, isLoading, isFetching } = useGetOrdersQuery({
-    page,
-    sort,
-    search: debouncedSearch || undefined,
-    status: status || undefined,
+// OrderSort is one combined string ("createdAt" | "-createdAt" | …); DataTable
+// speaks { columnId, direction }. Adapt at this boundary — ordersApi.ts keeps
+// splitting the combined string into ?sortBy=/?orderBy= as before.
+function toSortState(sort: OrderSort | undefined): SortState | null {
+  if (!sort) return null;
+  return sort.startsWith("-")
+    ? { columnId: sort.slice(1), direction: "desc" }
+    : { columnId: sort, direction: "asc" };
+}
+
+function fromSortState(next: SortState | null): OrderSort | undefined {
+  if (!next) return undefined;
+  const base = next.columnId as "createdAt" | "totalAmount";
+  return (next.direction === "desc" ? `-${base}` : base) as OrderSort;
+}
+
+export const OrderList = () => {
+  const { filters, setFilter, page, setPage, limit, setLimit } = useListQueryState<OrderFilters>({
+    search: "",
+    status: "",
+    sort: undefined,
   });
 
+  const { data, isLoading, isFetching, isError, refetch } = useGetOrdersQuery({
+    page,
+    limit,
+    sort: filters.sort,
+    search: filters.search || undefined,
+    status: filters.status || undefined,
+  });
+
+  const columns = useMemo<DataTableColumn<AdminOrder>[]>(
+    () => [
+      {
+        id: "orderNumber",
+        header: "Order #",
+        cell: (order) => (
+          <Link
+            to={ORDERS_ROUTES.detail(order.id)}
+            className="font-medium text-primary-600 hover:underline"
+          >
+            {order.orderNumber}
+          </Link>
+        ),
+      },
+      {
+        id: "buyer",
+        header: "Buyer",
+        cell: (order) => order.buyer?.email ?? "—",
+      },
+      {
+        id: "createdAt",
+        header: "Date",
+        sortable: true,
+        cell: (order) => formatDate(order.createdAt),
+      },
+      {
+        id: "status",
+        header: "Status",
+        cell: (order) => (
+          <StatusBadge tone={STATUS_TONE[order.status]}>{STATUS_LABEL[order.status]}</StatusBadge>
+        ),
+      },
+      {
+        id: "totalAmount",
+        header: "Total",
+        sortable: true,
+        align: "right",
+        cell: (order) => formatPrice(order.totalAmount),
+      },
+    ],
+    [],
+  );
+
   const orders = data?.items ?? [];
-  const pagination = data?.pagination;
+  const total = data?.pagination.total ?? 0;
 
   return (
-    <section className="min-w-0 flex-1">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <SearchInput
-          id="order-search"
-          label="Search orders"
-          placeholder="Search order # or buyer email…"
-          value={search}
-          onChange={onSearchChange}
-          width="w-80"
-        />
-        <label htmlFor="order-status" className="sr-only">
-          Status
-        </label>
-        <select
-          id="order-status"
-          value={status}
-          onChange={(event) => onStatusChange(event.target.value as OrderStatus | "")}
-          className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-600"
-        >
-          <option value="">Status: All</option>
-          {ORDER_STATUSES.map((value) => (
-            <option key={value} value={value}>
-              {STATUS_LABEL[value]}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {isLoading ? (
-        <LoadingState label="Loading…" spaced={false} />
-      ) : (
-        <Table minWidthClassName="min-w-[700px]" isFetching={isFetching}>
-          <TableHeadRow variant="shaded">
-            <th className="px-3 py-2 font-medium text-neutral-500">Order #</th>
-            <th className="px-3 py-2 font-medium text-neutral-500">Buyer</th>
-            <SortableHeader<OrderSort>
-              label="Date"
-              sortKeyAsc="createdAt"
-              sortKeyDesc="-createdAt"
-              currentSort={sort}
-              onSortChange={onSortChange}
-            />
-            <th className="px-3 py-2 font-medium text-neutral-500">Status</th>
-            <SortableHeader<OrderSort>
-              label="Total"
-              sortKeyAsc="totalAmount"
-              sortKeyDesc="-totalAmount"
-              currentSort={sort}
-              onSortChange={onSortChange}
-              align="right"
-            />
-          </TableHeadRow>
-          <tbody className="divide-y divide-neutral-100">
-            {orders.map((order) => (
-              <tr key={order.id}>
-                <td className="px-3 py-2 font-medium text-neutral-900">
-                  <Link to={ORDERS_ROUTES.detail(order.id)} className="hover:underline">
-                    {order.orderNumber}
-                  </Link>
-                </td>
-                <td className="px-3 py-2">{order.buyer?.email ?? "—"}</td>
-                <td className="px-3 py-2">{formatDate(order.createdAt)}</td>
-                <td className="px-3 py-2">
-                  <StatusBadge tone={STATUS_TONE[order.status]}>
-                    {STATUS_LABEL[order.status]}
-                  </StatusBadge>
-                </td>
-                <td className="px-3 py-2 text-right font-medium tabular-nums text-neutral-900">
-                  {formatPrice(order.totalAmount)}
-                </td>
-              </tr>
-            ))}
-            {orders.length === 0 && <EmptyRow colSpan={5} message="No orders found." />}
-          </tbody>
-        </Table>
-      )}
-
-      {pagination && <Pagination page={page} pagination={pagination} onPageChange={onPageChange} />}
-    </section>
+    <DataTable<AdminOrder>
+      className="mt-4 min-h-0 flex-1"
+      columns={columns}
+      rows={orders}
+      getRowId={(order) => order.id}
+      isLoading={isLoading}
+      isFetching={isFetching}
+      isError={isError}
+      onRetry={refetch}
+      emptyMessage="No orders found."
+      caption="Order list"
+      minWidth="44rem"
+      search={{
+        label: "Search orders",
+        placeholder: "Search order # or buyer email…",
+        defaultValue: filters.search,
+        onSearch: (value) => setFilter("search", value),
+      }}
+      filters={{
+        fields: [
+          {
+            type: "select",
+            key: "status",
+            label: "Status",
+            placeholder: "Status: All",
+            options: STATUS_OPTIONS,
+          },
+        ],
+        values: { status: filters.status },
+        onChange: (_key, value) => setFilter("status", value as OrderStatus | ""),
+      }}
+      sort={toSortState(filters.sort)}
+      onSortChange={(next) => setFilter("sort", fromSortState(next))}
+      pagination={{ page, pageSize: limit, total }}
+      onPaginationChange={({ page: nextPage, pageSize }) => {
+        if (pageSize !== limit) setLimit(pageSize);
+        else setPage(nextPage);
+      }}
+    />
   );
 };

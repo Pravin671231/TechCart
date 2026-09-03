@@ -1,13 +1,9 @@
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { AlertModal } from "@/components/ui/AlertModal";
-import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
-import { Pagination } from "@/components/ui/Pagination";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { InlineAlert } from "@/components/ui/InlineAlert";
-import { LoadingState } from "@/components/ui/LoadingState";
-import { SearchInput } from "@/components/form/SearchInput";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useListQueryState } from "@/hooks/useListQueryState";
 import {
   useDeleteBrandMutation,
   useGetBrandsQuery,
@@ -16,40 +12,30 @@ import {
 import type { BrandListItem } from "./types";
 
 export interface BrandListProps {
-  search: string;
-  onSearchChange: (value: string) => void;
-  page: number;
-  onPageChange: (page: number) => void;
   onEdit: (brand: BrandListItem) => void;
 }
 
-export const BrandList = ({
-  search,
-  onSearchChange,
-  page,
-  onPageChange,
-  onEdit,
-}: BrandListProps) => {
-  const debouncedSearch = useDebouncedValue(search, 300);
-  const {
-    data,
-    isLoading,
-    isFetching,
-  } = useGetBrandsQuery({ search: debouncedSearch || undefined, page });
-  const brands = data?.items ?? [];
-  const pagination = data?.pagination;
+export const BrandList = ({ onEdit }: BrandListProps) => {
+  const { filters, setFilter, page, setPage, limit, setLimit } = useListQueryState<{
+    search: string;
+  }>({ search: "" });
+
+  const { data, isLoading, isFetching, isError, refetch } = useGetBrandsQuery({
+    search: filters.search || undefined,
+    page,
+    limit,
+  });
   const [deleteBrand, { isLoading: isDeleting }] = useDeleteBrandMutation();
   const [updateBrandStatus] = useUpdateBrandStatusMutation();
-  const [deleteGuard, setDeleteGuard] = useState<{ id: string; message: string } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<BrandListItem | null>(null);
+  const [guardMessage, setGuardMessage] = useState<string | null>(null);
 
   async function handleDelete(brand: BrandListItem) {
-    setDeleteGuard(null);
     try {
       await deleteBrand(brand._id).unwrap();
     } catch (err) {
       const envelope = getApiErrorEnvelope(err);
-      setDeleteGuard({ id: brand._id, message: envelope?.message ?? "Unable to delete brand." });
+      setGuardMessage(envelope?.message ?? "Unable to delete brand.");
     }
   }
 
@@ -57,87 +43,99 @@ export const BrandList = ({
     await updateBrandStatus({ id: brand._id, status: !brand.status }).unwrap();
   }
 
+  const columns: DataTableColumn<BrandListItem>[] = [
+    {
+      id: "logo",
+      header: "Logo",
+      width: "5rem",
+      cell: (brand) =>
+        brand.logo ? (
+          <img
+            src={brand.logo.url}
+            alt={brand.logo.alt ?? ""}
+            className="h-8 w-16 rounded-md border border-neutral-200 object-cover"
+          />
+        ) : (
+          <span className="block h-8 w-16 rounded-md border border-neutral-200 bg-neutral-50" />
+        ),
+    },
+    {
+      id: "name",
+      header: "Name",
+      cell: (brand) => <span className="font-medium text-neutral-900">{brand.name}</span>,
+    },
+    {
+      id: "productCount",
+      header: "Products",
+      align: "right",
+      cell: (brand) => <span className="tabular-nums">{brand.productCount}</span>,
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (brand) => (
+        <StatusBadge
+          tone={brand.status ? "success" : "neutral"}
+          shape="pill"
+          onClick={() => void handleToggleStatus(brand)}
+        >
+          {brand.status ? "Active" : "Inactive"}
+        </StatusBadge>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: (brand) => (
+        <span className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => onEdit(brand)}
+            className="text-primary-600 hover:underline"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => setPendingDelete(brand)}
+            className="text-primary-600 hover:underline"
+          >
+            Delete
+          </button>
+        </span>
+      ),
+    },
+  ];
+
+  const brands = data?.items ?? [];
+  const total = data?.pagination.total ?? 0;
+
   return (
-    <section className="min-w-0 flex-1">
-      <SearchInput
-        id="brand-search"
-        label="Search brands"
-        placeholder="Search by name…"
-        value={search}
-        onChange={onSearchChange}
+    <>
+      <DataTable<BrandListItem>
+        className="min-h-0 flex-1"
+        columns={columns}
+        rows={brands}
+        getRowId={(brand) => brand._id}
+        isLoading={isLoading}
+        isFetching={isFetching}
+        isError={isError}
+        onRetry={refetch}
+        emptyMessage="No brands found."
+        caption="Brand list"
+        minWidth="34rem"
+        search={{
+          label: "Search brands",
+          placeholder: "Search by name…",
+          defaultValue: filters.search,
+          onSearch: (value) => setFilter("search", value),
+        }}
+        pagination={{ page, pageSize: limit, total }}
+        onPaginationChange={({ page: nextPage, pageSize }) => {
+          if (pageSize !== limit) setLimit(pageSize);
+          else setPage(nextPage);
+        }}
       />
-
-      {isLoading ? (
-        <LoadingState />
-      ) : (
-        <div className="mt-4">
-          <Table minWidthClassName="min-w-[560px]" isFetching={isFetching}>
-            <TableHeadRow>
-              <th className="px-3 py-2">Logo</th>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2 text-right">Products</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Actions</th>
-            </TableHeadRow>
-            <tbody>
-              {brands.map((brand) => (
-                <Fragment key={brand._id}>
-                  <tr className="border-b border-neutral-100">
-                    <td className="px-3 py-2">
-                      {brand.logo ? (
-                        <img
-                          src={brand.logo.url}
-                          alt={brand.logo.alt ?? ""}
-                          className="h-8 w-16 rounded-md border border-neutral-200 object-cover"
-                        />
-                      ) : (
-                        <span className="block h-8 w-16 rounded-md border border-neutral-200 bg-neutral-50" />
-                      )}
-                    </td>
-                    <td className="px-3 py-2 font-medium text-neutral-900">{brand.name}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{brand.productCount}</td>
-                    <td className="px-3 py-2">
-                      <StatusBadge
-                        tone={brand.status ? "success" : "neutral"}
-                        shape="pill"
-                        onClick={() => void handleToggleStatus(brand)}
-                      >
-                        {brand.status ? "Active" : "Inactive"}
-                      </StatusBadge>
-                    </td>
-                    <td className="px-3 py-2">
-                      <button
-                        type="button"
-                        onClick={() => onEdit(brand)}
-                        className="mr-3 text-primary-600 hover:underline"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPendingDelete(brand)}
-                        className="text-primary-600 hover:underline"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                  {deleteGuard?.id === brand._id && (
-                    <tr>
-                      <td colSpan={5} className="px-3 py-2">
-                        <InlineAlert>{deleteGuard.message}</InlineAlert>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              ))}
-              {brands.length === 0 && <EmptyRow colSpan={5} message="No brands found." />}
-            </tbody>
-          </Table>
-        </div>
-      )}
-
-      {pagination && <Pagination page={page} pagination={pagination} onPageChange={onPageChange} />}
 
       <AlertModal
         open={Boolean(pendingDelete)}
@@ -151,7 +149,17 @@ export const BrandList = ({
           if (target) void handleDelete(target);
         }}
       />
-    </section>
+
+      <AlertModal
+        open={Boolean(guardMessage)}
+        variant="warning"
+        title="Cannot delete brand"
+        message={guardMessage}
+        confirmLabel="OK"
+        cancelLabel="Close"
+        onCancel={() => setGuardMessage(null)}
+        onConfirm={() => setGuardMessage(null)}
+      />
+    </>
   );
 };
-

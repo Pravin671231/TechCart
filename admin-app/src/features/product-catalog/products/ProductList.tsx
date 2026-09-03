@@ -1,176 +1,154 @@
+import { useMemo } from "react";
 import { Link } from "react-router";
+import { DataTable, type DataTableColumn, type SortState } from "@/components/data-table";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { useListQueryState } from "@/hooks/useListQueryState";
 import { useGetBrandsQuery } from "@/features/product-catalog/brands/brandsApi";
 import { useGetCategoriesQuery } from "@/features/product-catalog/categories/categoriesApi";
 import { PRODUCT_CATALOG_ROUTES } from "@/features/product-catalog/routePaths";
-import { LoadingState } from "@/components/ui/LoadingState";
-import { Pagination } from "@/components/ui/Pagination";
-import { SearchInput } from "@/components/form/SearchInput";
-import { SortableHeader } from "@/components/ui/SortableHeader";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { useGetProductsQuery, useUpdateProductStatusMutation } from "./productsApi";
+import { useGetProductsQuery } from "./productsApi";
 import { STATUS_LABEL, STATUS_TONE } from "./statusPresentation";
 import type { Product, ProductSort, ProductStatus } from "./types";
 
-export interface ProductListProps {
+interface ProductFilters {
   search: string;
-  onSearchChange: (value: string) => void;
   status: ProductStatus | "";
-  onStatusChange: (value: ProductStatus | "") => void;
-  sort: ProductSort | undefined;
-  onSortChange: (sort: ProductSort | undefined) => void;
-  page: number;
-  onPageChange: (page: number) => void;
+  sort?: ProductSort;
 }
 
-export const ProductList = ({
-  search,
-  onSearchChange,
-  status,
-  onStatusChange,
-  sort,
-  onSortChange,
-  page,
-  onPageChange,
-}: ProductListProps) => {
-  const debouncedSearch = useDebouncedValue(search, 300);
-  const { data, isLoading, isFetching } = useGetProductsQuery({
+const STATUS_OPTIONS = [
+  { label: "Draft", value: "draft" },
+  { label: "Published", value: "published" },
+  { label: "Archived", value: "archived" },
+];
+
+// ProductSort is one combined string ("name" | "-name" | …); DataTable speaks
+// { columnId, direction }. Adapt at this boundary — productsApi.ts keeps
+// splitting the combined string into ?sortBy=/?orderBy= as before.
+function toSortState(sort: ProductSort | undefined): SortState | null {
+  if (!sort) return null;
+  return sort.startsWith("-")
+    ? { columnId: sort.slice(1), direction: "desc" }
+    : { columnId: sort, direction: "asc" };
+}
+
+function fromSortState(next: SortState | null): ProductSort | undefined {
+  if (!next) return undefined;
+  const base = next.columnId as "name" | "createdAt";
+  return (next.direction === "desc" ? `-${base}` : base) as ProductSort;
+}
+
+export const ProductList = () => {
+  const { filters, setFilter, page, setPage, limit, setLimit } = useListQueryState<ProductFilters>({
+    search: "",
+    status: "",
+    sort: undefined,
+  });
+
+  const { data, isLoading, isFetching, isError, refetch } = useGetProductsQuery({
     page,
-    sort,
-    search: debouncedSearch || undefined,
-    status: status || undefined,
+    limit,
+    sort: filters.sort,
+    search: filters.search || undefined,
+    status: filters.status || undefined,
   });
   const { data: brandsData } = useGetBrandsQuery({ limit: 100 });
   const { data: categoriesData } = useGetCategoriesQuery({ limit: 100 });
-  const brands = brandsData?.items ?? [];
-  const categories = categoriesData?.items ?? [];
-  const [updateStatus] = useUpdateProductStatusMutation();
 
-  const brandNameById = new Map(brands.map((b) => [b._id, b.name]));
-  const categoryNameById = new Map(categories.map((c) => [c._id, c.name]));
+  const brandNameById = useMemo(
+    () => new Map((brandsData?.items ?? []).map((brand) => [brand._id, brand.name])),
+    [brandsData],
+  );
+  const categoryNameById = useMemo(
+    () => new Map((categoriesData?.items ?? []).map((category) => [category._id, category.name])),
+    [categoriesData],
+  );
+
+  const columns = useMemo<DataTableColumn<Product>[]>(
+    () => [
+      {
+        id: "name",
+        header: "Name",
+        sortable: true,
+        cell: (product) => (
+          <Link
+            to={PRODUCT_CATALOG_ROUTES.products.detail(product._id)}
+            className="font-medium text-primary-600 hover:underline"
+          >
+            {product.name}
+          </Link>
+        ),
+      },
+      {
+        id: "brand",
+        header: "Brand",
+        cell: (product) => brandNameById.get(product.brand) ?? "—",
+      },
+      {
+        id: "category",
+        header: "Category",
+        cell: (product) => categoryNameById.get(product.category) ?? "—",
+      },
+      {
+        id: "variants",
+        header: "Variants",
+        align: "right",
+        cell: (product) => product.variants.length,
+      },
+      {
+        id: "status",
+        header: "Status",
+        cell: (product) => (
+          <StatusBadge tone={STATUS_TONE[product.status]}>
+            {STATUS_LABEL[product.status]}
+          </StatusBadge>
+        ),
+      },
+    ],
+    [brandNameById, categoryNameById],
+  );
 
   const products = data?.items ?? [];
-  const pagination = data?.pagination;
-
-  async function handleArchive(product: Product) {
-    await updateStatus({ id: product._id, status: "archived" }).unwrap();
-  }
-
-  async function handleRestore(product: Product) {
-    await updateStatus({ id: product._id, status: "draft" }).unwrap();
-  }
+  const total = data?.pagination.total ?? 0;
 
   return (
-    <section className="min-w-0 flex-1">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <SearchInput
-          id="product-search"
-          label="Search products"
-          placeholder="Search name or SKU…"
-          value={search}
-          onChange={onSearchChange}
-          width="w-72"
-        />
-        <label htmlFor="product-status" className="sr-only">
-          Status
-        </label>
-        <select
-          id="product-status"
-          value={status}
-          onChange={(event) => onStatusChange(event.target.value as ProductStatus | "")}
-          className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-600"
-        >
-          <option value="">Status: All</option>
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-          <option value="archived">Archived</option>
-        </select>
-      </div>
-
-      {isLoading ? (
-        <LoadingState label="Loading…" spaced={false} />
-      ) : (
-        <Table minWidthClassName="min-w-[700px]" isFetching={isFetching}>
-          <TableHeadRow variant="shaded">
-            <SortableHeader<ProductSort>
-              label="Name"
-              sortKeyAsc="name"
-              sortKeyDesc="-name"
-              currentSort={sort}
-              onSortChange={onSortChange}
-            />
-            <th className="px-3 py-2 font-medium text-neutral-500">Brand</th>
-            <th className="px-3 py-2 font-medium text-neutral-500">Category</th>
-            <th className="px-3 py-2 text-right font-medium text-neutral-500">Variants</th>
-            <th className="px-3 py-2 font-medium text-neutral-500">Status</th>
-            <th className="px-3 py-2 font-medium text-neutral-500">Actions</th>
-          </TableHeadRow>
-          <tbody className="divide-y divide-neutral-100">
-            {products.map((product) => (
-              <tr key={product._id}>
-                <td className="px-3 py-2 font-medium text-neutral-900">
-                  <Link
-                    to={PRODUCT_CATALOG_ROUTES.products.detail(product._id)}
-                    className="hover:underline"
-                  >
-                    {product.name}
-                  </Link>
-                </td>
-                <td className="px-3 py-2">{brandNameById.get(product.brand) ?? "—"}</td>
-                <td className="px-3 py-2">{categoryNameById.get(product.category) ?? "—"}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{product.variants.length}</td>
-                <td className="px-3 py-2">
-                  <StatusBadge tone={STATUS_TONE[product.status]}>
-                    {STATUS_LABEL[product.status]}
-                  </StatusBadge>
-                </td>
-                <td className="px-3 py-2 text-xs whitespace-nowrap text-neutral-500">
-                  <Link
-                    to={PRODUCT_CATALOG_ROUTES.products.detail(product._id)}
-                    className="text-primary-600 hover:underline"
-                  >
-                    View
-                  </Link>
-                  {" · "}
-                  <Link
-                    to={PRODUCT_CATALOG_ROUTES.products.edit(product._id)}
-                    className="text-primary-600 hover:underline"
-                  >
-                    Edit
-                  </Link>
-                  {product.status === "archived" ? (
-                    <>
-                      {" · "}
-                      <button
-                        type="button"
-                        onClick={() => void handleRestore(product)}
-                        className="text-primary-600 hover:underline"
-                      >
-                        Restore
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {" · "}
-                      <button
-                        type="button"
-                        onClick={() => void handleArchive(product)}
-                        className="text-primary-600 hover:underline"
-                      >
-                        Archive
-                      </button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {products.length === 0 && <EmptyRow colSpan={6} message="No products found." />}
-          </tbody>
-        </Table>
-      )}
-
-      {pagination && <Pagination page={page} pagination={pagination} onPageChange={onPageChange} />}
-    </section>
+    <DataTable<Product>
+      className="mt-4 min-h-0 flex-1"
+      columns={columns}
+      rows={products}
+      getRowId={(product) => product._id}
+      isLoading={isLoading}
+      isFetching={isFetching}
+      isError={isError}
+      onRetry={refetch}
+      emptyMessage="No products found."
+      caption="Product list"
+      minWidth="52rem"
+      search={{
+        label: "Search products",
+        placeholder: "Search name or SKU…",
+        onSearch: (value) => setFilter("search", value),
+      }}
+      filters={{
+        fields: [
+          {
+            type: "select",
+            key: "status",
+            label: "Status",
+            placeholder: "Status: All",
+            options: STATUS_OPTIONS,
+          },
+        ],
+        values: { status: filters.status },
+        onChange: (_key, value) => setFilter("status", value as ProductStatus | ""),
+      }}
+      sort={toSortState(filters.sort)}
+      onSortChange={(next) => setFilter("sort", fromSortState(next))}
+      pagination={{ page, pageSize: limit, total }}
+      onPaginationChange={({ page: nextPage, pageSize }) => {
+        if (pageSize !== limit) setLimit(pageSize);
+        else setPage(nextPage);
+      }}
+    />
   );
 };

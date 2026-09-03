@@ -1,13 +1,9 @@
-import { Fragment, useState } from "react";
+import { useMemo, useState } from "react";
 import { getApiErrorEnvelope } from "@/app/api/apiError";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { AlertModal } from "@/components/ui/AlertModal";
-import { EmptyRow, Table, TableHeadRow } from "@/components/ui/Table";
-import { Pagination } from "@/components/ui/Pagination";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { InlineAlert } from "@/components/ui/InlineAlert";
-import { LoadingState } from "@/components/ui/LoadingState";
-import { SearchInput } from "@/components/form/SearchInput";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useListQueryState } from "@/hooks/useListQueryState";
 import {
   useDeleteCategoryMutation,
   useGetCategoriesQuery,
@@ -16,10 +12,6 @@ import {
 import type { CategoryListItem } from "./types";
 
 export interface CategoryListProps {
-  search: string;
-  onSearchChange: (value: string) => void;
-  page: number;
-  onPageChange: (page: number) => void;
   onEdit: (category: CategoryListItem) => void;
 }
 
@@ -46,45 +38,39 @@ function orderAsTree(categories: CategoryListItem[]): CategoryListItem[] {
   return ordered;
 }
 
-export const CategoryList = ({
-  search,
-  onSearchChange,
-  page,
-  onPageChange,
-  onEdit,
-}: CategoryListProps) => {
-  const debouncedSearch = useDebouncedValue(search, 300);
-  const {
-    data,
-    isLoading,
-    isFetching,
-  } = useGetCategoriesQuery({ search: debouncedSearch || undefined, page });
+export const CategoryList = ({ onEdit }: CategoryListProps) => {
+  const { filters, setFilter, page, setPage, limit, setLimit } = useListQueryState<{
+    search: string;
+  }>({ search: "" });
+
+  const { data, isLoading, isFetching, isError, refetch } = useGetCategoriesQuery({
+    search: filters.search || undefined,
+    page,
+    limit,
+  });
   // The tree ordering/parent-name lookup below only sees the current page's
   // slice, not every category — a child whose parent falls on a different
   // page renders as an unindented "orphan" with no resolvable parent name.
   // A known, accepted limitation of pairing pagination with a two-level
   // hierarchy view; still strictly better than the previous silent
   // hard-cap-at-20-with-no-pagination-at-all behavior.
-  const categories = data?.items ?? [];
-  const pagination = data?.pagination;
+  const categories = useMemo(() => data?.items ?? [], [data]);
+  const total = data?.pagination.total ?? 0;
+
   const [deleteCategory, { isLoading: isDeleting }] = useDeleteCategoryMutation();
   const [updateCategoryStatus] = useUpdateCategoryStatusMutation();
-  const [deleteGuard, setDeleteGuard] = useState<{ id: string; message: string } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<CategoryListItem | null>(null);
+  const [guardMessage, setGuardMessage] = useState<string | null>(null);
 
-  const orderedCategories = orderAsTree(categories);
-  const nameById = new Map(categories.map((c) => [c._id, c.name]));
+  const orderedCategories = useMemo(() => orderAsTree(categories), [categories]);
+  const nameById = useMemo(() => new Map(categories.map((c) => [c._id, c.name])), [categories]);
 
   async function handleDelete(category: CategoryListItem) {
-    setDeleteGuard(null);
     try {
       await deleteCategory(category._id).unwrap();
     } catch (err) {
       const envelope = getApiErrorEnvelope(err);
-      setDeleteGuard({
-        id: category._id,
-        message: envelope?.message ?? "Unable to delete category.",
-      });
+      setGuardMessage(envelope?.message ?? "Unable to delete category.");
     }
   }
 
@@ -92,91 +78,97 @@ export const CategoryList = ({
     await updateCategoryStatus({ id: category._id, status: !category.status }).unwrap();
   }
 
+  const columns: DataTableColumn<CategoryListItem>[] = [
+    {
+      id: "name",
+      header: "Name",
+      cellClassName: (category) =>
+        category.parentCategory
+          ? "pl-8 font-medium text-neutral-900"
+          : "font-medium text-neutral-900",
+      cell: (category) => (category.parentCategory ? `↳ ${category.name}` : category.name),
+    },
+    {
+      id: "parent",
+      header: "Parent",
+      cell: (category) =>
+        category.parentCategory ? (nameById.get(category.parentCategory) ?? "—") : "—",
+    },
+    {
+      id: "productCount",
+      header: "Products",
+      align: "right",
+      cell: (category) => <span className="tabular-nums">{category.productCount}</span>,
+    },
+    {
+      id: "sortOrder",
+      header: "Sort",
+      align: "right",
+      cell: (category) => <span className="tabular-nums">{category.sortOrder}</span>,
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (category) => (
+        <StatusBadge
+          tone={category.status ? "success" : "neutral"}
+          shape="pill"
+          onClick={() => void handleToggleStatus(category)}
+        >
+          {category.status ? "Active" : "Inactive"}
+        </StatusBadge>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: (category) => (
+        <span className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => onEdit(category)}
+            className="text-primary-600 hover:underline"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => setPendingDelete(category)}
+            className="text-primary-600 hover:underline"
+          >
+            Delete
+          </button>
+        </span>
+      ),
+    },
+  ];
+
   return (
-    <section className="min-w-0 flex-1">
-      <SearchInput
-        id="category-search"
-        label="Search categories"
-        placeholder="Search by name…"
-        value={search}
-        onChange={onSearchChange}
+    <>
+      <DataTable<CategoryListItem>
+        className="min-h-0 flex-1"
+        columns={columns}
+        rows={orderedCategories}
+        getRowId={(category) => category._id}
+        isLoading={isLoading}
+        isFetching={isFetching}
+        isError={isError}
+        onRetry={refetch}
+        emptyMessage="No categories found."
+        caption="Category list"
+        minWidth="40rem"
+        search={{
+          label: "Search categories",
+          placeholder: "Search by name…",
+          defaultValue: filters.search,
+          onSearch: (value) => setFilter("search", value),
+        }}
+        pagination={{ page, pageSize: limit, total }}
+        onPaginationChange={({ page: nextPage, pageSize }) => {
+          if (pageSize !== limit) setLimit(pageSize);
+          else setPage(nextPage);
+        }}
       />
-
-      {isLoading ? (
-        <LoadingState />
-      ) : (
-        <div className="mt-4">
-          <Table minWidthClassName="min-w-[640px]" isFetching={isFetching}>
-            <TableHeadRow>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Parent</th>
-              <th className="px-3 py-2 text-right">Products</th>
-              <th className="px-3 py-2 text-right">Sort</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Actions</th>
-            </TableHeadRow>
-            <tbody>
-              {orderedCategories.map((category) => {
-                const isChild = Boolean(category.parentCategory);
-                const parentName = category.parentCategory
-                  ? nameById.get(category.parentCategory)
-                  : undefined;
-                return (
-                  <Fragment key={category._id}>
-                    <tr className="border-b border-neutral-100">
-                      <td
-                        className={`px-3 py-2 font-medium text-neutral-900 ${isChild ? "pl-8" : ""}`}
-                      >
-                        {isChild ? `↳ ${category.name}` : category.name}
-                      </td>
-                      <td className="px-3 py-2 text-neutral-500">{parentName ?? "—"}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{category.productCount}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{category.sortOrder}</td>
-                      <td className="px-3 py-2">
-                        <StatusBadge
-                          tone={category.status ? "success" : "neutral"}
-                          shape="pill"
-                          onClick={() => void handleToggleStatus(category)}
-                        >
-                          {category.status ? "Active" : "Inactive"}
-                        </StatusBadge>
-                      </td>
-                      <td className="px-3 py-2">
-                        <button
-                          type="button"
-                          onClick={() => onEdit(category)}
-                          className="mr-3 text-primary-600 hover:underline"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPendingDelete(category)}
-                          className="text-primary-600 hover:underline"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                    {deleteGuard?.id === category._id && (
-                      <tr>
-                        <td colSpan={6} className="px-3 py-2">
-                          <InlineAlert>{deleteGuard.message}</InlineAlert>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-              {orderedCategories.length === 0 && (
-                <EmptyRow colSpan={6} message="No categories found." />
-              )}
-            </tbody>
-          </Table>
-        </div>
-      )}
-
-      {pagination && <Pagination page={page} pagination={pagination} onPageChange={onPageChange} />}
 
       <AlertModal
         open={Boolean(pendingDelete)}
@@ -190,6 +182,17 @@ export const CategoryList = ({
           if (target) void handleDelete(target);
         }}
       />
-    </section>
+
+      <AlertModal
+        open={Boolean(guardMessage)}
+        variant="warning"
+        title="Cannot delete category"
+        message={guardMessage}
+        confirmLabel="OK"
+        cancelLabel="Close"
+        onCancel={() => setGuardMessage(null)}
+        onConfirm={() => setGuardMessage(null)}
+      />
+    </>
   );
 };

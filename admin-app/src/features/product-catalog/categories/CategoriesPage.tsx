@@ -1,16 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { useListQueryState } from "@/hooks/useListQueryState";
 import { useGetCategoriesQuery } from "./categoriesApi";
 import { CategoryForm } from "./CategoryForm";
 import { CategoryList } from "./CategoryList";
 import type { CategoryListItem } from "./types";
 
 export const CategoriesPage = () => {
-  const { filters, setFilter, page, setPage } = useListQueryState<{ search: string }>({
-    search: "",
-  });
   const [selectedCategory, setSelectedCategory] = useState<CategoryListItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -25,7 +21,7 @@ export const CategoriesPage = () => {
   }
 
   return (
-    <main className="p-6">
+    <main className="flex h-full min-h-0 flex-col p-6">
       <PageHeader
         title="Categories"
         actions={
@@ -40,24 +36,22 @@ export const CategoriesPage = () => {
         }
       />
 
-      <div className="flex flex-col gap-6 xl:flex-row">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col gap-6 xl:flex-row">
         <CategoryList
-          search={filters.search}
-          onSearchChange={(value) => setFilter("search", value)}
-          page={page}
-          onPageChange={setPage}
           onEdit={(category) => {
             setIsCreating(false);
             setSelectedCategory(category);
           }}
         />
         {showForm && (
-          <CategoryForm
-            category={isCreating ? null : selectedCategory}
-            allCategories={allCategories}
-            onSaved={closeForm}
-            onCancel={closeForm}
-          />
+          <div className="w-full shrink-0 overflow-y-auto xl:w-96">
+            <CategoryForm
+              category={isCreating ? null : selectedCategory}
+              allCategories={allCategories}
+              onSaved={closeForm}
+              onCancel={closeForm}
+            />
+          </div>
         )}
       </div>
     </main>

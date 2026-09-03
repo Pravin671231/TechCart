@@ -1,15 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { useListQueryState } from "@/hooks/useListQueryState";
 import { BrandForm } from "./BrandForm";
 import { BrandList } from "./BrandList";
 import type { BrandListItem } from "./types";
 
 export const BrandsPage = () => {
-  const { filters, setFilter, page, setPage } = useListQueryState<{ search: string }>({
-    search: "",
-  });
   const [selectedBrand, setSelectedBrand] = useState<BrandListItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -21,7 +17,7 @@ export const BrandsPage = () => {
   }
 
   return (
-    <main className="p-6">
+    <main className="flex h-full min-h-0 flex-col p-6">
       <PageHeader
         title="Brands"
         actions={
@@ -36,23 +32,21 @@ export const BrandsPage = () => {
         }
       />
 
-      <div className="flex flex-col gap-6 xl:flex-row">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col gap-6 xl:flex-row">
         <BrandList
-          search={filters.search}
-          onSearchChange={(value) => setFilter("search", value)}
-          page={page}
-          onPageChange={setPage}
           onEdit={(brand) => {
             setIsCreating(false);
             setSelectedBrand(brand);
           }}
         />
         {showForm && (
-          <BrandForm
-            brand={isCreating ? null : selectedBrand}
-            onSaved={closeForm}
-            onCancel={closeForm}
-          />
+          <div className="w-full shrink-0 overflow-y-auto xl:w-96">
+            <BrandForm
+              brand={isCreating ? null : selectedBrand}
+              onSaved={closeForm}
+              onCancel={closeForm}
+            />
+          </div>
         )}
       </div>
     </main>

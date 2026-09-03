@@ -139,17 +139,19 @@ describe("ProductsPage", () => {
     });
   });
 
-  it("archives a published product and restores an archived one", async () => {
+  it("changes product status from the detail page", async () => {
     setupHandlers([makeProduct({ status: "published" })]);
     renderProductsApp();
     await screen.findByText("Test Phone");
 
-    fireEvent.click(screen.getByRole("button", { name: "Archive" }));
-    expect(await screen.findByText("Archived")).toBeInTheDocument();
-    const restoreButton = await screen.findByRole("button", { name: "Restore" });
+    fireEvent.click(screen.getByRole("link", { name: "Test Phone" }));
+    const statusSelect = await screen.findByLabelText("Change status");
 
-    fireEvent.click(restoreButton);
-    expect(await screen.findByText("Draft")).toBeInTheDocument();
+    fireEvent.change(statusSelect, { target: { value: "archived" } });
+    await waitFor(() => expect(screen.getByLabelText("Change status")).toHaveValue("archived"));
+
+    fireEvent.change(screen.getByLabelText("Change status"), { target: { value: "draft" } });
+    await waitFor(() => expect(screen.getByLabelText("Change status")).toHaveValue("draft"));
   });
 
   it("navigates to the read-only detail view, rendering every stored field and all variants regardless of active", async () => {
@@ -182,7 +184,7 @@ describe("ProductsPage", () => {
     renderProductsApp();
     await screen.findByText("Test Phone");
 
-    fireEvent.click(screen.getByRole("link", { name: "View" }));
+    fireEvent.click(screen.getByRole("link", { name: "Test Phone" }));
 
     expect(await screen.findByText("Electronics › Smartphones")).toBeInTheDocument();
     expect(screen.getByText("Screen Size")).toBeInTheDocument();
@@ -261,5 +263,70 @@ describe("ProductsPage", () => {
     await waitFor(() => {
       expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
+  });
+
+  it("changes page size via the footer, re-requesting with the new limit", async () => {
+    const handlers = setupHandlers([makeProduct()]);
+    renderProductsApp();
+    await screen.findByText("Test Phone");
+
+    fireEvent.change(screen.getByLabelText("Rows per page"), { target: { value: "50" } });
+
+    await waitFor(() => {
+      expect(handlers.getLastListUrl()!.searchParams.get("limit")).toBe("50");
+    });
+  });
+
+  it("navigates to the next page via the footer", async () => {
+    let lastListUrl: URL | null = null;
+    server.use(
+      http.get(`${BASE}/brands`, () =>
+        HttpResponse.json({
+          success: true,
+          data: [{ _id: "brand-1", name: "Brand A", slug: "brand-a" }],
+          pagination: LOOKUP_PAGINATION,
+        }),
+      ),
+      http.get(`${BASE}/categories`, () =>
+        HttpResponse.json({ success: true, data: [], pagination: LOOKUP_PAGINATION }),
+      ),
+      http.get(`${BASE}/products`, ({ request }) => {
+        lastListUrl = new URL(request.url);
+        const page = Number(lastListUrl.searchParams.get("page") ?? "1");
+        return HttpResponse.json({
+          success: true,
+          data: [makeProduct({ _id: `p-${page}`, name: `Phone page ${page}` })],
+          pagination: { page, limit: 20, total: 45, totalPages: 3, hasNextPage: page < 3 },
+        });
+      }),
+    );
+
+    renderProductsApp();
+    await screen.findByText("Phone page 1");
+
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+
+    await waitFor(() => {
+      expect(lastListUrl!.searchParams.get("page")).toBe("2");
+    });
+    expect(await screen.findByText("Phone page 2")).toBeInTheDocument();
+  });
+
+  it("clears the status filter via 'Clear filters'", async () => {
+    const handlers = setupHandlers([makeProduct()]);
+    renderProductsApp();
+    await screen.findByText("Test Phone");
+
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "archived" } });
+    await waitFor(() => {
+      expect(handlers.getLastListUrl()!.searchParams.get("status")).toBe("archived");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Status")).toHaveValue("");
+    });
+    expect(screen.queryByRole("button", { name: "Clear filters" })).not.toBeInTheDocument();
   });
 });

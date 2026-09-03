@@ -1,39 +1,18 @@
 import { LinkButton } from "@/components/ui/Button";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { useListQueryState } from "@/hooks/useListQueryState";
+import { PRODUCT_CATALOG_ROUTES } from "@/features/product-catalog/routePaths";
 import { ProductList } from "./ProductList";
-import type { ProductSort, ProductStatus } from "./types";
-
-interface ProductFilters {
-  search: string;
-  status: ProductStatus | "";
-  sort?: ProductSort;
-}
 
 export const ProductsPage = () => {
-  const { filters, setFilter, page, setPage } = useListQueryState<ProductFilters>({
-    search: "",
-    status: "",
-    sort: undefined,
-  });
-
   return (
-    <main className="p-6">
+    <main className="flex h-full min-h-0 flex-col p-6">
       <PageHeader
         title="Products"
-        actions={<LinkButton to="/products/new">+ New product</LinkButton>}
+        actions={
+          <LinkButton to={PRODUCT_CATALOG_ROUTES.products.new}>+ New product</LinkButton>
+        }
       />
-
-      <ProductList
-        search={filters.search}
-        onSearchChange={(value) => setFilter("search", value)}
-        status={filters.status}
-        onStatusChange={(value) => setFilter("status", value)}
-        sort={filters.sort}
-        onSortChange={(value) => setFilter("sort", value)}
-        page={page}
-        onPageChange={setPage}
-      />
+      <ProductList />
     </main>
   );
 };
