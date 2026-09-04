@@ -220,7 +220,7 @@ export const CategorySpecificationEditor = ({ categoryId }: { categoryId: string
       <div className="flex items-center justify-between">
         <p className="text-xs text-neutral-500">
           Marking a field filterable makes it a buyer-facing filter and eligible for category card
-          display (first four, in order).
+          display (first six, in order).
         </p>
         <Button onClick={() => void handleSave()} loading={isSaving} loadingLabel="Saving…">
           Save schema

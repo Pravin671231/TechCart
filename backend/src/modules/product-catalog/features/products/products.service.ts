@@ -461,7 +461,7 @@ export type PublicCardSpecification = {
 
 // FR-CAT-091's card contract (image, name, sellingPrice, no specifications)
 // plus brand and — as of #36 — `cardSpecifications` (FR-CAT-092's
-// first-four-filterable-specs augmentation), following the SRS's own worked
+// first-six-filterable-specs augmentation), following the SRS's own worked
 // listing-item example. `cardSpecifications` is always present, even as `[]`
 // for a home/all-products listing or a category with no filterable fields —
 // per the SRS, the home and category views share this one response shape,
@@ -664,10 +664,10 @@ function toPublicListItem(product: PublicProductDoc): PublicProductListItem {
   return item;
 }
 
-// FR-CAT-092: a product's own value for each of its category's first-four
+// FR-CAT-092: a product's own value for each of its category's first-six
 // filterable fields, in that same order — a field is skipped entirely
 // (never padded with a null/placeholder entry) when the product has no
-// stored value for it, matching "a product carrying fewer than four
+// stored value for it, matching "a product carrying fewer than six
 // filterable specifications renders only those it has." Matched by name
 // alone across all of the product's specification groups, the same
 // simplification categorySpecifications.service.ts's card-field lookup

@@ -30,6 +30,7 @@ import {
   validateProductSpecifications,
   getCardFieldsByCategoryIds,
   getFilterableFieldsByCategory,
+  MAX_CARD_SPECIFICATION_FIELDS,
 } from "../categorySpecifications.service";
 
 const categoryId = new Types.ObjectId();
@@ -551,8 +552,8 @@ describe("getCardFieldsByCategoryIds", () => {
     ]);
   });
 
-  it("caps the result at the first four filterable fields, in declaration order", async () => {
-    const sixFilterableFields: SpecificationGroup = {
+  it("caps the result at the first six filterable fields, in declaration order", async () => {
+    const eightFilterableFields: SpecificationGroup = {
       groupName: "Specs",
       specifications: [
         { name: "A", type: "boolean", required: false, filterable: true },
@@ -561,15 +562,25 @@ describe("getCardFieldsByCategoryIds", () => {
         { name: "D", type: "boolean", required: false, filterable: true },
         { name: "E", type: "boolean", required: false, filterable: true },
         { name: "F", type: "boolean", required: false, filterable: true },
+        { name: "G", type: "boolean", required: false, filterable: true },
+        { name: "H", type: "boolean", required: false, filterable: true },
       ],
     };
     vi.mocked(categorySpecificationsRepository.findByCategoryIds).mockResolvedValue(
-      new Map([[categoryId.toString(), [sixFilterableFields]]]),
+      new Map([[categoryId.toString(), [eightFilterableFields]]]),
     );
 
     const result = await getCardFieldsByCategoryIds([categoryId]);
 
-    expect(result.get(categoryId.toString())?.map((f) => f.name)).toEqual(["A", "B", "C", "D"]);
+    expect(MAX_CARD_SPECIFICATION_FIELDS).toBe(6);
+    expect(result.get(categoryId.toString())?.map((f) => f.name)).toEqual([
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+    ]);
   });
 
   it("omits non-filterable fields entirely", async () => {

@@ -162,7 +162,7 @@
             <ol class="mt-1 list-decimal space-y-0.5 pl-5 text-blue-800">
               <li>It becomes a buyer-facing filter facet · FR-CAT-072</li>
               <li>
-                It becomes eligible for display on category product cards — first four in the order
+                It becomes eligible for display on category product cards — first six in the order
                 below · FR-CAT-092
               </li>
             </ol>
@@ -362,14 +362,14 @@
               </div>
             </section>
 
-            <!-- Card preview — which four fields actually reach a category card -->
+            <!-- Card preview — which six fields actually reach a category card -->
             <section class="w-full shrink-0 xl:w-80">
               <div class="rounded-lg border border-neutral-200 p-4">
                 <h2 class="mb-1 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
                   Category card preview
                 </h2>
                 <p class="mb-3 text-[11px] text-neutral-400">
-                  5 fields are filterable; the first four in declaration order reach the card
+                  5 fields are filterable; all 5 fit within the first-six card limit
                 </p>
 
                 <article class="overflow-hidden rounded-lg border border-neutral-200 shadow-sm">
@@ -397,6 +397,10 @@
                         <dt>Battery Capacity</dt>
                         <dd class="text-neutral-600">4500 mAh</dd>
                       </div>
+                      <div class="flex justify-between gap-2">
+                        <dt>Fast Charging</dt>
+                        <dd class="text-neutral-600">Yes</dd>
+                      </div>
                     </dl>
                     <p class="text-sm font-semibold text-neutral-900">₹49,900</p>
                   </div>
@@ -407,11 +411,11 @@
                 >
                   <p class="mb-1 font-medium text-neutral-600">Not on the card</p>
                   <p>
-                    A 5th filterable field would still appear in the buyer filter rail — the limit
-                    of four constrains display only, never the schema · FR-CAT-092
+                    A 7th filterable field would still appear in the buyer filter rail — the limit
+                    of six constrains display only, never the schema · FR-CAT-092
                   </p>
                   <p class="mt-1">
-                    Reorder with the ⣿ handles to change which four appear. Nothing else changes.
+                    Reorder with the ⣿ handles to change which six appear. Nothing else changes.
                   </p>
                 </div>
               </div>
