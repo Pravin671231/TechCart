@@ -36,7 +36,7 @@ const PAYMENT_MARKS = [VisaMark, MastercardMark, RuPayMark, UpiMark];
 
 export function Footer() {
   return (
-    <footer className="border-t border-neutral-800 bg-neutral-900 text-neutral-400">
+    <footer className="border-t-2 border-primary-600/60 bg-neutral-900 text-neutral-400">
       <div className="mx-auto max-w-7xl px-4 py-10">
         <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-5">
           <div>

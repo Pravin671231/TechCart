@@ -34,7 +34,9 @@ export function PriceDisplay({
 }) {
   const classes = SIZE_CLASSES[size];
   const badge = (
-    <span className={`rounded-md bg-accent-100 font-medium text-accent-700 ${classes.badge}`}>
+    <span
+      className={`rounded-md bg-linear-to-r from-accent-100 to-accent-200 font-medium text-accent-800 ${classes.badge}`}
+    >
       {discount}% off
     </span>
   );

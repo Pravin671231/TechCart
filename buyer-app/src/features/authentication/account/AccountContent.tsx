@@ -31,30 +31,32 @@ export function AccountContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-2xl space-y-8">
-        <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">My Account</h2>
+        <h2 className="text-center font-display text-3xl font-bold tracking-tight text-neutral-900">
+          My Account
+        </h2>
 
         {dashboard ? (
           <>
             <AccountSummary dashboard={dashboard} />
             <div>
-              <h3 className="mb-3 text-lg font-semibold text-gray-900">Recent orders</h3>
+              <h3 className="mb-3 text-lg font-semibold text-neutral-900">Recent orders</h3>
               <RecentOrdersList orders={dashboard.recentOrders} />
             </div>
           </>
         ) : (
-          <p className="text-center text-sm text-gray-500">Loading...</p>
+          <p className="text-center text-sm text-neutral-500">Loading...</p>
         )}
 
-        <div className="rounded-md border border-gray-300 p-6">
-          <h3 className="mb-4 text-lg font-semibold text-gray-900">Edit profile</h3>
-          <p className="mb-4 text-sm text-gray-600">Update your name and phone number</p>
+        <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+          <h3 className="mb-4 text-lg font-semibold text-neutral-900">Edit profile</h3>
+          <p className="mb-4 text-sm text-neutral-600">Update your name and phone number</p>
           <div className="flex justify-center">
             {profile ? (
               <ProfileForm profile={profile} />
             ) : (
-              <p className="text-sm text-gray-500">Loading...</p>
+              <p className="text-sm text-neutral-500">Loading...</p>
             )}
           </div>
         </div>
@@ -62,11 +64,11 @@ export function AccountContent() {
         <div className="flex flex-col items-center gap-2 text-center">
           <Link
             href="/account/addresses"
-            className="text-sm font-medium text-primary hover:underline"
+            className="text-sm font-medium text-primary-700 hover:underline"
           >
             Manage saved addresses
           </Link>
-          <Link href="/orders" className="text-sm font-medium text-primary hover:underline">
+          <Link href="/orders" className="text-sm font-medium text-primary-700 hover:underline">
             View your orders
           </Link>
         </div>

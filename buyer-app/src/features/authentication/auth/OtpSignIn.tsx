@@ -86,7 +86,7 @@ export function OtpSignIn() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2.5 shadow-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+              className="field-input mt-1 w-full px-3 py-2.5"
               placeholder="you@example.com"
             />
           </div>
@@ -94,7 +94,7 @@ export function OtpSignIn() {
           <button
             type="submit"
             disabled={isSendingOtp}
-            className="w-full rounded-md bg-primary-600 py-2.5 font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+            className="w-full rounded-md bg-gradient-primary py-2.5 font-medium text-white transition hover:brightness-95 hover:shadow-md disabled:opacity-50"
           >
             {isSendingOtp ? "Sending..." : "Send OTP"}
           </button>
@@ -115,7 +115,7 @@ export function OtpSignIn() {
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
               required
               maxLength={6}
-              className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2.5 text-center text-2xl tracking-widest shadow-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+              className="field-input mt-1 w-full px-3 py-2.5 text-center text-2xl tracking-widest"
               placeholder="000000"
             />
           </div>
@@ -123,7 +123,7 @@ export function OtpSignIn() {
           <button
             type="submit"
             disabled={isVerifyingOtp || otp.length !== 6}
-            className="w-full rounded-md bg-primary-600 py-2.5 font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+            className="w-full rounded-md bg-gradient-primary py-2.5 font-medium text-white transition hover:brightness-95 hover:shadow-md disabled:opacity-50"
           >
             {isVerifyingOtp ? "Verifying..." : "Verify & Sign In"}
           </button>

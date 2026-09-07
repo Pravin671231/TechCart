@@ -66,7 +66,7 @@ export function AddToCartButton({
       <button
         type="button"
         onClick={() => router.push("/cart")}
-        className={`${base} border border-primary-600 bg-white text-primary-700 hover:bg-primary-50`}
+        className={`${base} border border-accent-600 bg-white text-accent-700 hover:bg-accent-50`}
       >
         Go to Cart
       </button>
@@ -97,7 +97,7 @@ export function AddToCartButton({
         type="button"
         onClick={handleClick}
         disabled={isLoading}
-        className={`${base} bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-60`}
+        className={`${base} bg-gradient-accent text-white hover:brightness-95 hover:shadow-md disabled:opacity-60`}
       >
         Add to Cart
       </button>

@@ -30,7 +30,7 @@ export function ProfileForm({ profile }: { profile: AccountProfile }) {
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="email" className="block text-sm font-medium text-neutral-700">
           Email Address
         </label>
         <input
@@ -38,12 +38,12 @@ export function ProfileForm({ profile }: { profile: AccountProfile }) {
           type="email"
           value={profile.email}
           disabled
-          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500"
+          className="field-input mt-1 w-full px-3 py-2 text-sm"
         />
       </div>
 
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="name" className="block text-sm font-medium text-neutral-700">
           Name
         </label>
         <input
@@ -51,12 +51,12 @@ export function ProfileForm({ profile }: { profile: AccountProfile }) {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+          className="field-input mt-1 w-full px-3 py-2 text-sm"
         />
       </div>
 
       <div>
-        <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="phone" className="block text-sm font-medium text-neutral-700">
           Phone
         </label>
         <input
@@ -64,7 +64,7 @@ export function ProfileForm({ profile }: { profile: AccountProfile }) {
           type="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+          className="field-input mt-1 w-full px-3 py-2 text-sm"
         />
       </div>
 
@@ -74,7 +74,7 @@ export function ProfileForm({ profile }: { profile: AccountProfile }) {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full bg-primary text-white py-2 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
+        className="w-full rounded-md bg-gradient-primary py-2 font-medium text-white transition hover:brightness-95 hover:shadow-md disabled:opacity-50"
       >
         {isLoading ? "Saving..." : "Save Changes"}
       </button>

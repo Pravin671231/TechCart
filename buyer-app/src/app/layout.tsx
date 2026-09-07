@@ -28,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${plusJakartaSans.variable}`}>
-      <body className="flex min-h-screen flex-col bg-white text-neutral-600">
+      <body className="app-background flex min-h-screen flex-col text-neutral-600">
         <StoreProvider>
           <AppShell>{children}</AppShell>
         </StoreProvider>

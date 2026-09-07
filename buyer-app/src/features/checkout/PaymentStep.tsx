@@ -117,7 +117,7 @@ export function PaymentStep({ order }: { order: CheckoutResponse }) {
               setError(null);
               setAttempt((n) => n + 1);
             }}
-            className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+            className="rounded-md bg-gradient-primary px-4 py-2 text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md"
           >
             Retry payment
           </button>
