@@ -73,6 +73,14 @@ skeleton / empty / error listing states on `home.html`, the two distinct empty s
 `search.html`, and the guard rejections (`FR-CAT-019`, `028`, `031`, `041`) shown inline on the
 admin pages that raise them.
 
+## Account screens
+
+Not tied to SRS v0.2 — a first-pass layout/spacing study for the buyer account surface.
+
+| File                                            | Screen  | Notes                                                                   |
+| ----------------------------------------------- | ------- | --------------------------------------------------------------------- |
+| [`buyer-app/sign-in.html`](buyer-app/sign-in.html) | Sign In | Two-column gradient welcome panel + Google / OTP form, stacks on mobile |
+
 ## Traceability to SRS v0.2 §6
 
 Every bullet in [`docs/srs/features/0.2-product-catalog.md`](../docs/srs/features/0.2-product-catalog.md)

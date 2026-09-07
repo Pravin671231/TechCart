@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Buyer — Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme {
+        --color-primary-50: #eef2ff;
+        --color-primary-100: #e0e7ff;
+        --color-primary-200: #c7d2fe;
+        --color-primary-300: #a5b4fc;
+        --color-primary-400: #818cf8;
+        --color-primary-500: #6366f1;
+        --color-primary-600: #4f46e5;
+        --color-primary-700: #4338ca;
+        --color-primary-800: #3730a3;
+        --color-primary-900: #312e81;
+
+        --color-accent-50: #fff7ed;
+        --color-accent-100: #ffedd5;
+        --color-accent-200: #fed7aa;
+        --color-accent-300: #fdba74;
+        --color-accent-400: #fb923c;
+        --color-accent-500: #f97316;
+        --color-accent-600: #ea580c;
+        --color-accent-700: #c2410c;
+        --color-accent-800: #9a3412;
+        --color-accent-900: #7c2d12;
+
+        --font-sans:
+          "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+      }
+    </style>
+  </head>
+  <body class="flex min-h-screen flex-col bg-neutral-100 text-neutral-600">
+    <p class="border-b border-neutral-200 bg-white px-4 py-2 text-center text-[11px]">
+      <span class="text-neutral-500">buyer-app · Sign In — layout &amp; spacing wireframe —</span>
+      <code class="text-neutral-600">
+        two-column card · gradient welcome panel + Google/OTP form · stacks on mobile
+      </code>
+    </p>
+
+    <main class="flex items-center justify-center p-4">
+      <!-- Parent container — one centered card holding two children -->
+      <div
+        class="w-full  rounded-xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-6"
+      >
+        <div class="grid gap-6 lg:grid-cols-[45fr_55fr] lg:gap-8">
+          <!-- Child 1 — Welcome / branding panel -->
+          <aside
+            class="relative flex min-w-0 flex-col justify-center gap-8 overflow-hidden rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 p-4 text-white sm:p-8"
+          >
+            <span
+              aria-hidden="true"
+              class="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10 blur-2xl"
+            ></span>
+
+            <div class="relative flex items-center gap-2">
+              <svg
+                class="h-6 w-6"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#fff"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="9" cy="20" r="1.4" fill="#fff" stroke="none" />
+                <circle cx="18" cy="20" r="1.4" fill="#fff" stroke="none" />
+                <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
+              </svg>
+              <span class="text-base font-extrabold tracking-tight">
+                Tech<span class="text-primary-200">Cart</span>
+              </span>
+            </div>
+
+            <div class="relative">
+              <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">
+                Welcome to TechCart
+              </h2>
+              <p class="mt-3 max-w-sm text-sm/relaxed text-white/85">
+                Sign in to track orders, keep your cart between visits, and check out faster
+                next time.
+              </p>
+            </div>
+
+            <ul class="relative space-y-3 text-sm text-white/90">
+              <li class="flex items-center gap-2.5">
+                <span
+                  class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/15 text-[11px]"
+                >
+                  ✓
+                </span>
+                Track your orders
+              </li>
+              <li class="flex items-center gap-2.5">
+                <span
+                  class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/15 text-[11px]"
+                >
+                  ✓
+                </span>
+                Save items in your cart
+              </li>
+              <li class="flex items-center gap-2.5">
+                <span
+                  class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/15 text-[11px]"
+                >
+                  ✓
+                </span>
+                Faster checkout
+              </li>
+              <li class="flex items-center gap-2.5">
+                <span
+                  class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/15 text-[11px]"
+                >
+                  ✓
+                </span>
+                Manage your account
+              </li>
+            </ul>
+          </aside>
+
+          <!-- Child 2 — Login form -->
+          <div class="flex min-w-0 items-center justify-center rounded-xl p-4">
+            <div class="w-full max-w-sm space-y-6">
+              <div>
+                <h1 class="text-2xl font-bold tracking-tight text-neutral-900">
+                  Sign in to your account
+                </h1>
+                <p class="mt-1.5 text-sm text-neutral-500">Welcome to TechCart</p>
+              </div>
+
+              <button
+                type="button"
+                class="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                <span class="font-bold text-neutral-500">G</span>
+                Continue with Google
+              </button>
+
+              <div class="relative">
+                <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div class="w-full border-t border-neutral-200"></div>
+                </div>
+                <div class="relative flex justify-center">
+                  <span
+                    class="bg-white px-3 text-xs font-medium tracking-wide text-neutral-400 uppercase"
+                  >
+                    or
+                  </span>
+                </div>
+              </div>
+
+              <!-- OTP — step 1: email -->
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-neutral-700">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    class="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-3 text-sm text-neutral-700 placeholder:text-neutral-400 focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="w-full rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 py-3 font-semibold text-white hover:brightness-95"
+                >
+                  Send OTP
+                </button>
+              </div>
+
+              <!-- wireframe step separator -->
+              <div class="border-t border-dashed border-neutral-200 pt-4">
+                <p class="text-[11px] text-neutral-400">After the code arrives ↓</p>
+              </div>
+
+              <!-- OTP — step 2: code -->
+              <div class="space-y-4">
+                <p class="text-sm text-neutral-600">
+                  Enter the 6-digit code sent to <strong>you@example.com</strong>
+                </p>
+                <div>
+                  <label class="block text-sm font-medium text-neutral-700">
+                    Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    maxlength="6"
+                    placeholder="000000"
+                    class="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-3 text-center text-2xl tracking-widest text-neutral-700 placeholder:text-neutral-300 focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="w-full rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 py-3 font-semibold text-white hover:brightness-95"
+                >
+                  Verify &amp; Sign In
+                </button>
+                <button
+                  type="button"
+                  class="w-full py-2 text-sm text-primary-600 hover:text-primary-700"
+                >
+                  Resend OTP
+                </button>
+                <button
+                  type="button"
+                  class="w-full py-2 text-sm text-neutral-600 hover:text-neutral-900"
+                >
+                  Use different email
+                </button>
+              </div>
+
+              <p class="text-center text-sm text-neutral-500">
+                Don't have an account?
+                <a href="#" class="font-medium text-primary-600 hover:text-primary-700">
+                  Sign up
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
