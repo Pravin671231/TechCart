@@ -42,6 +42,20 @@
           "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
           Helvetica, Arial, sans-serif;
       }
+
+      /* Issue #343 — premium linear-gradient treatments (buyer-app). Wired for
+         real in buyer-app/src/app/globals.css; this page mirrors them. Any
+         gradient carrying white text keeps its lightest stop at/above the AA
+         threshold below (primary-600 / accent-700). */
+      .bg-gradient-primary {
+        background-image: linear-gradient(135deg, #4f46e5, #3730a3);
+      }
+      .bg-gradient-accent {
+        background-image: linear-gradient(135deg, #c2410c, #9a3412);
+      }
+      .bg-gradient-surface {
+        background-image: linear-gradient(180deg, #eef2ff, #fff);
+      }
     </style>
   </head>
   <body class="min-h-screen bg-white p-6 text-neutral-700">
@@ -263,6 +277,52 @@
             <code class="text-neutral-400">blue-600</code>
           </div>
         </div>
+
+        <p class="mt-6 mb-3 text-sm text-neutral-600">
+          <strong>Gradients</strong> (buyer-app) — subtle linear-gradient treatments built only
+          from the primary/accent scales above, for a more premium feel on CTAs and key
+          backgrounds. Defined as plain classes in
+          <code>buyer-app/src/app/globals.css</code> (the source of truth). Never introduce a
+          new hue — gradients only interpolate within one scale.
+        </p>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div>
+            <div
+              class="flex h-16 items-center justify-center rounded-md bg-gradient-primary text-sm font-medium text-white"
+            >
+              Primary CTA
+            </div>
+            <p class="mt-1 text-[11px] text-neutral-400">
+              <code>bg-gradient-primary</code> · primary-600 → primary-800
+            </p>
+          </div>
+          <div>
+            <div
+              class="flex h-16 items-center justify-center rounded-md bg-gradient-accent text-sm font-medium text-white"
+            >
+              Add to cart
+            </div>
+            <p class="mt-1 text-[11px] text-neutral-400">
+              <code>bg-gradient-accent</code> · accent-700 → accent-800
+            </p>
+          </div>
+          <div>
+            <div
+              class="flex h-16 items-center justify-center rounded-md bg-gradient-surface text-sm text-neutral-500 ring-1 ring-neutral-200"
+            >
+              Section wash
+            </div>
+            <p class="mt-1 text-[11px] text-neutral-400">
+              <code>bg-gradient-surface</code> · primary-50 → white
+            </p>
+          </div>
+        </div>
+        <p class="mt-1 text-[11px] text-neutral-400">
+          Contrast: white-text gradients keep their lightest stop at/above the AA threshold noted
+          above — <code>primary-600</code> for primary, <code>accent-700</code> for accent. Hover
+          darkens (<code>hover:brightness-95</code>), which only improves contrast. The
+          <code>bg-gradient-surface</code> wash carries dark text or none.
+        </p>
       </section>
 
       <!-- Typography -->
@@ -344,8 +404,8 @@
           <li><code>rounded-lg</code> for cards, modals, image containers</li>
           <li><code>rounded-md</code> for buttons, inputs, badges/pills</li>
           <li>
-            <code>shadow-sm</code> for resting cards; <code>shadow-md</code> on hover/dropdowns only
-            — avoid heavier shadows
+            <code>shadow-sm</code> for resting cards; <code>shadow-md</code> on hover/dropdowns and
+            on buyer-app form inputs (Issue #343) — avoid heavier shadows
           </li>
           <li>
             <code>p-4</code> / <code>gap-4</code> as the default component padding/gutter;
@@ -363,12 +423,12 @@
         <p class="mb-2 text-sm text-neutral-600">Buttons</p>
         <div class="mb-6 flex flex-wrap items-center gap-3">
           <button
-            class="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+            class="rounded-md bg-gradient-primary px-4 py-2 text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md"
           >
             Primary action
           </button>
           <button
-            class="rounded-md bg-accent-600 px-4 py-2 text-sm font-medium text-white hover:bg-accent-700"
+            class="rounded-md bg-gradient-accent px-4 py-2 text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md"
           >
             Add to cart
           </button>
@@ -429,17 +489,23 @@
         <div class="grid gap-6 sm:grid-cols-2">
           <div>
             <p class="mb-2 text-sm text-neutral-600">Form input</p>
+            <p class="mb-2 text-[11px] text-neutral-400">
+              buyer-app inputs carry a resting <code>shadow-md</code> and a
+              <code>border-neutral-300</code> / <code>primary-600</code> focus ring (Issue #343,
+              <code>.field-input</code> in <code>globals.css</code>). admin-app inputs are
+              unchanged.
+            </p>
             <label class="mb-3 block text-sm">
               <span class="text-neutral-500">Name *</span>
               <input
-                class="mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+                class="mt-1 block w-full rounded-md border border-neutral-300 px-3 py-2 text-sm shadow-md focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
                 placeholder="Brand name"
               />
             </label>
             <label class="block text-sm">
               <span class="text-red-600">Slug *</span>
               <input
-                class="mt-1 block w-full rounded-md border border-red-500 px-3 py-2 text-sm focus:ring-1 focus:ring-red-500 focus:outline-none"
+                class="mt-1 block w-full rounded-md border border-red-500 px-3 py-2 text-sm shadow-md focus:ring-1 focus:ring-red-500 focus:outline-none"
                 value="taken-slug"
               />
               <span class="mt-1 block text-[11px] text-red-600">This slug is already in use.</span>

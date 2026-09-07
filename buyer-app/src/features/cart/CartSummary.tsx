@@ -37,7 +37,7 @@ export function CartSummary({ cart }: { cart: Cart }) {
         type="button"
         disabled={availableCount === 0}
         onClick={() => router.push("/checkout")}
-        className="mt-5 w-full rounded-md bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-neutral-300"
+        className="mt-5 w-full rounded-md bg-gradient-primary px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:bg-none disabled:bg-neutral-300"
       >
         Proceed to checkout
       </button>

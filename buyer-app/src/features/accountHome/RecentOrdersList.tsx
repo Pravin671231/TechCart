@@ -9,11 +9,11 @@ import type { OrderResponse } from "@/features/orders/types";
 export function RecentOrdersList({ orders }: { orders: OrderResponse[] }) {
   if (orders.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-gray-300 p-6 text-center">
-        <p className="text-sm text-gray-600">You haven&apos;t placed any orders yet.</p>
+      <div className="rounded-lg border border-dashed border-neutral-300 p-6 text-center">
+        <p className="text-sm text-neutral-600">You haven&apos;t placed any orders yet.</p>
         <Link
           href="/"
-          className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+          className="mt-2 inline-block text-sm font-medium text-primary-700 hover:underline"
         >
           Start shopping
         </Link>
@@ -27,7 +27,7 @@ export function RecentOrdersList({ orders }: { orders: OrderResponse[] }) {
         <OrderRow key={order.id} order={order} />
       ))}
       <div className="text-center">
-        <Link href="/orders" className="text-sm font-medium text-primary hover:underline">
+        <Link href="/orders" className="text-sm font-medium text-primary-700 hover:underline">
           View all orders
         </Link>
       </div>

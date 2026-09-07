@@ -7,7 +7,7 @@ export function CartEmpty() {
       <p className="text-sm text-neutral-500">Browse the catalogue and add something you like.</p>
       <Link
         href="/"
-        className="mt-2 rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+        className="mt-2 rounded-md bg-gradient-primary px-4 py-2 text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md"
       >
         Start shopping
       </Link>

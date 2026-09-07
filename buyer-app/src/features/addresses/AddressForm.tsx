@@ -97,7 +97,7 @@ export function AddressForm({
           required
           value={input.fullName}
           onChange={(e) => set("fullName", e.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+          className="field-input mt-1 w-full px-3 py-2 text-sm"
         />
       </div>
 
@@ -111,7 +111,7 @@ export function AddressForm({
           required
           value={input.phone}
           onChange={(e) => set("phone", e.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+          className="field-input mt-1 w-full px-3 py-2 text-sm"
         />
       </div>
 
@@ -124,7 +124,7 @@ export function AddressForm({
           required
           value={input.line1}
           onChange={(e) => set("line1", e.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+          className="field-input mt-1 w-full px-3 py-2 text-sm"
         />
       </div>
 
@@ -136,7 +136,7 @@ export function AddressForm({
           id="line2"
           value={input.line2 ?? ""}
           onChange={(e) => set("line2", e.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+          className="field-input mt-1 w-full px-3 py-2 text-sm"
         />
       </div>
 
@@ -150,7 +150,7 @@ export function AddressForm({
             required
             value={input.city}
             onChange={(e) => set("city", e.target.value)}
-            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+            className="field-input mt-1 w-full px-3 py-2 text-sm"
           />
         </div>
         <div>
@@ -162,7 +162,7 @@ export function AddressForm({
             required
             value={input.state}
             onChange={(e) => set("state", e.target.value)}
-            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+            className="field-input mt-1 w-full px-3 py-2 text-sm"
           />
         </div>
       </div>
@@ -177,7 +177,7 @@ export function AddressForm({
           inputMode="numeric"
           value={input.pincode}
           onChange={(e) => set("pincode", e.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+          className="field-input mt-1 w-full px-3 py-2 text-sm"
         />
       </div>
 
@@ -187,7 +187,7 @@ export function AddressForm({
         <button
           type="submit"
           disabled={isLoading}
-          className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+          className="rounded-md bg-gradient-primary px-4 py-2 text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md disabled:opacity-50"
         >
           {isLoading ? "Saving…" : address ? "Save changes" : "Add address"}
         </button>

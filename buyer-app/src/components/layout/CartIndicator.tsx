@@ -34,7 +34,7 @@ export function CartIndicator() {
       <Link
         href="/sign-in?redirect=/cart"
         aria-label="Cart"
-        className="text-gray-700 hover:text-gray-900"
+        className="text-neutral-700 hover:text-neutral-900"
       >
         <ShoppingCart className="h-5 w-5" aria-hidden="true" />
       </Link>
@@ -46,7 +46,7 @@ export function CartIndicator() {
       <Link
         href="/cart"
         aria-label={`Cart, ${itemCount} item${itemCount === 1 ? "" : "s"}`}
-        className="relative flex text-gray-700 hover:text-gray-900"
+        className="relative flex text-neutral-700 hover:text-neutral-900"
       >
         <span
           data-testid="cart-icon"
@@ -56,7 +56,7 @@ export function CartIndicator() {
           <ShoppingCart className="h-5 w-5" aria-hidden="true" />
         </span>
         {itemCount > 0 && (
-          <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-semibold text-white">
+          <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-accent px-1 text-[10px] font-semibold text-white">
             {itemCount}
           </span>
         )}
@@ -106,7 +106,7 @@ export function CartIndicator() {
         )}
         <Link
           href="/cart"
-          className="mt-3 block rounded-md bg-primary-600 px-3 py-2 text-center text-sm font-medium text-white hover:bg-primary-700"
+          className="mt-3 block rounded-md bg-gradient-primary px-3 py-2 text-center text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md"
         >
           View cart
         </Link>

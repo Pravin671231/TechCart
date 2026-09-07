@@ -9,7 +9,7 @@ import type { SessionUser } from "@/features/authentication/auth/types";
 
 function ProfileIcon() {
   return (
-    <div className="flex items-center justify-center rounded-full border border-neutral-300 bg-gray-100 p-1 ">
+    <div className="flex items-center justify-center rounded-full border border-neutral-300 bg-neutral-100 p-1">
       <User className="h-5 w-5" aria-hidden="true" />
     </div>
   );
@@ -24,7 +24,7 @@ function initialsFor(session: SessionUser): string {
 
 function Avatar({ initials }: { initials: string }) {
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700">
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-primary-100 to-primary-200 text-xs font-semibold text-primary-700">
       {initials}
     </span>
   );
@@ -60,7 +60,7 @@ export function ProfileMenu() {
 
   if (!session) {
     return (
-      <Link href="/sign-in" aria-label="Sign in" className="flex cursor-pointer text-gray-700 hover:text-gray-900">
+      <Link href="/sign-in" aria-label="Sign in" className="flex cursor-pointer text-neutral-700 hover:text-neutral-900">
         <ProfileIcon />
       </Link>
     ); 

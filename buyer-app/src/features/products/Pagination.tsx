@@ -52,7 +52,7 @@ export function Pagination({
           aria-current={pageNumber === page ? "page" : undefined}
           className={
             pageNumber === page
-              ? "rounded-md bg-primary-600 px-3 py-1 font-medium text-white"
+              ? "rounded-md bg-gradient-primary px-3 py-1 font-medium text-white"
               : "rounded-md border border-neutral-300 px-3 py-1 hover:bg-neutral-50"
           }
         >

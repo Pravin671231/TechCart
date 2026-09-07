@@ -90,7 +90,7 @@ function MinMaxInputs({
         onKeyDown={(event) => {
           if (event.key === "Enter") commit();
         }}
-        className="w-full min-w-0 rounded-md border border-neutral-300 px-2 py-1.5 text-neutral-700"
+        className="field-input w-full min-w-0 px-2 py-1.5 text-neutral-700"
       />
       <span className="text-neutral-400">—</span>
       <input
@@ -103,7 +103,7 @@ function MinMaxInputs({
         onKeyDown={(event) => {
           if (event.key === "Enter") commit();
         }}
-        className="w-full min-w-0 rounded-md border border-neutral-300 px-2 py-1.5 text-neutral-700"
+        className="field-input w-full min-w-0 px-2 py-1.5 text-neutral-700"
       />
     </div>
   );

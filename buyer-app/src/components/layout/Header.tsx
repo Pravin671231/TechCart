@@ -40,7 +40,7 @@ export function Header() {
         </Link>
 
         {/* Desktop: inline categories + search bar */}
-        <div className="hidden h-10 flex-1 items-stretch rounded-md border border-neutral-300 bg-white focus-within:border-primary-600 focus-within:ring-1 focus-within:ring-primary-600 md:flex">
+        <div className="hidden h-10 flex-1 items-stretch rounded-md border border-neutral-300 bg-white shadow-md focus-within:border-primary-600 focus-within:ring-1 focus-within:ring-primary-600 md:flex">
           <CategoriesMenu />
           <SearchBar />
         </div>
@@ -63,7 +63,7 @@ export function Header() {
       {/* Mobile: collapsible search panel */}
       {searchOpen && (
         <div className="border-t border-neutral-200 px-4 py-2 md:hidden">
-          <div className="flex h-10 items-stretch rounded-md border border-neutral-300 bg-white focus-within:border-primary-600 focus-within:ring-1 focus-within:ring-primary-600">
+          <div className="flex h-10 items-stretch rounded-md border border-neutral-300 bg-white shadow-md focus-within:border-primary-600 focus-within:ring-1 focus-within:ring-primary-600">
             <CategoriesMenu />
             <SearchBar />
           </div>
