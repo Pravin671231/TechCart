@@ -49,6 +49,24 @@ describe("Auth", () => {
       // Google button + email OTP now read as one flow (no separate boxed sections).
       expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
     });
+
+    it("renders the two-column welcome panel value props (Issue #344)", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
+
+      render(
+        <Provider store={makeStore()}>
+          <SignInContent />
+        </Provider>
+      );
+
+      // "Welcome to TechCart" now appears twice — the welcome-panel <h2> and the
+      // form-card sub-line — so this must not assume a single match.
+      expect(screen.getAllByText(/welcome to techcart/i).length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText(/cart saved across every device/i)).toBeInTheDocument();
+      expect(screen.getByText(/order history & live status/i)).toBeInTheDocument();
+      expect(screen.getByText(/saved addresses for 1-tap checkout/i)).toBeInTheDocument();
+    });
   });
 
   describe("OtpSignIn", () => {

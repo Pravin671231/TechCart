@@ -97,6 +97,76 @@
   color: var(--color-neutral-400);
 }
 
+/* Issue #344 — sign-in page. Soft input variant: no visible border at rest,
+ * a light fill, resting shadow-md; on focus a white fill + primary border +
+ * a wider focus ring. Sibling to .field-input (#343); sign-in form only.
+ * Visual identity only — call sites keep their own padding/size utilities. */
+.field-input-soft {
+  border: 1.5px solid transparent;
+  border-radius: 0.75rem;
+  background-color: var(--color-neutral-100);
+  color: var(--color-neutral-900);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.08),
+    0 2px 4px -2px rgb(0 0 0 / 0.08);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+.field-input-soft::placeholder {
+  color: var(--color-neutral-400);
+}
+.field-input-soft:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  background-color: #fff;
+  box-shadow:
+    0 0 0 3px rgb(129 140 248 / 0.3),
+    0 4px 14px -4px rgb(0 0 0 / 0.15);
+}
+
+/* Issue #344 — sign-in welcome panel: brand gradient under a subtle radial
+ * dot grid (the dot grid can't be a Tailwind utility). */
+.signin-welcome {
+  background-color: var(--color-primary-700);
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+    linear-gradient(
+      155deg,
+      var(--color-primary-500) 0%,
+      var(--color-primary-700) 58%,
+      var(--color-primary-900) 100%
+    );
+  background-size:
+    22px 22px,
+    auto;
+}
+
+/* Issue #344 — subtle entrance for the sign-in panels: a 10px rise + fade,
+ * staggered, disabled under reduced motion (matches .animate-cart-shake). */
+@keyframes signin-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.signin-enter {
+  animation: signin-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.signin-enter-2 {
+  animation-delay: 0.09s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .signin-enter {
+    animation: none;
+  }
+}
+
 /* Issue #322 — a brief, subtle left↔right nudge on the header cart icon when
  * an item is added. ~300ms, minimal travel, settles back to rest. */
 @keyframes cart-shake {
