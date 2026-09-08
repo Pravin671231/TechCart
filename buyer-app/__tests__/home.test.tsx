@@ -7,8 +7,9 @@ import { server } from "./mocks/server";
 import { triggerIntersection } from "../vitest.setup";
 import type { PublicProductListItem } from "@/features/products/types";
 
-// ProductCard now renders the shared AddToCartButton, which uses
-// next/navigation hooks — stub them (no test here asserts on navigation).
+// The home card is a plain link (no AddToCartButton since Issue #345), but
+// other things in the tree can still touch next/navigation — stub it
+// defensively (no test here asserts on navigation).
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => "/",
@@ -271,5 +272,74 @@ describe("Home", () => {
     await screen.findByText("Product page 2");
     // Exactly one page-2 request despite two intersection events.
     expect(pagesRequested.filter((page) => page === "2")).toHaveLength(1);
+  });
+
+  it("does not render an Add to Cart control on the home card", async () => {
+    server.use(
+      http.get(`${API_URL}/api/products`, () => HttpResponse.json(listBody([makeProduct()]))),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { HomeContent } = await import("@/features/home/HomeContent");
+    render(
+      <Provider store={makeStore()}>
+        <HomeContent />
+      </Provider>,
+    );
+
+    await screen.findByText("Test Product");
+    expect(screen.queryByRole("button", { name: /add to cart/i })).not.toBeInTheDocument();
+    // The whole card is a single link to the product detail page.
+    expect(screen.getByRole("link", { name: /Test Product/ })).toHaveAttribute(
+      "href",
+      "/products/test-product",
+    );
+  });
+
+  it("shows skeleton cards in the grid while the next page loads, then swaps them for real cards", async () => {
+    server.use(
+      http.get(`${API_URL}/api/products`, async ({ request }) => {
+        const page = new URL(request.url).searchParams.get("page") ?? "1";
+        const pageNum = Number(page);
+        // Hold page 2 open so the skeletons are observable.
+        if (pageNum === 2) await new Promise((resolve) => setTimeout(resolve, 50));
+        return HttpResponse.json(
+          listBody([makeProduct({ _id: `p${pageNum}`, name: `Product page ${pageNum}` })], {
+            page: pageNum,
+            total: 3,
+            totalPages: 3,
+            hasNextPage: pageNum < 3,
+          }),
+        );
+      }),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { HomeContent } = await import("@/features/home/HomeContent");
+    render(
+      <Provider store={makeStore()}>
+        <HomeContent />
+      </Provider>,
+    );
+
+    expect(await screen.findByText("Product page 1")).toBeInTheDocument();
+    // No skeletons on the settled first page.
+    expect(screen.queryAllByTestId("product-card-skeleton")).toHaveLength(0);
+
+    await act(async () => {
+      triggerIntersection();
+    });
+
+    // A fixed batch of skeleton cards appears while page 2 is in flight.
+    await waitFor(() =>
+      expect(screen.getAllByTestId("product-card-skeleton")).toHaveLength(4),
+    );
+
+    // Once page 2 resolves the skeletons are gone and the real card is appended.
+    expect(await screen.findByText("Product page 2")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryAllByTestId("product-card-skeleton")).toHaveLength(0),
+    );
+    expect(screen.getByText("Product page 1")).toBeInTheDocument();
   });
 });
