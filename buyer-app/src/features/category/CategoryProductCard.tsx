@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AddToCartButton } from "@/features/cart/AddToCartButton";
+import { BuyNowButton } from "@/features/cart/BuyNowButton";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { formatPrice } from "@/features/products/money";
 import type { PublicProductListItem } from "@/features/products/types";
@@ -29,11 +30,17 @@ function PriceSection({ product }: { product: PublicProductListItem }) {
         size="md"
         stacked
       />
-      <AddToCartButton
+      <BuyNowButton
         variantId={product.defaultVariantId}
         availability={product.availability}
         size="sm"
         className="mt-1 w-full"
+      />
+      <AddToCartButton
+        variantId={product.defaultVariantId}
+        availability={product.availability}
+        size="sm"
+        className="w-full"
       />
     </div>
   );
@@ -43,9 +50,9 @@ function PlainCategoryProductCard({ product }: { product: PublicProductListItem 
   const isOutOfStock = product.availability === "out_of_stock";
 
   return (
-    <article className="flex gap-6 border-b border-neutral-200 py-6 first:pt-0 last:border-b-0">
+    <article className="group flex gap-6 border-b border-neutral-200 py-6 first:pt-0 last:border-b-0">
       <Link href={`/products/${product.slug}`} className="flex flex-1 gap-6">
-        <div className="relative flex aspect-[4/5] w-40 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-xs text-neutral-400 sm:w-52">
+        <div className="relative flex aspect-4/5 w-40 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-xs text-neutral-400 sm:w-52">
           {product.primaryImage ? (
             <Image
               src={product.primaryImage.url}
@@ -65,7 +72,9 @@ function PlainCategoryProductCard({ product }: { product: PublicProductListItem 
           )}
         </div>
         <div className="flex flex-1 flex-col gap-2">
-          <p className="text-base font-medium text-neutral-900">{product.name}</p>
+          <p className="text-base font-medium text-neutral-900 transition-colors group-hover:font-bold group-hover:text-primary-600">
+            {product.name}
+          </p>
         </div>
       </Link>
 
@@ -81,7 +90,7 @@ function DetailedCategoryProductCard({ product }: { product: PublicProductListIt
   const href = `/products/${product.slug}`;
 
   return (
-    <article className="flex gap-4 border-b border-neutral-200 py-6 first:pt-0 last:border-b-0 sm:gap-6 md:items-start">
+    <article className="group flex gap-4 border-b border-neutral-200 py-6 first:pt-0 last:border-b-0 sm:gap-6 md:items-start">
       {/* Column 1 (image) + column 2 (title + specs, desktop only) — one link */}
       <Link href={href} className="flex min-w-0 gap-4 sm:gap-6 md:flex-1">
         <div className="relative flex aspect-[4/5] w-28 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-xs text-neutral-400 sm:w-40 md:w-44">
@@ -104,7 +113,9 @@ function DetailedCategoryProductCard({ product }: { product: PublicProductListIt
           )}
         </div>
         <div className="hidden min-w-0 flex-1 flex-col gap-2 md:flex">
-          <p className="text-base font-medium text-neutral-900">{product.name}</p>
+          <p className="text-base font-medium text-neutral-900 transition-colors group-hover:font-bold group-hover:text-primary-600">
+            {product.name}
+          </p>
           <ul className="mt-1 space-y-1 text-xs text-neutral-500">
             {product.cardSpecifications.map((spec) => (
               <li key={spec.name}>
@@ -120,7 +131,9 @@ function DetailedCategoryProductCard({ product }: { product: PublicProductListIt
       <div className="flex min-w-0 flex-1 flex-col gap-2 md:w-40 md:flex-none">
         <PriceSection product={product} />
         <Link href={href} className="md:hidden">
-          <p className="text-sm font-medium text-neutral-900">{product.name}</p>
+          <p className="text-sm font-medium text-neutral-900 transition-colors group-hover:font-bold group-hover:text-primary-600">
+            {product.name}
+          </p>
         </Link>
       </div>
 
