@@ -312,7 +312,7 @@ The message always names the order's actual current status and the attempted tar
 
 ## Order Status Lifecycle
 
-Every status change in this system — buyer cancel, admin status advance, admin cancel, a successful payment, a refund, or the 30-minute auto-cancel sweep for stale unpaid orders — goes through the identical state machine (`orders.stateMachine.ts`'s `assertTransition`). An illegal move always fails `409 INVALID_ORDER_TRANSITION`, never silently no-ops.
+Every status change in this system — buyer cancel, admin status advance, admin cancel, a successful payment, a refund, or the auto-cancel sweep for stale unpaid orders — goes through the identical state machine (`orders.stateMachine.ts`'s `assertTransition`). An illegal move always fails `409 INVALID_ORDER_TRANSITION`, never silently no-ops.
 
 | From              | Legal `to` values                    |
 | ----------------- | -------------------------------------- |
@@ -327,8 +327,8 @@ Every status change in this system — buyer cancel, admin status advance, admin
 - **`cancelled` is reachable only from `pending_payment` or `paid`** — never from `processing`/`shipped`/`delivered`, for either the buyer's own cancel above or the admin cancel in [`ordersAdmin.api.md`](./ordersAdmin.api.md).
 - **`refunded` is reachable from any post-payment state** (`paid`, `processing`, `shipped`, `delivered`) but never from `pending_payment` (nothing paid yet to refund) or `cancelled` (already terminal).
 - **`shipped` is reached only from `processing`** — never directly from `paid`.
-- A `pending_payment` order left unpaid for **30 minutes** is auto-cancelled by a background sweep (no buyer/admin action needed) — its `statusHistory` shows a `cancelled` entry with a note explaining the auto-cancel.
-- Every notifiable transition (`paid`, `shipped`, `delivered`, `cancelled`) queues a status-update email to the buyer — `processing` does not.
+- A `pending_payment` order left unpaid for **30 minutes** is meant to be auto-cancelled by a background sweep (`FR-ORD-010`) — its `statusHistory` would then show a `cancelled` entry with a note explaining the auto-cancel. The sweep logic (`runAutoCancelSweep()`) still exists, but its scheduler was removed with Redis/BullMQ, so nothing runs it automatically right now — a stale unpaid order stays `pending_payment` until cancelled another way.
+- Every notifiable transition (`paid`, `shipped`, `delivered`, `cancelled`) sends a status-update email to the buyer (fire-and-forget, never blocking the response) — `processing` does not.
 
 ---
 

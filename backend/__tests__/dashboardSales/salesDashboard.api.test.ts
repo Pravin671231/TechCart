@@ -36,7 +36,6 @@ vi.mock("@/externalService/razorpay", async () => {
 
 import { createRazorpayOrder } from "@/externalService/razorpay";
 import { Product } from "@/modules/product-catalog/features/products/products.model";
-import * as ordersRepository from "@/modules/orders/orders.repository";
 import {
   bootstrapMemoryMongo,
   teardownMemoryMongo,
@@ -167,14 +166,6 @@ beforeEach(async () => {
   await ctx.mongoose.connection.db!.collection("orders").deleteMany({});
   await ctx.mongoose.connection.db!.collection("counters").deleteMany({});
   await ctx.mongoose.connection.db!.collection("payments").deleteMany({});
-  // Dynamic import — @/lib/cache imports @/config/env at its own top level,
-  // and a static import here would force that module to evaluate as soon as
-  // this test file loads, before bootstrapMemoryMongo() (in beforeAll, which
-  // always runs first) sets the real MONGODB_URI — freezing env.MONGODB_URI
-  // on vitest.config.ts's placeholder for this file's whole run. Same bug
-  // class documented in orders.service.ts/refunds.api.test.ts.
-  const { resetDashboardCache } = await import("../../src/lib/cache.js");
-  resetDashboardCache();
 });
 
 afterEach(() => {
@@ -210,16 +201,6 @@ describe("GET /api/admin/dashboard/summary (FR-DASH-001/003/004)", () => {
     expect(res.body.code).toBe("INVALID_DATE_RANGE");
   });
 
-  it("caches the aggregation result for repeated calls within the TTL", async () => {
-    await seedPaidOrder("Dashboard Phone C", 10000);
-    const spy = vi.spyOn(ordersRepository, "countAndRevenueInRange");
-
-    await admin("get", "/api/admin/dashboard/summary?from=2026-01-01&to=2026-12-31");
-    await admin("get", "/api/admin/dashboard/summary?from=2026-01-01&to=2026-12-31");
-
-    expect(spy).toHaveBeenCalledTimes(1);
-    spy.mockRestore();
-  });
 });
 
 describe("GET /api/admin/dashboard/sales (FR-DASH-005/018)", () => {

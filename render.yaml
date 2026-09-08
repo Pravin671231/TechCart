@@ -22,8 +22,6 @@ services:
         sync: false
       - key: RATE_LIMITING_ENABLED
         value: "true"
-      - key: REDIS_URL
-        sync: false
       - key: CORS_ORIGINS
         sync: false
       - key: R2_ACCOUNT_ID

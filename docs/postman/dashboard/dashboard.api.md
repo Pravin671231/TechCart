@@ -58,7 +58,7 @@ Shared by `summary`, `sales`, and `top-products` (not `catalog-summary`, which i
 
 ## Caching
 
-Every one of the four endpoints below is cached for **60 seconds** (`getOrSetCache`, Redis-backed when `REDIS_URL` is set, an in-process fallback otherwise) — the cache key includes the resolved date range, so two different `?from=`/`?to=` combinations never collide. There's no manual cache-bust endpoint; if you change underlying data and want to see it reflected immediately, wait out the 60s window or restart the backend (which clears the in-process fallback).
+None. Every endpoint below (and `GET /api/account/dashboard`) computes its result directly from MongoDB on every request — the 60s response cache was removed along with Redis. A data change is reflected on the very next call.
 
 ---
 

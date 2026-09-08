@@ -75,8 +75,8 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string): P
 }
 
 // Issue #159/M5.6 (FR-ORD-021-023) — order notification emails, sent via the
-// same Mailtrap transport, through BullMQ's worker process (orders/
-// orders.notifications.ts), never inline within a request/response cycle.
+// same Mailtrap transport from orders/orders.notifications.ts, fired
+// fire-and-forget so they never block a request/response cycle.
 // Deliberately typed as a plain DTO here, not orders.repository.ts's
 // OrderRecord, so this file stays decoupled from that module's internal
 // (ObjectId-carrying) shape — same reasoning every other export in this file

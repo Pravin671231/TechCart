@@ -138,8 +138,6 @@ beforeEach(async () => {
   await ctx.mongoose.connection.db!.collection("orders").deleteMany({});
   await ctx.mongoose.connection.db!.collection("counters").deleteMany({});
   await ctx.mongoose.connection.db!.collection("payments").deleteMany({});
-  const { resetDashboardCache } = await import("../../src/lib/cache.js");
-  resetDashboardCache();
 });
 
 afterEach(() => {

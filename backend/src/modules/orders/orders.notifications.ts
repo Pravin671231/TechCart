@@ -1,6 +1,4 @@
 import { Types } from "mongoose";
-import type { JobsOptions } from "bullmq";
-import { orderNotificationsQueue } from "@/lib/queue";
 import {
   sendOrderConfirmationEmail,
   sendOrderStatusEmail,
@@ -18,51 +16,38 @@ function isNotifiableStatus(status: OrderStatus): status is OrderNotifiableStatu
   return (NOTIFIABLE_STATUSES as readonly string[]).includes(status);
 }
 
-export const NOTIFICATION_JOB_NAMES = {
-  CONFIRMATION: "order-confirmation",
-  STATUS: "order-status",
-} as const;
-
 type OrderConfirmationJobData = { orderId: string };
 type OrderStatusNotificationJobData = { orderId: string; status: OrderNotifiableStatus };
 
-// FR-ORD-023 — BullMQ's own retry policy, not a caller-side retry loop.
-const RETRY_OPTS: JobsOptions = { attempts: 3, backoff: { type: "exponential", delay: 5000 } };
-
-// FR-ORD-021 — enqueued at the end of a successful checkout, never awaited
-// for its outcome by the caller. Enqueue failures (e.g. Redis unreachable
-// mid-request) are caught and logged here, not propagated — checkout's own
-// success must never depend on the notification subsystem.
+// FR-ORD-021 — fired at the end of a successful checkout, never awaited for
+// its outcome by the caller. The email send is best-effort: kicked off
+// fire-and-forget so checkout's own success never depends on the mail
+// provider being reachable, with failures caught and logged here.
 export async function enqueueOrderConfirmation(order: OrderRecord): Promise<void> {
-  if (!orderNotificationsQueue) return;
-  try {
-    const data: OrderConfirmationJobData = { orderId: order._id.toString() };
-    await orderNotificationsQueue.add(NOTIFICATION_JOB_NAMES.CONFIRMATION, data, RETRY_OPTS);
-  } catch (error) {
-    console.warn("[orders] failed to enqueue order-confirmation job", error);
-  }
+  void processOrderConfirmationJob({ orderId: order._id.toString() }).catch((error) => {
+    console.warn("[orders] order-confirmation email failed", error);
+  });
 }
 
-// FR-ORD-022 — called from transitionOrder() itself, so every future caller
+// FR-ORD-022 — called from transitionOrder() itself, so every caller
 // (auto-cancel sweep, admin advance/cancel, buyer cancel) gets notification
-// coverage for free with no per-call-site duplication.
+// coverage for free with no per-call-site duplication. Same best-effort,
+// fire-and-forget treatment as the confirmation email above.
 export async function enqueueStatusNotification(
   order: OrderRecord,
   status: OrderStatus,
 ): Promise<void> {
-  if (!orderNotificationsQueue || !isNotifiableStatus(status)) return;
-  try {
-    const data: OrderStatusNotificationJobData = { orderId: order._id.toString(), status };
-    await orderNotificationsQueue.add(NOTIFICATION_JOB_NAMES.STATUS, data, RETRY_OPTS);
-  } catch (error) {
-    console.warn("[orders] failed to enqueue order-status job", error);
-  }
+  if (!isNotifiableStatus(status)) return;
+  const data: OrderStatusNotificationJobData = { orderId: order._id.toString(), status };
+  void processOrderStatusJob(data).catch((error) => {
+    console.warn("[orders] order-status email failed", error);
+  });
 }
 
-// Worker processors — registered by lib/queueWorkers.ts, dispatched by job
-// name. Both silently no-op when the order/buyer no longer resolves (rare:
-// only reachable if an order were hard-deleted, which nothing in this
-// codebase does) rather than throwing into BullMQ's retry loop forever.
+// The actual senders — re-fetch the order fresh so a stale in-memory copy
+// from the caller can't produce a wrong email. Both silently no-op when the
+// order/buyer no longer resolves (rare: only reachable if an order were
+// hard-deleted, which nothing in this codebase does).
 export async function processOrderConfirmationJob(data: OrderConfirmationJobData): Promise<void> {
   const order = await findById(new Types.ObjectId(data.orderId));
   if (!order) return;

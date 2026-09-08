@@ -87,8 +87,6 @@ beforeEach(async () => {
   await Product.deleteMany({});
   await Category.deleteMany({});
   await Brand.deleteMany({});
-  const { resetDashboardCache } = await import("../../src/lib/cache.js");
-  resetDashboardCache();
 });
 
 afterEach(() => {

@@ -2,29 +2,17 @@ import { Types } from "mongoose";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Express } from "express";
 
-// M5 / Issue #159 — order-confirmation/order-status jobs are enqueued from
+// M5 / Issue #159 — order-confirmation/order-status emails are fired from
 // real checkout()/transitionOrder() calls (real DB, same rationale every
-// other orders suite documents), with @/lib/queue mocked so this suite can
-// assert exactly what got enqueued without needing a real Redis connection.
+// other orders suite documents). Since the Redis/BullMQ removal these are
+// sent inline, fire-and-forget, via @/externalService/mailer — mocked here
+// so the suite can assert exactly what got sent without a real mail
+// provider. The send is not awaited by the caller, so assertions use
+// vi.waitFor and each test settles prior sends before clearing mocks.
 vi.mock("@/externalService/mailer", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
   sendOrderConfirmationEmail: vi.fn().mockResolvedValue(undefined),
   sendOrderStatusEmail: vi.fn().mockResolvedValue(undefined),
-}));
-
-// vi.mock factories are hoisted above every top-level statement, including
-// a plain `const mockAdd = vi.fn()` declared earlier in this file — a
-// `mock`-prefixed name only satisfies Vitest's static check, it doesn't
-// change *when* the factory runs, so referencing a not-yet-initialized
-// plain const throws a real TDZ error at runtime. vi.hoisted() is the
-// actual fix: it hoists the value itself alongside the mock.
-const { mockAdd } = vi.hoisted(() => ({ mockAdd: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("@/lib/queue", () => ({
-  connection: null,
-  warnQueueDisabledOnce: vi.fn(),
-  QUEUE_NAMES: { ORDER_LIFECYCLE: "order-lifecycle", ORDER_NOTIFICATIONS: "order-notifications" },
-  orderLifecycleQueue: null,
-  orderNotificationsQueue: { add: mockAdd },
 }));
 
 import { Product } from "@/modules/product-catalog/features/products/products.model";
@@ -44,6 +32,7 @@ import {
 } from "../../testHelpers/adminSession";
 
 const BUYER_EMAIL = "notifications-buyer@example.com";
+const WAIT = { timeout: 5000 };
 
 let ctx: MemoryMongoContext;
 let app: Express;
@@ -58,6 +47,9 @@ const validAddress = {
   pincode: "560025",
 };
 
+// Creates an order via the real checkout flow and waits for its
+// fire-and-forget confirmation email to have been dispatched, so a caller
+// can vi.clearAllMocks() straight after with no in-flight send bleeding in.
 async function seedOrder(): Promise<{ id: string; _idOid: Types.ObjectId }> {
   const product = await Product.create({
     name: "Nova X5 Pro 5G",
@@ -90,7 +82,26 @@ async function seedOrder(): Promise<{ id: string; _idOid: Types.ObjectId }> {
     shippingAddress: validAddress,
   });
   const id = res.body.data.id as string;
+  await vi.waitFor(() => {
+    expect(mailer.sendOrderConfirmationEmail).toHaveBeenCalled();
+  }, WAIT);
   return { id, _idOid: new Types.ObjectId(id) };
+}
+
+// Advances an order through a chain of transitions and waits for each
+// notifiable one's fire-and-forget email to settle.
+async function advance(orderId: Types.ObjectId, ...statuses: string[]): Promise<void> {
+  const NOTIFIABLE = new Set(["paid", "shipped", "delivered", "cancelled"]);
+  let expected = 0;
+  for (const status of statuses) {
+    await transitionOrder(orderId, status as never);
+    if (NOTIFIABLE.has(status)) {
+      expected += 1;
+      await vi.waitFor(() => {
+        expect(mailer.sendOrderStatusEmail).toHaveBeenCalledTimes(expected);
+      }, WAIT);
+    }
+  }
 }
 
 beforeAll(async () => {
@@ -109,7 +120,7 @@ beforeEach(async () => {
   await ctx.mongoose.connection.db!.collection("addresses").deleteMany({});
   await ctx.mongoose.connection.db!.collection("orders").deleteMany({});
   await ctx.mongoose.connection.db!.collection("counters").deleteMany({});
-  mockAdd.mockClear();
+  vi.clearAllMocks();
 });
 
 afterEach(() => {
@@ -117,86 +128,95 @@ afterEach(() => {
 });
 
 describe("checkout / FR-ORD-021", () => {
-  it("enqueues exactly one order-confirmation job, without waiting on it sending", async () => {
+  it("sends exactly one order-confirmation email, without the request waiting on it", async () => {
     await seedOrder();
 
-    expect(mockAdd).toHaveBeenCalledTimes(1);
-    expect(mockAdd).toHaveBeenCalledWith(
-      "order-confirmation",
-      expect.objectContaining({ orderId: expect.any(String) }),
-      expect.anything(),
+    expect(mailer.sendOrderConfirmationEmail).toHaveBeenCalledTimes(1);
+    expect(mailer.sendOrderConfirmationEmail).toHaveBeenCalledWith(
+      BUYER_EMAIL,
+      expect.objectContaining({ orderNumber: expect.any(String) }),
     );
   });
 });
 
 describe("transitionOrder / FR-ORD-022", () => {
-  it.each(["paid", "shipped", "delivered"] as const)(
-    "enqueues its own order-status job when reaching %s",
-    async (status) => {
-      const { _idOid } = await seedOrder();
-      mockAdd.mockClear();
-
-      if (status === "shipped") {
-        await transitionOrder(_idOid, "paid");
-        mockAdd.mockClear();
-        await transitionOrder(_idOid, "processing");
-        mockAdd.mockClear();
-      } else if (status === "delivered") {
-        await transitionOrder(_idOid, "paid");
-        await transitionOrder(_idOid, "processing");
-        await transitionOrder(_idOid, "shipped");
-        mockAdd.mockClear();
-      }
-
-      await transitionOrder(_idOid, status);
-
-      expect(mockAdd).toHaveBeenCalledTimes(1);
-      expect(mockAdd).toHaveBeenCalledWith(
-        "order-status",
-        expect.objectContaining({ orderId: _idOid.toString(), status }),
-        expect.anything(),
-      );
-    },
-  );
-
-  it("enqueues an order-status job when cancelled", async () => {
+  it("sends an order-status email when reaching paid", async () => {
     const { _idOid } = await seedOrder();
-    mockAdd.mockClear();
+    vi.clearAllMocks();
 
-    await transitionOrder(_idOid, "cancelled");
+    await advance(_idOid, "paid");
 
-    expect(mockAdd).toHaveBeenCalledTimes(1);
-    expect(mockAdd).toHaveBeenCalledWith(
-      "order-status",
-      expect.objectContaining({ status: "cancelled" }),
-      expect.anything(),
+    expect(mailer.sendOrderStatusEmail).toHaveBeenCalledTimes(1);
+    expect(mailer.sendOrderStatusEmail).toHaveBeenCalledWith(BUYER_EMAIL, expect.any(String), "paid");
+  });
+
+  it("sends an order-status email when reaching shipped", async () => {
+    const { _idOid } = await seedOrder();
+    await advance(_idOid, "paid", "processing");
+    vi.clearAllMocks();
+
+    await advance(_idOid, "shipped");
+
+    expect(mailer.sendOrderStatusEmail).toHaveBeenCalledTimes(1);
+    expect(mailer.sendOrderStatusEmail).toHaveBeenCalledWith(
+      BUYER_EMAIL,
+      expect.any(String),
+      "shipped",
     );
   });
 
-  it("does not enqueue anything for a non-notifiable status (processing)", async () => {
+  it("sends an order-status email when reaching delivered", async () => {
     const { _idOid } = await seedOrder();
-    await transitionOrder(_idOid, "paid");
-    mockAdd.mockClear();
+    await advance(_idOid, "paid", "processing", "shipped");
+    vi.clearAllMocks();
 
-    await transitionOrder(_idOid, "processing");
+    await advance(_idOid, "delivered");
 
-    expect(mockAdd).not.toHaveBeenCalled();
+    expect(mailer.sendOrderStatusEmail).toHaveBeenCalledTimes(1);
+    expect(mailer.sendOrderStatusEmail).toHaveBeenCalledWith(
+      BUYER_EMAIL,
+      expect.any(String),
+      "delivered",
+    );
   });
 
-  it("a transition succeeds independent of the enqueue call failing", async () => {
-    mockAdd.mockRejectedValueOnce(new Error("redis unreachable"));
+  it("sends an order-status email when cancelled", async () => {
     const { _idOid } = await seedOrder();
+    vi.clearAllMocks();
 
-    // seedOrder's own checkout call is where the rejected enqueue landed;
-    // the order still exists and is pending_payment, checkout didn't throw.
+    await advance(_idOid, "cancelled");
+
+    expect(mailer.sendOrderStatusEmail).toHaveBeenCalledWith(
+      BUYER_EMAIL,
+      expect.any(String),
+      "cancelled",
+    );
+  });
+
+  it("does not send anything for a non-notifiable status (processing)", async () => {
+    const { _idOid } = await seedOrder();
+    await advance(_idOid, "paid");
+    vi.clearAllMocks();
+
+    await transitionOrder(_idOid, "processing");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(mailer.sendOrderStatusEmail).not.toHaveBeenCalled();
+  });
+
+  it("a transition succeeds independent of the email send failing", async () => {
+    const { _idOid } = await seedOrder();
+    vi.mocked(mailer.sendOrderStatusEmail).mockRejectedValueOnce(new Error("mail provider down"));
+
     const updated = await transitionOrder(_idOid, "paid");
     expect(updated.status).toBe("paid");
   });
 });
 
-describe("worker processors", () => {
+describe("send implementations", () => {
   it("processOrderConfirmationJob sends the confirmation email", async () => {
     const { id } = await seedOrder();
+    vi.clearAllMocks();
 
     await processOrderConfirmationJob({ orderId: id });
 
@@ -208,14 +228,11 @@ describe("worker processors", () => {
 
   it("processOrderStatusJob sends the status email", async () => {
     const { id, _idOid } = await seedOrder();
-    await transitionOrder(_idOid, "paid");
+    await advance(_idOid, "paid");
+    vi.clearAllMocks();
 
     await processOrderStatusJob({ orderId: id, status: "paid" });
 
-    expect(mailer.sendOrderStatusEmail).toHaveBeenCalledWith(
-      BUYER_EMAIL,
-      expect.any(String),
-      "paid",
-    );
+    expect(mailer.sendOrderStatusEmail).toHaveBeenCalledWith(BUYER_EMAIL, expect.any(String), "paid");
   });
 });

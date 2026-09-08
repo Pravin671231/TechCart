@@ -9,8 +9,8 @@
 // once, by walking orders.stateMachine.ts's real transition table via
 // orders.repository.ts's create()/updateStatus() directly — deliberately
 // NEVER orders.service.ts's transitionOrder(), since that dynamically
-// imports orders.notifications.ts and enqueues a BullMQ email; not calling
-// transitionOrder at all means that import (and the enqueue) never executes,
+// imports orders.notifications.ts and fires a notification email; not calling
+// transitionOrder at all means that import (and the send) never executes,
 // no mocking required. For every order reaching "paid" or later, a matching
 // Payment document is inserted the same way — payments.repository.ts's
 // create()/markCaptured()/addRefund() directly, never payments.service.ts's

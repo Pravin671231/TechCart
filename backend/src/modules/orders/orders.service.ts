@@ -248,15 +248,14 @@ export async function checkout(userId: string, input: CheckoutInput): Promise<Ch
   );
   await replaceCartItems(toObjectId(userId), remainingCartItems);
 
-  // FR-ORD-021 — enqueued after the order is committed. Awaiting this only
-  // waits on the job being *added* to the queue (near-instant, and the
-  // function itself never throws — enqueue failures are caught and logged
-  // internally); the actual email send happens later, asynchronously, in
-  // the worker — never inline within this request/response cycle.
+  // FR-ORD-021 — fired after the order is committed. enqueueOrderConfirmation
+  // never throws (the send is kicked off fire-and-forget and its failures are
+  // caught + logged internally), so this await returns near-instantly and the
+  // actual email send never blocks this request/response cycle.
   //
-  // Dynamic, not a static top-level import: orders.notifications.ts pulls
-  // in @/lib/queue -> @/config/env, and several test files import THIS
-  // module (orders.service.ts) statically at their own top level to call
+  // Dynamic, not a static top-level import: orders.notifications.ts pulls in
+  // @/externalService/mailer -> @/config/env, and several test files import
+  // THIS module (orders.service.ts) statically at their own top level to call
   // transitionOrder()/markOrderPaid() directly (not via HTTP). A static
   // import here would make @/config/env's envSchema.parse(process.env) run
   // as part of those test files' own module evaluation, before their
@@ -316,11 +315,11 @@ export async function transitionOrder(
     throw orderNotFound();
   }
 
-  // FR-ORD-022 — enqueued here, not at each individual call site, so every
+  // FR-ORD-022 — fired here, not at each individual call site, so every
   // caller of transitionOrder (buyer cancel, admin advance/cancel, the
   // auto-cancel sweep) gets notification coverage for free. A no-op for any
   // status not in the notifiable set (e.g. processing). Dynamic import —
-  // see the identical comment on checkout()'s own enqueue call above.
+  // see the identical comment on checkout()'s own call above.
   const { enqueueStatusNotification } = await import("./orders.notifications.js");
   await enqueueStatusNotification(updated, toStatus);
 
@@ -339,9 +338,16 @@ export async function markOrderPaid(
   return transitionOrder(orderId, "paid");
 }
 
-// FR-ORD-010 — orders left in pending_payment past 30 minutes are
-// auto-cancelled by queueWorkers.ts's repeatable BullMQ job. A run that
-// finds nothing to cancel is not itself an error (SRS v0.5 §3).
+// FR-ORD-010 — orders left in pending_payment past 30 minutes should be
+// auto-cancelled. This function does the work; a run that finds nothing to
+// cancel is not itself an error (SRS v0.5 §3).
+//
+// NOTE: nothing schedules this automatically any more. It used to run every
+// 5 minutes as a repeatable BullMQ job, removed along with the rest of the
+// Redis/BullMQ subsystem. Kept here (and unit-tested) as an invocable
+// operation — a follow-up should re-wire it to a scheduler that doesn't
+// need Redis (e.g. an in-process interval or an external cron hitting an
+// admin endpoint).
 const AUTO_CANCEL_WINDOW_MS = 30 * 60 * 1000;
 
 export async function runAutoCancelSweep(): Promise<{ cancelledCount: number }> {
