@@ -474,6 +474,43 @@ describe("Auth", () => {
         expect(screen.getByText(/OTP has expired/i)).toBeInTheDocument();
       });
     });
+
+    it("recovers from a hung send-OTP request via the request timeout", async () => {
+      const { makeStore } = await import("@/store/store");
+      const { SignInContent } = await import("@/features/authentication/auth/SignInContent");
+      const store = makeStore();
+
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+
+      server.use(
+        http.get("*/api/auth/get-session", () => HttpResponse.json({ success: true, data: null })),
+        // Never responds — simulates a backend that accepts the request and hangs.
+        http.post("*/api/auth/email-otp/send-verification-otp", () => new Promise(() => {}))
+      );
+
+      render(
+        <Provider store={store}>
+          <SignInContent />
+        </Provider>
+      );
+
+      const emailInput = screen.getByPlaceholderText(/you@example.com/i);
+      fireEvent.change(emailInput, { target: { value: "test@example.com" } });
+      fireEvent.click(screen.getByRole("button", { name: /send otp/i }));
+
+      expect(screen.getByRole("button", { name: /sending/i })).toBeInTheDocument();
+
+      // Trip the shared fetchBaseQuery timeout (REQUEST_TIMEOUT_MS = 20s).
+      await vi.advanceTimersByTimeAsync(21_000);
+
+      await waitFor(() => {
+        expect(screen.getByText(/unable to reach the server/i)).toBeInTheDocument();
+      });
+      const sendButton = screen.getByRole("button", { name: /^send otp$/i });
+      expect(sendButton).toBeEnabled();
+
+      vi.useRealTimers();
+    });
   });
 
   // Issue #322 — AuthStatus's text link is replaced by an initials avatar +

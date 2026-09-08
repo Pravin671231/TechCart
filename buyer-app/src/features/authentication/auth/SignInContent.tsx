@@ -82,31 +82,35 @@ export function SignInContent() {
         </ul>
       </aside>
 
-      {/* Form panel — full width on tablet/mobile, scrolls internally on short viewports. */}
-      <main className="flex flex-1 items-center justify-center overflow-y-auto bg-white p-6 sm:p-10 ">
-        <div className="signin-enter signin-enter-2 w-full max-w-sm">
-          <h1 className="font-display text-2xl font-bold tracking-tight text-neutral-900">
-            Sign in to your account
-          </h1>
-          <p className="mt-1.5 text-sm text-neutral-500">Welcome to TechCart</p>
+      {/* Form panel — full width on tablet/mobile. Scroll lives on <main>; the
+          inner min-h-full wrapper centres the card when it fits and lets the
+          panel scroll (card top stays reachable) when it doesn't. */}
+      <main className="flex-1 overflow-y-auto bg-white">
+        <div className="flex min-h-full items-center justify-center p-6 sm:p-10">
+          <div className="signin-enter signin-enter-2 w-full max-w-sm">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-neutral-900">
+              Sign in to your account
+            </h1>
+            <p className="mt-1.5 text-sm text-neutral-500">Welcome to TechCart</p>
 
-          <div className="mt-8 space-y-6">
-            <div className="flex justify-center">
-              <GoogleSignIn />
-            </div>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                <div className="w-full border-t border-neutral-200" />
+            <div className="mt-8 space-y-6">
+              <div className="flex justify-center">
+                <GoogleSignIn />
               </div>
-              <div className="relative flex justify-center">
-                <span className="bg-white px-3 text-xs font-medium tracking-wide text-neutral-400 uppercase">
-                  or
-                </span>
-              </div>
-            </div>
 
-            <OtpSignIn />
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-neutral-200" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-3 text-xs font-medium tracking-wide text-neutral-400 uppercase">
+                    or
+                  </span>
+                </div>
+              </div>
+
+              <OtpSignIn />
+            </div>
           </div>
         </div>
       </main>
