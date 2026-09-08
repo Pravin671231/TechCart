@@ -46,6 +46,15 @@ function normalizeError(error: FetchBaseQueryError): NormalizedApiError {
   };
 }
 
+// If a request hasn't answered in this long, `baseQueryWithEnvelope` gives up
+// on it and returns a TIMEOUT_ERROR, so a hung/unresponsive endpoint can't
+// freeze a screen indefinitely (e.g. a stuck "Sending…" button on /sign-in).
+// Implemented in the wrapper rather than via `fetchBaseQuery`'s own `timeout`
+// option: that option leaks an uncleared `setTimeout`, which breaks fake-timer
+// tests. `normalizeError` already maps `{ status: "TIMEOUT_ERROR" }` to the
+// generic "Unable to reach the server" message. 20s clears a Render cold start.
+const REQUEST_TIMEOUT_MS = 20_000;
+
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: NEXT_PUBLIC_API_URL,
   prepareHeaders: (headers) => {
@@ -81,7 +90,25 @@ const baseQueryWithEnvelope: BaseQueryFn<
     }
   }
 
-  const result = await rawBaseQuery(args, api, extraOptions);
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise: Promise<Awaited<ReturnType<typeof rawBaseQuery>>> = new Promise(
+    (resolve) => {
+      timeoutId = setTimeout(
+        () =>
+          resolve({
+            error: { status: "TIMEOUT_ERROR", error: `No response after ${REQUEST_TIMEOUT_MS}ms` },
+          }),
+        REQUEST_TIMEOUT_MS,
+      );
+    },
+  );
+
+  let result: Awaited<ReturnType<typeof rawBaseQuery>>;
+  try {
+    result = await Promise.race([rawBaseQuery(args, api, extraOptions), timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (process.env.NODE_ENV !== "production") {
     console.log("response", result.error ?? result.data);
