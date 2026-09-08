@@ -5,12 +5,12 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { useInfiniteScrollSentinel } from "@/hooks/useInfiniteScrollSentinel";
 import { useGetProductsQuery } from "@/features/products/api";
 import type { HomeProductSort } from "@/features/products/types";
-import { ProductGrid } from "@/features/products/ProductGrid";
 import { ProductListSkeleton } from "@/features/products/ProductListSkeleton";
 import { ProductListEmpty } from "@/features/products/ProductListEmpty";
 import { ProductListError } from "@/features/products/ProductListError";
 import { InfiniteScrollFooter } from "@/features/products/InfiniteScrollFooter";
 import { describeLoadedCount } from "@/features/products/Pagination";
+import { HomeProductGrid } from "./HomeProductGrid";
 import { HomeSortSelect } from "./HomeSortSelect";
 
 export function HomeContent() {
@@ -51,10 +51,12 @@ export function HomeContent() {
       ) : (
         data && (
           <>
-            <ProductGrid products={data.items} />
+            <HomeProductGrid
+              products={data.items}
+              isLoadingMore={isFetching && page > 1}
+            />
             <InfiniteScrollFooter
               sentinelRef={sentinelRef}
-              isLoadingMore={isFetching && page > 1}
               hasNextPage={hasNextPage}
               hasItems={data.items.length > 0}
             />
