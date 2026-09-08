@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { PageContainer } from "@/components/layout/PageContainer";
 import { NotFoundState } from "@/components/ui/NotFoundState";
 import { FetchingOverlay } from "@/components/ui/FetchingOverlay";
 import { useGetCategoryProductsQuery } from "@/features/products/api";
@@ -45,24 +44,29 @@ export function CategoryContent({ slug }: { slug: string }) {
     setPage(1);
   }
 
+  // Issue #346 — the category page is the one `container-fluid` route: edge-to-edge,
+  // dropping the shared `max-w-7xl` PageContainer. `AppShell` already renders the
+  // `<main>` landmark, so this is a plain `<div>`.
+  const pageWrapper = "flex w-full flex-1 flex-col px-4 py-6 sm:px-6 lg:px-8";
+
   if (isNotFound) {
     return (
-      <PageContainer className="flex flex-col">
+      <div className={pageWrapper}>
         <NotFoundState message="This category doesn't exist or is no longer available." />
-      </PageContainer>
+      </div>
     );
   }
 
   const breadcrumb = resolveBreadcrumb(categories, slug);
 
   return (
-    <PageContainer className="flex flex-col">
+    <div className={pageWrapper}>
       <CategoryBreadcrumb breadcrumb={breadcrumb} />
       <h1 className="mb-1 text-xl font-semibold tracking-tight text-neutral-900">
         {breadcrumb?.current.name ?? slug}
       </h1>
-      <div className="flex gap-6">
-        <aside className="hidden w-64 shrink-0 lg:block">
+      <div className="flex items-start gap-6">
+        <aside className="hidden w-64 shrink-0 lg:sticky lg:top-8 lg:block  lg:self-start  lg:pr-4">
           <CategoryFilterRail
             filterOptions={filterOptions}
             filters={filters}
@@ -102,6 +106,6 @@ export function CategoryContent({ slug }: { slug: string }) {
           )}
         </section>
       </div>
-    </PageContainer>
+    </div>
   );
 }
