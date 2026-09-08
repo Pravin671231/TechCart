@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import {
+  CHALLENGE_HEADER,
   clearAdminChallenge,
   issueAdminChallenge,
   readAdminChallenge,
@@ -114,7 +115,12 @@ const CHALLENGE_MISSING = new AppError(
 export async function adminSignInHandler(req: Request, res: Response): Promise<void> {
   const { email, password } = adminSignInSchema.parse(req.body);
   const challenge = await adminPasswordSignIn(email, password, getSignInMeta(req));
-  issueAdminChallenge(res, challenge);
+  const challengeToken = issueAdminChallenge(res, challenge);
+  // Cross-site clients (admin-app on Vercel) can't rely on the httpOnly
+  // cookie issueAdminChallenge also sets — Safari/Chrome block the
+  // third-party cookie — so surface the same token via a response header the
+  // client resends on the OTP steps (mirrors set-auth-token / FR-AUTH-046).
+  res.setHeader(CHALLENGE_HEADER, challengeToken);
   // No session yet — the mandatory OTP step (FR-AUTH-014) still has to pass.
   // admin-app reads data.code === "OTP_REQUIRED" to advance to the OTP screen.
   res.status(200).json(successResponse({ code: "OTP_REQUIRED" }));

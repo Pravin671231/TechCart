@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useGetSessionQuery } from "./api";
+import { clearChallenge } from "./challengeStorage";
 import { PasswordSignIn } from "./PasswordSignIn";
 import { OtpVerify } from "./OtpVerify";
 
@@ -31,7 +32,10 @@ export const SignInContent = () => {
         <OtpVerify
           email={step.email}
           onVerified={() => navigate("/", { replace: true })}
-          onStartOver={() => setStep({ name: "password" })}
+          onStartOver={() => {
+            clearChallenge();
+            setStep({ name: "password" });
+          }}
         />
       )}
     </main>

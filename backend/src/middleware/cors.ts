@@ -16,12 +16,15 @@ export const corsMiddleware = cors({
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-  // Authorization carries the Bearer session token (Issue #139) — omitting
-  // it would fail preflight for every authenticated buyer request.
-  allowedHeaders: ["Content-Type", "Authorization"],
-  // set-auth-token carries the Bearer session token back on sign-in
-  // (Better Auth's `bearer` plugin) — without exposing it explicitly, a
-  // browser receives the header but cross-origin `fetch(...).headers.get()`
-  // can't read it, silently breaking the whole point of this mechanism.
-  exposedHeaders: ["set-auth-token"],
+  // Authorization carries the Bearer session token (Issue #139).
+  // x-admin-2fa-challenge carries the admin pending-challenge token back to
+  // the two OTP steps for a cross-site client (see lib/adminChallenge.ts) —
+  // omitting either would fail preflight for those requests.
+  allowedHeaders: ["Content-Type", "Authorization", "x-admin-2fa-challenge"],
+  // set-auth-token carries the Bearer session token back on sign-in;
+  // x-admin-2fa-challenge carries the admin pending-challenge token back on
+  // the password step — without exposing them explicitly, a browser receives
+  // the header but cross-origin `fetch(...).headers.get()` can't read it,
+  // silently breaking the whole point of the mechanism.
+  exposedHeaders: ["set-auth-token", "x-admin-2fa-challenge"],
 });

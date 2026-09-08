@@ -70,7 +70,9 @@ afterEach(() => {
 });
 
 function capturePasswordStep(agent: ReturnType<typeof request.agent>) {
-  return agent.post("/api/auth/sign-in/email").send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+  return agent
+    .post("/api/auth/sign-in/email")
+    .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
 }
 
 async function sendAndCaptureOtp(agent: ReturnType<typeof request.agent>): Promise<string> {
@@ -287,6 +289,57 @@ describe("Admin password + mandatory OTP sign-in", () => {
 
       expect(session.status).toBe(200);
       expect(session.body.data.user.email).toBe(ADMIN_EMAIL);
+    });
+  });
+
+  describe("Pending challenge via x-admin-2fa-challenge header (cross-site clients)", () => {
+    it("completes the OTP steps with the header alone, no challenge cookie", async () => {
+      // admin-app (Vercel) can't rely on the third-party httpOnly cookie —
+      // Safari blocks it — so the password step also returns the challenge
+      // token in a response header the client resends on the OTP steps.
+      const passwordRes = await request(app)
+        .post("/api/auth/sign-in/email")
+        .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+      expect(passwordRes.status).toBe(200);
+
+      const challenge = passwordRes.headers["x-admin-2fa-challenge"] as string;
+      expect(challenge).toBeTruthy();
+
+      // Fresh request(app) — no agent, so no cookie is ever carried.
+      const send = await request(app)
+        .post("/api/auth/two-factor/send-otp")
+        .set("x-admin-2fa-challenge", challenge)
+        .send({});
+      expect(send.status).toBe(200);
+
+      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
+      const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1] as string;
+      expect(otp).toBe("123456");
+
+      const verify = await request(app)
+        .post("/api/auth/two-factor/verify-otp")
+        .set("x-admin-2fa-challenge", challenge)
+        .send({ code: otp });
+      expect(verify.status).toBe(200);
+      expect(verify.body.data.user.email).toBe(ADMIN_EMAIL);
+
+      const token = verify.headers["set-auth-token"];
+      expect(token).toBeTruthy();
+
+      const session = await request(app)
+        .get("/api/auth/get-session")
+        .set("Authorization", `Bearer ${token}`);
+      expect(session.body.data.user.email).toBe(ADMIN_EMAIL);
+    });
+
+    it("still rejects the OTP steps with neither cookie nor header", async () => {
+      await request(app)
+        .post("/api/auth/sign-in/email")
+        .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+
+      const send = await request(app).post("/api/auth/two-factor/send-otp").send({});
+      expect(send.status).toBe(401);
+      expect(send.body.code).toBe("INVALID_TWO_FACTOR_COOKIE");
     });
   });
 

@@ -7,6 +7,7 @@ import { server } from "../../../mocks/server";
 import { createStore } from "@/app/store/store";
 import { SignInContent } from "@/features/authentication/auth/SignInContent";
 import { clearToken, getToken } from "@/features/authentication/auth/tokenStorage";
+import { clearChallenge, getChallenge } from "@/features/authentication/auth/challengeStorage";
 
 const BASE = "http://localhost:4000/api/auth";
 
@@ -41,28 +42,56 @@ async function submitPassword(email = "admin@example.com", password = "correct-p
 describe("SignInContent", () => {
   afterEach(() => {
     clearToken();
+    clearChallenge();
   });
 
-  it("completes the password -> OTP happy path and redirects home", async () => {
+  it("completes the password -> OTP happy path, round-trips the 2FA challenge header, and redirects home", async () => {
     setUnauthenticatedSession();
     let verified = false;
+    let sendOtpChallenge: string | null = null;
+    let verifyOtpChallenge: string | null = null;
 
     server.use(
       http.get(`${BASE}/get-session`, () => {
         return HttpResponse.json({
           success: true,
           data: verified
-            ? { user: { id: "u1", name: "Admin", email: "admin@example.com", role: "catalog-manager" } }
+            ? {
+                user: {
+                  id: "u1",
+                  name: "Admin",
+                  email: "admin@example.com",
+                  role: "catalog-manager",
+                },
+              }
             : null,
         });
       }),
       http.post(`${BASE}/sign-in/email`, () => {
-        return HttpResponse.json({ success: true, data: { code: "OTP_REQUIRED" } });
+        return HttpResponse.json(
+          { success: true, data: { code: "OTP_REQUIRED" } },
+          { headers: { "x-admin-2fa-challenge": "chal-tok" } },
+        );
       }),
-      http.post(`${BASE}/two-factor/verify-otp`, () => {
+      http.post(`${BASE}/two-factor/send-otp`, ({ request }) => {
+        sendOtpChallenge = request.headers.get("x-admin-2fa-challenge");
+        return HttpResponse.json({ success: true, data: {} });
+      }),
+      http.post(`${BASE}/two-factor/verify-otp`, ({ request }) => {
+        verifyOtpChallenge = request.headers.get("x-admin-2fa-challenge");
         verified = true;
         return HttpResponse.json(
-          { success: true, data: { user: { id: "u1", name: "Admin", email: "admin@example.com", role: "catalog-manager" } } },
+          {
+            success: true,
+            data: {
+              user: {
+                id: "u1",
+                name: "Admin",
+                email: "admin@example.com",
+                role: "catalog-manager",
+              },
+            },
+          },
           { headers: { "set-auth-token": "real-token" } },
         );
       }),
@@ -71,11 +100,42 @@ describe("SignInContent", () => {
     renderSignIn();
     await submitPassword();
 
-    fireEvent.change(await screen.findByLabelText("Verification code"), { target: { value: "123456" } });
+    fireEvent.change(await screen.findByLabelText("Verification code"), {
+      target: { value: "123456" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Verify & sign in" }));
 
     expect(await screen.findByText("Home content")).toBeInTheDocument();
     expect(getToken()).toBe("real-token");
+    expect(sendOtpChallenge).toBe("chal-tok");
+    expect(verifyOtpChallenge).toBe("chal-tok");
+    // Cleared once the session is established.
+    expect(getChallenge()).toBeNull();
+  });
+
+  it("clears the stored 2FA challenge when the user starts over", async () => {
+    setUnauthenticatedSession();
+    server.use(
+      http.post(`${BASE}/sign-in/email`, () => {
+        return HttpResponse.json(
+          { success: true, data: { code: "OTP_REQUIRED" } },
+          { headers: { "x-admin-2fa-challenge": "chal-tok" } },
+        );
+      }),
+      http.post(`${BASE}/two-factor/send-otp`, () => {
+        return HttpResponse.json({ success: true, data: {} });
+      }),
+    );
+
+    renderSignIn();
+    await submitPassword();
+    await screen.findByLabelText("Verification code");
+    await waitFor(() => expect(getChallenge()).toBe("chal-tok"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Use a different account" }));
+
+    await screen.findByLabelText("Password");
+    expect(getChallenge()).toBeNull();
   });
 
   it("mints an OTP by calling send-otp as soon as the code step opens", async () => {
@@ -108,7 +168,11 @@ describe("SignInContent", () => {
     server.use(
       http.post(`${BASE}/sign-in/email`, () => {
         return HttpResponse.json(
-          { success: false, code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password." },
+          {
+            success: false,
+            code: "INVALID_EMAIL_OR_PASSWORD",
+            message: "Invalid email or password.",
+          },
           { status: 401 },
         );
       }),
@@ -125,7 +189,11 @@ describe("SignInContent", () => {
     server.use(
       http.post(`${BASE}/sign-in/email`, () => {
         return HttpResponse.json(
-          { success: false, code: "ACCOUNT_DEACTIVATED", message: "This account has been deactivated." },
+          {
+            success: false,
+            code: "ACCOUNT_DEACTIVATED",
+            message: "This account has been deactivated.",
+          },
           { status: 403 },
         );
       }),
@@ -174,7 +242,9 @@ describe("SignInContent", () => {
 
     renderSignIn();
     await submitPassword();
-    fireEvent.change(await screen.findByLabelText("Verification code"), { target: { value: "000000" } });
+    fireEvent.change(await screen.findByLabelText("Verification code"), {
+      target: { value: "000000" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Verify & sign in" }));
 
     expect(
@@ -198,10 +268,14 @@ describe("SignInContent", () => {
 
     renderSignIn();
     await submitPassword();
-    fireEvent.change(await screen.findByLabelText("Verification code"), { target: { value: "000000" } });
+    fireEvent.change(await screen.findByLabelText("Verification code"), {
+      target: { value: "000000" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Verify & sign in" }));
 
-    expect(await screen.findByText("This code has expired. Request a new one.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("This code has expired. Request a new one."),
+    ).toBeInTheDocument();
   });
 
   it("disables Resend during the cooldown and re-enables once it elapses", async () => {

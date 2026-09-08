@@ -78,4 +78,18 @@ describe("cross-site pending-2FA cookie (Issue #259/M3.21)", () => {
     expect(challengeCookie?.toLowerCase()).toContain("samesite=none");
     expect(challengeCookie?.toLowerCase()).toContain("secure");
   });
+
+  it("also returns the challenge token in the x-admin-2fa-challenge response header", async () => {
+    // The cross-site cookie above is still dropped outright by Safari (and
+    // increasingly Chrome) regardless of SameSite=None — so the same token
+    // is surfaced via a response header the client resends (FR-AUTH-046).
+    const res = await request(app)
+      .post("/api/auth/sign-in/email")
+      .set("Origin", "http://localhost:5173")
+      .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+
+    expect(res.status).toBe(200);
+    expect(res.headers["x-admin-2fa-challenge"]).toBeTruthy();
+    expect(res.headers["access-control-expose-headers"]).toContain("x-admin-2fa-challenge");
+  });
 });

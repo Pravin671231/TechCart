@@ -200,7 +200,7 @@ The full-page Google OAuth redirect flow (`POST /api/auth/sign-in/social` + `GET
 
 ## Admin Sign-In (Password + Mandatory OTP)
 
-Two-step challenge, distinct from buyer's single-call methods — a correct password alone never establishes a session (`FR-AUTH-011`–`014`, `030`). Since Issue #259/M3.21 this is a hand-rolled flow on the custom session engine (no Better Auth). The "which admin is mid-sign-in" state between the three calls rides an `httpOnly` cookie named `techcart_admin_2fa` (`SameSite=None; Secure` when the backend runs over HTTPS, `SameSite=Lax` otherwise) — Postman must keep the same cookie jar across all three calls.
+Two-step challenge, distinct from buyer's single-call methods — a correct password alone never establishes a session (`FR-AUTH-011`–`014`, `030`). Since Issue #259/M3.21 this is a hand-rolled flow on the custom session engine (no Better Auth). The "which admin is mid-sign-in" state between the three calls is carried two ways at once: an `httpOnly` cookie named `techcart_admin_2fa` (`SameSite=None; Secure` when the backend runs over HTTPS, `SameSite=Lax` otherwise), and — for a cross-site browser client that can't rely on that third-party cookie (Safari blocks it outright) — an `x-admin-2fa-challenge` **response header** on the password step that the client stores and resends as the **same request header** on `/two-factor/send-otp` and `/two-factor/verify-otp`. `readAdminChallenge` (`src/lib/adminChallenge.ts`) accepts either; the header wins when both are present. In Postman, keeping one cookie jar across all three calls is enough — no need to copy the header by hand.
 
 ### `POST /api/auth/sign-in/email`
 
@@ -234,7 +234,7 @@ Password step.
 }
 ```
 
-- **No session is established yet** — `GET /api/auth/get-session` right after this step still returns `data: null`. A `Set-Cookie: techcart_admin_2fa=…` header carries the pending challenge into the next two calls. **No OTP email is sent by this step** — the next call (`/two-factor/send-otp`) mints and sends it.
+- **No session is established yet** — `GET /api/auth/get-session` right after this step still returns `data: null`. A `Set-Cookie: techcart_admin_2fa=…` header **and** an `x-admin-2fa-challenge: <jwt>` response header both carry the pending challenge into the next two calls (see the section intro). **No OTP email is sent by this step** — the next call (`/two-factor/send-otp`) mints and sends it.
 
 ### Error cases
 
@@ -266,7 +266,7 @@ Password step.
 }
 ```
 
-No challenge cookie is set, and no OTP is ever sent, for any of these cases.
+No challenge cookie or `x-admin-2fa-challenge` header is set, and no OTP is ever sent, for any of these cases.
 
 ---
 
@@ -280,11 +280,11 @@ Mints + sends the OTP email for the pending challenge. Used for the initial send
 | URL    | `{{base_url}}/api/auth/two-factor/send-otp`     |
 | Name   | `Admin — Send OTP`                              |
 
-**Headers tab:** none required (no body). The `techcart_admin_2fa` cookie from the password step must be sent — Postman does this automatically within one cookie jar.
+**Headers tab:** none required (no body). The pending challenge must reach this call — via the `techcart_admin_2fa` cookie from the password step (Postman sends it automatically within one cookie jar) **or** an `x-admin-2fa-challenge: <jwt>` request header (the value from the password step's response header — this is what a cross-site browser client uses).
 
 **Click Send. Expected response — `200 OK`:** `{"success": true, "data": {}}`. The code is fixed to `123456` in every environment — submit that at `/two-factor/verify-otp`, no need to check an inbox. See [Prerequisites](#prerequisites).
 
-**Error — missing or expired challenge cookie:**
+**Error — missing or expired challenge (neither cookie nor `x-admin-2fa-challenge` header valid):**
 
 ```
 401 Unauthorized
@@ -310,7 +310,7 @@ Completes sign-in.
 | URL    | `{{base_url}}/api/auth/two-factor/verify-otp`       |
 | Name   | `Admin — Verify OTP`                                |
 
-**Headers tab:** `Content-Type: application/json`. The `techcart_admin_2fa` cookie must be sent.
+**Headers tab:** `Content-Type: application/json`. The pending challenge must reach this call too — the `techcart_admin_2fa` cookie **or** an `x-admin-2fa-challenge: <jwt>` request header (from the password step's response header).
 
 **Body tab → raw → JSON:**
 
@@ -370,7 +370,7 @@ No session is established in any of these cases:
 }
 ```
 
-**Missing or expired challenge cookie:** `401` `INVALID_TWO_FACTOR_COOKIE` (same shape as `/two-factor/send-otp` above).
+**Missing or expired challenge (no valid cookie or `x-admin-2fa-challenge` header):** `401` `INVALID_TWO_FACTOR_COOKIE` (same shape as `/two-factor/send-otp` above).
 
 ---
 
@@ -510,7 +510,7 @@ Self-service recovery for an admin who forgets the password from the sign-in flo
 | `INVALID_GOOGLE_TOKEN`                 | 401     | `auth.service.ts`'s `signInWithGoogle` — the One Tap `idToken` failed JWKS verification (`src/lib/googleAuth.ts`) | Only with a real, invalid Google token |
 | `INVALID_EMAIL_OR_PASSWORD`            | 401     | `auth.service.ts`'s `adminPasswordSignIn` (`/sign-in/email`) — wrong password, unknown email, or a `role:"buyer"` account, all indistinguishable | Yes                                   |
 | `ACCOUNT_DEACTIVATED`                  | 403     | `auth.service.ts` — `/sign-in/email` for an admin whose `status` is `false` (checked ahead of the password); also the buyer OTP-request path                | Yes                                   |
-| `INVALID_TWO_FACTOR_COOKIE`            | 401     | `auth.controller.ts` — `/two-factor/send-otp` or `/verify-otp` with no valid `techcart_admin_2fa` challenge cookie | Yes                                   |
+| `INVALID_TWO_FACTOR_COOKIE`            | 401     | `auth.controller.ts` — `/two-factor/send-otp` or `/verify-otp` with no valid pending challenge (`techcart_admin_2fa` cookie or `x-admin-2fa-challenge` header) | Yes                                   |
 | `INVALID_OTP`                          | 400     | `auth.service.ts`'s `verifyBuyerOtp` → `src/lib/otp.ts`'s `verifyOtp` — buyer OTP verify, wrong or already-consumed code | Yes                                   |
 | `OTP_EXPIRED`                          | 400     | `auth.service.ts`'s `verifyBuyerOtp` — buyer OTP verify, code older than its 10-minute expiry           | Yes                                   |
 | `INVALID_CODE`                         | 401     | `auth.service.ts`'s `adminVerifyOtp` — admin OTP verify, wrong or reused code                           | Yes                                   |
