@@ -135,7 +135,12 @@ export type PublicProductFilter = {
   inStockVariantIds?: Types.ObjectId[];
 };
 
-export type PublicSort = "relevance" | "price_asc" | "price_desc" | "newest";
+// "recommended" (SRS v0.2 amendment, FR-CAT-105) is the buyer-app *home*
+// default — the flat listing interleaves published products across their
+// categories (see interleaveByCategoryStages below). It is only meaningful on
+// the unscoped flat listing; a category-scoped request that somehow carries
+// it falls back to "newest" (listPublicPaginated).
+export type PublicSort = "relevance" | "price_asc" | "price_desc" | "newest" | "recommended";
 
 // #102: price range and on-sale are variant-level fields now (there's no
 // top-level sellingPrice/discount left on the product) — folded into one
@@ -208,7 +213,11 @@ function priceSortStages(sort: "price_asc" | "price_desc"): Record<string, unkno
         },
       },
     },
-    { $sort: { sortPrice: sort === "price_asc" ? 1 : -1 } },
+    // FR-CAT-106: `_id` is a total-order tie-breaker — a bare `{ sortPrice: ±1 }`
+    // leaves products that tie on price in a MongoDB-internal order that is not
+    // stable between the separate per-page aggregations infinite scroll issues,
+    // so page 2 could overlap page 1 and a refetch could reshuffle.
+    { $sort: { sortPrice: sort === "price_asc" ? 1 : -1, _id: 1 } },
   ];
 }
 
@@ -224,28 +233,63 @@ function priceSortStages(sort: "price_asc" | "price_desc"): Record<string, unkno
 // handled, consistent with how this codebase treats that edge case
 // elsewhere. Shared by both listPublicPaginated and searchPublicPaginated's
 // newest-fallback branch, same as priceSortStages already is.
-function newestSortStages(): Record<string, unknown>[] {
-  return [
-    {
-      $addFields: {
-        sortCreatedAt: {
-          $let: {
-            vars: {
-              primaryVariant: {
-                $first: {
-                  $sortArray: {
-                    input: { $filter: { input: "$variants", as: "v", cond: "$$v.active" } },
-                    sortBy: { sellingPrice: 1 },
-                  },
+function newestSortKeyStage(): Record<string, unknown> {
+  return {
+    $addFields: {
+      sortCreatedAt: {
+        $let: {
+          vars: {
+            primaryVariant: {
+              $first: {
+                $sortArray: {
+                  input: { $filter: { input: "$variants", as: "v", cond: "$$v.active" } },
+                  sortBy: { sellingPrice: 1 },
                 },
               },
             },
-            in: "$$primaryVariant.createdAt",
           },
+          in: "$$primaryVariant.createdAt",
         },
       },
     },
-    { $sort: { sortCreatedAt: -1 } },
+  };
+}
+
+function newestSortStages(): Record<string, unknown>[] {
+  // FR-CAT-106: `_id` tie-breaker — see priceSortStages' own note. A product
+  // with no active variant has a missing `sortCreatedAt` and sorts last under
+  // `-1`; `_id` still makes that group's internal order deterministic.
+  return [newestSortKeyStage(), { $sort: { sortCreatedAt: -1, _id: 1 } }];
+}
+
+// FR-CAT-105 (SRS v0.2 amendment): the "recommended" ordering for the flat
+// buyer listing. Rank each published product within its own category by
+// newest-primary-variant-first (`newestSortKeyStage` + the same
+// `{ sortCreatedAt: -1, _id: 1 }` key), then emit rank 1 of every category,
+// then rank 2 of every category, and so on — a round-robin interleave so the
+// home grid always looks varied instead of showing one category's whole run
+// before the next. `$setWindowFields` needs MongoDB 5.0+ (cluster is 8.0).
+//
+// `categoryRank` is a running row number within each category — `$sum: 1` over
+// an "unbounded"→"current" documents window, rather than `$documentNumber`,
+// which rejects a multi-field `sortBy` (and the `_id` tie-breaker is
+// load-bearing: without it two same-timestamp products in one category would
+// get a non-deterministic rank order, so pagination could reshuffle). The
+// final `{ categoryRank, category, _id }` sort is a total order, so this
+// paginates as cleanly as the plain sorts above.
+function interleaveByCategoryStages(): Record<string, unknown>[] {
+  return [
+    newestSortKeyStage(),
+    {
+      $setWindowFields: {
+        partitionBy: "$category",
+        sortBy: { sortCreatedAt: -1, _id: 1 },
+        output: {
+          categoryRank: { $sum: 1, window: { documents: ["unbounded", "current"] } },
+        },
+      },
+    },
+    { $sort: { categoryRank: 1, category: 1, _id: 1 } },
   ];
 }
 
@@ -256,10 +300,15 @@ function newestSortStages(): Record<string, unknown>[] {
 async function runFacetedAggregate(
   pipeline: Record<string, unknown>[],
 ): Promise<{ items: PublicProductDoc[]; total: number }> {
+  // allowDiskUse: the "recommended" sort's $setWindowFields buffers the whole
+  // matched set to rank within each category — cheap insurance against the
+  // 100 MB per-stage cap as the catalog grows (harmless for the plain sorts).
   const [result] = await Product.aggregate<{
     items: ProductRecord[];
     totalCount: { count: number }[];
-  }>(pipeline as unknown as Parameters<typeof Product.aggregate>[0]);
+  }>(pipeline as unknown as Parameters<typeof Product.aggregate>[0]).option({
+    allowDiskUse: true,
+  });
 
   const items = result?.items ?? [];
   const total = result?.totalCount[0]?.count ?? 0;
@@ -289,7 +338,15 @@ export async function listPublicPaginated(
   const query = buildMatchStage(filter);
   const skip = (page.page - 1) * page.limit;
 
-  const sortStages = isPriceSort(sort) ? priceSortStages(sort) : newestSortStages();
+  // FR-CAT-105: "recommended" interleaves by category, but only for the
+  // unscoped flat listing — a category-scoped request has a single category to
+  // draw from, so there is nothing to interleave and it falls back to newest.
+  const useInterleave = sort === "recommended" && !filter.categoryIds;
+  const sortStages = useInterleave
+    ? interleaveByCategoryStages()
+    : isPriceSort(sort)
+      ? priceSortStages(sort)
+      : newestSortStages();
   const pipeline = [
     { $match: query },
     ...sortStages,

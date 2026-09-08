@@ -4,18 +4,18 @@ import { useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { useInfiniteScrollSentinel } from "@/hooks/useInfiniteScrollSentinel";
 import { useGetProductsQuery } from "@/features/products/api";
-import type { ProductSort } from "@/features/products/types";
+import type { HomeProductSort } from "@/features/products/types";
 import { ProductGrid } from "@/features/products/ProductGrid";
 import { ProductListSkeleton } from "@/features/products/ProductListSkeleton";
 import { ProductListEmpty } from "@/features/products/ProductListEmpty";
 import { ProductListError } from "@/features/products/ProductListError";
 import { InfiniteScrollFooter } from "@/features/products/InfiniteScrollFooter";
 import { describeLoadedCount } from "@/features/products/Pagination";
-import { SortSelect } from "@/features/products/SortSelect";
+import { HomeSortSelect } from "./HomeSortSelect";
 
 export function HomeContent() {
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<ProductSort>("newest");
+  const [sort, setSort] = useState<HomeProductSort>("recommended");
 
   const { data, isLoading, isFetching, isError, refetch } = useGetProductsQuery({ page, sort });
 
@@ -26,7 +26,7 @@ export function HomeContent() {
     onLoadMore: () => setPage((current) => current + 1),
   });
 
-  function handleSortChange(next: ProductSort) {
+  function handleSortChange(next: HomeProductSort) {
     setSort(next);
     setPage(1);
   }
@@ -39,7 +39,7 @@ export function HomeContent() {
             ? describeLoadedCount(data.items.length, data.pagination.total)
             : "Loading products…"}
         </p>
-        <SortSelect value={sort} onChange={handleSortChange} />
+        <HomeSortSelect value={sort} onChange={handleSortChange} />
       </div>
 
       {isLoading ? (

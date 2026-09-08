@@ -266,7 +266,10 @@ const publicFilterFieldsSchema = z.object({
   attributeName: z.string().min(1).optional(),
   attributeValue: z.string().min(1).optional(),
   spec: specFilterQuerySchema,
-  sort: z.enum(["relevance", "price_asc", "price_desc", "newest"]).optional(),
+  // "recommended" (FR-CAT-105) is only acted on by the flat listing's plain
+  // path; a category-scoped or keyword request that carries it falls back to
+  // "newest" in products.repository.ts.
+  sort: z.enum(["relevance", "price_asc", "price_desc", "newest", "recommended"]).optional(),
 });
 
 const publicListQuerySchema = z

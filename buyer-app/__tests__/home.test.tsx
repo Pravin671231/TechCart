@@ -138,6 +138,28 @@ describe("Home", () => {
     expect(await screen.findByText("Something went wrong loading products.")).toBeInTheDocument();
   });
 
+  it("defaults to the interleaved 'recommended' sort and offers it in the dropdown", async () => {
+    let firstSort: string | null = null;
+    server.use(
+      http.get(`${API_URL}/api/products`, ({ request }) => {
+        firstSort ??= new URL(request.url).searchParams.get("sort");
+        return HttpResponse.json(listBody([makeProduct()]));
+      }),
+    );
+
+    const { makeStore } = await import("@/store/store");
+    const { HomeContent } = await import("@/features/home/HomeContent");
+    render(
+      <Provider store={makeStore()}>
+        <HomeContent />
+      </Provider>,
+    );
+
+    await screen.findByText("Test Product");
+    expect(firstSort).toBe("recommended");
+    expect(screen.getByRole("option", { name: "Recommended" })).toBeInTheDocument();
+  });
+
   it("refetches with the new ?sort= value on sort change, with no manual refetch call", async () => {
     let lastSort: string | null = null;
     server.use(
@@ -155,7 +177,7 @@ describe("Home", () => {
       </Provider>,
     );
 
-    await screen.findByText("Product (newest)");
+    await screen.findByText("Product (recommended)");
 
     await userEvent.setup().selectOptions(screen.getByLabelText("Sort"), "price_asc");
 

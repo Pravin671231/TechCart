@@ -253,6 +253,7 @@ Issue #121 was filed against `buyer-app` (observed as inconsistent Home Page car
 - **"Primary variant" has no prior definition in this codebase** (unlike images, variants have no `isPrimary` flag) — defined identically to the already-established `selectDefaultVariant()` (`products.service.ts`): the lowest-`sellingPrice` _active_ variant. A new shared `newestSortStages()` (`products.repository.ts`, mirroring `priceSortStages()`'s existing `$addFields`-then-`$sort` shape) reimplements that same selection rule in aggregation syntax via `$sortArray`/`$first` (MongoDB ≥5.2; confirmed 8.0 on this Atlas cluster), extracting that variant's `createdAt` into a computed `sortCreatedAt` field to sort on. A product with zero active variants gets a missing `sortCreatedAt` and sorts last under `-1` — not specially handled, consistent with how this codebase already treats that documented edge case elsewhere (e.g. `toPublicListItem`'s absent price/image fields).
 - **Wired into both `listPublicPaginated`'s non-price-sort branch and `searchPublicPaginated`'s newest-fallback branch** — fixing only the former (Home Page's own literal path) would have left Search's "newest" fallback ordering the same products differently for the identical underlying reason, an inconsistency judged worse than the small extra diff of sharing the fix. `listPublicPaginated` is now always aggregation-based (the old plain `.find().sort({createdAt:-1})` path is gone) — both price sorts and newest now need a computed-per-product sort key derived from `variants`, since there's no top-level field left to sort by directly.
 - **Deliberately out of scope**: the admin list's own `?sortBy=createdAt` (still the product's own top-level field) and exposing `createdAt` on the buyer API response (nothing renders it — this only ever affected sort order, not a displayed value) — both per an explicit scoping decision, not an oversight.
+- **Follow-up (`FR-CAT-106`, see Recommended Sort & Deterministic Pagination below)**: `newestSortStages`/`priceSortStages`' single-key `$sort` was later found to still reshuffle across the *separate* per-page aggregations infinite scroll issues (a tie on `sortCreatedAt`/`sortPrice` has no stable order between queries) — every buyer `$sort` now appends an `_id` tie-breaker, and `newestSortStages` was refactored to reuse a `newestSortKeyStage()` helper that the new `recommended` sort also builds on.
 - Test coverage: two new cases in `products.service.test.ts`'s existing `addVariant`/`updateVariant` `describe` blocks, asserting the exact variant array passed to the (mocked) `replaceVariants` — a new variant's fresh/matching `createdAt`/`updatedAt`, an edited variant's preserved `createdAt` alongside a bumped `updatedAt`, and an untouched sibling's timestamps left exactly as they were. No dedicated `newestSortStages()` test — same as `priceSortStages()`, this codebase has no existing precedent for testing aggregation pipeline shape/output directly (the repository layer stays mocked everywhere else too); manually verified end-to-end instead, against the real database and running API, before merge.
 
 ## Buyer Browsing
@@ -291,6 +292,37 @@ Issue #36 / M2.12 (`FR-CAT-068`–`076`, `FR-CAT-091`–`092`) is the last M2 is
 - **A real, pre-existing bug found and fixed while building this**: Express 5's default query parser (`"simple"`, Node's built-in `querystring`) doesn't support the bracket notation (`?spec[RAM]=8GB`, `?spec[ScreenSize][min]=6`) this issue's dynamic specification filters need — Express 4's `"extended"` (`qs`-based) default was dropped, and `qs` is no longer bundled as a dependency. `src/app.ts` now calls `app.set("query parser", "extended")`, with `qs`/`@types/qs` added as explicit `backend` dependencies (previously only present transitively). No prior route needed structured/nested query params, so nothing else in this codebase depended on the old default.
 - **The Atlas Search index definition (`backend/atlas-search/products-search-index.json`) grows two `embeddedDocuments`-typed fields**, `variants` and `specifications`, alongside #35's original `name`/`description` — see `backend/atlas-search/README.md` for the updated field-by-field explanation. Same unprovisioned-cluster caveat as #35: this repo has no Atlas access, so the index mapping and the `embeddedDocument` query operators `buildSearchFilters()` builds against it are this codebase's best-faith translation of Atlas Search's documented syntax, not verified against a live cluster.
 - Test layout matches #35's precedent: new cases added to each module's existing `tests/*.service.test.ts` / `__tests__/*.api.test.ts` files (no new test files) plus new `describe` blocks in `categorySpecifications.service.test.ts` for the two new lookups. Same repository-stays-mocked caveat as #35 — the Atlas Search filter-clause construction is exercised only via the service/controller layers asserting the right filter object reaches the (mocked) repository call, never against a real index. **This "unverified against a live cluster" caveat is now resolved — see Atlas Search Provisioning below.**
+
+## Recommended Sort & Deterministic Pagination
+
+SRS v0.2 amendment `FR-CAT-105`/`FR-CAT-106` (no issue number, `backend` + `buyer-app`) — filed
+against `buyer-app`'s home grid showing the same products repeating/reshuffling on infinite scroll.
+
+- **`FR-CAT-106` — total-order tie-breaker.** Every buyer listing sort in `products.repository.ts`
+  (`newestSortStages`, `priceSortStages`, and via them `searchPublicByRegex`/`searchPublicPaginated`'s
+  fallback) ended in a single-key `$sort` (`{ sortCreatedAt: -1 }` / `{ sortPrice: ±1 }`). Home's
+  infinite scroll issues each page as a **separate** `$skip`/`$limit` aggregation, and MongoDB's
+  order among documents that tie on that one key is not stable between separate queries — so page 2
+  overlapped page 1 (the `buyer-app` `merge` dedupes by `_id`, so items silently vanished) and a
+  refetch reshuffled the grid. Every `$sort` now appends `_id: 1`, making the order total.
+- **`FR-CAT-105` — `recommended` sort.** New `PublicSort` value + `interleaveByCategoryStages()`:
+  `newestSortKeyStage()` → `$setWindowFields` (`partitionBy: "$category"`, `sortBy: { sortCreatedAt: -1, _id: 1 }`,
+  `categoryRank` = a running `$sum: 1` over an `["unbounded", "current"]` documents window — **not**
+  `$documentNumber`, which rejects a multi-field `sortBy`) → `$sort: { categoryRank: 1, category: 1, _id: 1 }`.
+  Result: rank 1 of every category, then rank 2 of every category, … — a round-robin interleave so
+  the home grid always looks varied. Only `listPublicPaginated` acts on it, and only when
+  `!filter.categoryIds` — a category-scoped or keyword request falls back to `newest`
+  (`isPriceSort("recommended")` is already `false`). `runFacetedAggregate` gained
+  `.option({ allowDiskUse: true })` as cheap insurance for the window stage's buffering.
+- **Controller**: `"recommended"` added to `publicFilterFieldsSchema`'s `sort` enum (shared by the
+  flat + category schemas — the repo guard neutralises it for the category route). Service default
+  in `listPublicProductsCore` is unchanged; `buyer-app` sends `sort=recommended` explicitly.
+- **Tests**: new `__tests__/product-catalog/products/productListing.integration.test.ts` — real
+  in-memory Mongo, **no repository mock** (the only products suite that runs the real
+  `listPublicPaginated` aggregation besides the Atlas-gated `search.integration.test.ts`). Asserts,
+  per sort, that splitting one fetch into pages yields exactly the whole-fetch sequence (no overlap,
+  stable across refetches), and that `recommended`'s first N items span N distinct categories.
+  Postman: `docs/postman/product-catalog/products.api.md`'s `sort` row + a dedicated paragraph.
 
 ## Category Filter Options
 
