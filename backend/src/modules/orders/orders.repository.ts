@@ -86,7 +86,7 @@ export async function updateStatus(
 }
 
 // FR-ORD-010 — orders left in pending_payment past the 30-minute window,
-// for the scheduled auto-cancel sweep (queueWorkers.ts).
+// for orders.service.ts's runAutoCancelSweep().
 export async function findStalePendingPayment(olderThan: Date): Promise<OrderRecord[]> {
   return Order.find({ status: "pending_payment", createdAt: { $lt: olderThan } }).lean();
 }

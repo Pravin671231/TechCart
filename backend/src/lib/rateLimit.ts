@@ -1,5 +1,4 @@
-import Redis from "ioredis";
-import { RateLimiterMemory, RateLimiterRedis } from "rate-limiter-flexible";
+import { RateLimiterMemory } from "rate-limiter-flexible";
 import { env } from "@/config/env";
 
 // Issue #145/M3.7 (FR-AUTH-040–044), reworked by #258/#259 once the auth
@@ -12,41 +11,22 @@ import { env } from "@/config/env";
 // 2. `consumeEmailLimit` — the per-email dimension of FR-AUTH-040/042/043,
 //    for the paths whose request body carries an email.
 //
-// Both funnel through the same generic `consume()` so there's one Redis
-// client and one library in this file.
-
-const isTestEnv = env.NODE_ENV === "test";
-
-// A real Redis client only when rate limiting is on, we're not under test,
-// and a REDIS_URL is actually configured. Otherwise the limiters run on
-// per-instance in-memory counters (RateLimiterMemory) — still enforced when
-// RATE_LIMITING_ENABLED is true, just not shared across instances.
+// Both funnel through the same generic `consume()`. The limiters are plain
+// per-instance in-memory counters (RateLimiterMemory) — the backend runs as a
+// single instance, so there's no cross-instance sharing to worry about.
 // RATE_LIMITING_ENABLED=false short-circuits `consume()` below entirely.
-const redisClient =
-  env.RATE_LIMITING_ENABLED && !isTestEnv && env.REDIS_URL ? new Redis(env.REDIS_URL) : null;
 
 // Limiter instances are created lazily per distinct (keyPrefix, points,
 // duration) triple and cached — consumeIpLimit's and consumeEmailLimit's
 // groups all go through this same cache, keyed by their own fixed values.
-const limiters = new Map<string, RateLimiterMemory | RateLimiterRedis>();
+const limiters = new Map<string, RateLimiterMemory>();
 
-function getLimiter(keyPrefix: string, points: number, duration: number): RateLimiterMemory | RateLimiterRedis {
+function getLimiter(keyPrefix: string, points: number, duration: number): RateLimiterMemory {
   const cacheKey = `${keyPrefix}:${points}:${duration}`;
   const existing = limiters.get(cacheKey);
   if (existing) return existing;
 
-  const limiter = redisClient
-    ? new RateLimiterRedis({
-        storeClient: redisClient,
-        keyPrefix,
-        points,
-        duration,
-        // A transient Redis outage degrades to a per-instance in-memory
-        // limit instead of crashing every auth request or silently
-        // disabling rate limiting altogether.
-        insuranceLimiter: new RateLimiterMemory({ keyPrefix, points, duration }),
-      })
-    : new RateLimiterMemory({ keyPrefix, points, duration });
+  const limiter = new RateLimiterMemory({ keyPrefix, points, duration });
   limiters.set(cacheKey, limiter);
   return limiter;
 }

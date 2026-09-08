@@ -2,10 +2,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { env } from "@/config/env";
 import { consumeEmailLimit, consumeIpLimit, resetAllRateLimiters } from "@/lib/rateLimit";
 
-// Issue #145/M3.7 — exercises consumeEmailLimit directly. NODE_ENV=test (set
-// globally by Vitest) makes this module select RateLimiterMemory internally,
-// so this is real sliding-window logic, not a mock, with zero live Redis
-// needed.
+// Issue #145/M3.7 — exercises consumeEmailLimit directly. The limiters are
+// plain in-memory counters, so this is real sliding-window logic, not a mock.
 describe("rateLimit", () => {
   afterEach(() => {
     resetAllRateLimiters();

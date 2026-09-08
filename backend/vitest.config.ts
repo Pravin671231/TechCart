@@ -7,10 +7,10 @@ export default defineConfig({
     environment: "node",
     env: {
       MONGODB_URI: "mongodb://localhost:27017/techcart-test",
-      // REDIS_URL is deliberately omitted — it's optional (env.ts) and
-      // src/lib/rateLimit.ts uses RateLimiterMemory under NODE_ENV=test
-      // regardless. RATE_LIMITING_ENABLED defaults to "true", so the
-      // rate-limiting suites still exercise the real sliding-window logic.
+      // The auth rate limiters (src/lib/rateLimit.ts) are plain in-memory
+      // counters. RATE_LIMITING_ENABLED defaults to "true", so the
+      // rate-limiting suites still exercise the real sliding-window logic;
+      // a global vitest.setup.ts afterEach resets that state between tests.
       R2_ACCOUNT_ID: "test-account-id",
       R2_ACCESS_KEY_ID: "test-access-key-id",
       R2_SECRET_ACCESS_KEY: "test-secret-access-key",
@@ -27,8 +27,7 @@ export default defineConfig({
       GOOGLE_CLIENT_ID: "test-google-client-id",
       GOOGLE_CLIENT_SECRET: "test-google-client-secret",
       // Never actually connected to — every test mocks
-      // "@/externalService/mailer" wholesale, same "dummy value, never
-      // dialed" reasoning as REDIS_URL above.
+      // "@/externalService/mailer" wholesale.
       MAILTRAP_HOST: "test-mailtrap-host",
       MAILTRAP_PORT: "2525",
       MAILTRAP_USER: "test-mailtrap-user",
