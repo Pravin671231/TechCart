@@ -33,10 +33,17 @@ export type PublicProductListItem = {
 };
 
 // Home never sends `q`, so relevance is intentionally excluded — the mock's
-// own caption: "relevance (search only)".
+// own caption: "relevance (search only)". Shared by the category page's
+// SortSelect too.
 export type ProductSort = "price_asc" | "price_desc" | "newest";
 
-export type GetProductsArgs = { page: number; sort: ProductSort };
+// Home-only: `recommended` (SRS v0.2 amendment FR-CAT-105) interleaves products
+// across categories server-side and is the home default. Deliberately kept off
+// `ProductSort` so it never reaches the category page's SortSelect — the same
+// split `SearchProductSort` uses to keep `relevance` search-only.
+export type HomeProductSort = "recommended" | ProductSort;
+
+export type GetProductsArgs = { page: number; sort: HomeProductSort };
 export type GetProductsResult = { items: PublicProductListItem[]; pagination: Pagination };
 
 // A specification-facet selection: a bare string for an `enum`/`boolean`
