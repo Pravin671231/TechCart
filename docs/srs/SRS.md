@@ -18,7 +18,7 @@
 | 0.5     | 2026-08-21 | Orders                                    | Complete     |
 | 0.6     | 2026-08-21 | Payments                                  | Complete     |
 | 0.7     | 2026-08-21 | Dashboard                                 | Complete     |
-| 0.8     | 2026-08-21 | Backend Non-Functional Requirements       | Spec drafted |
+| 0.8     | 2026-08-21 | Backend Non-Functional Requirements       | In progress — M8.1 (Issue #176) implemented; `FR-NFR-BE-004` amended (Redis removed, in-process cache) |
 | 0.9     | 2026-08-21 | Frontend Non-Functional Requirements      | Spec drafted |
 | 0.10    | 2026-08-21 | Inventory Management                      | Complete     |
 | 1.1     | —          | Final Consolidated System SRS             | Planned      |

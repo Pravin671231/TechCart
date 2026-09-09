@@ -15,6 +15,16 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.string().default("development"),
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
+  // MongoDB connection pool / timeout settings (FR-NFR-BE-002) — explicitly
+  // configured rather than left at driver defaults. The driver default
+  // maxPoolSize is 100, far more than a single Render free instance against
+  // an Atlas M0 needs; serverSelectionTimeoutMS is what makes a request
+  // arriving during a lost-connection window fail fast (FR-NFR-BE-003)
+  // instead of hanging until the client gives up.
+  MONGO_MAX_POOL_SIZE: z.coerce.number().int().min(1).default(10),
+  MONGO_MIN_POOL_SIZE: z.coerce.number().int().min(0).default(0),
+  MONGO_SERVER_SELECTION_TIMEOUT_MS: z.coerce.number().int().min(1000).default(10000),
+  MONGO_SOCKET_TIMEOUT_MS: z.coerce.number().int().min(1000).default(45000),
   // Rate limiting on the auth surface (FR-AUTH-040–044). Default on. Set to
   // "false" to turn every auth limiter into a no-op — a local-dev / manual
   // Postman-testing escape hatch. Must stay "true" in a real deployment.
@@ -61,6 +71,12 @@ export const env = {
   PORT: rawEnv.PORT,
   NODE_ENV: rawEnv.NODE_ENV,
   MONGODB_URI: rawEnv.MONGODB_URI,
+  MONGO: {
+    MAX_POOL_SIZE: rawEnv.MONGO_MAX_POOL_SIZE,
+    MIN_POOL_SIZE: rawEnv.MONGO_MIN_POOL_SIZE,
+    SERVER_SELECTION_TIMEOUT_MS: rawEnv.MONGO_SERVER_SELECTION_TIMEOUT_MS,
+    SOCKET_TIMEOUT_MS: rawEnv.MONGO_SOCKET_TIMEOUT_MS,
+  },
   RATE_LIMITING_ENABLED: rawEnv.RATE_LIMITING_ENABLED,
   CORS_ORIGINS: rawEnv.CORS_ORIGINS,
   R2: {

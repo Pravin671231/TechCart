@@ -1,4 +1,5 @@
 import express, { Router } from "express";
+import { databaseReady } from "@/middleware/databaseReady";
 import { accountModule } from "@/modules/authentication/account/account.module";
 import { authModule } from "@/modules/authentication/auth/auth.module";
 import { addressesModule } from "@/modules/addresses/addresses.module";
@@ -12,6 +13,13 @@ import { productsPublicModule } from "@/modules/product-catalog/features/product
 import adminRouter from "./admin.routes";
 
 const router = Router();
+
+// FR-NFR-BE-003 — first in the chain: fail fast with 503 when MongoDB is
+// unreachable instead of buffering every query until a client timeout.
+// Exempts /health itself. Inert until a connection has been established at
+// least once (isDatabaseGateTripped), so mock-based test suites are
+// unaffected.
+router.use(databaseReady);
 
 // Mounted ahead of the global express.json() below — each hand-rolled auth
 // route declares its own route-scoped express.json() (auth.routes.ts), so

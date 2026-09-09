@@ -219,3 +219,71 @@ Issued-but-unconsumed keys live in a `presignedUploads` MongoDB collection, not 
 - **Integration tests** live at the workspace root: `__tests__/<feature>/*.test.ts`, using Supertest against the exported `app` from `src/app.ts` — exercise the full request/response cycle including middleware.
 - Both globs (`src/**/tests/**/*.test.ts`, `__tests__/**/*.test.ts`) are registered in `vitest.config.ts`'s `test.include`. `test.env` there also injects placeholder `MONGODB_URI`/`ADMIN_API_KEY`/`R2_*` values for the whole run, since `src/config/env.ts`'s `zod` schema would otherwise throw before any test file even loads — no test opens a real MongoDB connection or a real R2 bucket; `connectDB` is mocked wherever `startServer()` is exercised, and `r2.ts`'s `createPresignedPutUrl`/`uploadObject` are mocked wherever the `uploads` module is exercised.
 - **Coverage**: `npm run test:coverage --workspace backend` (v8 provider, text + HTML reporters, configured in `vitest.config.ts`'s `test.coverage`). No enforced threshold yet — reporting only, per Issue #3's scope; a coverage gate lands once real features (not just the skeleton) exist to measure.
+
+## Performance (Issue #176 / M8.1, SRS v0.8 `FR-NFR-BE-001`–`005`)
+
+### Connection resilience & pool config (`FR-NFR-BE-002`, `FR-NFR-BE-003`)
+
+`src/config/db.ts`'s `connectDB()` passes explicit `mongoose.ConnectOptions`
+instead of driver defaults, driven by env vars (all optional, defaults shown):
+
+| var | default | why |
+| --- | --- | --- |
+| `MONGO_MAX_POOL_SIZE` | `10` | driver default (100) is far more than a single Render free instance + Atlas M0 needs |
+| `MONGO_MIN_POOL_SIZE` | `0` | no idle sockets kept warm on a tiny instance |
+| `MONGO_SERVER_SELECTION_TIMEOUT_MS` | `10000` | how long a query waits for a reachable node before erroring — bounds the fail-fast window |
+| `MONGO_SOCKET_TIMEOUT_MS` | `45000` | kill a hung socket |
+
+Plus `bufferCommands: false` — a query issued while the connection is down
+throws immediately instead of buffering until a client timeout. The MongoDB
+driver already reconnects on its own with exponential backoff; we don't
+hand-roll that. `connectDB()` registers `connected`/`disconnected`/
+`reconnected`/`error` listeners (one-line logs) and tracks a
+"has connected at least once" flag.
+
+`src/middleware/databaseReady.ts` is mounted **first** in `routes/index.ts`:
+when a connection was established and is now down (`readyState !== 1`), every
+request except `/health` fails fast with `503 DATABASE_UNAVAILABLE` (the
+standard error envelope) rather than hanging. It is inert until the first
+successful connection, so the mock-based Supertest suites (which never call
+`connectDB()`) are unaffected. Covered end-to-end by
+`__tests__/databaseResilience/databaseReady.api.test.ts` (connect → drop →
+503 in <2s, not a hang → reconnect → 200, no restart).
+
+### Response cache utility (`FR-NFR-BE-004`)
+
+`src/lib/cache.ts` — `getOrSetCache(key, ttlSeconds, compute)`, an in-process
+TTL `Map` (SRS said Redis; Redis was removed in PR #351 and the backend runs
+single-instance, so a per-instance cache is equivalent at this scale — SRS
+`FR-NFR-BE-004` amended). Key format `<domain>:<entity>:<identifier>[:<variant>]`;
+default TTLs `CACHE_TTL.VOLATILE` (60s) / `CACHE_TTL.STANDARD` (300s);
+TTL-only invalidation. Ships as a utility + convention; not yet wired into
+any endpoint.
+
+### p95 latency target (`FR-NFR-BE-001`)
+
+**Target: p95 < 300 ms** for every list/paginated endpoint at the
+"small-to-medium store" scale (`docs/srs/SRS.md` §2.5), measured against a
+seeded dataset of ~5,000 products and ~10,000 orders
+(`npm run seed:load-test --workspace backend`).
+
+Endpoints the target covers:
+
+- **Buyer:** `GET /api/products` (listing + `?q=` search), `GET /api/products/:slug`,
+  `GET /api/categories/:slug/products`, `GET /api/categories/search`, `GET /api/orders`.
+- **Admin:** `GET /api/admin/products`, `/categories`, `/brands`, `/orders`,
+  `/inventory`, `/users`, `/dashboard/*`.
+
+### Load test (`FR-NFR-BE-005`)
+
+`backend/load-test/products.js` (k6) drives the three highest-traffic buyer
+endpoints — listing (55%), detail (25%), search (20%) — at 50 concurrent VUs
+for 1 minute, with a `p(95)<300` threshold per group. See
+`backend/load-test/README.md` for how to run it.
+
+#### Recorded baseline
+
+> _Pending — to be filled in from a local `k6 run` against a `techcart-loadtest`
+> database (seeded via `seed:load-test`). Record per-group p95, req/s, and
+> error rate here, with the machine's CPU/RAM and an explicit "local
+> hardware, not the Render/Atlas production shape" caveat._
