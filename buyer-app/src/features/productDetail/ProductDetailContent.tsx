@@ -115,6 +115,14 @@ export function ProductDetailContent({ slug }: { slug: string }) {
             onSelect={handleSelect}
           />
 
+          <ProductBuyBox
+            price={displayed.sellingPrice}
+            mrp={displayed.mrp}
+            discount={displayed.discount}
+            availability={selectedVariant?.availability}
+            variantId={selectedVariant?._id ?? product.variants[0]?._id}
+          />
+
           {product.description && (
             <section>
               <h2 className="mb-2 text-sm font-medium tracking-wide text-neutral-500 uppercase">
@@ -123,14 +131,6 @@ export function ProductDetailContent({ slug }: { slug: string }) {
               <p className="text-sm leading-relaxed text-neutral-700">{product.description}</p>
             </section>
           )}
-
-          <ProductBuyBox
-            price={displayed.sellingPrice}
-            mrp={displayed.mrp}
-            discount={displayed.discount}
-            availability={selectedVariant?.availability}
-            variantId={selectedVariant?._id ?? product.variants[0]?._id}
-          />
 
           <ProductSpecifications groups={product.specifications} />
         </div>
