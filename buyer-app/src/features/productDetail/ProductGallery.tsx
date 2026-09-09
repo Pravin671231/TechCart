@@ -36,7 +36,7 @@ export function ProductGallery({ images, name }: { images: ProductImageRef[]; na
         )}
       </div>
       {images.length > 1 && (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           {images.map((image, index) => (
             <button
               key={image.url + index}
@@ -44,7 +44,7 @@ export function ProductGallery({ images, name }: { images: ProductImageRef[]; na
               onClick={() => setSelectedIndex(index)}
               aria-label={`Show image ${index + 1}`}
               aria-current={index === selectedIndex}
-              className={`relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-md border bg-neutral-50 ${
+              className={`relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-md border bg-neutral-50 focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:outline-none ${
                 index === selectedIndex ? "border-2 border-primary-600" : "border-neutral-200"
               }`}
             >

@@ -20,6 +20,7 @@ import {
   validateProductSpecifications,
   getCardFieldsByCategoryIds,
   getFilterableFieldsByCategory,
+  getSpecificationUnitsByCategory,
   type CardSpecificationField,
 } from "@/modules/product-catalog/features/categorySpecifications/categorySpecifications.service";
 import {
@@ -518,8 +519,31 @@ export type PublicProductVariant = {
 // in afterward via a single batched lookup, mirroring attachCardSpecifications'
 // list-side shape.
 type PublicProductVariantDraft = Omit<PublicProductVariant, "availability">;
-type PublicProductDetailDraft = Omit<PublicProductDetail, "variants"> & {
+
+// The detail draft carries the raw stored spec groups; attachSpecificationUnits
+// annotates each value with its category-schema unit afterward, the same
+// "sync mapper + async enricher" split attachVariantAvailability/
+// attachCardSpecifications already use.
+type PublicProductDetailDraft = Omit<PublicProductDetail, "variants" | "specifications"> & {
   variants: PublicProductVariantDraft[];
+  specifications: ProductSpecificationGroup[];
+};
+type PublicProductDetailWithVariants = Omit<PublicProductDetailDraft, "variants"> & {
+  variants: PublicProductVariant[];
+};
+
+// FR-CAT-063: the detail response's spec pairs carry the field's `unit` from
+// the owning category's schema (`null` when it defines none) — the stored
+// product value is just `{ name, value }`, so the unit is resolved at read
+// time, mirroring how cardSpecifications already surfaces it on list items.
+export type PublicSpecificationValue = {
+  name: string;
+  value: string | number | boolean;
+  unit: string | null;
+};
+export type PublicSpecificationGroup = {
+  groupName: string;
+  values: PublicSpecificationValue[];
 };
 
 // sku/images are deliberately absent here — #102 removed both from the
@@ -538,7 +562,7 @@ export type PublicProductDetail = {
   discount?: number;
   sellingPrice?: number;
   isFeatured: boolean;
-  specifications: ProductSpecificationGroup[];
+  specifications: PublicSpecificationGroup[];
   hasVariants: boolean;
   defaultVariantId?: Types.ObjectId;
   variants: PublicProductVariant[];
@@ -751,7 +775,7 @@ async function attachAvailability(
 // each variant's own summed stock, not a rolled-up best-of-everything value.
 async function attachVariantAvailability(
   detail: PublicProductDetailDraft,
-): Promise<PublicProductDetail> {
+): Promise<PublicProductDetailWithVariants> {
   const variantIds = detail.variants.map((variant) => variant._id);
   const stockByVariant = await sumStockByVariantIds(variantIds);
   const variants: PublicProductVariant[] = detail.variants.map((variant) => ({
@@ -759,6 +783,26 @@ async function attachVariantAvailability(
     availability: (stockByVariant.get(variant._id.toString()) ?? 0) > 0 ? "in_stock" : "out_of_stock",
   }));
   return { ...detail, variants };
+}
+
+// FR-CAT-063: annotate every spec value with its category-schema unit
+// (`null` when the field defines none). Matched by field name across all of
+// the product's groups — the same name-only simplification the card-spec and
+// filter lookups make.
+async function attachSpecificationUnits(
+  detail: PublicProductDetailWithVariants,
+  categoryId: Types.ObjectId,
+): Promise<PublicProductDetail> {
+  const units = await getSpecificationUnitsByCategory(categoryId);
+  const specifications: PublicSpecificationGroup[] = detail.specifications.map((group) => ({
+    groupName: group.groupName,
+    values: group.values.map((value) => ({
+      name: value.name,
+      value: value.value,
+      unit: units.get(value.name) ?? null,
+    })),
+  }));
+  return { ...detail, specifications };
 }
 
 // #102: the product has no sku/images/mrp/discount/sellingPrice of its own
@@ -916,5 +960,6 @@ export async function listPublicProductsByCategorySlug(
 export async function getPublicProductBySlug(slug: string): Promise<PublicProductDetail> {
   const product = await findPublishedBySlug(slug);
   if (!product) throw notFoundBySlug(slug);
-  return attachVariantAvailability(toPublicDetail(product));
+  const resolved = await attachVariantAvailability(toPublicDetail(product));
+  return attachSpecificationUnits(resolved, product.category._id);
 }

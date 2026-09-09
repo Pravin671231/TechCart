@@ -43,6 +43,7 @@ vi.mock(
     validateProductSpecifications: vi.fn(),
     getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
     getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
+    getSpecificationUnitsByCategory: vi.fn().mockResolvedValue(new Map()),
   }),
 );
 
@@ -1343,6 +1344,39 @@ describe("getPublicProductBySlug", () => {
 
     const result = await getPublicProductBySlug("phone");
 
-    expect(result.specifications).toEqual(specifications);
+    expect(result.specifications).toEqual([
+      { groupName: "Display", values: [{ name: "Screen Size", value: 6.1, unit: null }] },
+    ]);
+  });
+
+  it("annotates each spec value with its category-schema unit (null when unset)", async () => {
+    vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue({
+      ...publicProductStub,
+      specifications: [
+        {
+          groupName: "Display",
+          values: [
+            { name: "Screen Size", value: 6.1 },
+            { name: "Panel", value: "OLED" },
+          ],
+        },
+      ],
+    });
+    vi.mocked(categorySpecificationsService.getSpecificationUnitsByCategory).mockResolvedValue(
+      new Map([
+        ["Screen Size", "inch"],
+        ["Panel", null],
+      ]),
+    );
+
+    const result = await getPublicProductBySlug("phone");
+
+    expect(result.specifications[0]?.values).toEqual([
+      { name: "Screen Size", value: 6.1, unit: "inch" },
+      { name: "Panel", value: "OLED", unit: null },
+    ]);
+    expect(categorySpecificationsService.getSpecificationUnitsByCategory).toHaveBeenCalledWith(
+      categoryId,
+    );
   });
 });

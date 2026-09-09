@@ -395,3 +395,21 @@ export async function getFilterableFieldsByCategory(
   }
   return result;
 }
+
+// FR-CAT-063: every spec field's unit, keyed by field name (`null` when the
+// field defines none) — used to annotate a product's full specification list
+// on the buyer detail page. Unlike the card-field lookup above this covers
+// *all* fields, not just filterable ones, and matched by name alone, the
+// same across-group simplification the two lookups above already document.
+export async function getSpecificationUnitsByCategory(
+  categoryId: Types.ObjectId,
+): Promise<Map<string, string | null>> {
+  const groups = await loadGroups(categoryId);
+  const result = new Map<string, string | null>();
+  for (const group of groups) {
+    for (const field of group.specifications) {
+      result.set(field.name, field.unit ?? null);
+    }
+  }
+  return result;
+}
