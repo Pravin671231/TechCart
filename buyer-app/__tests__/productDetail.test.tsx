@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { Provider } from "react-redux";
@@ -50,7 +50,63 @@ describe("ProductDetailContent", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    // Reset to the jsdom/setup default (mobile: matches === false) so an
+    // accordion test that widens the viewport doesn't leak into the next test.
+    setViewportWide(false);
   });
+
+  function setViewportWide(wide: boolean) {
+    window.matchMedia = ((query: string) => ({
+      matches: wide && query.includes("min-width"),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+  }
+
+  function serveDetail(detail: PublicProductDetail, slug = "test-phone") {
+    server.use(
+      http.get(`${API_URL}/api/products/${slug}`, () => {
+        callCount += 1;
+        return HttpResponse.json({ success: true, data: detail });
+      }),
+    );
+  }
+
+  async function renderDetail(slug = "test-phone") {
+    const { makeStore } = await import("@/store/store");
+    const { ProductDetailContent } = await import("@/features/productDetail/ProductDetailContent");
+    render(
+      <Provider store={makeStore()}>
+        <ProductDetailContent slug={slug} />
+      </Provider>,
+    );
+  }
+
+  const variantDetail = () =>
+    makeDetail({
+      hasVariants: true,
+      defaultVariantId: "v1",
+      mrp: 29900,
+      discount: 0,
+      sellingPrice: 29900,
+      variants: [
+        {
+          _id: "v1",
+          sku: "TP-128",
+          attributes: [{ name: "Storage", value: "128GB" }],
+          images: [{ url: "https://example.com/128gb.jpg" }],
+          mrp: 29900,
+          discount: 0,
+          sellingPrice: 29900,
+          availability: "in_stock",
+        },
+      ],
+    });
 
   it("pre-selects the default variant's price/availability/images when defaultVariantId is present", async () => {
     const detail = makeDetail({
@@ -178,5 +234,61 @@ describe("ProductDetailContent", () => {
       await screen.findByText("This product doesn't exist or is no longer available."),
     ).toBeInTheDocument();
     expect(screen.queryByText("Something went wrong loading this product.")).not.toBeInTheDocument();
+  });
+
+  it("renders both the Buy Now and Add to Cart CTAs in the buy box", async () => {
+    serveDetail(variantDetail());
+    await renderDetail();
+
+    expect(await screen.findByRole("button", { name: "Buy Now" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add to cart/i })).toBeInTheDocument();
+  });
+
+  describe("specifications accordion", () => {
+    const twoGroups = () =>
+      makeDetail({
+        specifications: [
+          { groupName: "Display", values: [{ name: "Screen Size", value: 6.1, unit: "inch" }] },
+          { groupName: "Battery", values: [{ name: "Capacity", value: 3200, unit: null }] },
+        ],
+      });
+
+    it("opens every group by default on tablet/desktop", async () => {
+      setViewportWide(true);
+      serveDetail(twoGroups());
+      await renderDetail();
+
+      const display = await screen.findByRole("button", { name: "Display" });
+      const battery = screen.getByRole("button", { name: "Battery" });
+      expect(display).toHaveAttribute("aria-expanded", "true");
+      expect(battery).toHaveAttribute("aria-expanded", "true");
+
+      // FR-CAT-063 — the unit is appended to the value (and nothing extra when
+      // the field defines none).
+      expect(screen.getByText("6.1 inch")).toBeInTheDocument();
+      const capacityRow = screen.getByText("Capacity").closest("div") as HTMLElement;
+      expect(within(capacityRow).getByText("3200")).toBeInTheDocument();
+      expect(within(capacityRow).queryByText(/mAh/)).not.toBeInTheDocument();
+    });
+
+    it("keeps groups closed on mobile and only opens one at a time", async () => {
+      // Default vitest.setup stub: matchMedia -> { matches: false } (mobile).
+      serveDetail(twoGroups());
+      await renderDetail();
+
+      const display = await screen.findByRole("button", { name: "Display" });
+      const battery = screen.getByRole("button", { name: "Battery" });
+      expect(display).toHaveAttribute("aria-expanded", "false");
+      expect(battery).toHaveAttribute("aria-expanded", "false");
+
+      const user = userEvent.setup();
+      await user.click(display);
+      expect(display).toHaveAttribute("aria-expanded", "true");
+      expect(battery).toHaveAttribute("aria-expanded", "false");
+
+      await user.click(battery);
+      expect(display).toHaveAttribute("aria-expanded", "false");
+      expect(battery).toHaveAttribute("aria-expanded", "true");
+    });
   });
 });

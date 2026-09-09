@@ -43,6 +43,7 @@ vi.mock(
     validateProductSpecifications: vi.fn(),
     getCardFieldsByCategoryIds: vi.fn().mockResolvedValue(new Map()),
     getFilterableFieldsByCategory: vi.fn().mockResolvedValue(new Map()),
+    getSpecificationUnitsByCategory: vi.fn().mockResolvedValue(new Map()),
   }),
 );
 
@@ -1072,6 +1073,23 @@ describe("GET /api/products/:slug", () => {
     for (const field of ["status", "createdBy", "updatedBy"]) {
       expect(res.body.data).not.toHaveProperty(field);
     }
+  });
+
+  it("annotates each specification value with its category-schema unit (FR-CAT-063)", async () => {
+    vi.mocked(productsRepository.findPublishedBySlug).mockResolvedValue({
+      ...publicProductStub,
+      specifications: [{ groupName: "Display", values: [{ name: "Screen Size", value: 6.1 }] }],
+    });
+    vi.mocked(categorySpecificationsService.getSpecificationUnitsByCategory).mockResolvedValue(
+      new Map([["Screen Size", "inch"]]),
+    );
+
+    const res = await request(app).get("/api/products/phone");
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.specifications).toEqual([
+      { groupName: "Display", values: [{ name: "Screen Size", value: 6.1, unit: "inch" }] },
+    ]);
   });
 
   it("returns PRODUCT_NOT_FOUND for a slug that doesn't match any published product", async () => {

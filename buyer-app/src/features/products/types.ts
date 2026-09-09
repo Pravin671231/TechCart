@@ -97,7 +97,14 @@ export type PublicProductVariant = {
   weight?: number;
 };
 
-export type ProductSpecificationValue = { name: string; value: string | number | boolean };
+export type ProductSpecificationValue = {
+  name: string;
+  value: string | number | boolean;
+  // FR-CAT-063 — the field's unit from the category spec schema, resolved by
+  // the backend at read time (`null` when the field defines none). Optional
+  // here only to tolerate fixtures/older cached responses that predate it.
+  unit?: string | null;
+};
 export type ProductSpecificationGroup = {
   groupName: string;
   values: ProductSpecificationValue[];

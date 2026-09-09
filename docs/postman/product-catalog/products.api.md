@@ -909,7 +909,15 @@ No headers required, no body.
     "discount": 10,
     "sellingPrice": 94410,
     "isFeatured": false,
-    "specifications": [],
+    "specifications": [
+      {
+        "groupName": "Technical",
+        "values": [
+          { "name": "Screen Size", "value": 6.1, "unit": "inch" },
+          { "name": "Panel", "value": "OLED", "unit": null }
+        ]
+      }
+    ],
     "hasVariants": true,
     "defaultVariantId": "66a1f0c9e4b0a1a2b3c4d5e9",
     "variants": [
@@ -942,7 +950,7 @@ No headers required, no body.
 - **`availability` here is per-variant, not per-product** (Issue #189/M10.1) — the opposite shape from the list endpoint above. Every variant object in `variants[]` always carries its own `availability` (required, never omitted), computed from that single variant's own summed stock across warehouses — never a rolled-up "best of all variants" value like the list endpoint's top-level field. No top-level `availability` field exists on this detail response at all.
 - **There is no top-level `sku` or `images`** (Issue #102) — every image and every SKU lives per-variant now (`variants[].sku`/`variants[].images`); the buyer product-detail gallery is whichever variant is selected, starting with the default variant's own required images.
 - **`hasVariants`/`variants`/`defaultVariantId`/`mrp`/`discount`/`sellingPrice` (`FR-CAT-064`)**: when the product has at least one *active* variant, `hasVariants` is `true`, `variants` lists only the active ones (inactive variants never appear here), and `defaultVariantId` is the id of the lowest-`sellingPrice` active variant — that variant's own `mrp`/`discount`/`sellingPrice` become this response's top-level values too. With **no** active variant (the documented edge case noted under `GET /api/products` above), `defaultVariantId`/`mrp`/`discount`/`sellingPrice` are all simply **absent**, not `null` — there's no product-level value to fall back to.
-- **`specifications` lists every stored group/value, filterable or not** (`FR-CAT-063`) — unlike a category card (`#36`), the detail page draws no distinction.
+- **`specifications` lists every stored group/value, filterable or not** (`FR-CAT-063`) — unlike a category card (`#36`), the detail page draws no distinction. Each value also carries the field's **`unit`** resolved from the owning category's specification schema (`null` when the field defines none) — the stored product value is just `{ name, value }`, so the unit is attached at read time, matching `cardSpecifications`' shape on the list endpoint.
 - **`metaTitle`/`metaDescription` fall back to `name`/a truncated `description`** when unset (`FR-CAT-012`) — the same formula categories' own public list already uses.
 
 ### Error cases

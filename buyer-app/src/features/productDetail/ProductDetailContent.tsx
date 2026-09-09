@@ -4,18 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { NotFoundState } from "@/components/ui/NotFoundState";
-import { PriceDisplay } from "@/components/ui/PriceDisplay";
-import { AddToCartButton } from "@/features/cart/AddToCartButton";
 import { useGetProductBySlugQuery } from "@/features/products/api";
-import { formatPrice } from "@/features/products/money";
 import { ProductListError } from "@/features/products/ProductListError";
 import type { PublicProductVariant } from "@/features/products/types";
 import type { NormalizedApiError } from "@/store/api";
-import { AvailabilityBadge } from "./AvailabilityBadge";
+import { ProductBuyBox } from "./ProductBuyBox";
 import { ProductDetailSkeleton } from "./ProductDetailSkeleton";
 import { ProductGallery } from "./ProductGallery";
+import { ProductInfo } from "./ProductInfo";
 import { ProductSpecifications } from "./ProductSpecifications";
-import { VariantSelector } from "./VariantSelector";
 
 function attributesOf(variant: PublicProductVariant | undefined): Record<string, string> {
   if (!variant) return {};
@@ -106,63 +103,38 @@ export function ProductDetailContent({ slug }: { slug: string }) {
         <span className="font-medium text-neutral-900">{product.name}</span>
       </nav>
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <ProductGallery images={images} name={product.name} />
+      <div className="grid gap-8 md:grid-cols-2 md:items-start">
+        <div className="md:sticky md:top-24">
+          <ProductGallery images={images} name={product.name} />
+        </div>
 
-        <section className="flex flex-col gap-5">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
-              {product.name}
-            </h1>
-            <p className="mt-1 text-sm text-neutral-500">
-              by <span className="text-primary-600">{product.brand.name}</span>
-              <span className="mx-1">·</span>
-              <Link className="text-primary-600 hover:underline" href={`/category/${product.category.slug}`}>
-                {product.category.name}
-              </Link>
-            </p>
-          </div>
-
-          <div>
-            <PriceDisplay
-              price={formatPrice(displayed.sellingPrice)}
-              mrp={formatPrice(displayed.mrp)}
-              discount={displayed.discount}
-              size="lg"
-            />
-          </div>
-
-          {selectedVariant && (
-            <p>
-              <AvailabilityBadge availability={selectedVariant.availability} />
-            </p>
-          )}
-
-          {product.hasVariants && (
-            <VariantSelector
-              variants={product.variants}
-              selectedAttributes={selectedAttributes}
-              onSelect={handleSelect}
-            />
-          )}
-
-          <AddToCartButton
-            variantId={selectedVariant?._id ?? product.variants[0]?._id}
-            availability={selectedVariant?.availability}
-            size="md"
-            className="w-full sm:w-auto"
+        <div className="flex flex-col gap-6">
+          <ProductInfo
+            product={product}
+            selectedAttributes={selectedAttributes}
+            onSelect={handleSelect}
           />
-        </section>
+
+          <ProductBuyBox
+            price={displayed.sellingPrice}
+            mrp={displayed.mrp}
+            discount={displayed.discount}
+            availability={selectedVariant?.availability}
+            variantId={selectedVariant?._id ?? product.variants[0]?._id}
+          />
+
+          {product.description && (
+            <section>
+              <h2 className="mb-2 text-sm font-medium tracking-wide text-neutral-500 uppercase">
+                Description
+              </h2>
+              <p className="text-sm leading-relaxed text-neutral-700">{product.description}</p>
+            </section>
+          )}
+
+          <ProductSpecifications groups={product.specifications} />
+        </div>
       </div>
-
-      <section className="mt-10 max-w-3xl">
-        <h2 className="mb-2 text-sm font-medium tracking-wide text-neutral-500 uppercase">
-          Description
-        </h2>
-        <p className="text-sm text-neutral-700">{product.description}</p>
-      </section>
-
-      <ProductSpecifications groups={product.specifications} />
     </PageContainer>
   );
 }
