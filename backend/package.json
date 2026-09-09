@@ -14,6 +14,7 @@
     "seed:inventory": "tsx src/scripts/seed/inventory.ts",
     "seed:orders": "tsx src/scripts/seed/orders.ts",
     "seed:all": "tsx src/scripts/seed/all.ts",
+    "seed:load-test": "tsx src/scripts/seed/loadTest.ts",
     "search:ensure": "tsx src/scripts/searchIndexes/ensureSearchIndexes.ts",
     "search:verify": "tsx src/scripts/searchIndexes/verifySearchIndexes.ts",
     "test": "vitest run",

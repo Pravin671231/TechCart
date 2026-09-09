@@ -20,6 +20,17 @@ services:
         value: production
       - key: MONGODB_URI
         sync: false
+      # MongoDB pool/timeout config (FR-NFR-BE-002) — not secrets, so explicit
+      # values rather than sync:false. Tuned for one Render free instance
+      # against an Atlas M0.
+      - key: MONGO_MAX_POOL_SIZE
+        value: "10"
+      - key: MONGO_MIN_POOL_SIZE
+        value: "0"
+      - key: MONGO_SERVER_SELECTION_TIMEOUT_MS
+        value: "10000"
+      - key: MONGO_SOCKET_TIMEOUT_MS
+        value: "45000"
       - key: RATE_LIMITING_ENABLED
         value: "true"
       - key: CORS_ORIGINS
