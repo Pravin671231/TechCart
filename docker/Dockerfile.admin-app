@@ -6,7 +6,11 @@
 # stage is nginx (current stable practice for serving a Vite build) rather
 # than Node + the "serve" package.
 
-FROM node:24-alpine AS deps
+# Single source of truth for the Node major is .nvmrc/.node-version — keep this
+# default in step with them (see docs/architecture.md §8, "Node pinning").
+ARG NODE_VERSION=24
+
+FROM node:${NODE_VERSION}-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY backend/package.json backend/package.json

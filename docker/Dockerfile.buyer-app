@@ -9,7 +9,11 @@
 # .next/standalone, so (unlike Dockerfile.backend) this runner stage does
 # NOT need the shared root node_modules at all.
 
-FROM node:24-alpine AS deps
+# Single source of truth for the Node major is .nvmrc/.node-version — keep this
+# default in step with them (see docs/architecture.md §8, "Node pinning").
+ARG NODE_VERSION=24
+
+FROM node:${NODE_VERSION}-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY backend/package.json backend/package.json
@@ -22,7 +26,7 @@ COPY tsconfig.base.json ./
 COPY buyer-app buyer-app
 RUN npm run build --workspace buyer-app
 
-FROM node:24-alpine AS runner
+FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
