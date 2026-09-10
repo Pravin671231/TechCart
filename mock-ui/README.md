@@ -77,9 +77,19 @@ admin pages that raise them.
 
 Not tied to SRS v0.2 — a first-pass layout/spacing study for the buyer account surface.
 
-| File                                            | Screen  | Notes                                                                   |
-| ----------------------------------------------- | ------- | --------------------------------------------------------------------- |
+| File                                               | Screen  | Notes                                                                   |
+| -------------------------------------------------- | ------- | ----------------------------------------------------------------------- |
 | [`buyer-app/sign-in.html`](buyer-app/sign-in.html) | Sign In | Two-column gradient welcome panel + Google / OTP form, stacks on mobile |
+
+## Dashboard — SRS v0.7
+
+The admin landing screen. Role-branched in the real app (`admin-app/src/features/dashboard/`) —
+`order-manager` / `super-admin` get the Sales view, `catalog-manager` gets the narrower Catalog
+view; this single mock renders **both**, one under the other, for review.
+
+| File                                                   | Screen                    | Key requirements                        |
+| ------------------------------------------------------ | ------------------------- | --------------------------------------- |
+| [`admin-app/dashboard.html`](admin-app/dashboard.html) | Sales + Catalog dashboard | `FR-DASH-001`, `003`–`008`, `013`–`021` |
 
 ## Traceability to SRS v0.2 §6
 

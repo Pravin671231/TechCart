@@ -1,15 +1,49 @@
-import { Card, CardHeading } from "@/components/ui/Card";
+import type { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { CardHeading } from "@/components/ui/Card";
+
+type Accent = "primary" | "accent" | "success" | "warning";
+
+// Module-private — the four accents map to a tinted icon chip. Colors follow
+// the fixed status convention (brand-kit.html §257): success = green,
+// warning = amber; primary/accent are the two brand scales.
+const CHIP_CLASS: Record<Accent, string> = {
+  primary: "bg-primary-50 text-primary-600",
+  accent: "bg-accent-50 text-accent-600",
+  success: "bg-green-100 text-green-700",
+  warning: "bg-amber-100 text-amber-700",
+};
 
 export interface SummaryCardProps {
   label: string;
   value: string;
+  icon: LucideIcon;
+  accent?: Accent;
+  hint?: string;
 }
 
-export const SummaryCard = ({ label, value }: SummaryCardProps) => {
+export const SummaryCard = ({
+  label,
+  value,
+  icon: Icon,
+  accent = "primary",
+  hint,
+}: SummaryCardProps) => {
   return (
-    <Card>
-      <CardHeading>{label}</CardHeading>
-      <p className="text-2xl font-semibold text-neutral-900">{value}</p>
-    </Card>
+    <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center gap-3">
+        <span
+          className={cn(
+            "flex h-10 w-10 items-center justify-center rounded-lg",
+            CHIP_CLASS[accent],
+          )}
+        >
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <CardHeading spacing="mb-1">{label}</CardHeading>
+      </div>
+      <p className="text-2xl font-bold text-neutral-900">{value}</p>
+      {hint && <p className="mt-1 text-xs text-neutral-500">{hint}</p>}
+    </div>
   );
 };
