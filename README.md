@@ -91,6 +91,8 @@ Run from the repo root:
 
 - **[docs/srs/SRS.md](docs/srs/SRS.md)** — the versioned Software Requirements Specification: scope, feature index, per-feature detail docs.
 - **[docs/architecture.md](docs/architecture.md)** — system diagram, per-app architecture, data model, environments, and conventions. **§10 is the current source of truth for what's implemented so far.**
+- **[docs/user-manuals/](docs/user-manuals/)** — end-user guides for the [buyer app](docs/user-manuals/buyer-app.md) (shoppers) and the [admin console](docs/user-manuals/admin-app.md) (staff), with screenshots.
+- **[docs/postman/](docs/postman/)** — per-module API request/response walkthroughs for manual testing.
 - Each workspace also has its own `CLAUDE.md` (`backend/CLAUDE.md`, `buyer-app/CLAUDE.md`, `admin-app/CLAUDE.md`) with implementation detail specific to that app.
 
 ---
