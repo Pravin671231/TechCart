@@ -11,7 +11,11 @@
 # prod deps, not just backend's. Acceptable for this repo's small-to-medium
 # scale; revisit with pnpm/turborepo prune if image size becomes a problem.
 
-FROM node:24-alpine AS deps
+# Single source of truth for the Node major is .nvmrc/.node-version — keep this
+# default in step with them (see docs/architecture.md §8, "Node pinning").
+ARG NODE_VERSION=24
+
+FROM node:${NODE_VERSION}-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY backend/package.json backend/package.json
@@ -24,7 +28,7 @@ COPY tsconfig.base.json ./
 COPY backend backend
 RUN npm run build --workspace backend
 
-FROM node:24-alpine AS production-deps
+FROM node:${NODE_VERSION}-alpine AS production-deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY backend/package.json backend/package.json
@@ -32,7 +36,7 @@ COPY buyer-app/package.json buyer-app/package.json
 COPY admin-app/package.json admin-app/package.json
 RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
-FROM node:24-alpine AS runner
+FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
