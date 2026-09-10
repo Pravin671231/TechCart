@@ -4,7 +4,14 @@ import type { Linter } from "eslint";
 
 const config: Linter.Config[] = tseslint.config(
   {
-    ignores: ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.next/**", "**/coverage/**"],
+    ignores: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.next/**",
+      "**/coverage/**",
+      "docs/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
