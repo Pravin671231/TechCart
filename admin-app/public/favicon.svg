@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="TechCart Admin">
+  <defs>
+    <linearGradient id="tc-admin" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4f46e5" />
+      <stop offset="1" stop-color="#4338ca" />
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#tc-admin)" />
+  <g transform="translate(4 4)" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.2 2.2h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+  </g>
+  <circle cx="12" cy="25" r="1.8" fill="#ffffff" />
+  <circle cx="23" cy="25" r="1.8" fill="#ffffff" />
+  <g fill="#ffffff" opacity="0.9">
+    <rect x="24" y="3" width="2.4" height="2.4" rx="0.6" />
+    <rect x="27.6" y="3" width="2.4" height="2.4" rx="0.6" />
+    <rect x="24" y="6.6" width="2.4" height="2.4" rx="0.6" />
+    <rect x="27.6" y="6.6" width="2.4" height="2.4" rx="0.6" />
+  </g>
+</svg>
