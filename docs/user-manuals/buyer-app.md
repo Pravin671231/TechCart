@@ -229,11 +229,13 @@ instead of the price and buttons.
 
 ### Specifications
 
+![Specifications accordion](assets/buyer-app/12-specifications-accordion.png)
+
 Below the buy box, a **Specifications** section lists the product's attributes in
-groups (for example _Display_, _Battery_). On a wide screen every group is open and
-you can collapse any of them; on a narrow screen they start closed and only one opens
-at a time. Each value shows its unit where one is defined (e.g. _6.1 inch_). The
-section is hidden for a product that has no specification values.
+groups (for example _Technical Specifications_, _Display_). On a wide screen every
+group is open and you can collapse any of them; on a narrow screen they start closed
+and only one opens at a time. Each value shows its unit where one is defined (e.g.
+_6.3 inch_). The section is hidden for a product that has no specification values.
 
 ---
 

@@ -22,7 +22,8 @@ script in [`screenshots/`](screenshots/) — see
 [`screenshots/README.md`](screenshots/README.md) for the environment setup and run
 steps.
 
-They were captured against a local instance with the standard development dataset.
-Product, brand, and category **images are grey placeholders** in that dataset — the
-storefront and console render real uploaded images the same way once a catalogue has
-them.
+The **buyer-app** screenshots are captured from the live storefront
+(`https://tech-cart-buyer-app.vercel.app`) and show the real catalogue and real
+product images. The **admin-app** screenshots are captured from a local instance
+whose development dataset uses grey placeholder images — the console renders real
+uploaded images the same way once a catalogue has them.
