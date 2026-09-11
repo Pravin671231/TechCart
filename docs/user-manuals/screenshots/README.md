@@ -96,6 +96,14 @@ servers.
 
 - **Images** — the local dataset the admin-app screenshots use has grey placeholder
   images. The live storefront (buyer-app screenshots) serves real product images.
+- **Sidebar shots are the one exception to "admin-app = local"** — `03-console-layout.png`
+  and `04-sidebar-mobile-drawer.png` were refreshed against the live deployment
+  (`https://tech-cart-admin-app.vercel.app`) after the dark-mode PR (#377) widened the
+  sidebar and moved the theme toggle into its header row, using the same
+  `admin@techcart.com` / `superAdmin123` super-admin and fixed `123456` OTP. No
+  `capture.mjs` change was needed — a small throwaway script did the sign-in + two
+  shots and was discarded; re-run the same way (sign in, screenshot `/`, open the
+  mobile drawer, screenshot again) if the sidebar chrome changes again.
 - **Razorpay** — `19-checkout-payment.png` shows the real Razorpay Checkout overlay
   (Test Mode) when test keys are configured; without them the step lands on its
   "Retry payment" state instead. Either is a valid screenshot for the manual.
