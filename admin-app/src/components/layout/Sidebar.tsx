@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useGetSessionQuery } from "@/features/authentication/auth/api";
 import { isAdminRole } from "@/features/authentication/auth/adminRoles";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
 import { NAV_ITEMS } from "./navItems";
@@ -34,11 +35,12 @@ export const Sidebar = ({ onNavigate, variant = "rail" }: SidebarProps) => {
     <>
       <div
         className={cn(
-          "flex h-16 shrink-0 items-center border-b border-neutral-200 dark:border-neutral-800",
-          isRail ? "justify-center px-2 lg:justify-start lg:px-4" : "justify-start px-4",
+          "flex h-16 shrink-0 items-center justify-between border-b border-neutral-200 px-2 dark:border-neutral-800",
+          isRail ? "lg:px-4" : "px-4",
         )}
       >
         <Header compact={isRail} />
+        <ThemeToggle />
       </div>
       <SidebarItems items={items} onNavigate={onNavigate} layout={isRail ? "rail" : "list"} />
       <Footer onNavigate={onNavigate} variant={variant} />

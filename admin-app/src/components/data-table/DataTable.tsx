@@ -100,7 +100,7 @@ export const DataTable = <TRow,>({
         {toolbar}
       </DataTableToolbar>
 
-      <div className="relative min-h-0 flex-1 overflow-auto">
+      <div className="scrollbar-brand relative min-h-0 flex-1 overflow-auto">
         <table
           aria-busy={showFetchingOverlay || undefined}
           style={{ minWidth: resolveColumnWidth(minWidth) }}

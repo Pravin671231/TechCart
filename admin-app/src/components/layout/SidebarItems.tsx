@@ -43,7 +43,7 @@ export const SidebarItems = ({ items, onNavigate, layout = "rail" }: SidebarItem
   }
 
   return (
-    <nav className="sidebar-scroll flex flex-1 flex-col gap-1 overflow-y-auto p-2 text-sm">
+    <nav className="scrollbar-brand flex flex-1 flex-col gap-1 overflow-y-auto p-2 text-sm">
       {groups.map((group) => (
         <div key={group} className="flex flex-col gap-0.5">
           <span

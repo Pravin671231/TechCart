@@ -17,7 +17,7 @@ export const AdminUsersPage = () => {
       <div className="mt-4 flex min-h-0 flex-1 flex-col gap-6 xl:flex-row">
         <AdminUserList />
         {isCreating && (
-          <div className="w-full shrink-0 overflow-y-auto xl:w-96">
+          <div className="scrollbar-brand w-full shrink-0 overflow-y-auto xl:w-96">
             <AdminUserForm
               onSaved={() => setIsCreating(false)}
               onCancel={() => setIsCreating(false)}

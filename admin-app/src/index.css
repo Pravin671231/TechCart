@@ -37,26 +37,27 @@
     sans-serif;
 }
 
-/* Sidebar nav scroll container (SidebarItems.tsx) — thin, brand-primary-colored
- * scrollbar in both themes. `--color-primary-*` come from the `@theme` block above. */
-.sidebar-scroll {
+/* Any scrollable container app-wide — thin, brand-primary-colored scrollbar in
+ * both themes. `--color-primary-*` come from the `@theme` block above. */
+.scrollbar-brand {
   scrollbar-width: thin;
   scrollbar-color: var(--color-primary-400) transparent;
 }
-.dark .sidebar-scroll {
+.dark .scrollbar-brand {
   scrollbar-color: var(--color-primary-600) transparent;
 }
-.sidebar-scroll::-webkit-scrollbar {
+.scrollbar-brand::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
-.sidebar-scroll::-webkit-scrollbar-track {
+.scrollbar-brand::-webkit-scrollbar-track {
   background: transparent;
 }
-.sidebar-scroll::-webkit-scrollbar-thumb {
+.scrollbar-brand::-webkit-scrollbar-thumb {
   background-color: var(--color-primary-400);
   border-radius: 9999px;
 }
-.dark .sidebar-scroll::-webkit-scrollbar-thumb {
+.dark .scrollbar-brand::-webkit-scrollbar-thumb {
   background-color: var(--color-primary-600);
 }
 

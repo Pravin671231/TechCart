@@ -1,7 +1,6 @@
-import { LogOut, Moon, Sun } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { useGetSessionQuery, useSignOutMutation } from "@/features/authentication/auth/api";
-import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 
 export interface FooterProps {
@@ -13,7 +12,6 @@ export interface FooterProps {
 export const Footer = ({ onNavigate, variant = "rail" }: FooterProps) => {
   const navigate = useNavigate();
   const [signOut] = useSignOutMutation();
-  const { theme, toggleTheme } = useTheme();
   // Cached — RequireAuth has already resolved this exact session query
   // before Footer (nested inside AppShell) ever mounts, so this is a free
   // cache hit (Issue #149/M3.11).
@@ -44,21 +42,6 @@ export const Footer = ({ onNavigate, variant = "rail" }: FooterProps) => {
           </Link>
         </div>
       </div>
-      <button
-        type="button"
-        aria-label="Toggle theme"
-        onClick={toggleTheme}
-        className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-neutral-200 px-2 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50 lg:px-3 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-800"
-      >
-        {theme === "dark" ? (
-          <Sun className="h-4 w-4 shrink-0" aria-hidden="true" />
-        ) : (
-          <Moon className="h-4 w-4 shrink-0" aria-hidden="true" />
-        )}
-        <span className={cn(isRail && "hidden lg:inline")}>
-          {theme === "dark" ? "Light mode" : "Dark mode"}
-        </span>
-      </button>
       <button
         type="button"
         aria-label="Logout"

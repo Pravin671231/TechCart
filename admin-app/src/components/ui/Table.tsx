@@ -24,7 +24,12 @@ export const Table = ({
         fillHeight && "flex h-full min-h-0 flex-col",
       )}
     >
-      <div className={cn("overflow-x-auto", fillHeight && "min-h-0 flex-1 overflow-y-auto")}>
+      <div
+        className={cn(
+          "scrollbar-brand overflow-x-auto",
+          fillHeight && "min-h-0 flex-1 overflow-y-auto",
+        )}
+      >
         <table
           aria-busy={isFetching}
           className={cn(
