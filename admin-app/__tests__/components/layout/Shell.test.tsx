@@ -9,6 +9,7 @@ import { createStore } from "@/app/store/store";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableLayout } from "@/components/layout/TableLayout";
+import { ThemeProvider } from "@/theme/ThemeProvider";
 
 const SESSION_URL = "http://localhost:4000/api/auth/get-session";
 
@@ -17,17 +18,19 @@ function renderShell(initialPath = "/") {
   return {
     store: testStore,
     ...render(
-      <Provider store={testStore}>
-        <MemoryRouter initialEntries={[initialPath]}>
-          <Routes>
-            <Route element={<AppShell />}>
-              <Route path="/" element={<div>Home content</div>} />
-              <Route path="/products" element={<div>Products content</div>} />
-            </Route>
-            <Route path="/sign-in" element={<div>Sign-in content</div>} />
-          </Routes>
-        </MemoryRouter>
-      </Provider>,
+      <ThemeProvider>
+        <Provider store={testStore}>
+          <MemoryRouter initialEntries={[initialPath]}>
+            <Routes>
+              <Route element={<AppShell />}>
+                <Route path="/" element={<div>Home content</div>} />
+                <Route path="/products" element={<div>Products content</div>} />
+              </Route>
+              <Route path="/sign-in" element={<div>Sign-in content</div>} />
+            </Routes>
+          </MemoryRouter>
+        </Provider>
+      </ThemeProvider>,
     ),
   };
 }
