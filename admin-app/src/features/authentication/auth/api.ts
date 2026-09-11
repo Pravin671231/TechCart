@@ -78,13 +78,22 @@ export const authApi = api.injectEndpoints({
         headers: challengeHeaders(),
       }),
       transformResponse: (response: VerifyOtpResponse) => unwrapData(response).user,
+      // Write the session this response already carries straight into the
+      // getSession cache instead of invalidating + refetching. The old
+      // invalidateTags(["Session"]) approach forced a second, separate
+      // GET /api/auth/get-session round-trip to repopulate the cache before
+      // RequireAuth (mounted right after the redirect to "/") could see a
+      // real session — against the deployed Render backend, that race
+      // window was wide enough to show the dashboard briefly and then
+      // bounce back to /sign-in once the slower refetch settled. Patching
+      // the cache directly is synchronous and needs no extra request.
       async onQueryStarted(_, { dispatch, queryFulfilled }) {
         try {
-          const { meta } = await queryFulfilled;
+          const { data: user, meta } = await queryFulfilled;
           const token = meta?.response?.headers.get("set-auth-token");
           if (token) setToken(token);
           clearChallenge();
-          dispatch(authApi.util.invalidateTags(["Session"]));
+          dispatch(authApi.util.updateQueryData("getSession", undefined, () => user));
         } catch {
           // handled by the caller's own error state
         }
