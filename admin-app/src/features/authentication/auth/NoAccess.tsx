@@ -13,8 +13,10 @@ export const NoAccess = () => {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">No access</h1>
-      <p className="max-w-sm text-sm text-neutral-500">
+      <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+        No access
+      </h1>
+      <p className="max-w-sm text-sm text-neutral-500 dark:text-neutral-400">
         You don&apos;t have access to the admin console. Contact a super admin if you believe this
         is a mistake.
       </p>

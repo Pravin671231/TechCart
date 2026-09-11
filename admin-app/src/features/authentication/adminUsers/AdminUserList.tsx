@@ -35,7 +35,9 @@ export const AdminUserList = () => {
     {
       id: "name",
       header: "Name",
-      cell: (adminUser) => <span className="font-medium text-neutral-900">{adminUser.name}</span>,
+      cell: (adminUser) => (
+        <span className="font-medium text-neutral-900 dark:text-neutral-100">{adminUser.name}</span>
+      ),
     },
     {
       id: "email",
@@ -55,7 +57,7 @@ export const AdminUserList = () => {
               onChange={(event) =>
                 void handleRoleChange(adminUser, event.target.value as AdminUser["role"])
               }
-              className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm"
+              className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-200"
             >
               {ADMIN_ROLES.map((role) => (
                 <option key={role} value={role}>
@@ -87,7 +89,9 @@ export const AdminUserList = () => {
       id: "lastSignInAt",
       header: "Last sign-in",
       cell: (adminUser) => (
-        <span className="text-neutral-500">{formatLastSignIn(adminUser.lastSignInAt)}</span>
+        <span className="text-neutral-500 dark:text-neutral-400">
+          {formatLastSignIn(adminUser.lastSignInAt)}
+        </span>
       ),
     },
   ];

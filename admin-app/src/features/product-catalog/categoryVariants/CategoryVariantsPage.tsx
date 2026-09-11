@@ -21,7 +21,7 @@ export const CategoryVariantsPage = () => {
             <select
               value={categoryId}
               onChange={(event) => setSelectedCategoryId(event.target.value)}
-              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 font-medium text-neutral-600"
+              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 font-medium text-neutral-600 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-300"
             >
               {categories.length === 0 && <option value="">No categories yet</option>}
               {categories.map((category) => (
@@ -33,14 +33,14 @@ export const CategoryVariantsPage = () => {
           </label>
         }
       />
-      <p className="mb-4 text-[11px] text-neutral-400">
+      <p className="mb-4 text-[11px] text-neutral-400 dark:text-neutral-500">
         One variant-type document per category — no axes until the first "Save axes".
       </p>
 
       {categoryId ? (
         <CategoryVariantEditor key={categoryId} categoryId={categoryId} />
       ) : (
-        <p className="text-sm text-neutral-500">Create a category first.</p>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">Create a category first.</p>
       )}
     </main>
   );

@@ -44,7 +44,7 @@ export const DataTableSearch = ({
         value={value}
         placeholder={placeholder}
         onChange={(event) => setValue(event.target.value)}
-        className="h-9 w-64 rounded-md border border-neutral-600 px-3 text-sm placeholder:text-neutral-400 focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none shadow-2xl"
+        className="h-9 w-64 rounded-md border border-neutral-600 px-3 text-sm placeholder:text-neutral-400 shadow-2xl focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-200 dark:placeholder:text-neutral-500"
       />
     </div>
   );

@@ -75,7 +75,7 @@ export const DataTableBody = <TRow,>({
     return (
       <tbody>
         <tr>
-          <td colSpan={colSpan} className="border-b border-neutral-100">
+          <td colSpan={colSpan} className="border-b border-neutral-100 dark:border-neutral-800">
             {renderError ? renderError(error, onRetry) : (
               <DataTableError error={error} onRetry={onRetry} />
             )}
@@ -89,7 +89,7 @@ export const DataTableBody = <TRow,>({
     return (
       <tbody>
         <tr>
-          <td colSpan={colSpan} className="border-b border-neutral-100">
+          <td colSpan={colSpan} className="border-b border-neutral-100 dark:border-neutral-800">
             {renderEmpty ? renderEmpty() : <DataTableEmpty message={emptyMessage} />}
           </td>
         </tr>
@@ -115,18 +115,18 @@ export const DataTableBody = <TRow,>({
                 : undefined
             }
             className={cn(
-              selected && "bg-primary-50",
-              onRowClick && "cursor-pointer hover:bg-neutral-50",
+              selected && "bg-primary-50 dark:bg-primary-900/40",
+              onRowClick && "cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800",
             )}
           >
             {selectionEnabled && (
-              <td className="border-b border-neutral-100 px-3 py-2">
+              <td className="border-b border-neutral-100 px-3 py-2 dark:border-neutral-800">
                 <span className="sr-only">Select row</span>
                 <input
                   type="checkbox"
                   checked={selected}
                   onChange={() => toggleRow(id)}
-                  className="h-4 w-4 rounded border-neutral-300"
+                  className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600"
                 />
               </td>
             )}
@@ -142,7 +142,7 @@ export const DataTableBody = <TRow,>({
                 <td
                   key={column.id}
                   className={cn(
-                    "border-b-2 border-neutral-300 px-3 py-2 text-sm text-neutral-700",
+                    "border-b-2 border-neutral-300 px-3 py-2 text-sm text-neutral-700 dark:border-neutral-700 dark:text-neutral-200",
                     getAlignClass(column.align),
                     cellClassName,
                   )}

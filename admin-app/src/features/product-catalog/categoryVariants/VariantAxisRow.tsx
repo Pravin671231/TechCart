@@ -47,7 +47,7 @@ export const VariantAxisRow = ({
           value={axis.name}
           aria-label="Axis name"
           onChange={(event) => update({ name: event.target.value })}
-          className="w-32 rounded-md border border-neutral-300 px-2 py-1"
+          className="w-32 rounded-md border border-neutral-300 px-2 py-1 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
         />
       </td>
       <td className="px-3 py-2">
@@ -56,7 +56,7 @@ export const VariantAxisRow = ({
           value={axis.code}
           aria-label={`Code for ${axis.name}`}
           onChange={(event) => update({ code: event.target.value })}
-          className="w-24 rounded-md border border-neutral-300 px-2 py-1 font-mono text-xs"
+          className="w-24 rounded-md border border-neutral-300 px-2 py-1 font-mono text-xs dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
         />
       </td>
       <td className="px-3 py-2">
@@ -64,7 +64,7 @@ export const VariantAxisRow = ({
           value={axis.type}
           aria-label={`Type for ${axis.name}`}
           onChange={(event) => update({ type: event.target.value as VariantAxisType })}
-          className="rounded-md border border-neutral-300 px-2 py-1"
+          className="rounded-md border border-neutral-300 px-2 py-1 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
         >
           {AXIS_TYPES.map((type) => (
             <option key={type} value={type}>
@@ -89,14 +89,20 @@ export const VariantAxisRow = ({
             aria-label={`Options for ${axis.name}`}
             placeholder="e.g. Black/#000, Silver/#c0c0c0"
             onChange={(event) => update({ options: parseOptions(event.target.value) })}
-            className="w-64 rounded-md border border-neutral-300 px-2 py-1 text-xs"
+            className="w-64 rounded-md border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
           />
         ) : (
-          <span className="text-neutral-400">— not used for {axis.type}</span>
+          <span className="text-neutral-400 dark:text-neutral-500">
+            — not used for {axis.type}
+          </span>
         )}
       </td>
       <td className="px-3 py-2">
-        <button type="button" onClick={onDelete} className="text-xs text-red-600 hover:underline">
+        <button
+          type="button"
+          onClick={onDelete}
+          className="text-xs text-red-600 hover:underline dark:text-red-400"
+        >
           Delete
         </button>
       </td>

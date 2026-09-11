@@ -84,7 +84,7 @@ export const BrandForm = ({ brand, onSaved, onCancel }: BrandFormProps) => {
         />
 
         {saveError && (
-          <p role="alert" className="text-[11px] text-red-600">
+          <p role="alert" className="text-[11px] text-red-600 dark:text-red-400">
             {saveError.message ?? "Unable to save brand."}
           </p>
         )}

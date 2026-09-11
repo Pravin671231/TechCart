@@ -67,11 +67,11 @@ export const OtpVerify = ({ email, onVerified, onStartOver }: OtpVerifyProps) =>
 
   return (
     <form onSubmit={handleVerify} className="w-full space-y-4">
-      <p className="text-sm text-neutral-600">
+      <p className="text-sm text-neutral-600 dark:text-neutral-300">
         Enter the 6-digit code sent to <strong>{email}</strong>
       </p>
       <div>
-        <label htmlFor="otp-code" className="block text-sm font-medium text-neutral-700">
+        <label htmlFor="otp-code" className="block text-sm font-medium text-neutral-700 dark:text-neutral-200">
           Verification code
         </label>
         <input

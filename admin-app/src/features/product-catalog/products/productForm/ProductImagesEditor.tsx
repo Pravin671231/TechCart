@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import { notifyApiError, notifyApiSuccess } from "@/app/api/apiToast";
+import { cn } from "@/lib/utils";
 import {
   usePresignUploadMutation,
   putFileToPresignedUrl,
@@ -179,11 +180,11 @@ export const ProductImagesEditor = ({
 
   return (
     <div className="w-full">
-      <span className="block text-sm font-medium text-neutral-700">
+      <span className="block text-sm font-medium text-neutral-700 dark:text-neutral-200">
         {label}
       </span>
 
-      <p className="mt-1 text-[11px] text-neutral-400">
+      <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">
         {images.length} of {max}
         {min > 0
           ? ` · at least ${min} required`
@@ -195,11 +196,12 @@ export const ProductImagesEditor = ({
         {images.map((image, index) => (
           <div
             key={image.objectKey}
-            className={`rounded-lg border p-2 ${
+            className={cn(
+              "rounded-lg border p-2",
               image.isPrimary
                 ? "border-2 border-primary-600"
-                : "border-neutral-200"
-            }`}
+                : "border-neutral-200 dark:border-neutral-700",
+            )}
           >
             <img
               src={image.publicUrl}
@@ -213,11 +215,12 @@ export const ProductImagesEditor = ({
             <button
               type="button"
               onClick={() => makePrimary(index)}
-              className={
+              className={cn(
+                "text-xs",
                 image.isPrimary
-                  ? "text-xs font-medium text-primary-700"
-                  : "text-xs text-neutral-500"
-              }
+                  ? "font-medium text-primary-700 dark:text-primary-400"
+                  : "text-neutral-500 dark:text-neutral-400",
+              )}
             >
               {image.isPrimary
                 ? "◉ Primary"
@@ -236,13 +239,13 @@ export const ProductImagesEditor = ({
                   alt: event.target.value,
                 })
               }
-              className="mt-1 block w-full rounded-md border border-neutral-200 px-2 py-1 text-[11px]"
+              className="mt-1 block w-full rounded-md border border-neutral-200 px-2 py-1 text-[11px] dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
             />
 
             <button
               type="button"
               onClick={() => removeImage(index)}
-              className="mt-1 text-[11px] text-red-600 hover:underline"
+              className="mt-1 text-[11px] text-red-600 hover:underline dark:text-red-400"
             >
               Remove
             </button>
@@ -256,11 +259,10 @@ export const ProductImagesEditor = ({
             aria-disabled={isLoading}
             onClick={openFilePicker}
             onKeyDown={handleUploadKeyDown}
-            className={`flex aspect-square items-center justify-center rounded-lg border border-dashed border-neutral-300 text-center text-xs font-medium text-primary-600 hover:bg-primary-50 ${
-              isLoading
-                ? "cursor-not-allowed opacity-60"
-                : "cursor-pointer"
-            }`}
+            className={cn(
+              "flex aspect-square items-center justify-center rounded-lg border border-dashed border-neutral-300 text-center text-xs font-medium text-primary-600 hover:bg-primary-50 dark:border-neutral-600 dark:text-primary-400 dark:hover:bg-primary-900/30",
+              isLoading ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+            )}
           >
             {isLoading
               ? "Uploading…"
@@ -284,7 +286,7 @@ export const ProductImagesEditor = ({
       {error && (
         <p
           role="alert"
-          className="mt-1 text-[11px] text-red-600"
+          className="mt-1 text-[11px] text-red-600 dark:text-red-400"
         >
           {error}
         </p>

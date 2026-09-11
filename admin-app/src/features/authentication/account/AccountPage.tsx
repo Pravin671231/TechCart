@@ -83,7 +83,7 @@ export const AccountPage = () => {
 
           {error && <InlineAlert>{error}</InlineAlert>}
           {success && (
-            <p role="status" className="text-sm text-green-700">
+            <p role="status" className="text-sm text-green-700 dark:text-green-400">
               Password changed successfully.
             </p>
           )}

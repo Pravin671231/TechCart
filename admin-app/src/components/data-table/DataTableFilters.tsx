@@ -30,7 +30,7 @@ export const DataTableFilters = ({
         <button
           type="button"
           onClick={() => fields.forEach((field) => onChange(field.key, ""))}
-          className="text-sm font-medium text-primary-600 hover:underline"
+          className="text-sm font-medium text-primary-600 hover:underline dark:text-primary-400"
         >
           {clearLabel}
         </button>
@@ -56,7 +56,7 @@ const SelectFilter = ({ field, value, onChange }: SelectFilterProps) => {
         id={selectId}
         value={value}
         onChange={(event) => onChange(field.key, event.target.value)}
-        className="h-9 rounded-md border border-neutral-600 bg-white px-3 text-sm text-black-600 focus:border-primary-600 focus:outline-none shadow-2xl"
+        className="h-9 rounded-md border border-neutral-600 bg-white px-3 text-sm text-neutral-700 shadow-2xl focus:border-primary-600 focus:outline-none dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-200"
       >
         <option value="">{field.placeholder ?? "All"}</option>
         {field.options.map((option) => (

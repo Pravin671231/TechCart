@@ -27,18 +27,21 @@ export const DataTableLoading = <TRow,>({
       {Array.from({ length: rowCount }).map((_, rowIndex) => (
         <tr key={rowIndex} aria-hidden="true">
           {hasSelectionColumn && (
-            <td className="border-b border-neutral-100 px-3 py-2">
-              <span className="block h-4 w-4 animate-pulse rounded bg-neutral-200" />
+            <td className="border-b border-neutral-100 px-3 py-2 dark:border-neutral-800">
+              <span className="block h-4 w-4 animate-pulse rounded bg-neutral-200 dark:bg-neutral-700" />
             </td>
           )}
           {columns.map((column, columnIndex) => (
             <td
               key={column.id}
-              className={cn("border-b border-neutral-100 px-3 py-2", getAlignClass(column.align))}
+              className={cn(
+                "border-b border-neutral-100 px-3 py-2 dark:border-neutral-800",
+                getAlignClass(column.align),
+              )}
             >
               <span
                 className={cn(
-                  "block h-4 animate-pulse rounded bg-neutral-200",
+                  "block h-4 animate-pulse rounded bg-neutral-200 dark:bg-neutral-700",
                   BAR_WIDTHS[(rowIndex + columnIndex) % BAR_WIDTHS.length],
                   column.align === "right" && "ml-auto",
                   column.align === "center" && "mx-auto",

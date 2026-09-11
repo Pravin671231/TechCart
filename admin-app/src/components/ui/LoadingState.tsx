@@ -12,9 +12,11 @@ export const LoadingState = ({
   spaced = true,
 }: LoadingStateProps) => {
   if (fullPage) {
-    return <main className="p-6 text-sm text-neutral-500">{label}</main>;
+    return <main className="p-6 text-sm text-neutral-500 dark:text-neutral-400">{label}</main>;
   }
-  return <p className={cn("text-sm text-neutral-500", spaced && "mt-4")}>{label}</p>;
+  return (
+    <p className={cn("text-sm text-neutral-500 dark:text-neutral-400", spaced && "mt-4")}>{label}</p>
+  );
 };
 
 export interface ErrorStateProps {
@@ -29,7 +31,9 @@ export const ErrorState = ({
   spaced = true,
 }: ErrorStateProps) => {
   if (fullPage) {
-    return <main className="p-6 text-sm text-red-600">{message}</main>;
+    return <main className="p-6 text-sm text-red-600 dark:text-red-400">{message}</main>;
   }
-  return <p className={cn("text-sm text-red-600", spaced && "mt-4")}>{message}</p>;
+  return (
+    <p className={cn("text-sm text-red-600 dark:text-red-400", spaced && "mt-4")}>{message}</p>
+  );
 };

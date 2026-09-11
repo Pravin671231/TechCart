@@ -21,9 +21,16 @@ export const TopProductsTable = ({ products, isFetching = false }: TopProductsTa
           <EmptyRow colSpan={4} message="No sales in this range yet." />
         ) : (
           products.map((product, index) => (
-            <tr key={product.productId} className="border-b border-neutral-100 hover:bg-neutral-50">
-              <td className="px-3 py-2 text-neutral-400 tabular-nums">{index + 1}</td>
-              <td className="px-3 py-2 font-medium text-neutral-900">{product.name}</td>
+            <tr
+              key={product.productId}
+              className="border-b border-neutral-100 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800"
+            >
+              <td className="px-3 py-2 text-neutral-400 tabular-nums dark:text-neutral-500">
+                {index + 1}
+              </td>
+              <td className="px-3 py-2 font-medium text-neutral-900 dark:text-neutral-100">
+                {product.name}
+              </td>
               <td className="px-3 py-2 text-right tabular-nums">{product.unitsSold}</td>
               <td className="px-3 py-2 text-right font-semibold tabular-nums">
                 {formatPrice(product.revenue)}

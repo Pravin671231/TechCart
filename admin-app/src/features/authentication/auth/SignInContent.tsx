@@ -28,12 +28,12 @@ export const SignInContent = () => {
        * contrast regardless of where the artwork's linework falls. */}
       <div className="absolute inset-0 -z-10 bg-black/35" />
 
-      <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-8 shadow-2xl">
+      <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-8 shadow-2xl dark:bg-neutral-900">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
             TechCart Admin
           </h1>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
             {step.name === "password" ? "Sign in to continue" : "Two-factor verification"}
           </p>
         </div>

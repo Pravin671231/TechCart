@@ -13,7 +13,7 @@ export const DataTableEmpty = ({
 }: DataTableEmptyProps) => {
   return (
     <div className="flex min-h-40 flex-col items-center justify-center gap-3 px-4 py-10 text-center">
-      <p className="text-sm text-neutral-500">{message}</p>
+      <p className="text-sm text-neutral-500 dark:text-neutral-400">{message}</p>
       {action}
     </div>
   );

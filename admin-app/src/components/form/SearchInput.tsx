@@ -31,7 +31,7 @@ export const SearchInput = ({
         className={cn(
           "h-9",
           width,
-          "rounded-md border border-neutral-300 px-3 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none",
+          "rounded-md border border-neutral-300 px-3 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100",
         )}
       />
     </>

@@ -60,7 +60,7 @@ const StockCell = ({ item }: StockCellProps) => {
       <button
         type="button"
         onClick={startEditing}
-        className="rounded-md px-2 py-1 text-right tabular-nums hover:bg-neutral-100"
+        className="rounded-md px-2 py-1 text-right tabular-nums hover:bg-neutral-100 dark:text-neutral-100 dark:hover:bg-neutral-800"
       >
         {item.stock}
       </button>
@@ -78,7 +78,7 @@ const StockCell = ({ item }: StockCellProps) => {
           type="number"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          className="w-20 rounded-md border border-neutral-300 px-2 py-1 text-right text-sm"
+          className="w-20 rounded-md border border-neutral-300 px-2 py-1 text-right text-sm dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
           autoFocus
         />
         <button
@@ -92,13 +92,13 @@ const StockCell = ({ item }: StockCellProps) => {
         <button
           type="button"
           onClick={cancel}
-          className="rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-50"
+          className="rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800"
         >
           Cancel
         </button>
       </div>
       {error && (
-        <p role="alert" className="text-[11px] text-red-600">
+        <p role="alert" className="text-[11px] text-red-600 dark:text-red-400">
           {error}
         </p>
       )}
@@ -123,12 +123,20 @@ export const InventoryList = () => {
       {
         id: "product",
         header: "Product",
-        cell: (item) => <span className="font-medium text-neutral-900">{item.productName}</span>,
+        cell: (item) => (
+          <span className="font-medium text-neutral-900 dark:text-neutral-100">
+            {item.productName}
+          </span>
+        ),
       },
       {
         id: "sku",
         header: "SKU",
-        cell: (item) => <span className="font-mono text-xs text-neutral-600">{item.variantSku}</span>,
+        cell: (item) => (
+          <span className="font-mono text-xs text-neutral-600 dark:text-neutral-300">
+            {item.variantSku}
+          </span>
+        ),
       },
       {
         id: "warehouse",

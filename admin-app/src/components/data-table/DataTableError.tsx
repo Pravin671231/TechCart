@@ -21,12 +21,12 @@ export const DataTableError = ({
       role="alert"
       className="flex min-h-40 flex-col items-center justify-center gap-3 px-4 py-10 text-center"
     >
-      <p className="text-sm text-red-600">{message}</p>
+      <p className="text-sm text-red-600 dark:text-red-400">{message}</p>
       {onRetry && (
         <button
           type="button"
           onClick={onRetry}
-          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-800"
         >
           Retry
         </button>

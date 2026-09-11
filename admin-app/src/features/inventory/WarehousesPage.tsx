@@ -25,14 +25,18 @@ export const WarehousesPage = () => {
         id: "name",
         header: "Name",
         cell: (warehouse) => (
-          <span className="font-medium text-neutral-900">{warehouse.name}</span>
+          <span className="font-medium text-neutral-900 dark:text-neutral-100">
+            {warehouse.name}
+          </span>
         ),
       },
       {
         id: "code",
         header: "Code",
         cell: (warehouse) => (
-          <span className="font-mono text-xs text-neutral-600">{warehouse.code}</span>
+          <span className="font-mono text-xs text-neutral-600 dark:text-neutral-300">
+            {warehouse.code}
+          </span>
         ),
       },
       {
@@ -103,7 +107,7 @@ export const WarehousesPage = () => {
             />
 
             {saveError && (
-              <p role="alert" className="text-[11px] text-red-600">
+              <p role="alert" className="text-[11px] text-red-600 dark:text-red-400">
                 {saveError.message ?? "Unable to create warehouse."}
               </p>
             )}

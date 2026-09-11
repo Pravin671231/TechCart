@@ -17,11 +17,11 @@ const headerContainerVariants = cva(
   },
 );
 
-const headingVariants = cva("font-semibold tracking-tight", {
+const headingVariants = cva("font-semibold tracking-tight text-neutral-900 dark:text-neutral-100", {
   variants: {
     size: {
       lg: "text-2xl",
-      md: "text-xl text-neutral-900",
+      md: "text-xl",
     },
   },
   defaultVariants: {
@@ -47,18 +47,26 @@ export const PageHeader = ({ title, size = "lg", actions, breadcrumbs }: PageHea
       <div>
         <h1 className={headingVariants({ size })}>{title}</h1>
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav aria-label="Breadcrumb" className="mt-1 text-sm text-neutral-500">
+          <nav aria-label="Breadcrumb" className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
             {breadcrumbs.map((crumb, index) => {
               const isCurrent = index === breadcrumbs.length - 1;
               return (
                 <span key={`${crumb.label}-${index}`}>
-                  {index > 0 && <span className="mx-1.5 text-neutral-300">&gt;</span>}
+                  {index > 0 && (
+                    <span className="mx-1.5 text-neutral-300 dark:text-neutral-600">&gt;</span>
+                  )}
                   {isCurrent ? (
-                    <span className="font-semibold text-neutral-900" aria-current="page">
+                    <span
+                      className="font-semibold text-neutral-900 dark:text-neutral-100"
+                      aria-current="page"
+                    >
                       {crumb.label}
                     </span>
                   ) : crumb.to ? (
-                    <Link to={crumb.to} className="text-neutral-500 hover:text-primary-600">
+                    <Link
+                      to={crumb.to}
+                      className="text-neutral-500 hover:text-primary-600 dark:text-neutral-400"
+                    >
                       {crumb.label}
                     </Link>
                   ) : (

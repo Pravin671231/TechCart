@@ -47,18 +47,18 @@ export const SingleImageUploader = ({
 
   return (
     <div>
-      <span className="block text-sm font-medium text-neutral-700">{label}</span>
+      <span className="block text-sm font-medium text-neutral-700 dark:text-neutral-200">{label}</span>
       <div className="mt-1 flex items-center gap-3">
         {localPreview ? (
           <img
             src={localPreview}
             alt={`${label} preview`}
-            className="h-12 w-24 rounded-md border border-neutral-200 object-cover"
+            className="h-12 w-24 rounded-md border border-neutral-200 object-cover dark:border-neutral-700"
           />
         ) : (
-          <span className="block h-12 w-24 rounded-md border border-dashed border-neutral-300 bg-neutral-50" />
+          <span className="block h-12 w-24 rounded-md border border-dashed border-neutral-300 bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800" />
         )}
-        <label className="cursor-pointer rounded-md border border-neutral-400 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100">
+        <label className="cursor-pointer rounded-md border border-neutral-400 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800">
           {isLoading ? "Uploading…" : "Upload"}
           <input
             type="file"
@@ -69,7 +69,7 @@ export const SingleImageUploader = ({
           />
         </label>
       </div>
-      {error && <p className="mt-1 text-[11px] text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 };

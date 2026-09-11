@@ -39,7 +39,7 @@ export const PasswordSignIn = ({ onOtpRequired }: PasswordSignInProps) => {
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4">
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-neutral-700">
+        <label htmlFor="email" className="block text-sm font-medium text-neutral-700 dark:text-neutral-200">
           Email
         </label>
         <input
@@ -53,7 +53,7 @@ export const PasswordSignIn = ({ onOtpRequired }: PasswordSignInProps) => {
         />
       </div>
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-neutral-700">
+        <label htmlFor="password" className="block text-sm font-medium text-neutral-700 dark:text-neutral-200">
           Password
         </label>
         <div className="relative mt-1">
@@ -70,7 +70,7 @@ export const PasswordSignIn = ({ onOtpRequired }: PasswordSignInProps) => {
             type="button"
             onClick={() => setShowPassword((value) => !value)}
             aria-label={showPassword ? "Hide password" : "Show password"}
-            className="absolute inset-y-0 right-0 flex items-center px-3 text-neutral-400 hover:text-neutral-600"
+            className="absolute inset-y-0 right-0 flex items-center px-3 text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>

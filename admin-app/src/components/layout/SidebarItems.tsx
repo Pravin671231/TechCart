@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FocusEvent, MouseEvent } from "react";
-import { NavLink } from "react-router";
+import { NavLink, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "./navItems";
 
@@ -24,6 +24,13 @@ export const SidebarItems = ({ items, onNavigate, layout = "rail" }: SidebarItem
   const groups = Array.from(new Set(items.map((item) => item.group)));
   const isRail = layout === "rail";
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const { pathname } = useLocation();
+
+  function isGroupActive(group: string) {
+    return items
+      .filter((item) => item.group === group)
+      .some((item) => (item.end ? pathname === item.to : pathname.startsWith(item.to)));
+  }
 
   function showTooltip(label: string, event: MouseEvent | FocusEvent) {
     if (!isRail) return;
@@ -36,13 +43,14 @@ export const SidebarItems = ({ items, onNavigate, layout = "rail" }: SidebarItem
   }
 
   return (
-    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2 text-sm">
+    <nav className="sidebar-scroll flex flex-1 flex-col gap-1 overflow-y-auto p-2 text-sm">
       {groups.map((group) => (
         <div key={group} className="flex flex-col gap-0.5">
           <span
             className={cn(
-              "px-3 pt-3 pb-1 text-[10px] font-semibold tracking-wide text-neutral-400 uppercase",
+              "px-3 pt-3 pb-1 text-[10px] font-semibold tracking-wide text-neutral-400 uppercase dark:text-neutral-500",
               isRail && "hidden lg:block",
+              isGroupActive(group) && "text-primary-600 dark:text-primary-400",
             )}
           >
             {group}
@@ -66,8 +74,8 @@ export const SidebarItems = ({ items, onNavigate, layout = "rail" }: SidebarItem
                     isRail &&
                       "flex-col justify-center gap-1 px-2 text-center lg:flex-row lg:justify-start lg:gap-2 lg:px-3",
                     isActive
-                      ? "bg-primary-50 font-medium text-primary-700"
-                      : "text-neutral-600 hover:bg-neutral-100",
+                      ? "bg-primary-50 font-medium text-primary-700 dark:bg-primary-900/40 dark:text-primary-300"
+                      : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800",
                   )
                 }
               >
@@ -88,7 +96,7 @@ export const SidebarItems = ({ items, onNavigate, layout = "rail" }: SidebarItem
       {isRail && tooltip && (
         <span
           role="tooltip"
-          className="pointer-events-none fixed z-50 -translate-y-1/2 rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium whitespace-nowrap text-white shadow-md lg:hidden"
+          className="pointer-events-none fixed z-50 -translate-y-1/2 rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium whitespace-nowrap text-white shadow-md lg:hidden dark:bg-neutral-700"
           style={{ top: tooltip.top, left: tooltip.left }}
         >
           {tooltip.label}

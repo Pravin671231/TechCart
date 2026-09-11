@@ -101,12 +101,12 @@ export const OrderDetailPage = () => {
               terminal status (cancelled/refunded) has no legal next state,
               so the control is inert with only its own value shown. */}
           <label className="flex items-center gap-2">
-            <span className="text-neutral-500">Change status</span>
+            <span className="text-neutral-500 dark:text-neutral-400">Change status</span>
             <select
               value={order.status}
               disabled={isChangingStatus || legalNextStatuses.length === 0}
               onChange={(event) => void handleStatusChange(event.target.value as OrderStatus)}
-              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 font-medium text-neutral-600"
+              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 font-medium text-neutral-600 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-300"
             >
               <option value={order.status}>{STATUS_LABEL[order.status]}</option>
               {legalNextStatuses.map((status) => (
@@ -120,7 +120,7 @@ export const OrderDetailPage = () => {
             <button
               type="button"
               onClick={() => setShowCancelModal(true)}
-              className="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
+              className="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/30"
             >
               Cancel order
             </button>
@@ -129,7 +129,7 @@ export const OrderDetailPage = () => {
             <button
               type="button"
               onClick={() => setShowRefundModal(true)}
-              className="rounded-md border border-green-300 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50"
+              className="rounded-md border border-green-300 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/30"
             >
               Refund
             </button>
@@ -139,7 +139,9 @@ export const OrderDetailPage = () => {
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <StatusBadge tone={STATUS_TONE[order.status]}>{STATUS_LABEL[order.status]}</StatusBadge>
-        <span className="text-sm text-neutral-500">Placed {formatDateTime(order.createdAt)}</span>
+        <span className="text-sm text-neutral-500 dark:text-neutral-400">
+          Placed {formatDateTime(order.createdAt)}
+        </span>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
@@ -148,27 +150,29 @@ export const OrderDetailPage = () => {
             <CardHeading>Details</CardHeading>
             <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
               <div className="flex gap-2">
-                <dt className="w-28 shrink-0 text-neutral-500">Buyer</dt>
-                <dd className="text-neutral-900">{order.buyer?.name ?? "—"}</dd>
+                <dt className="w-28 shrink-0 text-neutral-500 dark:text-neutral-400">Buyer</dt>
+                <dd className="text-neutral-900 dark:text-neutral-100">{order.buyer?.name ?? "—"}</dd>
               </div>
               <div className="flex gap-2">
-                <dt className="w-28 shrink-0 text-neutral-500">Email</dt>
-                <dd className="text-neutral-900">{order.buyer?.email ?? "—"}</dd>
+                <dt className="w-28 shrink-0 text-neutral-500 dark:text-neutral-400">Email</dt>
+                <dd className="text-neutral-900 dark:text-neutral-100">{order.buyer?.email ?? "—"}</dd>
               </div>
               {order.trackingReference && (
                 <div className="flex gap-2">
-                  <dt className="w-28 shrink-0 text-neutral-500">Tracking</dt>
-                  <dd className="font-mono text-xs text-neutral-800">{order.trackingReference}</dd>
+                  <dt className="w-28 shrink-0 text-neutral-500 dark:text-neutral-400">Tracking</dt>
+                  <dd className="font-mono text-xs text-neutral-800 dark:text-neutral-200">
+                    {order.trackingReference}
+                  </dd>
                 </div>
               )}
               {order.payment && (
                 <div className="flex gap-2">
-                  <dt className="w-28 shrink-0 text-neutral-500">Payment</dt>
+                  <dt className="w-28 shrink-0 text-neutral-500 dark:text-neutral-400">Payment</dt>
                   <dd className="flex items-center gap-2">
                     <StatusBadge tone={PAYMENT_STATUS_TONE[order.payment.status]}>
                       {PAYMENT_STATUS_LABEL[order.payment.status]}
                     </StatusBadge>
-                    <span className="text-neutral-600">
+                    <span className="text-neutral-600 dark:text-neutral-300">
                       {/* payment.amount is integer paise — every other money
                           field here is whole rupees (formatPrice's own
                           contract), so this divides back down at the one
@@ -180,8 +184,8 @@ export const OrderDetailPage = () => {
               )}
               {order.cancellationReason && (
                 <div className="flex gap-2 sm:col-span-2">
-                  <dt className="w-28 shrink-0 text-neutral-500">Cancellation</dt>
-                  <dd className="text-neutral-900">{order.cancellationReason}</dd>
+                  <dt className="w-28 shrink-0 text-neutral-500 dark:text-neutral-400">Cancellation</dt>
+                  <dd className="text-neutral-900 dark:text-neutral-100">{order.cancellationReason}</dd>
                 </div>
               )}
             </dl>
@@ -191,38 +195,50 @@ export const OrderDetailPage = () => {
             <CardHeading>Items</CardHeading>
             <Table minWidthClassName="min-w-[600px]">
               <TableHeadRow variant="shaded">
-                <th className="px-3 py-2 font-medium text-neutral-500">Product</th>
-                <th className="px-3 py-2 font-medium text-neutral-500">Attributes</th>
-                <th className="px-3 py-2 text-right font-medium text-neutral-500">Qty</th>
-                <th className="px-3 py-2 text-right font-medium text-neutral-500">Unit price</th>
-                <th className="px-3 py-2 text-right font-medium text-neutral-500">Line total</th>
+                <th className="px-3 py-2 font-medium text-neutral-500 dark:text-neutral-400">
+                  Product
+                </th>
+                <th className="px-3 py-2 font-medium text-neutral-500 dark:text-neutral-400">
+                  Attributes
+                </th>
+                <th className="px-3 py-2 text-right font-medium text-neutral-500 dark:text-neutral-400">
+                  Qty
+                </th>
+                <th className="px-3 py-2 text-right font-medium text-neutral-500 dark:text-neutral-400">
+                  Unit price
+                </th>
+                <th className="px-3 py-2 text-right font-medium text-neutral-500 dark:text-neutral-400">
+                  Line total
+                </th>
               </TableHeadRow>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
                 {order.items.map((item) => (
                   <tr key={item.variant.id}>
-                    <td className="px-3 py-2 text-neutral-900">{item.product.name}</td>
-                    <td className="px-3 py-2 text-neutral-600">
+                    <td className="px-3 py-2 text-neutral-900 dark:text-neutral-100">
+                      {item.product.name}
+                    </td>
+                    <td className="px-3 py-2 text-neutral-600 dark:text-neutral-300">
                       {formatAttributes(item.variant.attributes)}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">{item.quantity}</td>
                     <td className="px-3 py-2 text-right tabular-nums">
                       {formatPrice(item.unitPrice)}
                     </td>
-                    <td className="px-3 py-2 text-right font-medium tabular-nums text-neutral-900">
+                    <td className="px-3 py-2 text-right font-medium tabular-nums text-neutral-900 dark:text-neutral-100">
                       {formatPrice(item.lineTotal)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </Table>
-            <div className="mt-3 flex justify-end text-sm font-semibold text-neutral-900">
+            <div className="mt-3 flex justify-end text-sm font-semibold text-neutral-900 dark:text-neutral-100">
               Total: {formatPrice(order.totalAmount)}
             </div>
           </Card>
 
           <Card>
             <CardHeading>Shipping address</CardHeading>
-            <p className="text-sm text-neutral-700">
+            <p className="text-sm text-neutral-700 dark:text-neutral-300">
               {order.shippingAddress.fullName}
               <br />
               {order.shippingAddress.line1}
@@ -247,10 +263,14 @@ export const OrderDetailPage = () => {
                     <StatusBadge tone={STATUS_TONE[entry.status]}>
                       {STATUS_LABEL[entry.status]}
                     </StatusBadge>
-                    <span className="text-xs text-neutral-500">{formatDateTime(entry.at)}</span>
+                    <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                      {formatDateTime(entry.at)}
+                    </span>
                   </span>
                   {entry.note && (
-                    <span className="mt-0.5 text-xs text-neutral-500">{entry.note}</span>
+                    <span className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+                      {entry.note}
+                    </span>
                   )}
                 </span>
               </li>

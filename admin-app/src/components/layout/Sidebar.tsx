@@ -34,7 +34,7 @@ export const Sidebar = ({ onNavigate, variant = "rail" }: SidebarProps) => {
     <>
       <div
         className={cn(
-          "flex h-16 shrink-0 items-center border-b border-neutral-200",
+          "flex h-16 shrink-0 items-center border-b border-neutral-200 dark:border-neutral-800",
           isRail ? "justify-center px-2 lg:justify-start lg:px-4" : "justify-start px-4",
         )}
       >

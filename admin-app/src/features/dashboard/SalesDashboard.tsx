@@ -53,7 +53,7 @@ export const SalesDashboard = () => {
     : [];
 
   return (
-    <main className="flex min-h-full flex-col gap-4 bg-neutral-50 p-6">
+    <main className="flex min-h-full flex-col gap-4 bg-neutral-50 p-6 dark:bg-neutral-950">
       <PageHeader
         title="Dashboard"
         actions={<DateRangePicker value={range} onChange={setRange} />}

@@ -39,8 +39,8 @@ const AxisControl = ({
             style={{ background: option.value }}
             className={
               value === option.value
-                ? "h-8 w-8 rounded-full ring-2 ring-primary-600 ring-offset-2"
-                : "h-8 w-8 rounded-full border border-neutral-300"
+                ? "h-8 w-8 rounded-full ring-2 ring-primary-600 ring-offset-2 dark:ring-offset-neutral-900"
+                : "h-8 w-8 rounded-full border border-neutral-300 dark:border-neutral-600"
             }
           />
         ))}
@@ -54,7 +54,7 @@ const AxisControl = ({
         aria-label={axis.name}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-1 block w-full rounded-md border border-neutral-300 bg-white px-3 py-2"
+        className="mt-1 block w-full rounded-md border border-neutral-300 bg-white px-3 py-2 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
       >
         <option value="">— select —</option>
         {(axis.options ?? []).map((option) => (
@@ -72,7 +72,7 @@ const AxisControl = ({
       aria-label={axis.name}
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="mt-1 block w-full rounded-md border border-neutral-300 px-3 py-2"
+      className="mt-1 block w-full rounded-md border border-neutral-300 px-3 py-2 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
     />
   );
 };
@@ -173,12 +173,12 @@ const VariantForm = ({
     <div
       role="group"
       aria-label={variant ? "Edit variant" : "New variant"}
-      className="mb-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3"
+      className="mb-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-800"
     >
       <div className="grid gap-3 sm:grid-cols-5">
         {axes.map((axis) => (
           <label key={axis.code} className="block text-sm">
-            <span className="text-neutral-500">
+            <span className="text-neutral-500 dark:text-neutral-400">
               {axis.name} <em>({axis.type})</em>
             </span>
             <AxisControl
@@ -216,12 +216,14 @@ const VariantForm = ({
         />
       </div>
 
-      <p className="mt-2 text-xs text-neutral-500">
+      <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
         Selling price: {sellingPreview !== null ? formatPrice(sellingPreview) : "—"}{" "}
-        <span className="text-[11px] text-neutral-400">(preview — server-computed)</span>
+        <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
+          (preview — server-computed)
+        </span>
       </p>
 
-      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-neutral-500">
+      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-neutral-500 dark:text-neutral-400">
         <Checkbox
           label="Active"
           labelClassName="gap-1.5"
@@ -234,7 +236,7 @@ const VariantForm = ({
             type="number"
             value={weight}
             onChange={(event) => setWeight(event.target.value)}
-            className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1"
+            className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
           />
         </label>
       </div>
@@ -251,7 +253,7 @@ const VariantForm = ({
       </div>
 
       {(formError || saveError) && (
-        <p role="alert" className="mt-3 text-sm text-red-800">
+        <p role="alert" className="mt-3 text-sm text-red-800 dark:text-red-400">
           {formError ?? saveError?.message ?? "Unable to save this variant."}
         </p>
       )}
@@ -299,12 +301,14 @@ export const ProductVariantsEditor = ({
 
   return (
     <div>
-      <p className="mb-4 text-[11px] text-neutral-400">
+      <p className="mb-4 text-[11px] text-neutral-400 dark:text-neutral-500">
         One control per axis, chosen by the axis type defined for this category — swatch for color,
         dropdown for select, numeric for number, text otherwise.
       </p>
 
-      {isLoading && <p className="text-sm text-neutral-500">Loading variant axes…</p>}
+      {isLoading && (
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">Loading variant axes…</p>
+      )}
 
       {variants.map((variant) =>
         editingVariantId === variant._id ? (
@@ -319,7 +323,7 @@ export const ProductVariantsEditor = ({
         ) : (
           <div
             key={variant._id}
-            className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-200 p-3 text-sm text-neutral-500"
+            className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-200 p-3 text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400"
           >
             <span>
               {formatAttributes(variant.attributes)} — {formatPrice(variant.sellingPrice)} ·{" "}
@@ -331,7 +335,7 @@ export const ProductVariantsEditor = ({
                 setIsAddingNew(false);
                 setEditingVariantId(variant._id);
               }}
-              className="text-xs text-primary-600 hover:underline"
+              className="text-xs text-primary-600 hover:underline dark:text-primary-400"
             >
               Edit
             </button>

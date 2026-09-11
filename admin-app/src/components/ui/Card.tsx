@@ -2,7 +2,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-const cardVariants = cva("rounded-lg border", {
+const cardVariants = cva("rounded-lg border bg-white dark:bg-neutral-900", {
   variants: {
     padding: {
       sm: "p-3",
@@ -10,11 +10,11 @@ const cardVariants = cva("rounded-lg border", {
     },
     tone: {
       default: "",
-      muted: "bg-neutral-50",
+      muted: "bg-neutral-50 dark:bg-neutral-800",
     },
     dashed: {
-      true: "border-dashed border-neutral-300",
-      false: "border-neutral-200",
+      true: "border-dashed border-neutral-300 dark:border-neutral-600",
+      false: "border-neutral-200 dark:border-neutral-800",
     },
   },
   defaultVariants: {
@@ -53,7 +53,12 @@ export interface CardHeadingProps {
 
 export const CardHeading = ({ children, spacing = "mb-3" }: CardHeadingProps) => {
   return (
-    <h2 className={cn(spacing, "text-xs font-semibold tracking-wide text-neutral-700 uppercase")}>
+    <h2
+      className={cn(
+        spacing,
+        "text-xs font-semibold tracking-wide text-neutral-700 uppercase dark:text-neutral-200",
+      )}
+    >
       {children}
     </h2>
   );

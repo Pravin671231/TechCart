@@ -69,7 +69,7 @@ export const AdminUserForm = ({ onSaved, onCancel }: AdminUserFormProps) => {
         </SelectField>
 
         {saveError && (
-          <p role="alert" className="text-[11px] text-red-600">
+          <p role="alert" className="text-[11px] text-red-600 dark:text-red-400">
             {saveError.message ?? "Unable to create admin."}
           </p>
         )}

@@ -208,7 +208,7 @@ export const ProductForm = ({ product }: { product: Product | null }) => {
 
         <Card>
           <CardHeading spacing="mb-1">Specifications</CardHeading>
-          <p className="mb-4 text-[11px] text-neutral-400">
+          <p className="mb-4 text-[11px] text-neutral-400 dark:text-neutral-500">
             Rendered from the selected category&apos;s schema, not a fixed field list.
           </p>
           <ProductSpecificationsFields
@@ -229,7 +229,7 @@ export const ProductForm = ({ product }: { product: Product | null }) => {
           </Card>
         )}
         {!product && (
-          <Card dashed className="text-sm text-neutral-500">
+          <Card dashed className="text-sm text-neutral-500 dark:text-neutral-400">
             Save the product first — variants are added on the edit screen.
           </Card>
         )}

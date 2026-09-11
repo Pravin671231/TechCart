@@ -7,9 +7,9 @@ type Shape = "pill" | "rounded";
 const statusBadgeVariants = cva("px-2 py-0.5 text-xs font-medium", {
   variants: {
     tone: {
-      success: "bg-green-100 text-green-700",
-      neutral: "bg-neutral-100 text-neutral-600",
-      warning: "bg-amber-100 text-amber-700",
+      success: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+      neutral: "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300",
+      warning: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
     },
     shape: {
       pill: "rounded-full",

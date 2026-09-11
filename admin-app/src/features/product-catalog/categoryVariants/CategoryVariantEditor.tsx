@@ -122,7 +122,7 @@ export const CategoryVariantEditor = ({ categoryId }: { categoryId: string }) =>
   return (
     <section className="min-w-0 flex-1 space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-neutral-500 dark:text-neutral-400">
           These definitions drive form rendering only — deleting an axis is unguarded, unlike a
           specification field.
         </p>
@@ -133,14 +133,20 @@ export const CategoryVariantEditor = ({ categoryId }: { categoryId: string }) =>
 
       <Table minWidthClassName="min-w-[760px]">
         <TableHeadRow variant="shaded">
-          <th className="px-3 py-2 font-medium text-neutral-500">Axis name</th>
-          <th className="px-3 py-2 font-medium text-neutral-500">Code</th>
-          <th className="px-3 py-2 font-medium text-neutral-500">Type</th>
-          <th className="px-3 py-2 font-medium text-neutral-500">Required</th>
-          <th className="px-3 py-2 font-medium text-neutral-500">Options (label / value)</th>
-          <th className="px-3 py-2 font-medium text-neutral-500"></th>
+          <th className="px-3 py-2 font-medium text-neutral-500 dark:text-neutral-400">
+            Axis name
+          </th>
+          <th className="px-3 py-2 font-medium text-neutral-500 dark:text-neutral-400">Code</th>
+          <th className="px-3 py-2 font-medium text-neutral-500 dark:text-neutral-400">Type</th>
+          <th className="px-3 py-2 font-medium text-neutral-500 dark:text-neutral-400">
+            Required
+          </th>
+          <th className="px-3 py-2 font-medium text-neutral-500 dark:text-neutral-400">
+            Options (label / value)
+          </th>
+          <th className="px-3 py-2 font-medium text-neutral-500 dark:text-neutral-400"></th>
         </TableHeadRow>
-        <tbody className="divide-y divide-neutral-100">
+        <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
           {axes.map((axis, index) => (
             <VariantAxisRow
               key={axis.code}
