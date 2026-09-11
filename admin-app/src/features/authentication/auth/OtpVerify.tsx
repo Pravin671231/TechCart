@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { InlineAlert } from "@/components/ui/InlineAlert";
-import { TextField } from "@/components/form/FormField";
 import { useSendOtpMutation, useVerifyOtpMutation } from "./api";
 import { describeAuthError } from "./describeAuthError";
 
@@ -67,21 +66,25 @@ export const OtpVerify = ({ email, onVerified, onStartOver }: OtpVerifyProps) =>
   };
 
   return (
-    <form onSubmit={handleVerify} className="w-full max-w-sm space-y-4">
+    <form onSubmit={handleVerify} className="w-full space-y-4">
       <p className="text-sm text-neutral-600">
         Enter the 6-digit code sent to <strong>{email}</strong>
       </p>
-      <TextField
-        id="otp-code"
-        label="Verification code"
-        type="text"
-        inputMode="numeric"
-        maxLength={6}
-        required
-        value={code}
-        onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-        className="text-center text-2xl tracking-widest"
-      />
+      <div>
+        <label htmlFor="otp-code" className="block text-sm font-medium text-neutral-700">
+          Verification code
+        </label>
+        <input
+          id="otp-code"
+          type="text"
+          inputMode="numeric"
+          maxLength={6}
+          required
+          value={code}
+          onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+          className="field-input mt-1 w-full px-3 py-2 text-center text-2xl tracking-widest"
+        />
+      </div>
       {error && <InlineAlert>{error}</InlineAlert>}
       <Button
         type="submit"

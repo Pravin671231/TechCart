@@ -113,6 +113,64 @@ describe("SignInContent", () => {
     expect(getChallenge()).toBeNull();
   });
 
+  it("does not depend on a second get-session call after OTP verification", async () => {
+    // Regression test: verifyOtp used to invalidate the Session tag and
+    // rely on a fresh GET /api/auth/get-session to repopulate the cache,
+    // racing the redirect to "/" — against the deployed Render backend,
+    // that race was wide enough to briefly show the dashboard and then
+    // bounce back to /sign-in a few seconds later. get-session is stubbed
+    // here to permanently report no session, proving the redirect now
+    // relies solely on the session verify-otp's own response returns.
+    server.use(
+      http.get(`${BASE}/get-session`, () => HttpResponse.json({ success: true, data: null })),
+      http.post(`${BASE}/sign-in/email`, () => {
+        return HttpResponse.json({ success: true, data: { code: "OTP_REQUIRED" } });
+      }),
+      http.post(`${BASE}/two-factor/send-otp`, () => {
+        return HttpResponse.json({ success: true, data: {} });
+      }),
+      http.post(`${BASE}/two-factor/verify-otp`, () => {
+        return HttpResponse.json(
+          {
+            success: true,
+            data: {
+              user: {
+                id: "u1",
+                name: "Admin",
+                email: "admin@example.com",
+                role: "catalog-manager",
+              },
+            },
+          },
+          { headers: { "set-auth-token": "real-token" } },
+        );
+      }),
+    );
+
+    renderSignIn();
+    await submitPassword();
+    fireEvent.change(await screen.findByLabelText("Verification code"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Verify & sign in" }));
+
+    expect(await screen.findByText("Home content")).toBeInTheDocument();
+  });
+
+  it("toggles the password field's visibility via the eye icon", async () => {
+    setUnauthenticatedSession();
+    renderSignIn();
+
+    const passwordInput = screen.getByLabelText("Password");
+    expect(passwordInput).toHaveAttribute("type", "password");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+    expect(passwordInput).toHaveAttribute("type", "text");
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide password" }));
+    expect(passwordInput).toHaveAttribute("type", "password");
+  });
+
   it("clears the stored 2FA challenge when the user starts over", async () => {
     setUnauthenticatedSession();
     server.use(
