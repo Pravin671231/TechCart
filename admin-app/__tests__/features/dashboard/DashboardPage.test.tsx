@@ -1,9 +1,19 @@
 import { http, HttpResponse } from "msw";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { MemoryRouter } from "react-router";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { server } from "../../mocks/server";
 import { renderWithStore } from "../../utils/renderWithStore";
+
+// SalesDashboard/CatalogDashboard render a <Link> (the "view all" banner),
+// so the page needs a router context on top of the store.
+const renderDashboard = () =>
+  renderWithStore(
+    <MemoryRouter>
+      <DashboardPage />
+    </MemoryRouter>,
+  );
 
 const BASE = "http://localhost:4000/api/admin/dashboard";
 
@@ -70,7 +80,7 @@ describe("DashboardPage", () => {
   it("renders the narrower catalog dashboard for a catalog-manager session, with no sales widgets", async () => {
     mockCatalogEndpoint();
 
-    renderWithStore(<DashboardPage />);
+    renderDashboard();
 
     expect(await screen.findByText("Total products")).toBeInTheDocument();
     expect(screen.getByText("10")).toBeInTheDocument();
@@ -83,7 +93,7 @@ describe("DashboardPage", () => {
     mockOrderManagerSession();
     mockSalesEndpoints();
 
-    renderWithStore(<DashboardPage />);
+    renderDashboard();
 
     expect(await screen.findByText("Total revenue")).toBeInTheDocument();
     expect(screen.getByText("Total orders")).toBeInTheDocument();
@@ -106,7 +116,7 @@ describe("DashboardPage", () => {
       ),
     );
 
-    renderWithStore(<DashboardPage />);
+    renderDashboard();
     await screen.findByText("Total revenue");
 
     const fromInput = screen.getByLabelText("From");

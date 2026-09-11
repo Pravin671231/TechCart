@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin — Dashboard (sales + catalog)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme {
+        --color-primary-50: #eef2ff;
+        --color-primary-100: #e0e7ff;
+        --color-primary-200: #c7d2fe;
+        --color-primary-300: #a5b4fc;
+        --color-primary-400: #818cf8;
+        --color-primary-500: #6366f1;
+        --color-primary-600: #4f46e5;
+        --color-primary-700: #4338ca;
+        --color-primary-800: #3730a3;
+        --color-primary-900: #312e81;
+
+        --color-accent-50: #fff7ed;
+        --color-accent-100: #ffedd5;
+        --color-accent-200: #fed7aa;
+        --color-accent-300: #fdba74;
+        --color-accent-400: #fb923c;
+        --color-accent-500: #f97316;
+        --color-accent-600: #ea580c;
+        --color-accent-700: #c2410c;
+        --color-accent-800: #9a3412;
+        --color-accent-900: #7c2d12;
+
+        --font-sans:
+          "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+      }
+    </style>
+  </head>
+  <body class="h-screen bg-white text-neutral-600">
+    <div class="flex h-screen">
+      <!-- Sidebar — full height, left edge (copied from index.html shell) -->
+      <aside class="flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white">
+        <a
+          href="./index.html"
+          class="flex h-16 shrink-0 items-center gap-2 border-b border-neutral-200 px-4"
+        >
+          <svg
+            class="h-5 w-5 text-accent-600"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            <path d="M2.5 3.5h2.4l2.7 12.5h9.7l2.2-8.5H6" />
+          </svg>
+          <div class="flex flex-col leading-tight">
+            <span class="text-sm font-extrabold tracking-tight text-neutral-900">
+              Tech<span class="text-primary-600">Cart</span>
+            </span>
+            <span class="text-[10px] font-medium tracking-wide text-neutral-400 uppercase">
+              Admin
+            </span>
+          </div>
+        </a>
+
+        <nav class="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2 text-sm">
+          <a
+            href="./dashboard.html"
+            class="rounded-md bg-primary-50 px-3 py-2 font-medium text-primary-700"
+          >
+            Dashboard
+          </a>
+          <a
+            href="./product-list.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Products
+          </a>
+          <a
+            href="./category-list.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Categories
+          </a>
+          <a
+            href="./brand-list.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Brands
+          </a>
+          <a
+            href="./specification-editor.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Specifications
+          </a>
+          <a
+            href="./variant-type-editor.html"
+            class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100"
+          >
+            Variant types
+          </a>
+          <a href="#" class="rounded-md px-3 py-2 text-neutral-600 hover:bg-neutral-100">Orders</a>
+        </nav>
+
+        <div class="mt-auto border-t border-neutral-200 p-3">
+          <div class="flex items-center gap-2 rounded-md p-2">
+            <span
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700"
+            >
+              A
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-neutral-900">Admin User</p>
+              <p class="truncate text-xs text-neutral-500">Order Manager</p>
+            </div>
+          </div>
+          <a
+            href="#"
+            class="mt-2 flex items-center justify-center rounded-md border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50"
+          >
+            Logout
+          </a>
+        </div>
+      </aside>
+
+      <div class="flex min-w-0 flex-1 flex-col">
+        <main class="flex-1 overflow-auto bg-[#f7f8fc] p-6">
+          <p class="mb-4 text-[11px] text-neutral-400">
+            admin-app · Dashboard (SRS v0.7) —
+            <code class="text-neutral-500"> FR-DASH-001, 003–008, 013–014, 017–021 </code>
+            · role-branched: <code class="text-neutral-500">order-manager</code> /
+            <code class="text-neutral-500">super-admin</code> see the Sales view,
+            <code class="text-neutral-500">catalog-manager</code> sees the Catalog view · both shown
+            below on one page for review
+          </p>
+
+          <!-- ============================================================= -->
+          <!-- SALES DASHBOARD — order-manager / super-admin                  -->
+          <!-- ============================================================= -->
+          <div class="mb-3 flex items-center gap-3">
+            <span
+              class="rounded-md bg-primary-100 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-primary-700 uppercase"
+            >
+              Sales dashboard
+            </span>
+            <span class="text-[11px] text-neutral-400">order-manager · super-admin</span>
+          </div>
+
+          <div class="flex flex-col gap-4">
+            <!-- Page header + date range control -->
+            <div
+              class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <h1 class="text-2xl font-semibold tracking-tight text-neutral-900">Dashboard</h1>
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  class="rounded-md border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-50"
+                >
+                  7D
+                </button>
+                <button
+                  class="rounded-md border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700"
+                >
+                  30D
+                </button>
+                <button
+                  class="rounded-md border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-50"
+                >
+                  90D
+                </button>
+                <label class="flex items-center gap-1 text-[11px] text-neutral-500">
+                  From
+                  <input
+                    type="date"
+                    value="2026-08-12"
+                    class="rounded-md border border-neutral-300 px-2 py-1 text-xs"
+                  />
+                </label>
+                <label class="flex items-center gap-1 text-[11px] text-neutral-500">
+                  To
+                  <input
+                    type="date"
+                    value="2026-09-11"
+                    class="rounded-md border border-neutral-300 px-2 py-1 text-xs"
+                  />
+                </label>
+                <button class="text-xs text-primary-600 hover:underline">Reset</button>
+              </div>
+            </div>
+
+            <!-- Loading + error states (mocked alongside the happy path) -->
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <p class="mb-2 text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">
+                  Loading state
+                </p>
+                <div class="flex items-center gap-3">
+                  <div class="h-10 w-10 shrink-0 animate-pulse rounded-lg bg-neutral-100"></div>
+                  <div class="flex-1 space-y-2">
+                    <div class="h-2.5 w-24 animate-pulse rounded bg-neutral-100"></div>
+                    <div class="h-4 w-16 animate-pulse rounded bg-neutral-100"></div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 shadow-sm"
+              >
+                <p class="mb-1 text-[11px] font-semibold tracking-wide text-red-500 uppercase">
+                  Error state
+                </p>
+                Unable to load the dashboard.
+              </div>
+            </div>
+
+            <!-- Summary grid — 4 stat tiles -->
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <!-- Total orders -->
+              <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div class="mb-3 flex items-center gap-3">
+                  <span
+                    class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600"
+                  >
+                    <svg
+                      class="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                      <path d="M3 6h18" />
+                      <path d="M16 10a4 4 0 0 1-8 0" />
+                    </svg>
+                  </span>
+                  <span class="text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                    Total orders
+                  </span>
+                </div>
+                <p class="text-2xl font-bold text-neutral-900">128</p>
+                <p class="mt-1 text-xs text-neutral-500">in the selected range</p>
+              </div>
+
+              <!-- Total revenue -->
+              <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div class="mb-3 flex items-center gap-3">
+                  <span
+                    class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-700"
+                  >
+                    <svg
+                      class="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M19 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h13" />
+                      <path d="M21 8H6" />
+                      <circle cx="17" cy="12" r="1.5" fill="currentColor" stroke="none" />
+                    </svg>
+                  </span>
+                  <span class="text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                    Total revenue
+                  </span>
+                </div>
+                <p class="text-2xl font-bold text-neutral-900">₹4,52,000</p>
+                <p class="mt-1 text-xs text-neutral-500">captured, net of refunds</p>
+              </div>
+
+              <!-- Avg order value -->
+              <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div class="mb-3 flex items-center gap-3">
+                  <span
+                    class="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-50 text-accent-600"
+                  >
+                    <svg
+                      class="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="m3 17 6-6 4 4 8-8" />
+                      <path d="M17 7h4v4" />
+                    </svg>
+                  </span>
+                  <span class="text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                    Avg order value
+                  </span>
+                </div>
+                <p class="text-2xl font-bold text-neutral-900">₹3,531</p>
+                <p class="mt-1 text-xs text-neutral-500">revenue ÷ orders</p>
+              </div>
+
+              <!-- Paid orders -->
+              <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div class="mb-3 flex items-center gap-3">
+                  <span
+                    class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-700"
+                  >
+                    <svg
+                      class="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="m9 12 2 2 4-4" />
+                    </svg>
+                  </span>
+                  <span class="text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                    Paid orders
+                  </span>
+                </div>
+                <p class="text-2xl font-bold text-neutral-900">104</p>
+                <p class="mt-1 text-xs text-neutral-500">reached payment capture</p>
+              </div>
+            </div>
+
+            <!-- Analytics grid — revenue area chart + orders bar chart -->
+            <div class="grid gap-4 lg:grid-cols-2">
+              <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <h2 class="mb-3 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                  Revenue over time
+                </h2>
+                <svg viewBox="0 0 520 200" class="h-[220px] w-full" preserveAspectRatio="none">
+                  <!-- grid -->
+                  <g stroke="#f0f1f5" stroke-width="1">
+                    <line x1="0" y1="40" x2="520" y2="40" />
+                    <line x1="0" y1="90" x2="520" y2="90" />
+                    <line x1="0" y1="140" x2="520" y2="140" />
+                    <line x1="0" y1="185" x2="520" y2="185" />
+                  </g>
+                  <!-- fill -->
+                  <path
+                    d="M0,150 L65,120 L130,135 L195,95 L260,110 L325,70 L390,85 L455,45 L520,60 L520,185 L0,185 Z"
+                    fill="#ede9fe"
+                  />
+                  <!-- line -->
+                  <path
+                    d="M0,150 L65,120 L130,135 L195,95 L260,110 L325,70 L390,85 L455,45 L520,60"
+                    fill="none"
+                    stroke="#4f46e5"
+                    stroke-width="2"
+                  />
+                </svg>
+                <div class="mt-1 flex justify-between text-[10px] text-neutral-400">
+                  <span>Aug 12</span><span>Aug 26</span><span>Sep 9</span>
+                </div>
+              </div>
+
+              <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <h2 class="mb-3 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                  Orders over time
+                </h2>
+                <svg viewBox="0 0 520 200" class="h-[220px] w-full" preserveAspectRatio="none">
+                  <g stroke="#f0f1f5" stroke-width="1">
+                    <line x1="0" y1="40" x2="520" y2="40" />
+                    <line x1="0" y1="90" x2="520" y2="90" />
+                    <line x1="0" y1="140" x2="520" y2="140" />
+                    <line x1="0" y1="185" x2="520" y2="185" />
+                  </g>
+                  <g fill="#4f46e5">
+                    <rect x="12" y="120" width="34" height="65" rx="4" />
+                    <rect x="72" y="95" width="34" height="90" rx="4" />
+                    <rect x="132" y="135" width="34" height="50" rx="4" />
+                    <rect x="192" y="80" width="34" height="105" rx="4" />
+                    <rect x="252" y="105" width="34" height="80" rx="4" />
+                    <rect x="312" y="60" width="34" height="125" rx="4" />
+                    <rect x="372" y="90" width="34" height="95" rx="4" />
+                    <rect x="432" y="45" width="34" height="140" rx="4" />
+                    <rect x="492" y="70" width="20" height="115" rx="4" />
+                  </g>
+                </svg>
+                <div class="mt-1 flex justify-between text-[10px] text-neutral-400">
+                  <span>Aug 12</span><span>Aug 26</span><span>Sep 9</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Orders by status breakdown -->
+            <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+              <h2 class="mb-3 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                Orders by status
+              </h2>
+              <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+                <!-- Paid -->
+                <div class="rounded-lg border border-neutral-200 p-3">
+                  <p class="text-[11px] text-neutral-500">Paid</p>
+                  <p class="text-lg font-bold text-neutral-900">64</p>
+                  <div class="mt-1.5 h-1.5 w-full rounded-full bg-neutral-100">
+                    <div class="h-1.5 rounded-full bg-green-500" style="width: 50%"></div>
+                  </div>
+                  <p class="mt-1 text-[11px] text-neutral-500">50%</p>
+                </div>
+                <!-- Processing -->
+                <div class="rounded-lg border border-neutral-200 p-3">
+                  <p class="text-[11px] text-neutral-500">Processing</p>
+                  <p class="text-lg font-bold text-neutral-900">22</p>
+                  <div class="mt-1.5 h-1.5 w-full rounded-full bg-neutral-100">
+                    <div class="h-1.5 rounded-full bg-green-500" style="width: 17%"></div>
+                  </div>
+                  <p class="mt-1 text-[11px] text-neutral-500">17%</p>
+                </div>
+                <!-- Shipped -->
+                <div class="rounded-lg border border-neutral-200 p-3">
+                  <p class="text-[11px] text-neutral-500">Shipped</p>
+                  <p class="text-lg font-bold text-neutral-900">14</p>
+                  <div class="mt-1.5 h-1.5 w-full rounded-full bg-neutral-100">
+                    <div class="h-1.5 rounded-full bg-green-500" style="width: 11%"></div>
+                  </div>
+                  <p class="mt-1 text-[11px] text-neutral-500">11%</p>
+                </div>
+                <!-- Pending payment -->
+                <div class="rounded-lg border border-neutral-200 p-3">
+                  <p class="text-[11px] text-neutral-500">Pending payment</p>
+                  <p class="text-lg font-bold text-neutral-900">18</p>
+                  <div class="mt-1.5 h-1.5 w-full rounded-full bg-neutral-100">
+                    <div class="h-1.5 rounded-full bg-neutral-400" style="width: 14%"></div>
+                  </div>
+                  <p class="mt-1 text-[11px] text-neutral-500">14%</p>
+                </div>
+                <!-- Cancelled -->
+                <div class="rounded-lg border border-neutral-200 p-3">
+                  <p class="text-[11px] text-neutral-500">Cancelled</p>
+                  <p class="text-lg font-bold text-neutral-900">10</p>
+                  <div class="mt-1.5 h-1.5 w-full rounded-full bg-neutral-100">
+                    <div class="h-1.5 rounded-full bg-amber-500" style="width: 8%"></div>
+                  </div>
+                  <p class="mt-1 text-[11px] text-neutral-500">8%</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Top products -->
+            <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+              <h2 class="mb-3 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                Top products
+              </h2>
+              <div class="overflow-x-auto rounded-lg border border-neutral-200">
+                <table class="w-full border-collapse text-sm">
+                  <thead class="bg-neutral-50 text-left">
+                    <tr class="border-b border-neutral-200">
+                      <th class="px-3 py-2 text-xs font-semibold text-neutral-500">#</th>
+                      <th class="px-3 py-2 text-xs font-semibold text-neutral-500">Product</th>
+                      <th class="px-3 py-2 text-right text-xs font-semibold text-neutral-500">
+                        Units sold
+                      </th>
+                      <th class="px-3 py-2 text-right text-xs font-semibold text-neutral-500">
+                        Revenue
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="border-b border-neutral-100 hover:bg-neutral-50">
+                      <td class="px-3 py-2 text-neutral-400 tabular-nums">1</td>
+                      <td class="px-3 py-2 font-medium text-neutral-900">Nova X5 Pro</td>
+                      <td class="px-3 py-2 text-right tabular-nums">48</td>
+                      <td class="px-3 py-2 text-right font-semibold tabular-nums">₹1,44,000</td>
+                    </tr>
+                    <tr class="border-b border-neutral-100 hover:bg-neutral-50">
+                      <td class="px-3 py-2 text-neutral-400 tabular-nums">2</td>
+                      <td class="px-3 py-2 font-medium text-neutral-900">AeroBook 14</td>
+                      <td class="px-3 py-2 text-right tabular-nums">21</td>
+                      <td class="px-3 py-2 text-right font-semibold tabular-nums">₹1,05,000</td>
+                    </tr>
+                    <tr class="border-b border-neutral-100 hover:bg-neutral-50">
+                      <td class="px-3 py-2 text-neutral-400 tabular-nums">3</td>
+                      <td class="px-3 py-2 font-medium text-neutral-900">Pulse Buds 2</td>
+                      <td class="px-3 py-2 text-right tabular-nums">63</td>
+                      <td class="px-3 py-2 text-right font-semibold tabular-nums">₹63,000</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="mt-2 text-[11px] text-neutral-400">
+                Empty state: “No sales in this range yet.”
+              </p>
+            </div>
+
+            <!-- Gradient banner -->
+            <div
+              class="flex flex-col gap-3 rounded-xl bg-gradient-to-r from-primary-600 to-primary-800 px-5 py-4 text-white sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <p class="text-sm font-semibold">Manage orders</p>
+                <p class="text-xs text-white/80">Review, fulfil and refund customer orders.</p>
+              </div>
+              <a
+                href="#"
+                class="inline-flex w-fit items-center rounded-md bg-white/15 px-3 py-1.5 text-sm font-medium hover:bg-white/25"
+              >
+                View all orders →
+              </a>
+            </div>
+          </div>
+
+          <!-- ============================================================= -->
+          <!-- CATALOG DASHBOARD — catalog-manager                            -->
+          <!-- ============================================================= -->
+          <div class="my-8 border-t border-dashed border-neutral-300"></div>
+          <div class="mb-3 flex items-center gap-3">
+            <span
+              class="rounded-md bg-accent-100 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-accent-700 uppercase"
+            >
+              Catalog dashboard
+            </span>
+            <span class="text-[11px] text-neutral-400"
+              >catalog-manager · no date range · no sales widgets</span
+            >
+          </div>
+
+          <div class="flex flex-col gap-4">
+            <h1 class="text-2xl font-semibold tracking-tight text-neutral-900">Dashboard</h1>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <!-- Total products -->
+              <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div class="mb-3 flex items-center gap-3">
+                  <span
+                    class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600"
+                  >
+                    <svg
+                      class="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path
+                        d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"
+                      />
+                      <path d="m3.3 7 8.7 5 8.7-5M12 22V12" />
+                    </svg>
+                  </span>
+                  <span class="text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                    Total products
+                  </span>
+                </div>
+                <p class="text-2xl font-bold text-neutral-900">42</p>
+                <p class="mt-1 text-xs text-neutral-500">across all statuses</p>
+              </div>
+
+              <!-- Published products -->
+              <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div class="mb-3 flex items-center gap-3">
+                  <span
+                    class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-700"
+                  >
+                    <svg
+                      class="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="m9 12 2 2 4-4" />
+                    </svg>
+                  </span>
+                  <span class="text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                    Published products
+                  </span>
+                </div>
+                <p class="text-2xl font-bold text-neutral-900">31</p>
+                <p class="mt-1 text-xs text-neutral-500">8 drafts</p>
+              </div>
+
+              <!-- Categories -->
+              <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div class="mb-3 flex items-center gap-3">
+                  <span
+                    class="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-50 text-accent-600"
+                  >
+                    <svg
+                      class="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path
+                        d="M20 10a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1"
+                      />
+                      <path
+                        d="M12 5v14M12 12H4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h8M12 19h8a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-8"
+                      />
+                    </svg>
+                  </span>
+                  <span class="text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                    Categories
+                  </span>
+                </div>
+                <p class="text-2xl font-bold text-neutral-900">9 active</p>
+                <p class="mt-1 text-xs text-neutral-500">of 11 total</p>
+              </div>
+
+              <!-- Brands -->
+              <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div class="mb-3 flex items-center gap-3">
+                  <span
+                    class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600"
+                  >
+                    <svg
+                      class="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path
+                        d="M2 9a3 3 0 0 1 .88-2.12l3-3A3 3 0 0 1 8 3h8a3 3 0 0 1 2.12.88l3 3A3 3 0 0 1 22 9v9a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3Z"
+                      />
+                      <path d="M7 7h.01" />
+                    </svg>
+                  </span>
+                  <span class="text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                    Brands
+                  </span>
+                </div>
+                <p class="text-2xl font-bold text-neutral-900">6 active</p>
+                <p class="mt-1 text-xs text-neutral-500">of 6 total</p>
+              </div>
+            </div>
+
+            <!-- Products by status breakdown -->
+            <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+              <h2 class="mb-3 text-xs font-semibold tracking-wide text-neutral-700 uppercase">
+                Products by status
+              </h2>
+              <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+                <div class="rounded-lg border border-neutral-200 p-3">
+                  <p class="text-[11px] text-neutral-500">Published</p>
+                  <p class="text-lg font-bold text-neutral-900">31</p>
+                  <div class="mt-1.5 h-1.5 w-full rounded-full bg-neutral-100">
+                    <div class="h-1.5 rounded-full bg-green-500" style="width: 74%"></div>
+                  </div>
+                  <p class="mt-1 text-[11px] text-neutral-500">74%</p>
+                </div>
+                <div class="rounded-lg border border-neutral-200 p-3">
+                  <p class="text-[11px] text-neutral-500">Draft</p>
+                  <p class="text-lg font-bold text-neutral-900">8</p>
+                  <div class="mt-1.5 h-1.5 w-full rounded-full bg-neutral-100">
+                    <div class="h-1.5 rounded-full bg-neutral-400" style="width: 19%"></div>
+                  </div>
+                  <p class="mt-1 text-[11px] text-neutral-500">19%</p>
+                </div>
+                <div class="rounded-lg border border-neutral-200 p-3">
+                  <p class="text-[11px] text-neutral-500">Archived</p>
+                  <p class="text-lg font-bold text-neutral-900">3</p>
+                  <div class="mt-1.5 h-1.5 w-full rounded-full bg-neutral-100">
+                    <div class="h-1.5 rounded-full bg-neutral-400" style="width: 7%"></div>
+                  </div>
+                  <p class="mt-1 text-[11px] text-neutral-500">7%</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gradient banner -->
+            <div
+              class="flex flex-col gap-3 rounded-xl bg-gradient-to-r from-primary-600 to-primary-800 px-5 py-4 text-white sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <p class="text-sm font-semibold">Manage catalog</p>
+                <p class="text-xs text-white/80">Add and edit products, categories and brands.</p>
+              </div>
+              <a
+                href="./product-list.html"
+                class="inline-flex w-fit items-center rounded-md bg-white/15 px-3 py-1.5 text-sm font-medium hover:bg-white/25"
+              >
+                Manage products →
+              </a>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
