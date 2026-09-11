@@ -46,8 +46,8 @@ export const DateRangePicker = ({ value, onChange }: DateRangePickerProps) => {
             className={cn(
               "rounded-md border px-2.5 py-1 text-xs font-medium",
               active
-                ? "border-primary-200 bg-primary-50 text-primary-700"
-                : "border-neutral-300 text-neutral-600 hover:bg-neutral-50",
+                ? "border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/40 dark:text-primary-300"
+                : "border-neutral-300 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800",
             )}
           >
             {preset.label}
@@ -55,22 +55,22 @@ export const DateRangePicker = ({ value, onChange }: DateRangePickerProps) => {
         );
       })}
 
-      <label className="flex items-center gap-1 text-[11px] text-neutral-500">
+      <label className="flex items-center gap-1 text-[11px] text-neutral-500 dark:text-neutral-400">
         From
         <input
           type="date"
           value={value.from ?? ""}
           onChange={(event) => onChange({ ...value, from: event.target.value || undefined })}
-          className="rounded-md border border-neutral-300 px-2 py-1 text-xs"
+          className="rounded-md border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
         />
       </label>
-      <label className="flex items-center gap-1 text-[11px] text-neutral-500">
+      <label className="flex items-center gap-1 text-[11px] text-neutral-500 dark:text-neutral-400">
         To
         <input
           type="date"
           value={value.to ?? ""}
           onChange={(event) => onChange({ ...value, to: event.target.value || undefined })}
-          className="rounded-md border border-neutral-300 px-2 py-1 text-xs"
+          className="rounded-md border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
         />
       </label>
 
@@ -78,7 +78,7 @@ export const DateRangePicker = ({ value, onChange }: DateRangePickerProps) => {
         <button
           type="button"
           onClick={() => onChange({})}
-          className="text-xs text-primary-600 hover:underline"
+          className="text-xs text-primary-600 hover:underline dark:text-primary-400"
         >
           Reset
         </button>

@@ -41,7 +41,10 @@ export const CancelOrderModal = ({
       message={
         <div className="flex flex-col gap-2">
           <p>This cancels the order and can&apos;t be undone. Provide a reason for the buyer.</p>
-          <label htmlFor="cancel-order-reason" className="text-xs font-medium text-neutral-700">
+          <label
+            htmlFor="cancel-order-reason"
+            className="text-xs font-medium text-neutral-700 dark:text-neutral-200"
+          >
             Cancellation reason
           </label>
           <textarea
@@ -50,7 +53,7 @@ export const CancelOrderModal = ({
             onChange={(event) => setReason(event.target.value)}
             rows={3}
             placeholder="e.g. Item out of stock"
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
           />
         </div>
       }

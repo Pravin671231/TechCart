@@ -1,6 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /**
  * Brand tokens — see ../../mock-ui/brand-kit.html for the visual reference.
  * primary = Tailwind Indigo, accent = Tailwind Orange, renamed semantically.
@@ -35,6 +37,30 @@
     sans-serif;
 }
 
+/* Any scrollable container app-wide — thin, brand-primary-colored scrollbar in
+ * both themes. `--color-primary-*` come from the `@theme` block above. */
+.scrollbar-brand {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary-400) transparent;
+}
+.dark .scrollbar-brand {
+  scrollbar-color: var(--color-primary-600) transparent;
+}
+.scrollbar-brand::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-brand::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-brand::-webkit-scrollbar-thumb {
+  background-color: var(--color-primary-400);
+  border-radius: 9999px;
+}
+.dark .scrollbar-brand::-webkit-scrollbar-thumb {
+  background-color: var(--color-primary-600);
+}
+
 /* Sign-in page — shared upscale input treatment, ported verbatim from
  * buyer-app/src/app/globals.css's .field-input (Issue #343). Scoped to the
  * sign-in page's hand-rolled inputs (email/password/OTP) only — every other
@@ -66,6 +92,18 @@
 .field-input:disabled {
   background-color: var(--color-neutral-100);
   color: var(--color-neutral-400);
+}
+.dark .field-input {
+  border-color: var(--color-neutral-600);
+  background-color: var(--color-neutral-900);
+  color: var(--color-neutral-100);
+}
+.dark .field-input::placeholder {
+  color: var(--color-neutral-500);
+}
+.dark .field-input:disabled {
+  background-color: var(--color-neutral-800);
+  color: var(--color-neutral-500);
 }
 
 /* Sign-in page — step-switch entrance (password <-> OTP), both directions.

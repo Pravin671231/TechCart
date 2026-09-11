@@ -3,15 +3,27 @@ import { Provider } from "react-redux";
 import { Toaster } from "sonner";
 import { store } from "@/app/store/store";
 import { MainRoutes } from "@/routes/mainRoutes";
+import { ThemeProvider } from "@/theme/ThemeProvider";
+import { useTheme } from "@/hooks/useTheme";
 
-const App = () => {
+const AppContent = () => {
+  const { theme } = useTheme();
+
   return (
     <Provider store={store}>
       <BrowserRouter>
         <MainRoutes />
       </BrowserRouter>
-      <Toaster richColors position="top-right" />
+      <Toaster theme={theme} richColors position="top-right" />
     </Provider>
+  );
+};
+
+const App = () => {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 };
 

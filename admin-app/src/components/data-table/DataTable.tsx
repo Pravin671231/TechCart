@@ -92,7 +92,7 @@ export const DataTable = <TRow,>({
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 flex-col overflow-hidden rounded-lg border-2 border-neutral-400 bg-white shadow-lg",
+        "flex h-full min-h-0 flex-col overflow-hidden rounded-lg border-2 border-neutral-400 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900",
         className,
       )}
     >
@@ -100,7 +100,7 @@ export const DataTable = <TRow,>({
         {toolbar}
       </DataTableToolbar>
 
-      <div className="relative min-h-0 flex-1 overflow-auto">
+      <div className="scrollbar-brand relative min-h-0 flex-1 overflow-auto">
         <table
           aria-busy={showFetchingOverlay || undefined}
           style={{ minWidth: resolveColumnWidth(minWidth) }}
@@ -150,9 +150,9 @@ export const DataTable = <TRow,>({
           <div
             role="status"
             aria-live="polite"
-            className="pointer-events-none absolute right-3 top-2 flex items-center gap-1.5 rounded-full bg-white px-2 py-1 text-xs text-neutral-500 shadow-sm ring-1 ring-neutral-200"
+            className="pointer-events-none absolute right-3 top-2 flex items-center gap-1.5 rounded-full bg-white px-2 py-1 text-xs text-neutral-500 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:ring-neutral-700"
           >
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-600" />
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-600 dark:border-neutral-600 dark:border-t-neutral-300" />
             Updating…
           </div>
         )}

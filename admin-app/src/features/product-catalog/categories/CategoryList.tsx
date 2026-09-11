@@ -84,8 +84,8 @@ export const CategoryList = ({ onEdit }: CategoryListProps) => {
       header: "Name",
       cellClassName: (category) =>
         category.parentCategory
-          ? "pl-8 font-medium text-neutral-900"
-          : "font-medium text-neutral-900",
+          ? "pl-8 font-medium text-neutral-900 dark:text-neutral-100"
+          : "font-medium text-neutral-900 dark:text-neutral-100",
       cell: (category) => (category.parentCategory ? `↳ ${category.name}` : category.name),
     },
     {

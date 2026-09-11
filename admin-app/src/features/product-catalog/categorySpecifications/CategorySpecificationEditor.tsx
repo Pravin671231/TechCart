@@ -218,7 +218,7 @@ export const CategorySpecificationEditor = ({ categoryId }: { categoryId: string
   return (
     <section className="min-w-0 flex-1 space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-neutral-500 dark:text-neutral-400">
           Marking a field filterable makes it a buyer-facing filter and eligible for category card
           display (first six, in order).
         </p>

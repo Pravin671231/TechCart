@@ -34,7 +34,7 @@ export const DataTableHeader = <TRow,>({
   onToggleAll,
 }: DataTableHeaderProps<TRow>) => {
   const thBase = cn(
-    "border-b border-neutral-200 bg-neutral-50 px-3 py-2 text-md font-semibold uppercase tracking-wide text-neutral-500",
+    "border-b border-neutral-200 bg-neutral-50 px-3 py-2 text-md font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800 dark:text-neutral-400",
     stickyHeader && "sticky top-0 z-10",
   );
 
@@ -54,7 +54,7 @@ export const DataTableHeader = <TRow,>({
                 if (node) node.indeterminate = someSelected && !allSelected;
               }}
               onChange={onToggleAll}
-              className="h-4 w-4 rounded border-neutral-300"
+              className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600"
             />
           </th>
         )}
@@ -75,8 +75,8 @@ export const DataTableHeader = <TRow,>({
                   type="button"
                   onClick={() => onSortChange(nextSortState(sort, column.id))}
                   className={cn(
-                    "inline-flex items-center gap-1 hover:text-neutral-700",
-                    isSorted && "text-neutral-900",
+                    "inline-flex items-center gap-1 hover:text-neutral-700 dark:hover:text-neutral-200",
+                    isSorted && "text-neutral-900 dark:text-neutral-100",
                   )}
                 >
                   {column.header}

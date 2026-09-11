@@ -53,16 +53,18 @@ export const BrandList = ({ onEdit }: BrandListProps) => {
           <img
             src={brand.logo.url}
             alt={brand.logo.alt ?? ""}
-            className="h-8 w-16 rounded-md border border-neutral-200 object-cover"
+            className="h-8 w-16 rounded-md border border-neutral-200 object-cover dark:border-neutral-700"
           />
         ) : (
-          <span className="block h-8 w-16 rounded-md border border-neutral-200 bg-neutral-50" />
+          <span className="block h-8 w-16 rounded-md border border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800" />
         ),
     },
     {
       id: "name",
       header: "Name",
-      cell: (brand) => <span className="font-medium text-neutral-900">{brand.name}</span>,
+      cell: (brand) => (
+        <span className="font-medium text-neutral-900 dark:text-neutral-100">{brand.name}</span>
+      ),
     },
     {
       id: "productCount",

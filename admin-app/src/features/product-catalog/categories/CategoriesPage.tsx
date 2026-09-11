@@ -44,7 +44,7 @@ export const CategoriesPage = () => {
           }}
         />
         {showForm && (
-          <div className="w-full shrink-0 overflow-y-auto xl:w-96">
+          <div className="scrollbar-brand w-full shrink-0 overflow-y-auto xl:w-96">
             <CategoryForm
               category={isCreating ? null : selectedCategory}
               allCategories={allCategories}

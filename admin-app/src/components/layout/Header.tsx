@@ -16,10 +16,10 @@ export const Header = ({ compact = false }: HeaderProps) => {
           compact ? "hidden lg:flex" : "flex",
         )}
       >
-        <span className="text-sm font-extrabold tracking-tight text-neutral-900">
+        <span className="text-sm font-extrabold tracking-tight text-neutral-900 dark:text-neutral-100">
           Tech<span className="text-primary-600">Cart</span>
         </span>
-        <span className="text-[10px] font-medium tracking-wide text-neutral-400 uppercase">
+        <span className="text-[10px] font-medium tracking-wide text-neutral-400 uppercase dark:text-neutral-500">
           Admin
         </span>
       </div>

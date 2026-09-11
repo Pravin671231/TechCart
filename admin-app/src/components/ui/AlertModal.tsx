@@ -31,25 +31,25 @@ const VARIANT_STYLES: Record<
   }
 > = {
   deleted: {
-    border: "border-red-200",
-    header: "bg-red-50",
-    title: "text-red-800",
+    border: "border-red-200 dark:border-red-800",
+    header: "bg-red-50 dark:bg-red-900/30",
+    title: "text-red-800 dark:text-red-400",
     confirmButtonClass: "bg-red-600 text-white hover:bg-red-700",
     defaultConfirmLabel: "Delete",
     defaultLoadingLabel: "Deleting…",
   },
   warning: {
-    border: "border-amber-200",
-    header: "bg-amber-50",
-    title: "text-amber-800",
+    border: "border-amber-200 dark:border-amber-800",
+    header: "bg-amber-50 dark:bg-amber-900/30",
+    title: "text-amber-800 dark:text-amber-400",
     confirmButtonClass: "bg-amber-600 text-white hover:bg-amber-700",
     defaultConfirmLabel: "Continue",
     defaultLoadingLabel: "Working…",
   },
   confirm: {
-    border: "border-green-200",
-    header: "bg-green-50",
-    title: "text-green-800",
+    border: "border-green-200 dark:border-green-800",
+    header: "bg-green-50 dark:bg-green-900/30",
+    title: "text-green-800 dark:text-green-400",
     confirmButtonClass: "bg-green-600 text-white hover:bg-green-700",
     defaultConfirmLabel: "Confirm",
     defaultLoadingLabel: "Working…",
@@ -85,7 +85,7 @@ export const AlertModal = ({
         aria-modal="true"
         aria-labelledby="alert-modal-title"
         className={cn(
-          "relative w-full max-w-sm overflow-hidden rounded-lg border-2 bg-white shadow-xl",
+          "relative w-full max-w-sm overflow-hidden rounded-lg border-2 bg-white shadow-xl dark:bg-neutral-900",
           styles.border,
         )}
       >
@@ -97,12 +97,12 @@ export const AlertModal = ({
             type="button"
             aria-label="Close"
             onClick={onCancel}
-            className={cn("rounded-md p-1 hover:bg-black/5", styles.title)}
+            className={cn("rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/10", styles.title)}
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
-        <p className="px-4 py-4 text-sm text-neutral-600">{message}</p>
+        <p className="px-4 py-4 text-sm text-neutral-600 dark:text-neutral-300">{message}</p>
         <div className="flex justify-end gap-2 px-4 pb-4">
           <Button variant="secondary" size="sm" onClick={onCancel} disabled={isConfirming}>
             {cancelLabel}

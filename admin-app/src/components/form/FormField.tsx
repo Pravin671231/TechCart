@@ -8,7 +8,7 @@ import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const INPUT_CLASS =
-  "mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none disabled:bg-neutral-50 disabled:text-neutral-500";
+  "mt-1 block w-full rounded-md border border-neutral-400 px-3 py-2 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 focus:outline-none disabled:bg-neutral-50 disabled:text-neutral-500 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-500";
 
 const FieldShell = ({
   id,
@@ -27,13 +27,13 @@ const FieldShell = ({
 }) => {
   return (
     <div className={containerClassName}>
-      <label htmlFor={id} className="block text-sm font-medium text-neutral-700">
+      <label htmlFor={id} className="block text-sm font-medium text-neutral-700 dark:text-neutral-200">
         {label}
       </label>
       {children}
-      {hint && <p className="mt-1 text-[11px] text-neutral-400">{hint}</p>}
+      {hint && <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">{hint}</p>}
       {error && (
-        <p role="alert" className="mt-1 text-[11px] text-red-600">
+        <p role="alert" className="mt-1 text-[11px] text-red-600 dark:text-red-400">
           {error}
         </p>
       )}
@@ -132,7 +132,7 @@ export const SelectField = ({
       error={error}
       containerClassName={containerClassName}
     >
-      <select id={id} className={cn(INPUT_CLASS, "bg-white")} {...rest}>
+      <select id={id} className={cn(INPUT_CLASS, "bg-white dark:bg-neutral-900")} {...rest}>
         {children}
       </select>
     </FieldShell>
@@ -140,7 +140,7 @@ export const SelectField = ({
 };
 
 const readOnlyValueVariants = cva(
-  "mt-1 block rounded-md bg-neutral-50 px-3 py-2 text-neutral-500",
+  "mt-1 block rounded-md bg-neutral-50 px-3 py-2 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400",
   {
     variants: {
       size: {
@@ -152,7 +152,7 @@ const readOnlyValueVariants = cva(
         false: "",
       },
       bordered: {
-        true: "border border-neutral-200",
+        true: "border border-neutral-200 dark:border-neutral-700",
         false: "",
       },
     },
@@ -185,11 +185,11 @@ export const ReadOnlyField = ({
 }: ReadOnlyFieldProps) => {
   return (
     <div>
-      <span id={id} className="block text-sm font-medium text-neutral-700">
+      <span id={id} className="block text-sm font-medium text-neutral-700 dark:text-neutral-200">
         {label}
       </span>
       <span className={readOnlyValueVariants({ size, mono, bordered })}>{value}</span>
-      {hint && <p className="mt-1 text-[11px] text-neutral-400">{hint}</p>}
+      {hint && <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">{hint}</p>}
     </div>
   );
 };

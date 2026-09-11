@@ -27,14 +27,14 @@ export const DataTablePagination = ({
         aria-label="Previous page"
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
-        className="rounded-md border border-neutral-200 px-2 py-1 text-neutral-600 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:text-neutral-300"
+        className="rounded-md border border-neutral-200 px-2 py-1 text-neutral-600 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:text-neutral-300 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:disabled:text-neutral-600"
       >
         ‹
       </button>
 
       {window.map((entry, index) =>
         entry === "ellipsis" ? (
-          <span key={`gap-${index}`} className="px-1.5 text-neutral-400">
+          <span key={`gap-${index}`} className="px-1.5 text-neutral-400 dark:text-neutral-500">
             …
           </span>
         ) : (
@@ -47,7 +47,7 @@ export const DataTablePagination = ({
               "min-w-8 rounded-md border px-2 py-1",
               entry === page
                 ? "border-primary-600 bg-primary-600 text-white"
-                : "border-neutral-200 text-neutral-600 hover:bg-neutral-50",
+                : "border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800",
             )}
           >
             {entry}
@@ -60,7 +60,7 @@ export const DataTablePagination = ({
         aria-label="Next page"
         onClick={() => onPageChange(page + 1)}
         disabled={page >= pageCount}
-        className="rounded-md border border-neutral-200 px-2 py-1 text-neutral-600 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:text-neutral-300"
+        className="rounded-md border border-neutral-200 px-2 py-1 text-neutral-600 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:text-neutral-300 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:disabled:text-neutral-600"
       >
         ›
       </button>

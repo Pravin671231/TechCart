@@ -34,9 +34,9 @@ export const SpecificationGroupCard = ({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-neutral-200">
-      <div className="flex items-center justify-between gap-2 border-b border-neutral-200 bg-neutral-50 px-3 py-2">
-        <label className="flex items-center gap-2 text-sm font-medium text-neutral-900">
+    <div className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-700">
+      <div className="flex items-center justify-between gap-2 border-b border-neutral-200 bg-neutral-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-800">
+        <label className="flex items-center gap-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">
           Group:
           <input
             type="text"
@@ -46,21 +46,21 @@ export const SpecificationGroupCard = ({
               const next = event.target.value.trim();
               if (next && next !== group.groupName) onRenameGroup(next);
             }}
-            className="rounded-md border border-neutral-300 px-2 py-1 text-sm"
+            className="rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
           />
         </label>
         <button
           type="button"
           onClick={onDeleteGroup}
-          className="text-xs text-red-600 hover:underline"
+          className="text-xs text-red-600 hover:underline dark:text-red-400"
         >
           Delete group
         </button>
       </div>
 
       <Table minWidthClassName="min-w-[720px]" bordered={false}>
-        <thead className="text-left text-xs text-neutral-500">
-          <tr className="border-b border-neutral-200">
+        <thead className="text-left text-xs text-neutral-500 dark:text-neutral-400">
+          <tr className="border-b border-neutral-200 dark:border-neutral-700">
             <th className="px-3 py-2 font-medium">Order</th>
             <th className="px-3 py-2 font-medium">Field name</th>
             <th className="px-3 py-2 font-medium">Type</th>
@@ -71,10 +71,10 @@ export const SpecificationGroupCard = ({
             <th className="px-3 py-2 font-medium"></th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-100">
+        <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
           {group.specifications.map((field, index) => (
             <tr key={field.name + index}>
-              <td className="px-3 py-2 whitespace-nowrap text-neutral-400">
+              <td className="px-3 py-2 whitespace-nowrap text-neutral-400 dark:text-neutral-500">
                 <button
                   type="button"
                   onClick={() => onMoveField(index, -1)}
@@ -100,7 +100,7 @@ export const SpecificationGroupCard = ({
                   value={field.name}
                   aria-label="Field name"
                   onChange={(event) => updateField(index, { name: event.target.value })}
-                  className="w-32 rounded-md border border-neutral-300 px-2 py-1"
+                  className="w-32 rounded-md border border-neutral-300 px-2 py-1 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
                 />
               </td>
               <td className="px-3 py-2">
@@ -110,7 +110,7 @@ export const SpecificationGroupCard = ({
                   onChange={(event) =>
                     updateField(index, { type: event.target.value as SpecificationFieldType })
                   }
-                  className="rounded-md border border-neutral-300 px-2 py-1"
+                  className="rounded-md border border-neutral-300 px-2 py-1 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
                 >
                   {FIELD_TYPES.map((type) => (
                     <option key={type} value={type}>
@@ -127,7 +127,7 @@ export const SpecificationGroupCard = ({
                   onChange={(event) =>
                     updateField(index, { unit: event.target.value || undefined })
                   }
-                  className="w-16 rounded-md border border-neutral-300 px-2 py-1"
+                  className="w-16 rounded-md border border-neutral-300 px-2 py-1 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
                 />
               </td>
               <td className="px-3 py-2">
@@ -136,7 +136,7 @@ export const SpecificationGroupCard = ({
                     {(field.options ?? []).map((option, optionIndex) => (
                       <span
                         key={option}
-                        className="inline-flex items-center gap-1 rounded-md bg-neutral-100 px-2 py-1 text-xs"
+                        className="inline-flex items-center gap-1 rounded-md bg-neutral-100 px-2 py-1 text-xs dark:bg-neutral-800 dark:text-neutral-200"
                       >
                         {option}
                         <button
@@ -147,7 +147,7 @@ export const SpecificationGroupCard = ({
 
                             updateField(index, { options });
                           }}
-                          className="text-neutral-500 hover:text-red-600"
+                          className="text-neutral-500 hover:text-red-600 dark:text-neutral-400 dark:hover:text-red-400"
                           aria-label={`Remove ${option}`}
                         >
                           ×
@@ -166,13 +166,13 @@ export const SpecificationGroupCard = ({
                           options: [...(field.options ?? []), value],
                         });
                       }}
-                      className="rounded-md border border-neutral-300 px-2 py-1 text-xs hover:bg-neutral-50"
+                      className="rounded-md border border-neutral-300 px-2 py-1 text-xs hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-800"
                     >
                       +
                     </button>
                   </div>
                 ) : (
-                  <span className="text-neutral-400">—</span>
+                  <span className="text-neutral-400 dark:text-neutral-500">—</span>
                 )}
               </td>
               <td className="px-3 py-2">
@@ -199,7 +199,7 @@ export const SpecificationGroupCard = ({
                 <button
                   type="button"
                   onClick={() => onDeleteField(index)}
-                  className="text-xs text-red-600 hover:underline"
+                  className="text-xs text-red-600 hover:underline dark:text-red-400"
                 >
                   Delete
                 </button>
@@ -211,7 +211,7 @@ export const SpecificationGroupCard = ({
       <button
         type="button"
         onClick={onAddField}
-        className="w-full border-t border-neutral-100 px-3 py-2 text-left text-xs font-medium text-primary-600 hover:bg-primary-50"
+        className="w-full border-t border-neutral-100 px-3 py-2 text-left text-xs font-medium text-primary-600 hover:bg-primary-50 dark:border-neutral-800 dark:text-primary-400 dark:hover:bg-primary-900/30"
       >
         + Add field
       </button>

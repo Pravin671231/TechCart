@@ -88,13 +88,17 @@ export const ProductSpecificationsFields = ({
 
   if (!categoryId) {
     return (
-      <p className="text-sm text-neutral-400">Choose a category to see its specification fields.</p>
+      <p className="text-sm text-neutral-400 dark:text-neutral-500">
+        Choose a category to see its specification fields.
+      </p>
     );
   }
   if (isLoading) return <LoadingState spaced={false} />;
   if (!data || data.specificationGroups.length === 0) {
     return (
-      <p className="text-sm text-neutral-400">This category defines no specification fields.</p>
+      <p className="text-sm text-neutral-400 dark:text-neutral-500">
+        This category defines no specification fields.
+      </p>
     );
   }
 
@@ -102,7 +106,9 @@ export const ProductSpecificationsFields = ({
     <div className="space-y-4">
       {data.specificationGroups.map((group) => (
         <div key={group.groupName}>
-          <p className="mb-2 text-sm font-medium text-neutral-900">{group.groupName}</p>
+          <p className="mb-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+            {group.groupName}
+          </p>
           <div className="grid gap-3 sm:grid-cols-2">
             {group.specifications.map((field) => (
               <FieldInput

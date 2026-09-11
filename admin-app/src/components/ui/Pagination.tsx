@@ -45,7 +45,7 @@ export const Pagination = ({
         "mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between",
       )}
     >
-      <p className={cn("text-neutral-500")}>
+      <p className={cn("text-neutral-500 dark:text-neutral-400")}>
         Showing {(pagination.page - 1) * pagination.limit + 1}–
         {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
       </p>
@@ -57,14 +57,14 @@ export const Pagination = ({
             onClick={() => onPageChange(page - 1)}
             disabled={page <= 1}
             className={cn(
-              "rounded-md border border-neutral-200 px-3 py-1 text-neutral-500 disabled:cursor-not-allowed disabled:text-neutral-300",
+              "rounded-md border border-neutral-200 px-3 py-1 text-neutral-500 disabled:cursor-not-allowed disabled:text-neutral-300 dark:border-neutral-700 dark:text-neutral-400 dark:disabled:text-neutral-600",
             )}
           >
             ‹ Prev
           </button>
           {pageNumbers.map((entry, index) =>
             entry === "ellipsis" ? (
-              <span key={`ellipsis-${index}`} className="px-2 text-neutral-400">
+              <span key={`ellipsis-${index}`} className="px-2 text-neutral-400 dark:text-neutral-500">
                 …
               </span>
             ) : (
@@ -77,7 +77,7 @@ export const Pagination = ({
                   "min-w-8 rounded-md border px-2 py-1",
                   entry === page
                     ? "border-primary-600 bg-primary-600 text-white"
-                    : "border-neutral-200 text-neutral-600 hover:bg-neutral-50",
+                    : "border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800",
                 )}
               >
                 {entry}
@@ -89,7 +89,7 @@ export const Pagination = ({
             onClick={() => onPageChange(page + 1)}
             disabled={!pagination.hasNextPage}
             className={cn(
-              "rounded-md border border-neutral-300 px-3 py-1 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:text-neutral-300",
+              "rounded-md border border-neutral-300 px-3 py-1 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:text-neutral-300 dark:border-neutral-700 dark:hover:bg-neutral-800 dark:disabled:text-neutral-600",
             )}
           >
             Next ›
@@ -98,13 +98,13 @@ export const Pagination = ({
       )}
 
       {onPageSizeChange && (
-        <label className={cn("flex items-center gap-1.5 text-neutral-500")}>
+        <label className={cn("flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400")}>
           <span className="sr-only">Rows per page</span>
           <select
             value={pageSize ?? pagination.limit}
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
             className={cn(
-              "rounded-md border border-neutral-200 bg-white px-2 py-1 text-neutral-700",
+              "rounded-md border border-neutral-200 bg-white px-2 py-1 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200",
             )}
           >
             {pageSizeOptions.map((size) => (

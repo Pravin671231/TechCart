@@ -24,7 +24,7 @@ export const AppShell = () => {
 
   return (
     <div className="flex h-screen flex-col md:flex-row">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-4 md:hidden">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-4 md:hidden dark:border-neutral-800 dark:bg-neutral-900">
         <Header />
         <button
           type="button"
@@ -32,13 +32,13 @@ export const AppShell = () => {
           aria-expanded={mobileNavOpen}
           aria-controls="mobile-nav-drawer"
           onClick={() => setMobileNavOpen(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-md border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
         >
           <Menu className="h-5 w-5" aria-hidden="true" />
         </button>
       </header>
 
-      <aside className="hidden w-20 lg:w-50 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">
+      <aside className="hidden w-28 lg:w-64 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex dark:border-neutral-800 dark:bg-neutral-900">
         <Sidebar variant="rail" />
       </aside>
 
@@ -53,7 +53,7 @@ export const AppShell = () => {
           <aside
             id="mobile-nav-drawer"
             aria-label="Navigation"
-            className="relative flex h-full w-64 max-w-[80vw] flex-col bg-white shadow-xl"
+            className="relative flex h-full w-64 max-w-[80vw] flex-col bg-white shadow-xl dark:bg-neutral-900"
           >
             <Sidebar variant="drawer" onNavigate={() => setMobileNavOpen(false)} />
           </aside>

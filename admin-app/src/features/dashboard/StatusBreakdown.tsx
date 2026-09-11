@@ -28,22 +28,27 @@ const FILL_CLASS: Record<BreakdownTone, string> = {
 
 export const StatusBreakdown = ({ title, total, segments }: StatusBreakdownProps) => {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
       <CardHeading>{title}</CardHeading>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {segments.map((segment) => {
           const percent = total > 0 ? Math.round((segment.value / total) * 100) : 0;
           return (
-            <div key={segment.label} className="rounded-lg border border-neutral-200 p-3">
-              <p className="text-[11px] text-neutral-500">{segment.label}</p>
-              <p className="text-lg font-bold text-neutral-900">{segment.value}</p>
-              <div className="mt-1.5 h-1.5 w-full rounded-full bg-neutral-100">
+            <div
+              key={segment.label}
+              className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800"
+            >
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{segment.label}</p>
+              <p className="text-lg font-bold text-neutral-900 dark:text-neutral-100">
+                {segment.value}
+              </p>
+              <div className="mt-1.5 h-1.5 w-full rounded-full bg-neutral-100 dark:bg-neutral-800">
                 <div
                   className={cn("h-1.5 rounded-full", FILL_CLASS[segment.tone])}
                   style={{ width: `${percent}%` }}
                 />
               </div>
-              <p className="mt-1 text-[11px] text-neutral-500">{percent}%</p>
+              <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">{percent}%</p>
             </div>
           );
         })}

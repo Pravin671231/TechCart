@@ -56,12 +56,12 @@ export const ProductDetailPage = () => {
         />
         <div className="flex items-center gap-2 text-sm">
           <label className="flex items-center gap-2">
-            <span className="text-neutral-500">Change status</span>
+            <span className="text-neutral-500 dark:text-neutral-400">Change status</span>
             <select
               value={product.status}
               disabled={isChangingStatus}
               onChange={(event) => void handleStatusChange(event.target.value as ProductStatus)}
-              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 font-medium text-neutral-600"
+              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 font-medium text-neutral-600 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-300"
             >
               <option value="draft">Draft</option>
               <option value="published">Published</option>
@@ -82,38 +82,52 @@ export const ProductDetailPage = () => {
         <CardHeading>Details</CardHeading>
         <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <div className="flex gap-2">
-            <dt className="w-36 shrink-0 text-neutral-500">Name</dt>
-            <dd className="text-neutral-900">{product.name}</dd>
+            <dt className="w-36 shrink-0 text-neutral-500 dark:text-neutral-400">Name</dt>
+            <dd className="text-neutral-900 dark:text-neutral-100">{product.name}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="w-36 shrink-0 text-neutral-500">Slug</dt>
-            <dd className="font-mono text-xs text-neutral-800">{product.slug}</dd>
+            <dt className="w-36 shrink-0 text-neutral-500 dark:text-neutral-400">Slug</dt>
+            <dd className="font-mono text-xs text-neutral-800 dark:text-neutral-200">
+              {product.slug}
+            </dd>
           </div>
           <div className="flex gap-2">
-            <dt className="w-36 shrink-0 text-neutral-500">Brand</dt>
-            <dd className="text-neutral-900">{brandName}</dd>
+            <dt className="w-36 shrink-0 text-neutral-500 dark:text-neutral-400">Brand</dt>
+            <dd className="text-neutral-900 dark:text-neutral-100">{brandName}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="w-36 shrink-0 text-neutral-500">Category</dt>
-            <dd className="text-neutral-900">{categoryLabel}</dd>
+            <dt className="w-36 shrink-0 text-neutral-500 dark:text-neutral-400">Category</dt>
+            <dd className="text-neutral-900 dark:text-neutral-100">{categoryLabel}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="w-36 shrink-0 text-neutral-500">Featured</dt>
-            <dd className="text-neutral-900">{product.isFeatured ? "Yes" : "No"}</dd>
+            <dt className="w-36 shrink-0 text-neutral-500 dark:text-neutral-400">Featured</dt>
+            <dd className="text-neutral-900 dark:text-neutral-100">
+              {product.isFeatured ? "Yes" : "No"}
+            </dd>
           </div>
           <div className="flex gap-2">
-            <dt className="w-36 shrink-0 text-neutral-500">Meta title</dt>
-            <dd className={product.metaTitle ? "text-neutral-900" : "text-neutral-400"}>
+            <dt className="w-36 shrink-0 text-neutral-500 dark:text-neutral-400">Meta title</dt>
+            <dd
+              className={
+                product.metaTitle
+                  ? "text-neutral-900 dark:text-neutral-100"
+                  : "text-neutral-400 dark:text-neutral-500"
+              }
+            >
               {product.metaTitle ?? "— falls back to name"}
             </dd>
           </div>
           <div className="flex gap-2">
-            <dt className="w-36 shrink-0 text-neutral-500">Created by</dt>
-            <dd className="font-mono text-xs text-neutral-400">{product.createdBy ?? "null"}</dd>
+            <dt className="w-36 shrink-0 text-neutral-500 dark:text-neutral-400">Created by</dt>
+            <dd className="font-mono text-xs text-neutral-400 dark:text-neutral-500">
+              {product.createdBy ?? "null"}
+            </dd>
           </div>
           <div className="flex gap-2">
-            <dt className="w-36 shrink-0 text-neutral-500">Updated by</dt>
-            <dd className="font-mono text-xs text-neutral-400">{product.updatedBy ?? "null"}</dd>
+            <dt className="w-36 shrink-0 text-neutral-500 dark:text-neutral-400">Updated by</dt>
+            <dd className="font-mono text-xs text-neutral-400 dark:text-neutral-500">
+              {product.updatedBy ?? "null"}
+            </dd>
           </div>
         </dl>
       </Card>
@@ -124,15 +138,19 @@ export const ProductDetailPage = () => {
           <div className="grid gap-4 sm:grid-cols-3">
             {product.specifications.map((group) => (
               <div key={group.groupName}>
-                <p className="mb-1 text-sm font-medium text-neutral-900">{group.groupName}</p>
-                <dl className="text-sm text-neutral-600">
+                <p className="mb-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                  {group.groupName}
+                </p>
+                <dl className="text-sm text-neutral-600 dark:text-neutral-300">
                   {group.values.map((value) => (
                     <div
                       key={value.name}
-                      className="flex justify-between border-b border-neutral-100 py-1"
+                      className="flex justify-between border-b border-neutral-100 py-1 dark:border-neutral-800"
                     >
                       <dt>{value.name}</dt>
-                      <dd className="text-neutral-800">{String(value.value)}</dd>
+                      <dd className="text-neutral-800 dark:text-neutral-200">
+                        {String(value.value)}
+                      </dd>
                     </div>
                   ))}
                 </dl>
@@ -147,21 +165,36 @@ export const ProductDetailPage = () => {
           <CardHeading>Variants</CardHeading>
           <Table minWidthClassName="min-w-[700px]">
             <TableHeadRow variant="shaded">
-              <th className="px-3 py-2 font-medium text-neutral-500">SKU</th>
-              <th className="px-3 py-2 font-medium text-neutral-500">Attributes</th>
-              <th className="px-3 py-2 text-right font-medium text-neutral-500">MRP</th>
-              <th className="px-3 py-2 text-right font-medium text-neutral-500">Disc.</th>
-              <th className="px-3 py-2 text-right font-medium text-neutral-500">Selling</th>
-              <th className="px-3 py-2 font-medium text-neutral-500">Active</th>
+              <th className="px-3 py-2 font-medium text-neutral-500 dark:text-neutral-400">SKU</th>
+              <th className="px-3 py-2 font-medium text-neutral-500 dark:text-neutral-400">
+                Attributes
+              </th>
+              <th className="px-3 py-2 text-right font-medium text-neutral-500 dark:text-neutral-400">
+                MRP
+              </th>
+              <th className="px-3 py-2 text-right font-medium text-neutral-500 dark:text-neutral-400">
+                Disc.
+              </th>
+              <th className="px-3 py-2 text-right font-medium text-neutral-500 dark:text-neutral-400">
+                Selling
+              </th>
+              <th className="px-3 py-2 font-medium text-neutral-500 dark:text-neutral-400">
+                Active
+              </th>
             </TableHeadRow>
-            <tbody className="divide-y divide-neutral-100">
+            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {product.variants.map((variant) => (
-                <tr key={variant._id} className={variant.active ? undefined : "text-neutral-400"}>
-                  <td className="px-3 py-2 font-mono text-xs text-neutral-500">{variant.sku}</td>
+                <tr
+                  key={variant._id}
+                  className={variant.active ? undefined : "text-neutral-400 dark:text-neutral-500"}
+                >
+                  <td className="px-3 py-2 font-mono text-xs text-neutral-500 dark:text-neutral-400">
+                    {variant.sku}
+                  </td>
                   <td className="px-3 py-2">{formatAttributes(variant.attributes)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{formatPrice(variant.mrp)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{variant.discount}%</td>
-                  <td className="px-3 py-2 text-right font-medium tabular-nums text-neutral-900">
+                  <td className="px-3 py-2 text-right font-medium tabular-nums text-neutral-900 dark:text-neutral-100">
                     {formatPrice(variant.sellingPrice)}
                   </td>
                   <td className="px-3 py-2">
@@ -173,7 +206,7 @@ export const ProductDetailPage = () => {
               ))}
             </tbody>
           </Table>
-          <p className="mt-2 text-[11px] text-neutral-400">
+          <p className="mt-2 text-[11px] text-neutral-400 dark:text-neutral-500">
             Deactivated variants stay embedded on the document — never hard-removed.
           </p>
         </Card>

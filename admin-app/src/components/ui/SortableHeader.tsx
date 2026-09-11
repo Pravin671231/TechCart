@@ -27,11 +27,16 @@ export const SortableHeader = <TSort extends string>({
   }
 
   return (
-    <th className={cn("px-3 py-2 font-medium text-neutral-500", align === "right" && "text-right")}>
+    <th
+      className={cn(
+        "px-3 py-2 font-medium text-neutral-500 dark:text-neutral-400",
+        align === "right" && "text-right",
+      )}
+    >
       <button type="button" onClick={() => onSortChange(nextSort())}
         className={cn(
-          "inline-flex items-center gap-1 hover:text-neutral-700",
-          isActive && "text-neutral-900",
+          "inline-flex items-center gap-1 hover:text-neutral-700 dark:hover:text-neutral-200",
+          isActive && "text-neutral-900 dark:text-neutral-100",
         )}
       >
         {label}
