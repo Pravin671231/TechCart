@@ -109,13 +109,6 @@ describe("Order history", () => {
     vi.unstubAllEnvs();
   });
 
-  it("redirects an unauthenticated visitor to sign-in with a redirect back", async () => {
-    await renderHistory();
-    await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/sign-in?redirect=/orders");
-    });
-  });
-
   it("shows an empty state with no orders", async () => {
     signedIn();
     server.use(http.get(`${API_URL}/api/orders`, () => HttpResponse.json(listBody([]))));

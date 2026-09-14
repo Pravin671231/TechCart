@@ -1,38 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useGetSessionQuery } from "@/features/authentication/auth/api";
 import { useGetAccountDashboardQuery } from "@/features/accountHome/api";
 import { AccountSummary } from "@/features/accountHome/AccountSummary";
+import { AccountCtaBanner } from "@/features/accountHome/AccountCtaBanner";
 import { RecentOrdersList } from "@/features/accountHome/RecentOrdersList";
-import { useGetProfileQuery } from "./api";
-import { ProfileForm } from "./ProfileForm";
 
+// feature/buyer-app-account-sidebar-shell — the "Overview" sidebar panel.
+// AccountShell already guarantees an authenticated session before this
+// renders, so no session guard or `skip` here (previously duplicated in
+// every account-area content component). Edit-profile and cross-navigation
+// links moved out to their own sidebar destinations (ProfileContent, the
+// Orders/Addresses nav items) — see ProfileContent.tsx.
 export function AccountContent() {
-  const router = useRouter();
-  const { data: session } = useGetSessionQuery();
-
-  useEffect(() => {
-    if (session === null) {
-      router.push("/sign-in");
-    }
-  }, [session, router]);
-
-  const { data: profile } = useGetProfileQuery(undefined, { skip: !session });
-  // Issue #175/M7.5 — the account-home summary (profile + 5 recent orders +
-  // lifetime stats) composed above the existing edit-profile section, same
-  // route/session-guard as before, not a new page.
-  const { data: dashboard } = useGetAccountDashboardQuery(undefined, { skip: !session });
-
-  if (!session) {
-    return null;
-  }
+  const { data: dashboard } = useGetAccountDashboardQuery();
 
   return (
     <div className="px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-2xl space-y-8">
+      <div className="mx-auto w-full max-w-2xl space-y-6">
         <h2 className="text-center font-display text-3xl font-bold tracking-tight text-neutral-900">
           My Account
         </h2>
@@ -40,6 +24,12 @@ export function AccountContent() {
         {dashboard ? (
           <>
             <AccountSummary dashboard={dashboard} />
+            <AccountCtaBanner
+              title="Track your orders"
+              subtitle="See status, invoices and delivery updates."
+              ctaLabel="View all orders"
+              href="/orders"
+            />
             <div>
               <h3 className="mb-3 text-lg font-semibold text-neutral-900">Recent orders</h3>
               <RecentOrdersList orders={dashboard.recentOrders} />
@@ -48,30 +38,6 @@ export function AccountContent() {
         ) : (
           <p className="text-center text-sm text-neutral-500">Loading...</p>
         )}
-
-        <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-lg font-semibold text-neutral-900">Edit profile</h3>
-          <p className="mb-4 text-sm text-neutral-600">Update your name and phone number</p>
-          <div className="flex justify-center">
-            {profile ? (
-              <ProfileForm profile={profile} />
-            ) : (
-              <p className="text-sm text-neutral-500">Loading...</p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col items-center gap-2 text-center">
-          <Link
-            href="/account/addresses"
-            className="text-sm font-medium text-primary-700 hover:underline"
-          >
-            Manage saved addresses
-          </Link>
-          <Link href="/orders" className="text-sm font-medium text-primary-700 hover:underline">
-            View your orders
-          </Link>
-        </div>
       </div>
     </div>
   );

@@ -1,37 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { PageContainer } from "@/components/layout/PageContainer";
+import { useState } from "react";
 import { NotFoundState } from "@/components/ui/NotFoundState";
 import { ProductListError } from "@/features/products/ProductListError";
 import { formatPrice } from "@/features/products/money";
-import { useGetSessionQuery } from "@/features/authentication/auth/api";
 import { useCancelOrderMutation, useGetOrderQuery } from "./api";
 import { OrderStatusBadge } from "./OrderStatusBadge";
 import { OrderStatusTimeline } from "./OrderStatusTimeline";
 import { CANCELLABLE_STATUSES } from "./types";
 import type { NormalizedApiError } from "@/store/api";
 
+// feature/buyer-app-account-sidebar-shell — session guard moved to
+// AccountShell; PageContainer's own <main> dropped for a plain div (see
+// AddressListContent.tsx's identical note).
 export function OrderDetailContent({ id }: { id: string }) {
-  const router = useRouter();
-  const { data: session } = useGetSessionQuery();
-
-  useEffect(() => {
-    if (session === null) {
-      router.push(`/sign-in?redirect=/orders/${id}`);
-    }
-  }, [session, router, id]);
-
   const {
     data: order,
     isLoading,
     isError,
     error,
     refetch,
-  } = useGetOrderQuery(id, {
-    skip: !session,
-  });
+  } = useGetOrderQuery(id);
   const [cancelOrder, { isLoading: isCancelling }] = useCancelOrderMutation();
   const [cancelError, setCancelError] = useState<string | null>(null);
 
@@ -45,34 +34,32 @@ export function OrderDetailContent({ id }: { id: string }) {
     }
   }
 
-  if (session === null) return null;
-
   if (isError) {
     const code = (error as NormalizedApiError | undefined)?.code;
     const isNotFound = code === "ORDER_NOT_FOUND" || code === "INVALID_ID";
     return (
-      <PageContainer>
+      <div className="mx-auto w-full max-w-7xl px-4 py-6">
         {isNotFound ? (
           <NotFoundState message="This order doesn't exist or isn't yours." />
         ) : (
           <ProductListError onRetry={refetch} message="Something went wrong loading this order." />
         )}
-      </PageContainer>
+      </div>
     );
   }
 
-  if (session === undefined || isLoading || !order) {
+  if (isLoading || !order) {
     return (
-      <PageContainer>
+      <div className="mx-auto w-full max-w-7xl px-4 py-6">
         <p className="text-sm text-neutral-500">Loading order…</p>
-      </PageContainer>
+      </div>
     );
   }
 
   const canCancel = CANCELLABLE_STATUSES.includes(order.status);
 
   return (
-    <PageContainer>
+    <div className="mx-auto w-full max-w-7xl px-4 py-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
@@ -168,6 +155,6 @@ export function OrderDetailContent({ id }: { id: string }) {
           )}
         </div>
       </div>
-    </PageContainer>
+    </div>
   );
 }

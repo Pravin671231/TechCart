@@ -1,3 +1,5 @@
+import { ShoppingBag, Wallet } from "lucide-react";
+import { SummaryCard } from "@/components/ui/SummaryCard";
 import { formatPrice } from "@/features/products/money";
 import type { AccountDashboard } from "./types";
 
@@ -7,17 +9,19 @@ export function AccountSummary({ dashboard }: { dashboard: AccountDashboard }) {
       <h3 className="text-lg font-semibold text-neutral-900">{dashboard.profile.name}</h3>
       <p className="text-sm text-neutral-600">{dashboard.profile.email}</p>
 
-      <div className="mt-4 grid grid-cols-2 gap-4 border-t border-neutral-200 pt-4">
-        <div>
-          <p className="text-xs text-neutral-500">Lifetime orders</p>
-          <p className="text-xl font-semibold text-neutral-900">{dashboard.lifetimeOrderCount}</p>
-        </div>
-        <div>
-          <p className="text-xs text-neutral-500">Lifetime spent</p>
-          <p className="text-xl font-semibold text-neutral-900">
-            {formatPrice(dashboard.lifetimeAmountSpent)}
-          </p>
-        </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 border-t border-neutral-200 pt-4">
+        <SummaryCard
+          label="Lifetime orders"
+          value={String(dashboard.lifetimeOrderCount)}
+          icon={ShoppingBag}
+          accent="primary"
+        />
+        <SummaryCard
+          label="Lifetime spent"
+          value={formatPrice(dashboard.lifetimeAmountSpent)}
+          icon={Wallet}
+          accent="accent"
+        />
       </div>
     </div>
   );

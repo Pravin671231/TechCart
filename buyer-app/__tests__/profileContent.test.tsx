@@ -6,77 +6,30 @@ import { server } from "./mocks/server";
 
 const API_URL = "http://localhost:4000";
 
-const mockPush = vi.fn();
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
-}));
-
-describe("Account profile", () => {
+describe("Profile editing", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.stubEnv("NEXT_PUBLIC_API_URL", API_URL);
     vi.stubEnv("NEXT_PUBLIC_GOOGLE_CLIENT_ID", "test-client-id.apps.googleusercontent.com");
-    mockPush.mockClear();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  function mockSignedInSession() {
-    server.use(
-      http.get("*/api/auth/get-session", () => {
-        return HttpResponse.json({
-          success: true,
-          data: {
-            user: { id: "user1", name: "Jane Buyer", email: "jane@example.com", role: "buyer" },
-          },
-        });
-      }),
-      // Issue #175/M7.5 — AccountContent now also fetches the account
-      // dashboard whenever a session exists; every pre-existing test that
-      // establishes a session needs a matching default so it doesn't hit
-      // MSW's onUnhandledRequest: "error".
-      http.get("*/api/account/dashboard", () => {
-        return HttpResponse.json({
-          success: true,
-          data: {
-            profile: { _id: "user1", name: "Jane Buyer", email: "jane@example.com" },
-            recentOrders: [],
-            lifetimeOrderCount: 0,
-            lifetimeAmountSpent: 0,
-          },
-        });
-      }),
+  async function renderProfileContent() {
+    const { makeStore } = await import("@/store/store");
+    const { ProfileContent } = await import("@/features/authentication/account/ProfileContent");
+    const store = makeStore();
+
+    return render(
+      <Provider store={store}>
+        <ProfileContent />
+      </Provider>,
     );
   }
 
-  it("redirects to /sign-in when there is no session", async () => {
-    server.use(
-      http.get("*/api/auth/get-session", () => {
-        return HttpResponse.json({ success: true, data: null });
-      }),
-    );
-
-    const { makeStore } = await import("@/store/store");
-    const { AccountContent } = await import("@/features/authentication/account/AccountContent");
-    const store = makeStore();
-
-    render(
-      <Provider store={store}>
-        <AccountContent />
-      </Provider>,
-    );
-
-    await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/sign-in");
-    });
-  });
-
   it("shows the signed-in buyer's profile", async () => {
-    mockSignedInSession();
     server.use(
       http.get("*/api/account/profile", () => {
         return HttpResponse.json({
@@ -91,15 +44,7 @@ describe("Account profile", () => {
       }),
     );
 
-    const { makeStore } = await import("@/store/store");
-    const { AccountContent } = await import("@/features/authentication/account/AccountContent");
-    const store = makeStore();
-
-    render(
-      <Provider store={store}>
-        <AccountContent />
-      </Provider>,
-    );
+    await renderProfileContent();
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("Jane Buyer")).toBeInTheDocument();
@@ -109,7 +54,6 @@ describe("Account profile", () => {
   });
 
   it("updates the name and shows a confirmation, re-rendering from the mutation response", async () => {
-    mockSignedInSession();
     server.use(
       http.get("*/api/account/profile", () => {
         return HttpResponse.json({
@@ -125,15 +69,7 @@ describe("Account profile", () => {
       }),
     );
 
-    const { makeStore } = await import("@/store/store");
-    const { AccountContent } = await import("@/features/authentication/account/AccountContent");
-    const store = makeStore();
-
-    render(
-      <Provider store={store}>
-        <AccountContent />
-      </Provider>,
-    );
+    await renderProfileContent();
 
     const nameInput = await screen.findByDisplayValue("Jane Buyer");
     fireEvent.change(nameInput, { target: { value: "Jane B. Updated" } });
@@ -146,7 +82,6 @@ describe("Account profile", () => {
   });
 
   it("shows a validation error and no confirmation when the update is rejected", async () => {
-    mockSignedInSession();
     server.use(
       http.get("*/api/account/profile", () => {
         return HttpResponse.json({
@@ -166,15 +101,7 @@ describe("Account profile", () => {
       }),
     );
 
-    const { makeStore } = await import("@/store/store");
-    const { AccountContent } = await import("@/features/authentication/account/AccountContent");
-    const store = makeStore();
-
-    render(
-      <Provider store={store}>
-        <AccountContent />
-      </Provider>,
-    );
+    await renderProfileContent();
 
     const nameInput = await screen.findByDisplayValue("Jane Buyer");
     fireEvent.change(nameInput, { target: { value: "" } });
