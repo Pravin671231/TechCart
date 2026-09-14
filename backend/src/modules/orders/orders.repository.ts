@@ -1,5 +1,6 @@
-import mongoose, { type Types } from "mongoose";
+import type { Types } from "mongoose";
 import { escapeRegExp } from "@/utils/text";
+import { User } from "@/modules/user/user.model";
 import {
   Order,
   ORDER_STATUSES,
@@ -91,23 +92,13 @@ export async function findStalePendingPayment(olderThan: Date): Promise<OrderRec
   return Order.find({ status: "pending_payment", createdAt: { $lt: olderThan } }).lean();
 }
 
-// Raw MongoDB driver against the `users` collection, not a new Mongoose
-// model — the established convention this collection already has across
-// the authentication modules (adminUsers.repository.ts's own
-// usersCollection()), avoiding a competing schema against the same
-// collection.
-type BuyerRecord = { _id: Types.ObjectId; name?: string; email: string };
-
-function usersCollection() {
-  return mongoose.connection.db!.collection<BuyerRecord>("users");
-}
-
 // FR-ORD-018 — the ordering buyer's identity, alongside the admin detail
-// view.
+// view. Issue #385 — reads the real User model instead of the raw driver,
+// now that one exists for this collection.
 export async function findBuyerIdentity(
   userId: Types.ObjectId,
 ): Promise<{ id: string; name: string; email: string } | null> {
-  const user = await usersCollection().findOne({ _id: userId });
+  const user = await User.findById(userId).lean();
   if (!user) return null;
   return { id: user._id.toString(), name: user.name ?? "", email: user.email };
 }
@@ -132,9 +123,10 @@ export async function listForAdmin(
 
   if (filter.search) {
     const escaped = escapeRegExp(filter.search);
-    const matchingBuyers = await usersCollection()
-      .find({ email: { $regex: escaped, $options: "i" } }, { projection: { _id: 1 } })
-      .toArray();
+    const matchingBuyers = await User.find(
+      { email: { $regex: escaped, $options: "i" } },
+      { _id: 1 },
+    ).lean();
     mongoFilter.$or = [
       { orderNumber: { $regex: escaped, $options: "i" } },
       { user: { $in: matchingBuyers.map((buyer) => buyer._id) } },

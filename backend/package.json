@@ -17,6 +17,7 @@
     "seed:load-test": "tsx src/scripts/seed/loadTest.ts",
     "search:ensure": "tsx src/scripts/searchIndexes/ensureSearchIndexes.ts",
     "search:verify": "tsx src/scripts/searchIndexes/verifySearchIndexes.ts",
+    "migrate:split-user-auth": "tsx src/scripts/migrations/splitUserAuth.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

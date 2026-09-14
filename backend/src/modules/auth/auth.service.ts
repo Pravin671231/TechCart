@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { Types } from "mongoose";
 import { env } from "@/config/env";
 import { sendOtpEmail, sendPasswordResetEmail } from "@/externalService/mailer";
-import { verifyGoogleIdToken } from "@/lib/googleAuth";
+import { verifyGoogleIdToken, type GoogleIdentity } from "@/lib/googleAuth";
 import { requestOtp, verifyOtp } from "@/lib/otp";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { consumeResetToken, recordResetToken } from "@/lib/passwordResetTokens";
@@ -15,7 +15,7 @@ import {
 } from "@/lib/session";
 import { AppError } from "@/utils/AppError";
 import * as authRepository from "./auth.repository";
-import type { UserRecord } from "./auth.repository";
+import type { UserDocument } from "./auth.repository";
 
 export interface SessionUser {
   id: string;
@@ -39,7 +39,7 @@ export interface SignInResult {
 const GOOGLE_ACCOUNT_IS_ADMIN_MESSAGE =
   "This email belongs to an admin account. Sign in from the admin console instead.";
 
-function toSessionUser(record: UserRecord): SessionUser {
+function toSessionUser(record: UserDocument): SessionUser {
   return {
     id: record._id.toString(),
     name: record.name,
@@ -49,10 +49,43 @@ function toSessionUser(record: UserRecord): SessionUser {
   };
 }
 
-async function findOrCreateBuyer(email: string, name: string): Promise<UserRecord> {
+// OTP path only (Issue #385 — Google sign-in now goes through
+// findOrCreateGoogleBuyer below, which also handles authProvider/googleId).
+async function findOrCreateBuyer(email: string, name: string): Promise<UserDocument> {
   const existing = await authRepository.findUserByEmail(email);
   if (existing) return existing;
-  return authRepository.createBuyer({ email, name });
+  const user = await authRepository.createBuyer({ email, name, isVerified: true });
+  await authRepository.createUserAuth(user._id, { authProvider: "local" });
+  return user;
+}
+
+// Google sign-in path (Issue #385). A brand-new account is created with
+// authProvider:"google" and isVerified from Google's own email_verified
+// claim; an already-existing buyer (e.g. originally created via OTP) has its
+// googleId backfilled on first Google sign-in, without touching its existing
+// authProvider.
+async function findOrCreateGoogleBuyer(identity: GoogleIdentity): Promise<UserDocument> {
+  const existing = await authRepository.findUserByEmail(identity.email);
+  if (!existing) {
+    const user = await authRepository.createBuyer({
+      email: identity.email,
+      name: identity.name,
+      isVerified: identity.emailVerified,
+    });
+    await authRepository.createUserAuth(user._id, {
+      authProvider: "google",
+      ...(identity.sub !== undefined ? { googleId: identity.sub } : {}),
+    });
+    return user;
+  }
+
+  if (identity.sub !== undefined) {
+    const auth = await authRepository.findUserAuthByUserId(existing._id);
+    if (auth && !auth.googleId) {
+      await authRepository.setGoogleId(existing._id, identity.sub);
+    }
+  }
+  return existing;
 }
 
 async function rejectIfNonBuyer(email: string): Promise<void> {
@@ -61,7 +94,7 @@ async function rejectIfNonBuyer(email: string): Promise<void> {
   }
 }
 
-async function issueBuyerSession(user: UserRecord, meta: SignInMeta): Promise<SignInResult> {
+async function issueBuyerSession(user: UserDocument, meta: SignInMeta): Promise<SignInResult> {
   await authRepository.touchLastSignIn(user._id);
   const issued = await issueSession({
     userId: user._id.toString(),
@@ -91,7 +124,7 @@ export async function signInWithGoogle(idToken: string, meta: SignInMeta): Promi
   }
   await rejectIfNonBuyer(identity.email);
 
-  const user = await findOrCreateBuyer(identity.email, identity.name);
+  const user = await findOrCreateGoogleBuyer(identity);
   return issueBuyerSession(user, meta);
 }
 
@@ -167,7 +200,7 @@ function rateLimited(): AppError {
   return new AppError(429, "RATE_LIMITED", "Too many attempts. Try again later.");
 }
 
-function assertActiveAdmin(user: UserRecord | null): asserts user is UserRecord {
+function assertActiveAdmin(user: UserDocument | null): asserts user is UserDocument {
   // A missing user / a buyer-role account at an OTP step means the challenge
   // cookie no longer maps to a valid pending admin sign-in — treat it the
   // same as a missing/expired cookie so admin-app's INVALID_TWO_FACTOR_COOKIE
@@ -206,13 +239,15 @@ export async function adminPasswordSignIn(
     throw new AppError(403, "ACCOUNT_DEACTIVATED", "This account has been deactivated.");
   }
 
+  const auth = user ? await authRepository.findUserAuthByUserId(user._id) : null;
+
   // Unknown email, wrong password, a buyer-role account, and an admin with no
   // password hash all collapse to one generic error (FR-AUTH-010).
   if (
     !user ||
     user.role === "buyer" ||
-    !user.passwordHash ||
-    !(await verifyPassword(password, user.passwordHash))
+    !auth?.passwordHash ||
+    !(await verifyPassword(password, auth.passwordHash))
   ) {
     throw new AppError(401, "INVALID_EMAIL_OR_PASSWORD", INVALID_CREDENTIALS_MESSAGE);
   }
@@ -286,7 +321,7 @@ function buildAdminResetUrl(token: string): string {
   return `${origin.replace(/\/+$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
 }
 
-async function issueAdminResetLink(user: UserRecord): Promise<void> {
+async function issueAdminResetLink(user: UserDocument): Promise<void> {
   const token = crypto.randomBytes(RESET_TOKEN_BYTES).toString("base64url");
   await recordResetToken(token, user._id.toString());
   await sendPasswordResetEmail(user.email, buildAdminResetUrl(token));

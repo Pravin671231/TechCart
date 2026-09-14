@@ -11,6 +11,10 @@ export interface GoogleIdentity {
   email: string;
   name: string;
   emailVerified: boolean;
+  // Google's stable per-account id (the ID token's `sub` claim) — Issue #385,
+  // stored as `userAuth.googleId` to link a buyer account back to its Google
+  // identity.
+  sub?: string;
 }
 
 export async function verifyGoogleIdToken(idToken: string): Promise<GoogleIdentity | null> {
@@ -22,6 +26,7 @@ export async function verifyGoogleIdToken(idToken: string): Promise<GoogleIdenti
       email: payload.email,
       name: payload.name ?? payload.email,
       emailVerified: payload.email_verified === true,
+      ...(payload.sub !== undefined ? { sub: payload.sub } : {}),
     };
   } catch {
     return null;
