@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { PageContainer } from "@/components/layout/PageContainer";
+import { useState } from "react";
 import { ProductListError } from "@/features/products/ProductListError";
-import { useGetSessionQuery } from "@/features/authentication/auth/api";
 import { useGetAddressesQuery } from "./api";
 import { AddressCard } from "./AddressCard";
 import { AddressesEmpty } from "./AddressesEmpty";
@@ -14,40 +11,29 @@ import type { Address } from "./types";
 
 type Mode = { type: "list" } | { type: "add" } | { type: "edit"; address: Address };
 
+// feature/buyer-app-account-sidebar-shell — session guard moved to
+// AccountShell (the (account) route group's layout); this component can now
+// assume an authenticated context, and PageContainer's own <main> is dropped
+// in favor of a plain div since AccountShell's content region already owns
+// that scrollable-pane role (matching CategoryContent's identical fix,
+// Issue #346).
 export function AddressListContent() {
-  const router = useRouter();
-  const { data: session } = useGetSessionQuery();
   const [mode, setMode] = useState<Mode>({ type: "list" });
 
-  // Same inverted guard as CartContent/AccountContent: no session sends the
-  // buyer to sign-in with a redirect back here.
-  useEffect(() => {
-    if (session === null) {
-      router.push("/sign-in?redirect=/account/addresses");
-    }
-  }, [session, router]);
-
-  const {
-    data: addresses,
-    isLoading,
-    isError,
-    refetch,
-  } = useGetAddressesQuery(undefined, {
-    skip: !session,
-  });
+  const { data: addresses, isLoading, isError, refetch } = useGetAddressesQuery();
 
   return (
-    <PageContainer>
+    <div className="mx-auto w-full max-w-7xl px-4 py-6">
       <h1 className="mb-6 text-2xl font-semibold tracking-tight text-neutral-900">
         Saved addresses
       </h1>
 
-      {session === null ? null : isError ? (
+      {isError ? (
         <ProductListError
           onRetry={refetch}
           message="Something went wrong loading your addresses."
         />
-      ) : session === undefined || isLoading || !addresses ? (
+      ) : isLoading || !addresses ? (
         <AddressesSkeleton />
       ) : mode.type === "add" ? (
         <AddressForm
@@ -80,6 +66,6 @@ export function AddressListContent() {
           </button>
         </div>
       )}
-    </PageContainer>
+    </div>
   );
 }

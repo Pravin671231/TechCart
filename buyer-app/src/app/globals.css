@@ -198,6 +198,25 @@
   }
 }
 
+/* Thin, brand-primary-colored scrollbar for the account-area sidebar
+ * (feature/buyer-app-account-sidebar-shell) — single-theme version of
+ * admin-app/src/index.css's .scrollbar-brand (buyer-app has no dark mode). */
+.scrollbar-brand {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary-400) transparent;
+}
+.scrollbar-brand::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-brand::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-brand::-webkit-scrollbar-thumb {
+  background-color: var(--color-primary-400);
+  border-radius: 9999px;
+}
+
 /* Two-handle range slider for the buyer filter rail (fix/buyer-app-ui-bug).
  * Native <input type="range"> pseudo-elements can't be Tailwind utilities. */
 .range-slider {

@@ -5,7 +5,9 @@ import type { OrderResponse } from "@/features/orders/types";
 // Issue #175/M7.5 — 5 most recent orders, each linking to the existing
 // order-detail route from M5 (OrderRow, reused verbatim) rather than a
 // duplicated summary view. A brand-new buyer with no orders yet gets a
-// distinct empty state, not a blank list.
+// distinct empty state, not a blank list. feature/buyer-app-account-sidebar-shell
+// wraps this in the same card framing as AccountSummary/AccountCtaBanner so
+// the Overview panel reads as one cohesive dashboard block.
 export function RecentOrdersList({ orders }: { orders: OrderResponse[] }) {
   if (orders.length === 0) {
     return (
@@ -22,14 +24,16 @@ export function RecentOrdersList({ orders }: { orders: OrderResponse[] }) {
   }
 
   return (
-    <div className="space-y-3">
-      {orders.map((order) => (
-        <OrderRow key={order.id} order={order} />
-      ))}
-      <div className="text-center">
-        <Link href="/orders" className="text-sm font-medium text-primary-700 hover:underline">
-          View all orders
-        </Link>
+    <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+      <div className="space-y-3">
+        {orders.map((order) => (
+          <OrderRow key={order.id} order={order} />
+        ))}
+        <div className="text-center">
+          <Link href="/orders" className="text-sm font-medium text-primary-700 hover:underline">
+            View all orders
+          </Link>
+        </div>
       </div>
     </div>
   );

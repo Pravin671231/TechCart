@@ -62,13 +62,6 @@ describe("Address book", () => {
     vi.unstubAllEnvs();
   });
 
-  it("redirects an unauthenticated visitor to sign-in with a redirect back", async () => {
-    await renderAddresses();
-    await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/sign-in?redirect=/account/addresses");
-    });
-  });
-
   it("shows an empty state with an add action", async () => {
     signedIn();
     server.use(

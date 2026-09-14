@@ -1,13 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { PageContainer } from "@/components/layout/PageContainer";
+import { useState } from "react";
 import { FetchingOverlay } from "@/components/ui/FetchingOverlay";
 import { ProductListError } from "@/features/products/ProductListError";
 import { Pagination } from "@/features/products/Pagination";
 import type { Pagination as PaginationData } from "@/store/api";
-import { useGetSessionQuery } from "@/features/authentication/auth/api";
 import { useGetOrdersQuery } from "./api";
 import { OrderRow } from "./OrderRow";
 import { OrdersEmpty } from "./OrdersEmpty";
@@ -22,30 +19,21 @@ function describeOrdersRange(pagination: PaginationData): string {
   return `Showing ${start}–${end} of ${pagination.total} orders`;
 }
 
+// feature/buyer-app-account-sidebar-shell — session guard moved to
+// AccountShell; PageContainer's own <main> dropped for a plain div (see
+// AddressListContent.tsx's identical note).
 export function OrderHistoryContent() {
-  const router = useRouter();
-  const { data: session } = useGetSessionQuery();
   const [page, setPage] = useState(1);
 
-  // Same inverted guard as CartContent/AddressListContent/CheckoutContent.
-  useEffect(() => {
-    if (session === null) {
-      router.push("/sign-in?redirect=/orders");
-    }
-  }, [session, router]);
-
-  const { data, isLoading, isFetching, isError, refetch } = useGetOrdersQuery(
-    { page },
-    { skip: !session },
-  );
+  const { data, isLoading, isFetching, isError, refetch } = useGetOrdersQuery({ page });
 
   return (
-    <PageContainer className="flex flex-col">
+    <div className="mx-auto flex w-full max-w-7xl flex-col px-4 py-6">
       <h1 className="mb-6 text-2xl font-semibold tracking-tight text-neutral-900">Your orders</h1>
 
-      {session === null ? null : isError ? (
+      {isError ? (
         <ProductListError onRetry={refetch} message="Something went wrong loading your orders." />
-      ) : session === undefined || isLoading || !data ? (
+      ) : isLoading || !data ? (
         <OrdersSkeleton />
       ) : data.items.length === 0 ? (
         <OrdersEmpty />
@@ -62,6 +50,6 @@ export function OrderHistoryContent() {
           )}
         </FetchingOverlay>
       )}
-    </PageContainer>
+    </div>
   );
 }
