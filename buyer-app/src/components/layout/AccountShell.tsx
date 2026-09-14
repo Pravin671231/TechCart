@@ -17,6 +17,7 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: session } = useGetSessionQuery();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
 
   useEffect(() => {
     if (session === null) {
@@ -24,9 +25,15 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
     }
   }, [session, router, pathname]);
 
-  useEffect(() => {
+  // Close the mobile drawer on route change — adjusted during render
+  // (React's documented pattern for deriving state from a prop change)
+  // rather than in an effect, since react-hooks/set-state-in-effect rejects
+  // the effect-based version. Same precedent as CheckoutContent's
+  // default-address selection.
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setMobileNavOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     if (!mobileNavOpen) return;
