@@ -92,6 +92,8 @@ Refresh of stale `admin-app` user-manual screenshots (docs-only, no issue/milest
 
 `buyer-app` account-area sidebar + main-section shell (no issue/milestone, merged PR #381): `/account`, `/account/addresses`, `/orders`, and `/orders/[id]` wrapped in a shared sidebar (Overview/Orders/Addresses/Profile) + main-section shell via a new `(account)` route group (URLs unchanged), centralizing the session guard previously duplicated across all four content components. A new `/account/profile` route holds the Edit Profile card, moved out of a now dashboard-style Overview panel (icon-chip `SummaryCard` stat tiles + a gradient `AccountCtaBanner`, mirroring `admin-app`'s own). A new `.scrollbar-brand` utility styles the sidebar and the `lg:`+ independently-scrolling main pane. No backend, contract, or SRS change. See `buyer-app/AGENTS.md`'s Account-area sidebar shell section for full detail.
 
+`buyer-app` sonner toast notifications (no issue/milestone, merged PR #383): a `<Toaster/>` (new `sonner` dependency), themed via CSS-variable overrides in `globals.css` to match the brand kit, replaces inline success/error text across cart, account/address/order actions, and OTP sign-in, and newly surfaces four previously silent failures (Google sign-in, sign-out, cart-line remove, address delete/set-default). New shared `src/lib/apiErrorToast.ts` fallback helper. `CartLineRow`'s unavailable-line notice and checkout's `DroppedItemsNotice` stay inline (persistent content, not transient feedback). No backend, contract, or SRS change. See `buyer-app/AGENTS.md` for full detail.
+
 ## Development process — read before starting any feature
 
 This repo is built strictly feature-by-feature against a versioned SRS, not from a single upfront spec:
