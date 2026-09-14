@@ -90,6 +90,8 @@ Admin sign-in page redesign + OTP session bounce-back fix (`admin-app`, no issue
 
 Refresh of stale `admin-app` user-manual screenshots (docs-only, no issue/milestone, merged PR #379): sign-in (PR #375), dashboard (PR #373), and sidebar (PR #377, dark mode) screenshots had never been re-shot after their own features shipped. Re-captured against the live deployment with a throwaway sign-in-and-screenshot script — no `capture.mjs` change needed. `buyer-app`'s own stale screens (PDP, category, home card layout) are a follow-up.
 
+`buyer-app` account-area sidebar + main-section shell (no issue/milestone, merged PR #381): `/account`, `/account/addresses`, `/orders`, and `/orders/[id]` wrapped in a shared sidebar (Overview/Orders/Addresses/Profile) + main-section shell via a new `(account)` route group (URLs unchanged), centralizing the session guard previously duplicated across all four content components. A new `/account/profile` route holds the Edit Profile card, moved out of a now dashboard-style Overview panel (icon-chip `SummaryCard` stat tiles + a gradient `AccountCtaBanner`, mirroring `admin-app`'s own). A new `.scrollbar-brand` utility styles the sidebar and the `lg:`+ independently-scrolling main pane. No backend, contract, or SRS change. See `buyer-app/AGENTS.md`'s Account-area sidebar shell section for full detail.
+
 ## Development process — read before starting any feature
 
 This repo is built strictly feature-by-feature against a versioned SRS, not from a single upfront spec:
