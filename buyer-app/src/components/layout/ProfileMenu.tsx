@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User } from "lucide-react";
+import { toast } from "sonner";
 import { useGetSessionQuery, useSignOutMutation } from "@/features/authentication/auth/api";
 import type { SessionUser } from "@/features/authentication/auth/types";
+import { showApiErrorToast } from "@/lib/apiErrorToast";
 
 function ProfileIcon() {
   return (
@@ -70,9 +72,12 @@ export function ProfileMenu() {
 
   const handleSignOut = async () => {
     setOpen(false);
-    await signOut().catch(() => {
-      // error is handled by the mutation
-    });
+    try {
+      await signOut().unwrap();
+      toast.success("Signed out");
+    } catch (err) {
+      showApiErrorToast(err, "Failed to sign out. Please try again.");
+    }
     router.push("/");
   };
 

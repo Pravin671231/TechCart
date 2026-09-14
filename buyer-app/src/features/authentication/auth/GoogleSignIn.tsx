@@ -2,6 +2,7 @@
 
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
+import { showApiErrorToast } from "@/lib/apiErrorToast";
 import { NEXT_PUBLIC_GOOGLE_CLIENT_ID } from "@/store/env";
 import { useGetSessionQuery, useOneTapSignInMutation } from "./api";
 
@@ -26,9 +27,9 @@ export function GoogleSignIn() {
     window.google.accounts.id.initialize({
       client_id: NEXT_PUBLIC_GOOGLE_CLIENT_ID,
       callback: (response) => {
-        oneTapSignIn({ idToken: response.credential }).catch(() => {
-          // error handling is done by RTK Query and displayed by the parent
-        });
+        oneTapSignIn({ idToken: response.credential })
+          .unwrap()
+          .catch((err) => showApiErrorToast(err, "Failed to sign in with Google. Please try again."));
       },
     });
 

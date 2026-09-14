@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { Provider } from "react-redux";
+import { Toaster } from "sonner";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { server } from "./mocks/server";
 
@@ -299,6 +300,7 @@ describe("Auth", () => {
       render(
         <Provider store={store}>
           <SignInContent />
+          <Toaster />
         </Provider>
       );
 
@@ -352,6 +354,7 @@ describe("Auth", () => {
       render(
         <Provider store={store}>
           <SignInContent />
+          <Toaster />
         </Provider>
       );
 
@@ -399,6 +402,7 @@ describe("Auth", () => {
       render(
         <Provider store={store}>
           <SignInContent />
+          <Toaster />
         </Provider>
       );
 
@@ -455,6 +459,7 @@ describe("Auth", () => {
       render(
         <Provider store={store}>
           <SignInContent />
+          <Toaster />
         </Provider>
       );
 
@@ -491,6 +496,7 @@ describe("Auth", () => {
       render(
         <Provider store={store}>
           <SignInContent />
+          <Toaster />
         </Provider>
       );
 

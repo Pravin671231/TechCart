@@ -1,11 +1,31 @@
 "use client";
 
+import { toast } from "sonner";
+import { showApiErrorToast } from "@/lib/apiErrorToast";
 import { useDeleteAddressMutation, useSetDefaultAddressMutation } from "./api";
 import type { Address } from "./types";
 
 export function AddressCard({ address, onEdit }: { address: Address; onEdit: () => void }) {
   const [deleteAddress, { isLoading: isDeleting }] = useDeleteAddressMutation();
   const [setDefaultAddress, { isLoading: isSettingDefault }] = useSetDefaultAddressMutation();
+
+  const handleDelete = () => {
+    deleteAddress({ id: address._id })
+      .unwrap()
+      .then(
+        () => toast.success("Address deleted"),
+        (err) => showApiErrorToast(err, "Failed to delete address. Please try again."),
+      );
+  };
+
+  const handleSetDefault = () => {
+    setDefaultAddress({ id: address._id })
+      .unwrap()
+      .then(
+        () => toast.success("Default address updated"),
+        (err) => showApiErrorToast(err, "Failed to update default address. Please try again."),
+      );
+  };
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-neutral-200 p-4">
@@ -37,7 +57,7 @@ export function AddressCard({ address, onEdit }: { address: Address; onEdit: () 
         <button
           type="button"
           disabled={isDeleting}
-          onClick={() => deleteAddress({ id: address._id })}
+          onClick={handleDelete}
           className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
         >
           Delete
@@ -46,7 +66,7 @@ export function AddressCard({ address, onEdit }: { address: Address; onEdit: () 
           <button
             type="button"
             disabled={isSettingDefault}
-            onClick={() => setDefaultAddress({ id: address._id })}
+            onClick={handleSetDefault}
             className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
           >
             Set as default

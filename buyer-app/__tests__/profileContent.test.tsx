@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { Provider } from "react-redux";
+import { Toaster } from "sonner";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { server } from "./mocks/server";
 
@@ -25,6 +26,7 @@ describe("Profile editing", () => {
     return render(
       <Provider store={store}>
         <ProfileContent />
+        <Toaster />
       </Provider>,
     );
   }

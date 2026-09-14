@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { Provider } from "react-redux";
+import { Toaster } from "sonner";
 import { server } from "./mocks/server";
 import type { Cart, CartLineItem } from "@/features/cart/types";
 
@@ -60,6 +61,7 @@ async function renderCart() {
   render(
     <Provider store={makeStore()}>
       <CartContent />
+      <Toaster />
     </Provider>,
   );
 }
@@ -148,7 +150,7 @@ describe("Cart page", () => {
   });
 
   // Issue #190/M10.2 + #192/M10.4 (FR-INV-011)
-  it("renders the available count inline when a quantity increase hits INSUFFICIENT_STOCK", async () => {
+  it("shows a toast with the available count when a quantity increase hits INSUFFICIENT_STOCK", async () => {
     signedIn();
     server.use(
       http.get(`${API_URL}/api/cart`, () =>
@@ -171,7 +173,7 @@ describe("Cart page", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /increase quantity/i }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Only 1 more unit(s) available");
+    expect(await screen.findByText(/only 1 more unit\(s\) available/i)).toBeInTheDocument();
   });
 
   it("removes a line", async () => {

@@ -19,8 +19,7 @@ export function BuyNowButton({
   size?: CartButtonSize;
   className?: string;
 }) {
-  const { session, inCart, isAdding, insufficientStockMessage, goToCheckout, addItem } =
-    useAddToCart(variantId);
+  const { session, inCart, isAdding, goToCheckout, addItem } = useAddToCart(variantId);
 
   const base = `inline-flex items-center justify-center rounded-md font-medium transition ${SIZE_CLASSES[size]} ${className}`;
 
@@ -52,20 +51,13 @@ export function BuyNowButton({
   };
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={isAdding}
-        className={`${base} bg-gradient-primary text-white hover:brightness-95 hover:shadow-md disabled:bg-none disabled:bg-neutral-300`}
-      >
-        Buy Now
-      </button>
-      {insufficientStockMessage && (
-        <p role="alert" className="mt-1 text-xs text-accent-700">
-          {insufficientStockMessage}
-        </p>
-      )}
-    </>
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={isAdding}
+      className={`${base} bg-gradient-primary text-white hover:brightness-95 hover:shadow-md disabled:bg-none disabled:bg-neutral-300`}
+    >
+      Buy Now
+    </button>
   );
 }
