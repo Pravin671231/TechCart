@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { showApiErrorToast } from "@/lib/apiErrorToast";
 import { useSendOtpMutation, useVerifyOtpMutation } from "./api";
 import type { NormalizedApiError } from "@/store/api";
 
@@ -11,8 +13,6 @@ export function OtpSignIn() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [resendCountdown, setResendCountdown] = useState(0);
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [codeError, setCodeError] = useState<string | null>(null);
 
   const [sendOtp, { isLoading: isSendingOtp }] = useSendOtpMutation();
   const [verifyOtp, { isLoading: isVerifyingOtp }] = useVerifyOtpMutation();
@@ -25,21 +25,18 @@ export function OtpSignIn() {
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setEmailError(null);
 
     try {
       await sendOtp({ email }).unwrap();
       setStep("code");
       setResendCountdown(30);
     } catch (err) {
-      const error = err as NormalizedApiError;
-      setEmailError(error?.message || "Failed to send OTP. Please try again.");
+      showApiErrorToast(err, "Failed to send OTP. Please try again.");
     }
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCodeError(null);
 
     try {
       await verifyOtp({ email, otp }).unwrap();
@@ -48,27 +45,25 @@ export function OtpSignIn() {
       const code = error?.code;
 
       if (code === "GOOGLE_ACCOUNT_IS_ADMIN") {
-        setCodeError("This email is registered as an admin account. Please sign in as a buyer instead.");
+        toast.error("This email is registered as an admin account. Please sign in as a buyer instead.");
       } else if (code === "INVALID_OTP") {
         // `INVALID_OTP` is the code the backend's verifyBuyerOtp throws for a
         // wrong or already-consumed code (auth.service.ts).
-        setCodeError("The OTP you entered is invalid. Please try again.");
+        toast.error("The OTP you entered is invalid. Please try again.");
       } else if (code === "OTP_EXPIRED") {
-        setCodeError("The OTP has expired. Please request a new one.");
+        toast.error("The OTP has expired. Please request a new one.");
       } else {
-        setCodeError(error?.message || "Failed to verify OTP. Please try again.");
+        showApiErrorToast(err, "Failed to verify OTP. Please try again.");
       }
     }
   };
 
   const handleResendOtp = async () => {
-    setCodeError(null);
     try {
       await sendOtp({ email }).unwrap();
       setResendCountdown(30);
     } catch (err) {
-      const error = err as NormalizedApiError;
-      setCodeError(error?.message || "Failed to resend OTP. Please try again.");
+      showApiErrorToast(err, "Failed to resend OTP. Please try again.");
     }
   };
 
@@ -90,7 +85,6 @@ export function OtpSignIn() {
               placeholder="you@example.com"
             />
           </div>
-          {emailError && <p className="text-sm text-red-600">{emailError}</p>}
           <button
             type="submit"
             disabled={isSendingOtp}
@@ -119,7 +113,6 @@ export function OtpSignIn() {
               placeholder="000000"
             />
           </div>
-          {codeError && <p className="text-sm text-red-600">{codeError}</p>}
           <button
             type="submit"
             disabled={isVerifyingOtp || otp.length !== 6}
@@ -140,7 +133,6 @@ export function OtpSignIn() {
             onClick={() => {
               setStep("email");
               setOtp("");
-              setCodeError(null);
             }}
             className="w-full py-2 text-sm text-neutral-600 hover:text-neutral-900"
           >

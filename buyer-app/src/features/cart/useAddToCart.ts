@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useGetSessionQuery } from "@/features/authentication/auth/api";
+import { showApiErrorToast } from "@/lib/apiErrorToast";
 import type { NormalizedApiError } from "@/store/api";
 import { useAddCartItemMutation, useGetCartQuery } from "./api";
 
@@ -26,7 +27,6 @@ export function useAddToCart(variantId: string | undefined) {
   const { data: session } = useGetSessionQuery();
   const { data: cart } = useGetCartQuery(undefined, { skip: !session });
   const [addCartItem, { isLoading: isAdding }] = useAddCartItemMutation();
-  const [insufficientStockMessage, setInsufficientStockMessage] = useState<string | null>(null);
 
   const inCart = !!cart?.items.some((line) => line.variant.id === variantId);
 
@@ -40,14 +40,15 @@ export function useAddToCart(variantId: string | undefined) {
       return;
     }
     if (!variantId) return;
-    setInsufficientStockMessage(null);
     addCartItem({ variantId })
       .unwrap()
       .then(
         () => opts?.onSuccess?.(),
         (err: NormalizedApiError) => {
           if (err?.code === "INSUFFICIENT_STOCK") {
-            setInsufficientStockMessage(err.message);
+            toast.error(err.message);
+          } else {
+            showApiErrorToast(err);
           }
         },
       );
@@ -57,7 +58,6 @@ export function useAddToCart(variantId: string | undefined) {
     session,
     inCart,
     isAdding,
-    insufficientStockMessage,
     goToSignIn,
     goToCheckout,
     goToCart,

@@ -3,6 +3,7 @@ import path from "path";
 import "@testing-library/jest-dom/vitest";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
+import { toast } from "sonner";
 import { server } from "./__tests__/mocks/server";
 
 config({
@@ -61,5 +62,10 @@ afterEach(() => {
   cleanup();
   observerCallbacks.clear();
   vi.mocked(window.scrollTo).mockClear();
+  // sonner's toast queue is a module-level singleton, outside React — it
+  // isn't reset by `cleanup()`, so a toast from one test can still be
+  // "alive" (its default duration hasn't elapsed in real time) and reappear
+  // the moment the next test mounts its own <Toaster />.
+  toast.dismiss();
 });
 afterAll(() => server.close());

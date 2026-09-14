@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useGetSessionQuery } from "@/features/authentication/auth/api";
 import type { ProductAvailability } from "@/features/products/types";
+import { showApiErrorToast } from "@/lib/apiErrorToast";
 import type { NormalizedApiError } from "@/store/api";
 import { useAddCartItemMutation, useGetCartQuery } from "./api";
 
@@ -37,7 +38,6 @@ export function AddToCartButton({
   const { data: session } = useGetSessionQuery();
   const { data: cart } = useGetCartQuery(undefined, { skip: !session });
   const [addCartItem, { isLoading }] = useAddCartItemMutation();
-  const [insufficientStockMessage, setInsufficientStockMessage] = useState<string | null>(null);
 
   const base = `inline-flex items-center justify-center rounded-md font-medium transition ${SIZE_CLASSES[size]} ${className}`;
 
@@ -78,34 +78,31 @@ export function AddToCartButton({
       router.push(`/sign-in?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
-    setInsufficientStockMessage(null);
     addCartItem({ variantId })
       .unwrap()
-      .catch((err: NormalizedApiError) => {
-        // Issue #190/M10.2 — every other rejection is already rolled back
-        // via the optimistic getCart cache patch with no inline copy; this
-        // is the one case worth naming, since it's not a transient failure.
-        if (err?.code === "INSUFFICIENT_STOCK") {
-          setInsufficientStockMessage(err.message);
-        }
-      });
+      .then(
+        () => toast.success("Added to cart"),
+        (err: NormalizedApiError) => {
+          // Issue #190/M10.2 — every other rejection is already rolled back
+          // via the optimistic getCart cache patch; this is the one case
+          // worth naming, since it's not a transient failure.
+          if (err?.code === "INSUFFICIENT_STOCK") {
+            toast.error(err.message);
+          } else {
+            showApiErrorToast(err);
+          }
+        },
+      );
   };
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={isLoading}
-        className={`${base} bg-gradient-accent text-white hover:brightness-95 hover:shadow-md disabled:opacity-60`}
-      >
-        Add to Cart
-      </button>
-      {insufficientStockMessage && (
-        <p role="alert" className="mt-1 text-xs text-accent-700">
-          {insufficientStockMessage}
-        </p>
-      )}
-    </>
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={isLoading}
+      className={`${base} bg-gradient-accent text-white hover:brightness-95 hover:shadow-md disabled:opacity-60`}
+    >
+      Add to Cart
+    </button>
   );
 }

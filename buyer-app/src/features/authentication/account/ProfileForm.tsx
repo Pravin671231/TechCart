@@ -1,29 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { useUpdateProfileMutation } from "./api";
 import type { AccountProfile } from "./types";
-import type { NormalizedApiError } from "@/store/api";
+import { showApiErrorToast } from "@/lib/apiErrorToast";
 
 export function ProfileForm({ profile }: { profile: AccountProfile }) {
   const [name, setName] = useState(profile.name);
   const [phone, setPhone] = useState(profile.phone ?? "");
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
 
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSaved(false);
 
     try {
       await updateProfile({ name, phone }).unwrap();
-      setSaved(true);
+      toast.success("Profile updated");
     } catch (err) {
-      const apiError = err as NormalizedApiError;
-      setError(apiError?.message || "Failed to update profile. Please try again.");
+      showApiErrorToast(err, "Failed to update profile. Please try again.");
     }
   };
 
@@ -67,9 +63,6 @@ export function ProfileForm({ profile }: { profile: AccountProfile }) {
           className="field-input mt-1 w-full px-3 py-2 text-sm"
         />
       </div>
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {saved && <p className="text-sm text-green-600">Profile updated.</p>}
 
       <button
         type="submit"

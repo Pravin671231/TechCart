@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { Provider } from "react-redux";
+import { Toaster } from "sonner";
 import { server } from "./mocks/server";
 
 const API_URL = "http://localhost:4000";
@@ -49,6 +50,7 @@ async function renderButton(
   render(
     <Provider store={store}>
       <BuyNowButton variantId={variantId} availability={availability} />
+      <Toaster />
     </Provider>,
   );
   return store;
@@ -157,7 +159,7 @@ describe("BuyNowButton", () => {
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/checkout"));
   });
 
-  it("shows the available count inline and does not navigate when an add hits INSUFFICIENT_STOCK", async () => {
+  it("shows a toast with the available count and does not navigate when an add hits INSUFFICIENT_STOCK", async () => {
     signedIn();
     server.use(
       http.get(`${API_URL}/api/cart`, () =>
@@ -181,7 +183,7 @@ describe("BuyNowButton", () => {
     await renderButton("v1", "in_stock");
     await userEvent.click(await screen.findByRole("button", { name: /buy now/i }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Only 2 unit(s) available");
+    expect(await screen.findByText(/only 2 unit\(s\) available/i)).toBeInTheDocument();
     expect(mockPush).not.toHaveBeenCalledWith("/checkout");
   });
 });

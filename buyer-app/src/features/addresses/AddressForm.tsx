@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { useAddAddressMutation, useUpdateAddressMutation } from "./api";
 import type { Address, AddressInput } from "./types";
-import type { NormalizedApiError } from "@/store/api";
+import { showApiErrorToast } from "@/lib/apiErrorToast";
 
 const EMPTY_INPUT: AddressInput = {
   fullName: "",
@@ -44,7 +45,6 @@ export function AddressForm({
         }
       : EMPTY_INPUT,
   );
-  const [error, setError] = useState<string | null>(null);
 
   const [addAddress, { isLoading: isAdding }] = useAddAddressMutation();
   const [updateAddress, { isLoading: isUpdating }] = useUpdateAddressMutation();
@@ -56,7 +56,6 @@ export function AddressForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
 
     // `line2` is conditionally spread, not always included — under
     // exactOptionalPropertyTypes, an explicit `line2: undefined` key doesn't
@@ -76,10 +75,10 @@ export function AddressForm({
       const saved = address
         ? await updateAddress({ id: address._id, input: payload }).unwrap()
         : await addAddress(payload).unwrap();
+      toast.success(address ? "Address updated" : "Address added");
       onDone(saved);
     } catch (err) {
-      const apiError = err as NormalizedApiError;
-      setError(apiError?.message || "Failed to save address. Please try again.");
+      showApiErrorToast(err, "Failed to save address. Please try again.");
     }
   }
 
@@ -180,8 +179,6 @@ export function AddressForm({
           className="field-input mt-1 w-full px-3 py-2 text-sm"
         />
       </div>
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="flex gap-2 pt-1">
         <button

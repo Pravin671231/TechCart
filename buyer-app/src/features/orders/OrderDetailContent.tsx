@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { toast } from "sonner";
 import { NotFoundState } from "@/components/ui/NotFoundState";
 import { ProductListError } from "@/features/products/ProductListError";
 import { formatPrice } from "@/features/products/money";
+import { showApiErrorToast } from "@/lib/apiErrorToast";
 import { useCancelOrderMutation, useGetOrderQuery } from "./api";
 import { OrderStatusBadge } from "./OrderStatusBadge";
 import { OrderStatusTimeline } from "./OrderStatusTimeline";
@@ -22,15 +23,13 @@ export function OrderDetailContent({ id }: { id: string }) {
     refetch,
   } = useGetOrderQuery(id);
   const [cancelOrder, { isLoading: isCancelling }] = useCancelOrderMutation();
-  const [cancelError, setCancelError] = useState<string | null>(null);
 
   async function handleCancel() {
-    setCancelError(null);
     try {
       await cancelOrder({ id }).unwrap();
+      toast.success("Order cancelled");
     } catch (err) {
-      const apiError = err as NormalizedApiError;
-      setCancelError(apiError?.message || "Failed to cancel this order. Please try again.");
+      showApiErrorToast(err, "Failed to cancel this order. Please try again.");
     }
   }
 
@@ -142,7 +141,6 @@ export function OrderDetailContent({ id }: { id: string }) {
 
           {canCancel && (
             <section className="rounded-lg border border-neutral-200 p-5">
-              {cancelError && <p className="mb-3 text-sm text-red-600">{cancelError}</p>}
               <button
                 type="button"
                 disabled={isCancelling}

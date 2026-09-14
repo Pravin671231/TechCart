@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { toast } from "sonner";
 import { formatPrice } from "@/features/products/money";
+import { showApiErrorToast } from "@/lib/apiErrorToast";
 import type { NormalizedApiError } from "@/store/api";
 import { useRemoveCartItemMutation, useUpdateCartItemMutation } from "./api";
 import type { CartLineItem } from "./types";
@@ -13,25 +14,34 @@ const MAX_QUANTITY = 10;
 export function CartLineRow({ line }: { line: CartLineItem }) {
   const [updateItem, { isLoading: isUpdating }] = useUpdateCartItemMutation();
   const [removeItem, { isLoading: isRemoving }] = useRemoveCartItemMutation();
-  const [insufficientStockMessage, setInsufficientStockMessage] = useState<string | null>(null);
   const busy = isUpdating || isRemoving;
 
   const { variant, quantity, lineTotal, unavailable } = line;
 
   const setQuantity = (next: number) => {
     if (next < 0 || next > MAX_QUANTITY || next === quantity) return;
-    setInsufficientStockMessage(null);
     updateItem({ variantId: variant.id, quantity: next })
       .unwrap()
       .catch((err: NormalizedApiError) => {
         // Issue #190/M10.2 — every other rejection is rolled back via the
-        // optimistic cache patch with no inline copy; INSUFFICIENT_STOCK is
-        // the one worth naming, since a quantity increase can genuinely
-        // outrun the warehouse it was allocated to.
+        // optimistic cache patch; INSUFFICIENT_STOCK is the one worth
+        // naming, since a quantity increase can genuinely outrun the
+        // warehouse it was allocated to.
         if (err?.code === "INSUFFICIENT_STOCK") {
-          setInsufficientStockMessage(err.message);
+          toast.error(err.message);
+        } else {
+          showApiErrorToast(err);
         }
       });
+  };
+
+  const handleRemove = () => {
+    removeItem({ variantId: variant.id })
+      .unwrap()
+      .then(
+        () => toast.success("Removed from cart"),
+        (err) => showApiErrorToast(err),
+      );
   };
 
   return (
@@ -100,22 +110,12 @@ export function CartLineRow({ line }: { line: CartLineItem }) {
           <button
             type="button"
             disabled={busy}
-            onClick={() =>
-              removeItem({ variantId: variant.id }).catch(() => {
-                /* rolled back via cache */
-              })
-            }
+            onClick={handleRemove}
             className="text-xs font-medium text-neutral-500 hover:text-accent-700 disabled:opacity-50"
           >
             Remove
           </button>
         </div>
-
-        {insufficientStockMessage && (
-          <p role="alert" className="text-xs text-accent-700">
-            {insufficientStockMessage}
-          </p>
-        )}
       </div>
 
       <div className="shrink-0 text-right">
