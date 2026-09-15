@@ -3,12 +3,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
+import { toast } from "sonner";
 import { formatPrice } from "@/features/products/money";
 import { useInitiatePaymentMutation, useVerifyPaymentMutation } from "./api";
 import type { CheckoutResponse } from "./types";
 import type { NormalizedApiError } from "@/store/api";
 
 type PaymentStatus = "idle" | "verifying" | "failed";
+
+// If the Razorpay script tag neither fires onLoad nor onError (a connection
+// that hangs rather than failing outright), this is the fallback that stops
+// the widget from being stuck on "Opening secure payment…" forever — mirrors
+// store/api.ts's REQUEST_TIMEOUT_MS precedent for "don't let this hang".
+const SCRIPT_LOAD_TIMEOUT_MS = 10_000;
+const SCRIPT_LOAD_ERROR_MESSAGE =
+  "Unable to load the payment gateway. Please check your connection and try again.";
 
 // FR-PAY §6 (buyer-app UI/UX) — replaces the old "payment coming soon"
 // placeholder: launches the Razorpay Checkout widget using
@@ -23,10 +32,26 @@ export function PaymentStep({ order }: { order: CheckoutResponse }) {
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<PaymentStatus>("idle");
-  const [error, setError] = useState<string | null>(null);
 
   const [initiatePayment] = useInitiatePaymentMutation();
   const [verifyPayment] = useVerifyPaymentMutation();
+
+  // Shared by every real failure path — the reason is surfaced as a toast
+  // only, not duplicated inline next to the Retry button.
+  function fail(message: string) {
+    setStatus("failed");
+    toast.error(message);
+  }
+
+  useEffect(() => {
+    if (scriptLoaded) return;
+    const timeoutId = setTimeout(() => {
+      fail(SCRIPT_LOAD_ERROR_MESSAGE);
+    }, SCRIPT_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timeoutId);
+    // Fresh timeout window per retry attempt; skipped entirely once the
+    // script has actually loaded.
+  }, [scriptLoaded, attempt]);
 
   useEffect(() => {
     if (!scriptLoaded || !window.Razorpay) return;
@@ -60,10 +85,7 @@ export function PaymentStep({ order }: { order: CheckoutResponse }) {
               .catch((err: unknown) => {
                 if (cancelled) return;
                 const apiError = err as NormalizedApiError;
-                setError(
-                  apiError?.message || "We couldn't confirm your payment. Please try again.",
-                );
-                setStatus("failed");
+                fail(apiError?.message || "We couldn't confirm your payment. Please try again.");
               });
           },
           modal: {
@@ -78,8 +100,7 @@ export function PaymentStep({ order }: { order: CheckoutResponse }) {
       .catch((err: unknown) => {
         if (cancelled) return;
         const apiError = err as NormalizedApiError;
-        setError(apiError?.message || "Unable to start payment. Please try again.");
-        setStatus("failed");
+        fail(apiError?.message || "Unable to start payment. Please try again.");
       });
 
     return () => {
@@ -97,9 +118,11 @@ export function PaymentStep({ order }: { order: CheckoutResponse }) {
   return (
     <section className="rounded-lg border border-neutral-200 p-6 text-center">
       <Script
+        key={attempt}
         src="https://checkout.razorpay.com/v1/checkout.js"
         strategy="afterInteractive"
         onLoad={() => setScriptLoaded(true)}
+        onError={() => fail(SCRIPT_LOAD_ERROR_MESSAGE)}
       />
 
       <p className="text-base font-medium text-neutral-900">Order #{order.orderNumber}</p>
@@ -109,12 +132,10 @@ export function PaymentStep({ order }: { order: CheckoutResponse }) {
 
       {status === "failed" ? (
         <div className="mt-4 flex flex-col items-center gap-3">
-          <p className="text-sm text-red-600">{error}</p>
           <button
             type="button"
             onClick={() => {
               setStatus("idle");
-              setError(null);
               setAttempt((n) => n + 1);
             }}
             className="rounded-md bg-gradient-primary px-4 py-2 text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md"

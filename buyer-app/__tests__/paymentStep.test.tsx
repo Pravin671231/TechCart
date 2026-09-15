@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useEffect } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { Provider } from "react-redux";
+import { Toaster } from "sonner";
 import { server } from "./mocks/server";
 import type { CheckoutResponse } from "@/features/checkout/types";
 
@@ -16,13 +18,19 @@ vi.mock("next/navigation", () => ({
 }));
 
 // next/script never actually loads a remote script in jsdom — this stub
-// fires onLoad from an effect (post-commit, matching a real script tag's
-// own async onload timing) so PaymentStep's post-load effect runs without
+// fires onLoad/onError from an effect (post-commit, matching a real script
+// tag's own async timing) so PaymentStep's post-load effect runs without
 // tripping React's "setState while rendering a different component" guard.
-function MockScript({ onLoad }: { onLoad?: () => void }) {
+// `scriptBehavior` lets individual tests simulate a successful load, a script
+// load failure, or a script that neither loads nor errors (a hang, covered by
+// the timeout fallback) — reset to "load" in beforeEach.
+let scriptBehavior: "load" | "error" | "hang" = "load";
+
+function MockScript({ onLoad, onError }: { onLoad?: () => void; onError?: () => void }) {
   useEffect(() => {
-    onLoad?.();
-  }, [onLoad]);
+    if (scriptBehavior === "load") onLoad?.();
+    else if (scriptBehavior === "error") onError?.();
+  }, [onLoad, onError]);
   return null;
 }
 
@@ -72,6 +80,7 @@ async function renderPaymentStep() {
   render(
     <Provider store={makeStore()}>
       <PaymentStep order={order} />
+      <Toaster />
     </Provider>,
   );
 }
@@ -84,6 +93,7 @@ describe("PaymentStep", () => {
     mockPush.mockClear();
     openMock.mockClear();
     capturedOptions = undefined;
+    scriptBehavior = "load";
     // A real `function`, not an arrow — vi.fn()'s default mock implementation
     // can't be invoked with `new` (arrow functions aren't constructible at
     // all), and PaymentStep does `new window.Razorpay(...)`.
@@ -96,6 +106,7 @@ describe("PaymentStep", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     delete window.Razorpay;
+    vi.useRealTimers();
   });
 
   it("initiates payment on mount and opens the widget with the returned fields", async () => {
@@ -199,8 +210,79 @@ describe("PaymentStep", () => {
       razorpay_signature: "bad_sig",
     });
 
+    // The failure reason is surfaced as a toast only now (no inline card
+    // text), so a single findByText is unambiguous.
     expect(await screen.findByText(/signature mismatch/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /retry payment/i })).toBeInTheDocument();
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("shows a toast when initiating payment fails", async () => {
+    server.use(
+      http.post(`${API_URL}/api/orders/${order.id}/payment`, () =>
+        HttpResponse.json(
+          { success: false, code: "ORDER_NOT_ELIGIBLE_FOR_PAYMENT", message: "Order already paid." },
+          { status: 400 },
+        ),
+      ),
+    );
+
+    await renderPaymentStep();
+
+    expect(await screen.findByText(/order already paid/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /retry payment/i })).toBeInTheDocument();
+    expect(openMock).not.toHaveBeenCalled();
+  });
+
+  it("shows a toast when the Razorpay script fails to load", async () => {
+    scriptBehavior = "error";
+
+    await renderPaymentStep();
+
+    expect(await screen.findByText(/unable to load the payment gateway/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /retry payment/i })).toBeInTheDocument();
+    expect(openMock).not.toHaveBeenCalled();
+  });
+
+  it("shows a toast when the Razorpay script takes too long to load", async () => {
+    scriptBehavior = "hang";
+    vi.useFakeTimers();
+
+    await renderPaymentStep();
+
+    // Advance well past SCRIPT_LOAD_TIMEOUT_MS (10s) in one go, all still
+    // under fake time — the extra buffer flushes Sonner's own subsequent
+    // mount/entrance tick too, so switching to real timers mid-test (which
+    // would abandon anything still pending on the fake clock) isn't needed.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(11_000);
+    });
+
+    expect(screen.getByText(/unable to load the payment gateway/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /retry payment/i })).toBeInTheDocument();
+  });
+
+  it("retrying after a script-load failure re-attempts the script and completes the payment flow", async () => {
+    scriptBehavior = "error";
+    server.use(
+      http.post(`${API_URL}/api/orders/${order.id}/payment`, () =>
+        HttpResponse.json(
+          {
+            success: true,
+            data: { razorpayOrderId: "order_rzp5", amount: 8000000, currency: "INR", keyId: "rzp_test_1" },
+          },
+          { status: 201 },
+        ),
+      ),
+    );
+
+    await renderPaymentStep();
+
+    const retryButton = await screen.findByRole("button", { name: /retry payment/i });
+    scriptBehavior = "load";
+    await userEvent.click(retryButton);
+
+    await waitFor(() => expect(openMock).toHaveBeenCalledTimes(1));
+    expect(capturedOptions).toMatchObject({ order_id: "order_rzp5" });
   });
 });
