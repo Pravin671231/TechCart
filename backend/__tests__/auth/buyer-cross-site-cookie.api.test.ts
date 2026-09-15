@@ -34,10 +34,10 @@ beforeAll(async () => {
   process.env.MONGODB_URI = mongod.getUri();
 
   mongoose = (await import("mongoose")).default;
-  const { connectDB } = await import("../../../src/config/db.js");
+  const { connectDB } = await import("../../src/config/db.js");
   await connectDB();
 
-  const appModule = await import("../../../src/app.js");
+  const appModule = await import("../../src/app.js");
   app = (appModule as unknown as { default: Express }).default;
 }, 60000);
 
@@ -54,7 +54,7 @@ describe("cross-site buyer session cookie (Issue #258/M3.20)", () => {
       .post("/api/auth/email-otp/send-verification-otp")
       .send({ email, type: "sign-in" });
 
-    const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
+    const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
     const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
 
     const res = await request(app).post("/api/auth/sign-in/email-otp").send({ email, otp });

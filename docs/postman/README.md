@@ -131,6 +131,7 @@ Same shape as specifications above — no public/status/search surface.
 | 1   | [`auth.api.md`](./authentication/auth.api.md)             | Buyer sign-in (Google One Tap, email OTP), admin sign-in (password + mandatory OTP), session (`get-session`/`sign-out`), admin password reset | #139, #140, #141, #258–#261, #264 |
 | 2   | [`adminUsers.api.md`](./authentication/adminUsers.api.md) | Admin account provisioning — create/list/update further admin accounts (super-admin only)                                                     | #142                              |
 | 3   | [`account.api.md`](./authentication/account.api.md)       | "My own account" — buyer profile, admin change-password, buyer dashboard                                                                       | #144, #173                        |
+| 4   | [`userDirectory.api.md`](./authentication/userDirectory.api.md) | Read-only directory of every account (buyer + admin) — super-admin only                                                                  | #385                              |
 
 ### Full endpoint index
 
@@ -166,9 +167,16 @@ Same shape as specifications above — no public/status/search surface.
 | POST   | `/api/account/change-password` | admin (any role) | [→](./authentication/account.api.md#post-apiaccountchange-password) |
 | GET    | `/api/account/dashboard`       | buyer            | [→](./authentication/account.api.md#get-apiaccountdashboard)        |
 
+#### `userDirectory.api.md`
+
+| Method | Path                            | Scope                    | Doc                                                                        |
+| ------ | -------------------------------- | ------------------------ | ------------------------------------------------------------------------------ |
+| GET    | `/api/admin/user-directory`      | admin (super-admin only) | [→](./authentication/userDirectory.api.md#get-apiadminuser-directory)         |
+| GET    | `/api/admin/user-directory/:id`  | admin (super-admin only) | [→](./authentication/userDirectory.api.md#get-apiadminuser-directoryid)       |
+
 ---
 
-**17 endpoints total** across the 3 files above (10 + 3 + 4). The full-page Google OAuth redirect flow (`POST /api/auth/sign-in/social` + `GET /api/auth/callback/google`) was **not** rebuilt on the custom session engine (Issues #258/#260) — those two paths now return 404; One Tap and email OTP are the buyer sign-in methods. Google One Tap's `idToken` still can't be fabricated by hand — see [`auth.api.md`](./authentication/auth.api.md#post-apiauthone-tapcallback).
+**19 endpoints total** across the 4 files above (10 + 3 + 4 + 2). The full-page Google OAuth redirect flow (`POST /api/auth/sign-in/social` + `GET /api/auth/callback/google`) was **not** rebuilt on the custom session engine (Issues #258/#260) — those two paths now return 404; One Tap and email OTP are the buyer sign-in methods. Google One Tap's `idToken` still can't be fabricated by hand — see [`auth.api.md`](./authentication/auth.api.md#post-apiauthone-tapcallback).
 
 ---
 

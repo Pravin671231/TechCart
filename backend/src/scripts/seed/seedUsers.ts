@@ -15,8 +15,10 @@
 // searchIndexes/ensureSearchIndexes.ts's run*()-plus-CLI-wrapper split); the
 // CLI guard at the bottom owns connect/disconnect for the standalone
 // `npm run seed:users` entry point.
-import mongoose, { Types } from "mongoose";
+import { Types } from "mongoose";
 import { connectDB, disconnectDB } from "@/config/db";
+import { User } from "@/modules/user/user.model";
+import { UserAuth } from "@/modules/auth/userAuth.model";
 import { provisionAdminUser, type AdminRole } from "./createAdminUser";
 
 // Buyers are passwordless (SRS v0.3 §2.1) — no password credential to create,
@@ -53,21 +55,19 @@ async function upsertBuyer(buyer: { name: string; email: string }): Promise<{
   email: string;
   created: boolean;
 }> {
-  const usersCollection = mongoose.connection.db!.collection("users");
-  const existing = await usersCollection.findOne({ email: buyer.email });
-  const now = new Date();
+  const existing = await User.findOne({ email: buyer.email });
 
-  await usersCollection.updateOne(
+  // Issue #385 — writes across User (identity) + UserAuth (authProvider
+  // only; buyers are passwordless, so no passwordHash here).
+  await User.updateOne(
     { email: buyer.email },
     {
       $setOnInsert: {
         name: buyer.name,
         email: buyer.email,
-        emailVerified: true,
+        isVerified: true,
         role: "buyer",
         status: true,
-        createdAt: now,
-        updatedAt: now,
       },
     },
     { upsert: true },
@@ -75,8 +75,14 @@ async function upsertBuyer(buyer: { name: string; email: string }): Promise<{
 
   // updateOne's own result carries no document back — one follow-up lookup
   // gets the (possibly just-inserted) _id for the caller (Issue #330).
-  const stored = await usersCollection.findOne({ email: buyer.email });
-  return { id: stored!._id as Types.ObjectId, email: buyer.email, created: !existing };
+  const stored = await User.findOne({ email: buyer.email });
+  await UserAuth.updateOne(
+    { userId: stored!._id },
+    { $setOnInsert: { authProvider: "local" } },
+    { upsert: true },
+  );
+
+  return { id: stored!._id, email: buyer.email, created: !existing };
 }
 
 export type SeedUsersResult = {

@@ -1,7 +1,7 @@
 import express, { Router } from "express";
 import { databaseReady } from "@/middleware/databaseReady";
-import { accountModule } from "@/modules/authentication/account/account.module";
-import { authModule } from "@/modules/authentication/auth/auth.module";
+import { accountModule } from "@/modules/user/account/account.module";
+import { authModule } from "@/modules/auth/auth.module";
 import { addressesModule } from "@/modules/addresses/addresses.module";
 import { cartModule } from "@/modules/cart/cart.module";
 import { ordersModule } from "@/modules/orders/orders.module";

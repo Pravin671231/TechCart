@@ -2,7 +2,7 @@
 
 A step-by-step guide to testing admin account provisioning in Postman.
 
-**Scope:** this document covers admin account provisioning (`FR-AUTH-024`–`029`): a super-admin can create, list, and update further admin accounts over REST. Admin-only, no public/buyer surface — every route below requires a real session for a `role: "super-admin"` account (`rbac(["super-admin"])`, `src/middleware/rbac.ts`), resolved from TechCart's custom session engine (Better Auth was removed in Issues #258–#261; the routes and shapes here were unaffected). See [`../../../backend/CLAUDE.md`](../../../backend/CLAUDE.md)'s Admin Account Provisioning section for full implementation detail.
+**Scope:** this document covers admin account provisioning (`FR-AUTH-024`–`029`): a super-admin can create, list, and update further admin accounts over REST. Admin-only, no public/buyer surface — every route below requires a real session for a `role: "super-admin"` account (`rbac(["super-admin"])`, `src/middleware/rbac.ts`), resolved from TechCart's custom session engine (Better Auth was removed in Issues #258–#261; the routes and shapes here were unaffected). See [`../../../backend/CLAUDE.md`](../../../backend/CLAUDE.md)'s Admin Account Provisioning section for full implementation detail. For a read-only listing across **every** account, not just admins, see [`userDirectory.api.md`](./userDirectory.api.md) (Issue #385).
 
 ---
 
@@ -60,6 +60,7 @@ Content-Type: application/json
     "email": "new-catalog-manager@example.com",
     "role": "catalog-manager",
     "status": true,
+    "isVerified": true,
     "createdAt": "2026-08-23T10:00:00.000Z",
     "updatedAt": "2026-08-23T10:00:00.000Z"
   }
@@ -156,6 +157,7 @@ Try: `{{base_url}}/api/admin/users?role=catalog-manager&limit=10`
       "email": "new-catalog-manager@example.com",
       "role": "catalog-manager",
       "status": true,
+      "isVerified": true,
       "createdAt": "2026-08-23T10:00:00.000Z",
       "updatedAt": "2026-08-23T10:00:00.000Z"
     }

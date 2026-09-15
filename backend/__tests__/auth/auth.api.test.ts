@@ -41,14 +41,14 @@ beforeAll(async () => {
   process.env.MONGODB_URI = mongod.getUri();
 
   mongoose = (await import("mongoose")).default;
-  const { connectDB } = await import("../../../src/config/db.js");
+  const { connectDB } = await import("../../src/config/db.js");
   await connectDB();
 
   // TS's dynamic-`import()` typing for a CJS-emitted module (this workspace
   // is `"type": "commonjs"`) doesn't narrow to the named `default` export
   // the way a static import does — cast past it rather than chase the
   // ESM/CJS interop gap further.
-  const appModule = await import("../../../src/app.js");
+  const appModule = await import("../../src/app.js");
   app = (appModule as unknown as { default: Express }).default;
 }, 60000);
 
@@ -59,6 +59,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await mongoose.connection.db!.collection("users").deleteMany({});
+  await mongoose.connection.db!.collection("userAuth").deleteMany({});
   await mongoose.connection.db!.collection("otps").deleteMany({});
   await mongoose.connection.db!.collection("sessions").deleteMany({});
 });
@@ -67,9 +68,19 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function mockGoogleIdentity(claims: { email: string; name: string; emailVerified?: boolean }) {
+function mockGoogleIdentity(claims: {
+  email: string;
+  name: string;
+  emailVerified?: boolean;
+  sub?: string;
+}) {
   verifyIdTokenMock.mockResolvedValue({
-    getPayload: () => ({ email: claims.email, name: claims.name, email_verified: claims.emailVerified ?? true }),
+    getPayload: () => ({
+      email: claims.email,
+      name: claims.name,
+      email_verified: claims.emailVerified ?? true,
+      sub: claims.sub ?? `mock-google-sub-${claims.email}`,
+    }),
   });
 }
 
@@ -78,7 +89,7 @@ async function insertAdminUser(email: string, role = "super-admin") {
     _id: new mongoose.Types.ObjectId(),
     name: "Existing Admin",
     email,
-    emailVerified: true,
+    isVerified: true,
     role,
     status: true,
     createdAt: new Date(),
@@ -103,6 +114,16 @@ describe("Buyer passwordless authentication", () => {
         .db!.collection("users")
         .findOne({ email: "onetap-buyer@example.com" });
       expect(stored?.role).toBe("buyer");
+      expect(stored?.isVerified).toBe(true);
+
+      // Issue #385 — a first-time Google sign-in stores authProvider/googleId
+      // on the split userAuth document, isVerified on users from Google's own
+      // email_verified claim.
+      const auth = await mongoose.connection
+        .db!.collection("userAuth")
+        .findOne({ userId: stored?._id });
+      expect(auth?.authProvider).toBe("google");
+      expect(auth?.googleId).toBe("mock-google-sub-onetap-buyer@example.com");
     });
 
     it("rejects one-tap sign-in for an email already registered as an admin", async () => {
@@ -136,7 +157,7 @@ describe("Buyer passwordless authentication", () => {
 
       // codeHash means the plaintext code never sits in the DB — the real
       // code was only ever handed to the mocked sendOtpEmail call.
-      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
       expect(otp).toBeTruthy();
       // Issue #242/M3.14 — the buyer sign-in code is fixed to this value in
@@ -150,6 +171,13 @@ describe("Buyer passwordless authentication", () => {
 
       const stored = await mongoose.connection.db!.collection("users").findOne({ email });
       expect(stored?.role).toBe("buyer");
+      expect(stored?.isVerified).toBe(true);
+
+      // Issue #385 — an OTP sign-in creates authProvider:"local" with no
+      // googleId, since OTP itself proves the email, not a Google identity.
+      const auth = await mongoose.connection.db!.collection("userAuth").findOne({ userId: stored?._id });
+      expect(auth?.authProvider).toBe("local");
+      expect(auth?.googleId).toBeUndefined();
     });
 
     it("rejects a reused OTP", async () => {
@@ -158,7 +186,7 @@ describe("Buyer passwordless authentication", () => {
         .post("/api/auth/email-otp/send-verification-otp")
         .send({ email, type: "sign-in" });
 
-      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
 
       const first = await request(app).post("/api/auth/sign-in/email-otp").send({ email, otp });
@@ -176,7 +204,7 @@ describe("Buyer passwordless authentication", () => {
         .post("/api/auth/email-otp/send-verification-otp")
         .send({ email, type: "sign-in" });
 
-      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
 
       // The OTP TTL is 10 minutes (FR-AUTH-007) — push the stored record's
@@ -202,7 +230,7 @@ describe("Buyer passwordless authentication", () => {
       expect(send.status).toBe(403);
       expect(send.body).toMatchObject({ success: false, code: "GOOGLE_ACCOUNT_IS_ADMIN" });
 
-      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
       expect(sendOtpEmail).not.toHaveBeenCalled();
     });
   });
@@ -222,7 +250,7 @@ describe("Buyer passwordless authentication", () => {
         .send({ email, type: "sign-in" });
       expect(send.status).toBe(200);
 
-      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
 
       const otpRes = await request(app).post("/api/auth/sign-in/email-otp").send({ email, otp });
@@ -234,6 +262,49 @@ describe("Buyer passwordless authentication", () => {
     });
   });
 
+  describe("Google googleId backfill onto a pre-existing OTP account (Issue #385)", () => {
+    it("backfills googleId on a later Google sign-in without changing authProvider", async () => {
+      const email = "otp-then-google@example.com";
+
+      const send = await request(app)
+        .post("/api/auth/email-otp/send-verification-otp")
+        .send({ email, type: "sign-in" });
+      expect(send.status).toBe(200);
+
+      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
+      const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
+      const otpRes = await request(app).post("/api/auth/sign-in/email-otp").send({ email, otp });
+      expect(otpRes.status).toBe(200);
+
+      const stored = await mongoose.connection.db!.collection("users").findOne({ email });
+      const beforeAuth = await mongoose.connection
+        .db!.collection("userAuth")
+        .findOne({ userId: stored?._id });
+      expect(beforeAuth?.authProvider).toBe("local");
+      expect(beforeAuth?.googleId).toBeUndefined();
+
+      mockGoogleIdentity({ email, name: "Otp Then Google", sub: "google-sub-otp-then-google" });
+      const googleRes = await request(app)
+        .post("/api/auth/one-tap/callback")
+        .send({ idToken: "fake-id-token" });
+      expect(googleRes.status).toBe(200);
+      expect(googleRes.body.data.id).toBe(String(stored?._id));
+
+      const afterAuth = await mongoose.connection
+        .db!.collection("userAuth")
+        .findOne({ userId: stored?._id });
+      expect(afterAuth?.googleId).toBe("google-sub-otp-then-google");
+      // authProvider is not retroactively rewritten — the account is still
+      // "local" in origin, Google is just now a linked sign-in method.
+      expect(afterAuth?.authProvider).toBe("local");
+
+      const authCount = await mongoose.connection
+        .db!.collection("userAuth")
+        .countDocuments({ userId: stored?._id });
+      expect(authCount).toBe(1);
+    });
+  });
+
   describe("No client-supplied role (FR-AUTH-004)", () => {
     it("ignores a client-submitted role and defaults every new account to buyer", async () => {
       const email = "role-spoof@example.com";
@@ -241,7 +312,7 @@ describe("Buyer passwordless authentication", () => {
         .post("/api/auth/email-otp/send-verification-otp")
         .send({ email, type: "sign-in" });
 
-      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
 
       const res = await request(app)
@@ -270,7 +341,7 @@ describe("Buyer passwordless authentication", () => {
         .post("/api/auth/email-otp/send-verification-otp")
         .send({ email, type: "sign-in" });
 
-      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
 
       const signIn = await request(app).post("/api/auth/sign-in/email-otp").send({ email, otp });
@@ -294,7 +365,7 @@ describe("Buyer passwordless authentication", () => {
         .post("/api/auth/email-otp/send-verification-otp")
         .send({ email, type: "sign-in" });
 
-      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
       const otp = (sendOtpEmail as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string;
 
       const res = await request(app)
@@ -314,7 +385,7 @@ describe("Buyer passwordless authentication", () => {
         _id: new mongoose.Types.ObjectId(),
         name: "Deactivated Buyer",
         email,
-        emailVerified: true,
+        isVerified: true,
         role: "buyer",
         status: false,
         createdAt: new Date(),
@@ -328,7 +399,7 @@ describe("Buyer passwordless authentication", () => {
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(res.body).toMatchObject({ success: false, code: "ACCOUNT_DEACTIVATED" });
 
-      const { sendOtpEmail } = await import("../../../src/externalService/mailer.js");
+      const { sendOtpEmail } = await import("../../src/externalService/mailer.js");
       expect(sendOtpEmail).not.toHaveBeenCalled();
     });
   });

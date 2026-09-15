@@ -4,7 +4,7 @@ import { revokeAllSessionsForUser } from "@/lib/session";
 import { AppError } from "@/utils/AppError";
 import { buildPagination, type Pagination } from "@/utils/apiResponse";
 import { provisionAdminUser, type AdminRole } from "@/scripts/seed/createAdminUser";
-import { sendAdminPasswordResetLink } from "../auth/auth.service";
+import { sendAdminPasswordResetLink } from "@/modules/auth/auth.service";
 import * as adminUsersRepository from "./adminUsers.repository";
 import type {
   AdminUserListPage,

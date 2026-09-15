@@ -2,14 +2,16 @@
 // (superAdmin.ts, seedUsers.ts) and the auth test suites, so "create an
 // admin account with a real password" logic lives in exactly one place.
 //
-// Issue #259/M3.21 — the password credential is now a bcrypt hash written
-// straight to `users.passwordHash` via the raw MongoDB driver, replacing
-// Better Auth's `auth.api.signUpEmail` (which stored a scrypt hash in a
-// separate `account` collection). Admins are the only role with a password;
-// the hand-rolled `/api/auth/sign-in/email` flow verifies against this same
-// field.
-import mongoose, { Types } from "mongoose";
+// Issue #385 — writes across the two split models: User (identity) +
+// UserAuth (credentials, including passwordHash). Not transactional (no
+// replica set in this deployment, matching the transaction:false precedent
+// documented elsewhere in this codebase) — the UserAuth upsert on the
+// idempotent-update branch below self-heals a UserAuth row that's somehow
+// missing for an existing User.
+import { Types } from "mongoose";
 import { hashPassword } from "@/lib/password";
+import { User } from "@/modules/user/user.model";
+import { UserAuth } from "@/modules/auth/userAuth.model";
 
 export type AdminRole = "catalog-manager" | "order-manager" | "super-admin";
 
@@ -37,59 +39,37 @@ export interface ProvisionAdminUserResult {
   created: boolean;
 }
 
-interface AdminUserDoc {
-  _id: Types.ObjectId;
-  name: string;
-  email: string;
-  role: string;
-  status: boolean;
-  emailVerified: boolean;
-  twoFactorEnabled: boolean;
-  passwordHash: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export async function provisionAdminUser(
   input: ProvisionAdminUserInput,
 ): Promise<ProvisionAdminUserResult> {
-  const usersCollection = mongoose.connection.db!.collection<AdminUserDoc>("users");
-  const existing = await usersCollection.findOne({ email: input.email });
-
-  const now = new Date();
+  const existing = await User.findOne({ email: input.email });
   const passwordHash = await hashPassword(input.password);
 
   if (!existing) {
-    const id = new Types.ObjectId();
-    await usersCollection.insertOne({
-      _id: id,
+    const user = await User.create({
       name: input.name,
       email: input.email,
       role: input.role,
       status: true,
-      emailVerified: true,
-      twoFactorEnabled: true,
-      passwordHash,
-      createdAt: now,
-      updatedAt: now,
+      isVerified: true,
     });
-    return { id, email: input.email, role: input.role, created: true };
+    await UserAuth.create({
+      userId: user._id,
+      passwordHash,
+      authProvider: "local",
+      twoFactorEnabled: true,
+    });
+    return { id: user._id, email: input.email, role: input.role, created: true };
   }
 
   // Idempotent re-run (superAdmin.ts / seedUsers.ts run repeatedly). `status`
   // is deliberately left untouched — a deactivated account isn't silently
   // reactivated by a re-seed, matching the pre-#259 behaviour.
-  await usersCollection.updateOne(
-    { email: input.email },
-    {
-      $set: {
-        role: input.role,
-        twoFactorEnabled: true,
-        emailVerified: true,
-        passwordHash,
-        updatedAt: now,
-      },
-    },
+  await User.updateOne({ _id: existing._id }, { $set: { role: input.role, isVerified: true } });
+  await UserAuth.updateOne(
+    { userId: existing._id },
+    { $set: { authProvider: "local", twoFactorEnabled: true, passwordHash } },
+    { upsert: true },
   );
 
   return { id: existing._id, email: input.email, role: input.role, created: false };

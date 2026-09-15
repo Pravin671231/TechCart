@@ -54,6 +54,7 @@ afterAll(async () => {
 
 async function clearAuthCollections() {
   await mongoose.connection.db!.collection("users").deleteMany({});
+  await mongoose.connection.db!.collection("userAuth").deleteMany({});
   await mongoose.connection.db!.collection("account").deleteMany({});
   await mongoose.connection.db!.collection("verification").deleteMany({});
   await mongoose.connection.db!.collection("session").deleteMany({});
@@ -128,14 +129,29 @@ describe("Admin account provisioning", () => {
       expect(res.body.data.role).toBe("catalog-manager");
 
       const stored = await mongoose.connection
-        .db!.collection<{ email: string; twoFactorEnabled?: boolean }>("users")
+        .db!.collection<{ _id: unknown; email: string; isVerified?: boolean }>("users")
         .findOne({ email: "new-catalog-manager@example.com" });
-      expect(stored?.twoFactorEnabled).toBe(true);
+      expect(stored?.isVerified).toBe(true);
+
+      // Issue #385 — credentials now live on the split userAuth collection,
+      // not on users itself.
+      const storedAuth = await mongoose.connection
+        .db!.collection<{ userId: unknown; twoFactorEnabled?: boolean; authProvider?: string; passwordHash?: string }>(
+          "userAuth",
+        )
+        .findOne({ userId: stored?._id });
+      expect(storedAuth?.twoFactorEnabled).toBe(true);
+      expect(storedAuth?.authProvider).toBe("local");
 
       // FR-AUTH-029: the new admin must still go through the full
       // password+OTP sign-in flow via a real reset-password link, never an
       // auto-established session or a caller-visible temporary password.
+      // Issue #385's own security fix — the admin roster response must never
+      // include the bcrypt hash (the real, previously-masked bug this branch
+      // fixes: the old assertion here checked `.password`, a field that
+      // never existed, instead of the real field, `.passwordHash`).
       expect(res.body.data.password).toBeUndefined();
+      expect(res.body.data.passwordHash).toBeUndefined();
       const { sendPasswordResetEmail } = await import("../../../src/externalService/mailer.js");
       expect(sendPasswordResetEmail).toHaveBeenCalled();
 
@@ -193,6 +209,12 @@ describe("Admin account provisioning", () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.length).toBe(1);
       expect(res.body.pagination.total).toBeGreaterThanOrEqual(2);
+      // Issue #385 — the same security-fix assertion as the create test,
+      // covering the list endpoint's separate query path (list() vs
+      // findById()).
+      for (const admin of res.body.data as Array<{ passwordHash?: unknown }>) {
+        expect(admin.passwordHash).toBeUndefined();
+      }
     });
 
     it("filters by search", async () => {
