@@ -1,7 +1,11 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { NotFoundState } from "@/components/ui/NotFoundState";
+import { useAddCartItemMutation } from "@/features/cart/api";
+import { PaymentStep } from "@/features/checkout/PaymentStep";
 import { ProductListError } from "@/features/products/ProductListError";
 import { formatPrice } from "@/features/products/money";
 import { showApiErrorToast } from "@/lib/apiErrorToast";
@@ -15,6 +19,7 @@ import type { NormalizedApiError } from "@/store/api";
 // AccountShell; PageContainer's own <main> dropped for a plain div (see
 // AddressListContent.tsx's identical note).
 export function OrderDetailContent({ id }: { id: string }) {
+  const router = useRouter();
   const {
     data: order,
     isLoading,
@@ -23,6 +28,9 @@ export function OrderDetailContent({ id }: { id: string }) {
     refetch,
   } = useGetOrderQuery(id);
   const [cancelOrder, { isLoading: isCancelling }] = useCancelOrderMutation();
+  const [addCartItem] = useAddCartItemMutation();
+  const [showPaymentStep, setShowPaymentStep] = useState(false);
+  const [isMovingToCart, setIsMovingToCart] = useState(false);
 
   async function handleCancel() {
     try {
@@ -30,6 +38,27 @@ export function OrderDetailContent({ id }: { id: string }) {
       toast.success("Order cancelled");
     } catch (err) {
       showApiErrorToast(err, "Failed to cancel this order. Please try again.");
+    }
+  }
+
+  // Best-effort and sequential (not Promise.all) — a buyer's cart is one
+  // document, so concurrent adds would race each other. Stops on the first
+  // failure and leaves the order untouched (not cancelled), so retrying is
+  // clean rather than needing compensating rollback logic.
+  async function handleMoveToCart() {
+    if (!order) return;
+    setIsMovingToCart(true);
+    try {
+      for (const item of order.items) {
+        await addCartItem({ variantId: item.variant.id, quantity: item.quantity }).unwrap();
+      }
+      await cancelOrder({ id }).unwrap();
+      toast.success("Items added to your cart");
+      router.push("/cart");
+    } catch (err) {
+      showApiErrorToast(err, "Couldn't move these items to your cart. Please try again.");
+    } finally {
+      setIsMovingToCart(false);
     }
   }
 
@@ -56,6 +85,7 @@ export function OrderDetailContent({ id }: { id: string }) {
   }
 
   const canCancel = CANCELLABLE_STATUSES.includes(order.status);
+  const isPendingPayment = order.status === "pending_payment";
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6">
@@ -130,6 +160,31 @@ export function OrderDetailContent({ id }: { id: string }) {
         </div>
 
         <div className="flex flex-col gap-4">
+          {isPendingPayment && showPaymentStep && <PaymentStep order={order} />}
+
+          {isPendingPayment && !showPaymentStep && (
+            <section className="flex flex-col gap-3 rounded-lg border border-neutral-200 p-5">
+              <h2 className="text-sm font-semibold tracking-wide text-neutral-700 uppercase">
+                Complete your payment
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowPaymentStep(true)}
+                className="w-full rounded-md bg-gradient-primary px-4 py-2 text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md"
+              >
+                Pay now
+              </button>
+              <button
+                type="button"
+                disabled={isMovingToCart}
+                onClick={handleMoveToCart}
+                className="w-full rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+              >
+                {isMovingToCart ? "Moving to cart…" : "Add items to cart"}
+              </button>
+            </section>
+          )}
+
           <section className="rounded-lg border border-neutral-200 p-5">
             <h2 className="text-sm font-semibold tracking-wide text-neutral-700 uppercase">
               Status
