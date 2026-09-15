@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useEffect } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse, delay } from "msw";
 import { Provider } from "react-redux";
+import { Toaster } from "sonner";
 import { server } from "./mocks/server";
 import type { OrderResponse } from "@/features/orders/types";
 
@@ -13,6 +15,20 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
   usePathname: () => "/orders",
   useSearchParams: () => new URLSearchParams(),
+}));
+
+// PaymentStep (rendered once "Pay now" is clicked) loads the Razorpay SDK via
+// next/script, which never actually loads in jsdom — this stub fires onLoad
+// from an effect, matching paymentStep.test.tsx's own convention.
+function MockScript({ onLoad }: { onLoad?: () => void }) {
+  useEffect(() => {
+    onLoad?.();
+  }, [onLoad]);
+  return null;
+}
+
+vi.mock("next/script", () => ({
+  default: MockScript,
 }));
 
 function order(overrides: Partial<OrderResponse> = {}): OrderResponse {
@@ -93,6 +109,7 @@ async function renderDetail(id: string) {
   render(
     <Provider store={makeStore()}>
       <OrderDetailContent id={id} />
+      <Toaster />
     </Provider>,
   );
 }
@@ -308,5 +325,143 @@ describe("Order detail", () => {
     await renderDetail("missing");
 
     expect(await screen.findByText(/doesn't exist or isn't yours/i)).toBeInTheDocument();
+  });
+
+  it("shows Pay now and Add items to cart for a pending_payment order, alongside Cancel order", async () => {
+    signedIn();
+    server.use(
+      http.get(`${API_URL}/api/orders/o1`, () =>
+        HttpResponse.json({ success: true, data: order({ status: "pending_payment" }) }),
+      ),
+    );
+
+    await renderDetail("o1");
+
+    expect(await screen.findByRole("button", { name: /^pay now$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^add items to cart$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^cancel order$/i })).toBeInTheDocument();
+  });
+
+  it("does not show Pay now / Add items to cart for a paid order", async () => {
+    signedIn();
+    server.use(
+      http.get(`${API_URL}/api/orders/o1`, () =>
+        HttpResponse.json({ success: true, data: order({ status: "paid" }) }),
+      ),
+    );
+
+    await renderDetail("o1");
+
+    expect(await screen.findByRole("button", { name: /^cancel order$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^pay now$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^add items to cart$/i })).not.toBeInTheDocument();
+  });
+
+  it("clicking Pay now swaps in the payment retry flow", async () => {
+    signedIn();
+    server.use(
+      http.get(`${API_URL}/api/orders/o1`, () =>
+        HttpResponse.json({ success: true, data: order({ status: "pending_payment" }) }),
+      ),
+    );
+
+    await renderDetail("o1");
+
+    const payNowButton = await screen.findByRole("button", { name: /^pay now$/i });
+    await userEvent.click(payNowButton);
+
+    expect(screen.queryByRole("button", { name: /^pay now$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^add items to cart$/i })).not.toBeInTheDocument();
+    expect(await screen.findByText(/opening secure payment/i)).toBeInTheDocument();
+  });
+
+  it("clicking Add items to cart adds every line to the cart, cancels the order, and redirects to /cart", async () => {
+    signedIn();
+    const twoItemOrder = order({
+      status: "pending_payment",
+      items: [
+        {
+          product: { id: "p1", name: "Test Phone", slug: "test-phone" },
+          variant: { id: "v1", sku: "SKU-1", attributes: [], image: null },
+          unitPrice: 40000,
+          quantity: 2,
+          lineTotal: 80000,
+        },
+        {
+          product: { id: "p2", name: "Test Case", slug: "test-case" },
+          variant: { id: "v2", sku: "SKU-2", attributes: [], image: null },
+          unitPrice: 1000,
+          quantity: 1,
+          lineTotal: 1000,
+        },
+      ],
+    });
+
+    const calls: string[] = [];
+    const addedItems: { variantId: string; quantity: number }[] = [];
+    let current = twoItemOrder;
+
+    server.use(
+      http.get(`${API_URL}/api/orders/o1`, () =>
+        HttpResponse.json({ success: true, data: current }),
+      ),
+      http.post(`${API_URL}/api/cart/items`, async ({ request }) => {
+        calls.push("add");
+        const body = (await request.json()) as { variantId: string; quantity: number };
+        addedItems.push(body);
+        return HttpResponse.json({
+          success: true,
+          data: { items: [], itemCount: 0, subtotal: 0 },
+        });
+      }),
+      http.post(`${API_URL}/api/orders/o1/cancel`, () => {
+        calls.push("cancel");
+        current = { ...current, status: "cancelled" };
+        return HttpResponse.json({ success: true, data: current });
+      }),
+    );
+
+    await renderDetail("o1");
+
+    const addToCartButton = await screen.findByRole("button", { name: /^add items to cart$/i });
+    await userEvent.click(addToCartButton);
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/cart"));
+
+    expect(addedItems).toEqual([
+      { variantId: "v1", quantity: 2 },
+      { variantId: "v2", quantity: 1 },
+    ]);
+    expect(calls).toEqual(["add", "add", "cancel"]);
+    expect(await screen.findByText(/items added to your cart/i)).toBeInTheDocument();
+  });
+
+  it("shows an error and does not cancel or redirect when adding an item to the cart fails", async () => {
+    signedIn();
+    let cancelCalled = false;
+    server.use(
+      http.get(`${API_URL}/api/orders/o1`, () =>
+        HttpResponse.json({ success: true, data: order({ status: "pending_payment" }) }),
+      ),
+      http.post(`${API_URL}/api/cart/items`, () =>
+        HttpResponse.json(
+          { success: false, code: "INSUFFICIENT_STOCK", message: "Not enough stock available." },
+          { status: 409 },
+        ),
+      ),
+      http.post(`${API_URL}/api/orders/o1/cancel`, () => {
+        cancelCalled = true;
+        return HttpResponse.json({ success: true, data: order({ status: "cancelled" }) });
+      }),
+    );
+
+    await renderDetail("o1");
+
+    const addToCartButton = await screen.findByRole("button", { name: /^add items to cart$/i });
+    await userEvent.click(addToCartButton);
+
+    expect(await screen.findByText(/not enough stock available/i)).toBeInTheDocument();
+    expect(cancelCalled).toBe(false);
+    expect(mockPush).not.toHaveBeenCalledWith("/cart");
   });
 });
