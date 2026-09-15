@@ -176,3 +176,38 @@ describe("GET /api/admin/user-directory (FR-AUTH-047–049)", () => {
     expect(res.body.code).toBe("FORBIDDEN");
   });
 });
+
+describe("GET /api/admin/user-directory/:id (FR-AUTH-050)", () => {
+  it("returns a single directory entry by id", async () => {
+    await insertBuyer("detail-buyer@example.com", "Detail Buyer");
+    const stored = await mongoose.connection
+      .db!.collection<{ _id: unknown; email: string }>("users")
+      .findOne({ email: "detail-buyer@example.com" });
+
+    const res = await adminRequest(
+      "get",
+      `/api/admin/user-directory/${String(stored!._id)}`,
+      superAdminToken,
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.data.email).toBe("detail-buyer@example.com");
+    expect(res.body.data.passwordHash).toBeUndefined();
+  });
+
+  it("returns USER_NOT_FOUND for an id matching no account", async () => {
+    const missingId = new mongoose.Types.ObjectId();
+    const res = await adminRequest(
+      "get",
+      `/api/admin/user-directory/${String(missingId)}`,
+      superAdminToken,
+    );
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("USER_NOT_FOUND");
+  });
+
+  it("rejects a malformed id", async () => {
+    const res = await adminRequest("get", "/api/admin/user-directory/not-an-id", superAdminToken);
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("INVALID_ID");
+  });
+});

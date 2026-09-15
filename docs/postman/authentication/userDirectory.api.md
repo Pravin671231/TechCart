@@ -10,6 +10,8 @@ A step-by-step guide to testing the admin user directory in Postman.
 
 Same as [`adminUsers.api.md`](./adminUsers.api.md#prerequisites) — a real super-admin session, with `admin_access_token` already set from [`auth.api.md`](./auth.api.md#one-time-postman-setup).
 
+**Optional collection variable:** add `user_directory_id` (leave the value empty) to paste an `_id` from the list response into, for reuse in the `GET .../:id` request below.
+
 ---
 
 ## `GET /api/admin/user-directory`
@@ -100,6 +102,69 @@ Try: `{{base_url}}/api/admin/user-directory?role=buyer&limit=10`
 
 ---
 
+## `GET /api/admin/user-directory/:id`
+
+A single directory entry by id (`FR-AUTH-050`) — same fields as a list row.
+
+| Field  | Value                                          |
+| ------ | ------------------------------------------------- |
+| Method | `GET`                                              |
+| URL    | `{{base_url}}/api/admin/user-directory/{{user_directory_id}}` |
+| Name   | `Get User Directory Entry`                         |
+
+**Headers tab:** `Authorization: Bearer {{admin_access_token}}`. No body.
+
+**Click Send. Expected response — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "66a1f0c9e4b0a1a2b3c4d5e7",
+    "name": "Asha Rao",
+    "email": "asha@example.com",
+    "role": "buyer",
+    "status": true,
+    "isVerified": true,
+    "createdAt": "2026-08-23T10:00:00.000Z"
+  }
+}
+```
+
+### Error cases
+
+**`:id` doesn't match any account:**
+
+```
+404 Not Found
+```
+
+```json
+{
+  "success": false,
+  "code": "USER_NOT_FOUND",
+  "message": "User not found."
+}
+```
+
+**Malformed `:id`:**
+
+```
+400 Bad Request
+```
+
+```json
+{
+  "success": false,
+  "code": "INVALID_ID",
+  "message": "\"not-an-id\" is not a valid id."
+}
+```
+
+Same `UNAUTHENTICATED`/`FORBIDDEN` shapes as the list endpoint, above.
+
+---
+
 ## Error Code Reference
 
 | Code              | Status | Where it comes from                                                     | Reachable via an existing endpoint? |
@@ -107,6 +172,8 @@ Try: `{{base_url}}/api/admin/user-directory?role=buyer&limit=10`
 | `UNAUTHENTICATED` | 401    | `src/middleware/rbac.ts` — no session resolves from the request at all    | Yes                                     |
 | `FORBIDDEN`        | 403    | `src/middleware/rbac.ts` — a real session whose role isn't `super-admin`  | Yes                                     |
 | `VALIDATION_ERROR` | 400    | `errorHandler.ts` — a thrown `ZodError` (bad query params)                | Yes                                     |
+| `INVALID_ID`       | 400    | `src/utils/objectId.ts`'s `parseObjectId()` — the `:id` segment isn't a valid Mongo ObjectId | Yes |
+| `USER_NOT_FOUND`   | 404    | `userDirectory.service.ts` — `:id` doesn't match any account              | Yes                                     |
 
 ---
 

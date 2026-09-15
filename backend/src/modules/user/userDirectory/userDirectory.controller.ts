@@ -1,8 +1,9 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { successResponse } from "@/utils/apiResponse";
+import { parseObjectId } from "@/utils/objectId";
 import { parseQuery } from "@/utils/parseQuery";
-import { listUserDirectory } from "./userDirectory.service";
+import { getUserDirectoryEntry, listUserDirectory } from "./userDirectory.service";
 
 const ALL_ROLES = ["buyer", "catalog-manager", "order-manager", "super-admin"] as const;
 
@@ -35,4 +36,11 @@ export async function listUserDirectoryHandler(req: Request, res: Response): Pro
   );
   const { items, pagination } = await listUserDirectory(filter, sort, { page, limit });
   res.status(200).json(successResponse(items, pagination));
+}
+
+// FR-AUTH-050 — single directory entry by id, same read-only contract.
+export async function getUserDirectoryEntryHandler(req: Request, res: Response): Promise<void> {
+  const id = parseObjectId(req.params.id);
+  const entry = await getUserDirectoryEntry(id);
+  res.status(200).json(successResponse(entry));
 }

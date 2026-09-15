@@ -3,6 +3,7 @@ import {
   Boxes,
   ClipboardList,
   FolderTree,
+  IdCard,
   LayoutDashboard,
   ListChecks,
   Package,
@@ -14,6 +15,7 @@ import {
 import { PRODUCT_CATALOG_ROUTES } from "@/features/product-catalog/routePaths";
 import { ORDERS_ROUTES } from "@/features/orders/routePaths";
 import { INVENTORY_ROUTES } from "@/features/inventory/routePaths";
+import { USER_DIRECTORY_ROUTES } from "@/features/authentication/userDirectory/routePaths";
 import type { AdminRole } from "@/features/authentication/auth/adminRoles";
 
 export interface NavItem {
@@ -78,6 +80,13 @@ export const NAV_ITEMS: NavItem[] = [
     to: "/admin-users",
     label: "Admin Users",
     icon: Users,
+    group: "Administration",
+    roles: ["super-admin"],
+  },
+  {
+    to: USER_DIRECTORY_ROUTES.list,
+    label: "User Directory",
+    icon: IdCard,
     group: "Administration",
     roles: ["super-admin"],
   },

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { rbac } from "@/middleware/rbac";
-import { listUserDirectoryHandler } from "./userDirectory.controller";
+import { getUserDirectoryEntryHandler, listUserDirectoryHandler } from "./userDirectory.controller";
 
 const router = Router();
 
@@ -8,5 +8,6 @@ const router = Router();
 router.use(rbac(["super-admin"]));
 
 router.get("/", listUserDirectoryHandler);
+router.get("/:id", getUserDirectoryEntryHandler);
 
 export default router;

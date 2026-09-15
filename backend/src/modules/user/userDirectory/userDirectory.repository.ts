@@ -1,6 +1,7 @@
 // Issue #385 (FR-AUTH-047–049) — the read-only, unscoped counterpart to
 // adminUsers.repository.ts: lists every account (buyer + admin), not just
 // the three admin roles. Never imports UserAuth.
+import type { Types } from "mongoose";
 import { User, type UserDocument } from "@/modules/user/user.model";
 
 export type UserDirectoryRecord = Pick<
@@ -10,6 +11,10 @@ export type UserDirectoryRecord = Pick<
 
 export type UserDirectoryListSort = { field: string; order: 1 | -1 };
 export type UserDirectoryListPage = { page: number; limit: number };
+
+export async function findById(id: Types.ObjectId): Promise<UserDirectoryRecord | null> {
+  return User.findById(id).select("-passwordHash").lean();
+}
 
 export async function list(
   filter: Record<string, unknown>,

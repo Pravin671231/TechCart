@@ -169,13 +169,14 @@ Same shape as specifications above — no public/status/search surface.
 
 #### `userDirectory.api.md`
 
-| Method | Path                        | Scope                    | Doc                                                                    |
-| ------ | --------------------------- | ------------------------ | ------------------------------------------------------------------------ |
-| GET    | `/api/admin/user-directory` | admin (super-admin only) | [→](./authentication/userDirectory.api.md#get-apiadminuser-directory) |
+| Method | Path                            | Scope                    | Doc                                                                        |
+| ------ | -------------------------------- | ------------------------ | ------------------------------------------------------------------------------ |
+| GET    | `/api/admin/user-directory`      | admin (super-admin only) | [→](./authentication/userDirectory.api.md#get-apiadminuser-directory)         |
+| GET    | `/api/admin/user-directory/:id`  | admin (super-admin only) | [→](./authentication/userDirectory.api.md#get-apiadminuser-directoryid)       |
 
 ---
 
-**18 endpoints total** across the 4 files above (10 + 3 + 4 + 1). The full-page Google OAuth redirect flow (`POST /api/auth/sign-in/social` + `GET /api/auth/callback/google`) was **not** rebuilt on the custom session engine (Issues #258/#260) — those two paths now return 404; One Tap and email OTP are the buyer sign-in methods. Google One Tap's `idToken` still can't be fabricated by hand — see [`auth.api.md`](./authentication/auth.api.md#post-apiauthone-tapcallback).
+**19 endpoints total** across the 4 files above (10 + 3 + 4 + 2). The full-page Google OAuth redirect flow (`POST /api/auth/sign-in/social` + `GET /api/auth/callback/google`) was **not** rebuilt on the custom session engine (Issues #258/#260) — those two paths now return 404; One Tap and email OTP are the buyer sign-in methods. Google One Tap's `idToken` still can't be fabricated by hand — see [`auth.api.md`](./authentication/auth.api.md#post-apiauthone-tapcallback).
 
 ---
 

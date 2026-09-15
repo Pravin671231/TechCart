@@ -8,6 +8,7 @@ import { RequireAuth } from "@/features/authentication/auth/RequireAuth";
 import { RequireRole } from "@/features/authentication/auth/RequireRole";
 import { SignInContent } from "@/features/authentication/auth/SignInContent";
 import { AdminUsersPage } from "@/features/authentication/adminUsers/AdminUsersPage";
+import { UserDirectoryRoutes } from "@/features/authentication/userDirectory/routes";
 import { AccountPage } from "@/features/authentication/account/AccountPage";
 
 export const MainRoutes = () => {
@@ -18,6 +19,7 @@ export const MainRoutes = () => {
         <Route element={<RequireRole role="super-admin" />}>
           <Route element={<AppShell />}>
             <Route path="/admin-users" element={<AdminUsersPage />} />
+            {UserDirectoryRoutes()}
           </Route>
         </Route>
         <Route element={<RequireRole role={["order-manager", "super-admin"]} />}>
