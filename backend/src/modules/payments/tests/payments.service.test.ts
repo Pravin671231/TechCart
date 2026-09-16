@@ -233,6 +233,41 @@ describe("verifyPayment / FR-PAY-005-011", () => {
     expect(paymentsRepository.markFailed).toHaveBeenCalled();
     expect(markOrderPaid).not.toHaveBeenCalled();
   });
+
+  // Bug fix, no issue number: a webhook delivery (or a duplicate Checkout
+  // success callback) can already have marked the order paid before this
+  // call runs — markOrderPaid must not be re-called in that case, since the
+  // state machine has no paid->paid edge and would throw
+  // INVALID_ORDER_TRANSITION on an otherwise-legitimate double-confirmation.
+  it("on a valid signature for an order already marked paid: skips markOrderPaid and returns the current order", async () => {
+    const paidOrder = makeOrder({ status: "paid" });
+    vi.mocked(findOwned).mockResolvedValue(paidOrder);
+    vi.mocked(paymentsRepository.findByRazorpayOrderId).mockResolvedValue(makePayment());
+    vi.mocked(verifyPaymentSignature).mockReturnValue(true);
+    vi.mocked(buildOrderResponse).mockReturnValue({ id: orderId, status: "paid" } as never);
+
+    const result = await verifyPayment(userId, orderId, verifyInput);
+
+    expect(markOrderPaid).not.toHaveBeenCalled();
+    expect(buildOrderResponse).toHaveBeenCalledWith(paidOrder);
+    expect(result).toMatchObject({ status: "paid" });
+  });
+
+  it("on a valid signature for an already-captured payment: skips markCaptured but still marks the order paid", async () => {
+    vi.mocked(findOwned).mockResolvedValue(makeOrder());
+    vi.mocked(paymentsRepository.findByRazorpayOrderId).mockResolvedValue(
+      makePayment({ status: "captured" }),
+    );
+    vi.mocked(verifyPaymentSignature).mockReturnValue(true);
+    vi.mocked(markOrderPaid).mockResolvedValue(makeOrder({ status: "paid" }));
+    vi.mocked(buildOrderResponse).mockReturnValue({ id: orderId, status: "paid" } as never);
+
+    const result = await verifyPayment(userId, orderId, verifyInput);
+
+    expect(paymentsRepository.markCaptured).not.toHaveBeenCalled();
+    expect(markOrderPaid).toHaveBeenCalledWith(expect.anything(), "pay_123");
+    expect(result).toMatchObject({ status: "paid" });
+  });
 });
 
 describe("handleRazorpayWebhookEvent / FR-PAY-023-025", () => {

@@ -108,6 +108,16 @@ export type VerifyPaymentInput = {
 // pending_payment, so the buyer can retry (FR-PAY-011, initiatePayment's own
 // idempotency guard above already mints a fresh Razorpay order once this
 // attempt is marked failed).
+//
+// Idempotency guard (bug fix, no issue number): this call can race the
+// payment.captured webhook (handleRazorpayWebhookEvent below already guards
+// its own markCaptured/markOrderPaid pair the identical way) — whichever of
+// the two arrives second previously called markOrderPaid unconditionally,
+// which throws 409 INVALID_ORDER_TRANSITION ("Cannot move an order from
+// 'paid' to 'paid'.") since the state machine has no paid->paid edge. A
+// duplicate verify call (e.g. a re-fired Checkout success callback) hit the
+// same crash. Both are legitimate double-confirmations, not errors — skip
+// the already-done half of the work and return the current order state.
 export async function verifyPayment(
   userId: string,
   orderId: string,
@@ -139,11 +149,15 @@ export async function verifyPayment(
     );
   }
 
-  await markCaptured(payment._id, {
-    razorpayPaymentId: input.razorpayPaymentId,
-    razorpaySignature: input.razorpaySignature,
-  });
-  const updatedOrder = await markOrderPaid(orderOid, input.razorpayPaymentId);
+  if (payment.status !== "captured") {
+    await markCaptured(payment._id, {
+      razorpayPaymentId: input.razorpayPaymentId,
+      razorpaySignature: input.razorpaySignature,
+    });
+  }
+
+  const updatedOrder =
+    order.status === "paid" ? order : await markOrderPaid(orderOid, input.razorpayPaymentId);
   return buildOrderResponse(updatedOrder);
 }
 
