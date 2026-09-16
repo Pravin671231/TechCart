@@ -46,7 +46,7 @@ export function CartLineRow({ line }: { line: CartLineItem }) {
 
   return (
     <div
-      className={`flex gap-4 rounded-lg border border-neutral-200 p-4 ${
+      className={`flex gap-4 rounded-lg border-2 border-neutral-200 p-4 shadow-xl ${
         unavailable ? "opacity-60" : ""
       }`}
     >

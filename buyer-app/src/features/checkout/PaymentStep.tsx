@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { toast } from "sonner";
 import { formatPrice } from "@/features/products/money";
 import { useInitiatePaymentMutation, useVerifyPaymentMutation } from "./api";
+import { PaymentSuccessModal } from "./PaymentSuccessModal";
 import type { CheckoutResponse } from "./types";
 import type { NormalizedApiError } from "@/store/api";
 
-type PaymentStatus = "idle" | "verifying" | "failed";
+type PaymentStatus = "idle" | "verifying" | "failed" | "success";
 
 // If the Razorpay script tag neither fires onLoad nor onError (a connection
 // that hangs rather than failing outright), this is the fallback that stops
@@ -22,13 +22,13 @@ const SCRIPT_LOAD_ERROR_MESSAGE =
 // FR-PAY §6 (buyer-app UI/UX) — replaces the old "payment coming soon"
 // placeholder: launches the Razorpay Checkout widget using
 // POST .../payment's response, verifies the widget's own success callback
-// server-side, and redirects to the order detail view. A failure or
-// dismissal returns the buyer to a retry state on the same order rather
-// than forcing a fresh checkout — retrying re-calls POST .../payment,
-// which the backend already mints a fresh Razorpay order for after a
-// failed attempt (FR-PAY-011).
+// server-side, then shows PaymentSuccessModal (a brief confirmation with a
+// 5s countdown before it redirects home — see that component for the
+// countdown/navigation logic). A failure or dismissal returns the buyer to
+// a retry state on the same order rather than forcing a fresh checkout —
+// retrying re-calls POST .../payment, which the backend already mints a
+// fresh Razorpay order for after a failed attempt (FR-PAY-011).
 export function PaymentStep({ order }: { order: CheckoutResponse }) {
-  const router = useRouter();
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<PaymentStatus>("idle");
@@ -80,7 +80,7 @@ export function PaymentStep({ order }: { order: CheckoutResponse }) {
             })
               .unwrap()
               .then(() => {
-                if (!cancelled) router.push(`/orders/${order.id}`);
+                if (!cancelled) setStatus("success");
               })
               .catch((err: unknown) => {
                 if (cancelled) return;
@@ -100,6 +100,15 @@ export function PaymentStep({ order }: { order: CheckoutResponse }) {
       .catch((err: unknown) => {
         if (cancelled) return;
         const apiError = err as NormalizedApiError;
+        // ORDER_ALREADY_PAID (bug fix, no issue number) — this order is
+        // actually already done (e.g. a stale "failed" state from an
+        // earlier verifyPayment race, now fixed at its source), not a real
+        // failure; recover into the success state instead of dead-ending
+        // the buyer on a Retry loop that will only ever reject again.
+        if (apiError?.code === "ORDER_ALREADY_PAID") {
+          setStatus("success");
+          return;
+        }
         fail(apiError?.message || "Unable to start payment. Please try again.");
       });
 
@@ -107,12 +116,14 @@ export function PaymentStep({ order }: { order: CheckoutResponse }) {
       cancelled = true;
     };
     // Deliberately re-runs only on scriptLoaded/attempt (attempt is the
-    // retry trigger). initiatePayment/verifyPayment/router are omitted on
-    // purpose, not an oversight: a test double for next/navigation's
-    // useRouter that returns a fresh object per render (a common, valid
-    // mock shape) turns "router" into an unstable dependency and re-triggers
-    // this effect every render — a real infinite loop confirmed while
-    // writing this component's own test suite, not a theoretical concern.
+    // retry trigger). initiatePayment/verifyPayment are omitted on purpose,
+    // not an oversight — this effect originally also omitted `router` for
+    // the identical reason (a test double for next/navigation's useRouter
+    // that returns a fresh object per render turned it into an unstable
+    // dependency and re-triggered this effect every render, a real infinite
+    // loop confirmed while writing this component's own test suite);
+    // PaymentSuccessModal now owns the post-success redirect, so this
+    // component has no router usage left at all.
   }, [scriptLoaded, attempt]);
 
   return (
@@ -143,10 +154,14 @@ export function PaymentStep({ order }: { order: CheckoutResponse }) {
             Retry payment
           </button>
         </div>
-      ) : (
+      ) : status !== "success" ? (
         <p className="mt-4 text-sm text-neutral-600">
           {status === "verifying" ? "Confirming your payment…" : "Opening secure payment…"}
         </p>
+      ) : null}
+
+      {status === "success" && (
+        <PaymentSuccessModal orderNumber={order.orderNumber} amount={order.totalAmount} />
       )}
     </section>
   );

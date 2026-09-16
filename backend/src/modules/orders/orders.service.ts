@@ -331,11 +331,35 @@ export async function transitionOrder(
 // Express route anywhere in this codebase. paymentId isn't persisted yet
 // since orders.model.ts (v0.5) has no payment-reference field of its own —
 // v0.6 will extend the schema when it lands.
+//
+// Race guard (bug fix, no issue number): this function has two real callers
+// — payments.service.ts's verifyPayment (the Checkout widget's client-side
+// callback) and the payment.captured webhook — which can both resolve for
+// the same payment. A caller-side pre-check against a snapshot fetched
+// earlier in the request can't fully close that window (the other caller
+// can still land in between the snapshot and this call), so the guard has
+// to live here instead: if the order was already marked paid by whichever
+// caller won the race, transitionOrder's own fresh findById sees status
+// "paid" and assertTransition("paid","paid") throws INVALID_ORDER_TRANSITION
+// — recovered here as a benign double-confirmation, not a real error, by
+// re-fetching and returning the now-paid record. Any other transition
+// error (the order is genuinely in some other, non-paid state) still
+// propagates unchanged.
 export async function markOrderPaid(
   orderId: Types.ObjectId,
   _paymentId: string,
 ): Promise<OrderRecord> {
-  return transitionOrder(orderId, "paid");
+  try {
+    return await transitionOrder(orderId, "paid");
+  } catch (err) {
+    if (err instanceof AppError && err.code === "INVALID_ORDER_TRANSITION") {
+      const current = await findById(orderId);
+      if (current?.status === "paid") {
+        return current;
+      }
+    }
+    throw err;
+  }
 }
 
 // FR-ORD-010 — orders left in pending_payment past 30 minutes should be
