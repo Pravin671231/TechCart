@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useEffect } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse, delay } from "msw";
 import { Provider } from "react-redux";
@@ -255,7 +255,7 @@ describe("Order detail", () => {
 
     expect(await screen.findByText(/order #TC-2026-000001/i)).toBeInTheDocument();
     expect(screen.getByText(/221B, Residency Road/)).toBeInTheDocument();
-    expect(screen.getAllByText("Pending payment")).toHaveLength(1);
+    expect(screen.getAllByText("Pending")).toHaveLength(1);
     expect(screen.getAllByText("Paid")).toHaveLength(1);
     expect(screen.getAllByText("Processing")).toHaveLength(1);
     expect(screen.getAllByText("Shipped")).toHaveLength(2); // header badge + timeline entry
@@ -287,6 +287,9 @@ describe("Order detail", () => {
     const cancelButton = await screen.findByRole("button", { name: /^cancel order$/i });
     await userEvent.click(cancelButton);
 
+    const dialog = await screen.findByRole("alertdialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^cancel order$/i }));
+
     // Wait for the mutation to actually resolve (status badge flips to
     // "Cancelled"), not just for the button's own label to change to its
     // disabled "Cancelling…" in-flight state — that transient label change
@@ -295,6 +298,32 @@ describe("Order detail", () => {
       expect(screen.getAllByText("Cancelled").length).toBeGreaterThan(0);
     });
     expect(screen.queryByRole("button", { name: /^cancel order$/i })).not.toBeInTheDocument();
+  });
+
+  it("dismissing the cancel confirmation leaves the order untouched", async () => {
+    signedIn();
+    let cancelCalled = false;
+    server.use(
+      http.get(`${API_URL}/api/orders/o1`, () =>
+        HttpResponse.json({ success: true, data: order({ status: "pending_payment" }) }),
+      ),
+      http.post(`${API_URL}/api/orders/o1/cancel`, () => {
+        cancelCalled = true;
+        return HttpResponse.json({ success: true, data: order({ status: "cancelled" }) });
+      }),
+    );
+
+    await renderDetail("o1");
+
+    const cancelButton = await screen.findByRole("button", { name: /^cancel order$/i });
+    await userEvent.click(cancelButton);
+
+    const dialog = await screen.findByRole("alertdialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^cancel$/i }));
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(cancelCalled).toBe(false);
+    expect(screen.getByRole("button", { name: /^cancel order$/i })).toBeInTheDocument();
   });
 
   it("does not show the cancel button for a delivered order", async () => {
@@ -370,12 +399,15 @@ describe("Order detail", () => {
     const payNowButton = await screen.findByRole("button", { name: /^pay now$/i });
     await userEvent.click(payNowButton);
 
+    const dialog = await screen.findByRole("alertdialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^pay now$/i }));
+
     expect(screen.queryByRole("button", { name: /^pay now$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^add items to cart$/i })).not.toBeInTheDocument();
     expect(await screen.findByText(/opening secure payment/i)).toBeInTheDocument();
   });
 
-  it("clicking Add items to cart adds every line to the cart, cancels the order, and redirects to /cart", async () => {
+  it("clicking Add items to cart adds every line to the cart, cancels the order, and stays on the order page", async () => {
     signedIn();
     const twoItemOrder = order({
       status: "pending_payment",
@@ -426,14 +458,16 @@ describe("Order detail", () => {
     const addToCartButton = await screen.findByRole("button", { name: /^add items to cart$/i });
     await userEvent.click(addToCartButton);
 
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/cart"));
+    const dialog = await screen.findByRole("alertdialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^add to cart$/i }));
 
+    expect(await screen.findByText(/items added to your cart/i)).toBeInTheDocument();
     expect(addedItems).toEqual([
       { variantId: "v1", quantity: 2 },
       { variantId: "v2", quantity: 1 },
     ]);
     expect(calls).toEqual(["add", "add", "cancel"]);
-    expect(await screen.findByText(/items added to your cart/i)).toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalledWith("/cart");
   });
 
   it("shows an error and does not cancel or redirect when adding an item to the cart fails", async () => {
@@ -459,6 +493,9 @@ describe("Order detail", () => {
 
     const addToCartButton = await screen.findByRole("button", { name: /^add items to cart$/i });
     await userEvent.click(addToCartButton);
+
+    const dialog = await screen.findByRole("alertdialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^add to cart$/i }));
 
     expect(await screen.findByText(/not enough stock available/i)).toBeInTheDocument();
     expect(cancelCalled).toBe(false);

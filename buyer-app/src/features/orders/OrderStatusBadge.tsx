@@ -1,7 +1,7 @@
 import type { OrderStatus } from "./types";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  pending_payment: "Pending payment",
+  pending_payment: "Pending",
   paid: "Paid",
   processing: "Processing",
   shipped: "Shipped",
@@ -11,7 +11,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
 };
 
 const STATUS_CLASSES: Record<OrderStatus, string> = {
-  pending_payment: "bg-neutral-100 text-neutral-700",
+  pending_payment: "bg-yellow-100 text-yellow-700",
   paid: "bg-primary-100 text-primary-700",
   processing: "bg-primary-100 text-primary-700",
   shipped: "bg-accent-100 text-accent-700",

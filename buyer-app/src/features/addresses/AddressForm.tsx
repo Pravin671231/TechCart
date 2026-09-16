@@ -83,10 +83,7 @@ export function AddressForm({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-3 rounded-lg border border-neutral-200 p-4"
-    >
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <div>
         <label htmlFor="fullName" className="block text-sm font-medium text-neutral-700">
           Full name

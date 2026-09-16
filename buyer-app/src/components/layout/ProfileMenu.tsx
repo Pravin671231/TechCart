@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User } from "lucide-react";
 import { toast } from "sonner";
+import { AlertModal } from "@/components/ui/AlertModal";
 import { useGetSessionQuery, useSignOutMutation } from "@/features/authentication/auth/api";
 import type { SessionUser } from "@/features/authentication/auth/types";
 import { showApiErrorToast } from "@/lib/apiErrorToast";
@@ -34,9 +35,10 @@ function Avatar({ initials }: { initials: string }) {
 
 export function ProfileMenu() {
   const { data: session } = useGetSessionQuery();
-  const [signOut] = useSignOutMutation();
+  const [signOut, { isLoading: isSigningOut }] = useSignOutMutation();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -71,7 +73,6 @@ export function ProfileMenu() {
   const initials = initialsFor(session);
 
   const handleSignOut = async () => {
-    setOpen(false);
     try {
       await signOut().unwrap();
       toast.success("Signed out");
@@ -125,13 +126,30 @@ export function ProfileMenu() {
           <button
             type="button"
             role="menuitem"
-            onClick={handleSignOut}
+            onClick={() => {
+              setOpen(false);
+              setConfirmSignOut(true);
+            }}
             className="block w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
           >
             Sign out
           </button>
         </div>
       )}
+
+      <AlertModal
+        open={confirmSignOut}
+        variant="danger"
+        title="Sign out?"
+        message="You'll need to sign in again to view your account, orders, and cart."
+        confirmLabel="Sign out"
+        isConfirming={isSigningOut}
+        onConfirm={async () => {
+          setConfirmSignOut(false);
+          await handleSignOut();
+        }}
+        onCancel={() => setConfirmSignOut(false)}
+      />
     </div>
   );
 }
