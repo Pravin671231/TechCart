@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 export type AlertVariant = "confirm" | "danger";
@@ -38,7 +39,11 @@ const VARIANT_STYLES: Record<
 
 // buyer-app's own generic confirm/cancel dialog — mirrors admin-app's
 // components/ui/AlertModal.tsx API, adapted to this app's conventions (no
-// cn helper, no dark mode, no shared Button component).
+// cn helper, no dark mode, no shared Button component). Portaled to
+// document.body so its `fixed` positioning always resolves against the true
+// viewport — a caller opening this from inside a height-pinned/overflow
+// scroll shell (e.g. AccountShell.tsx's account-area layout) would otherwise
+// see it pinned near the top instead of centered.
 export function AlertModal({
   open,
   variant = "confirm",
@@ -51,6 +56,12 @@ export function AlertModal({
   isConfirming,
   confirmDisabled,
 }: AlertModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     function handleKey(event: KeyboardEvent) {
@@ -60,11 +71,11 @@ export function AlertModal({
     return () => document.removeEventListener("keydown", handleKey);
   }, [open, onCancel]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const styles = VARIANT_STYLES[variant];
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
@@ -111,6 +122,7 @@ export function AlertModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
