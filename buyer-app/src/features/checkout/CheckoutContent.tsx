@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageContainer } from "@/components/layout/PageContainer";
 import { ProductListError } from "@/features/products/ProductListError";
 import { SkeletonBox } from "@/components/ui/SkeletonBox";
 import { useGetSessionQuery } from "@/features/authentication/auth/api";
@@ -73,10 +72,12 @@ export function CheckoutContent() {
 
   if (order) {
     return (
-      <PageContainer>
-        <h1 className="mb-6 text-2xl font-semibold tracking-tight text-neutral-900">Checkout</h1>
-        <OrderConfirmation order={order} />
-      </PageContainer>
+      <div className="min-h-dvh w-full">
+        <div className="mt-2 mx-auto w-full max-w-7xl px-4 py-6 rounded-lg shadow-xl bg-white min-h-dvh">
+          <h1 className="mb-6 text-2xl font-semibold tracking-tight text-neutral-900">Checkout</h1>
+          <OrderConfirmation order={order} />
+        </div>
+      </div>
     );
   }
 
@@ -84,52 +85,54 @@ export function CheckoutContent() {
   const availableCount = cart?.items.filter((line) => !line.unavailable).length ?? 0;
 
   return (
-    <PageContainer>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight text-neutral-900">Checkout</h1>
+    <div className="min-h-dvh w-full">
+      <div className="mt-2 mx-auto w-full max-w-7xl px-4 py-6 rounded-lg shadow-xl bg-white min-h-dvh">
+        <h1 className="mb-6 text-2xl font-semibold tracking-tight text-neutral-900">Checkout</h1>
 
-      {session === null ? null : isCartError ? (
-        <ProductListError onRetry={refetchCart} message="Something went wrong loading your cart." />
-      ) : isAddressesError ? (
-        <ProductListError
-          onRetry={refetchAddresses}
-          message="Something went wrong loading your addresses."
-        />
-      ) : isLoading || !cart || !addresses ? (
-        <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
-          <SkeletonBox className="h-64 w-full rounded-lg" />
-          <SkeletonBox className="h-48 w-full rounded-lg" />
-        </div>
-      ) : availableCount === 0 ? (
-        <p className="text-sm text-neutral-500">Your cart has no available items to check out.</p>
-      ) : (
-        <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
-          <AddressSelector
-            addresses={addresses}
-            selectedId={selectedAddressId}
-            onSelect={setSelectedAddressId}
+        {session === null ? null : isCartError ? (
+          <ProductListError onRetry={refetchCart} message="Something went wrong loading your cart." />
+        ) : isAddressesError ? (
+          <ProductListError
+            onRetry={refetchAddresses}
+            message="Something went wrong loading your addresses."
           />
-
-          <div className="flex flex-col gap-4">
-            <OrderSummary cart={cart} />
-
-            {error && <p className="text-sm text-red-600">{error}</p>}
-
-            <button
-              type="button"
-              disabled={!selectedAddressId || isPlacingOrder}
-              onClick={handlePlaceOrder}
-              className="w-full rounded-md bg-gradient-primary px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:bg-none disabled:bg-neutral-300"
-            >
-              {isPlacingOrder ? "Placing order…" : "Place order"}
-            </button>
-            {!selectedAddressId && (
-              <p className="text-center text-xs text-neutral-500">
-                Select or add a shipping address to continue.
-              </p>
-            )}
+        ) : isLoading || !cart || !addresses ? (
+          <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
+            <SkeletonBox className="h-64 w-full rounded-lg" />
+            <SkeletonBox className="h-48 w-full rounded-lg" />
           </div>
-        </div>
-      )}
-    </PageContainer>
+        ) : availableCount === 0 ? (
+          <p className="text-sm text-neutral-500">Your cart has no available items to check out.</p>
+        ) : (
+          <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
+            <AddressSelector
+              addresses={addresses}
+              selectedId={selectedAddressId}
+              onSelect={setSelectedAddressId}
+            />
+
+            <div className="flex flex-col gap-4">
+              <OrderSummary cart={cart} />
+
+              {error && <p className="text-sm text-red-600">{error}</p>}
+
+              <button
+                type="button"
+                disabled={!selectedAddressId || isPlacingOrder}
+                onClick={handlePlaceOrder}
+                className="w-full rounded-md bg-gradient-primary px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:bg-none disabled:bg-neutral-300"
+              >
+                {isPlacingOrder ? "Placing order…" : "Place order"}
+              </button>
+              {!selectedAddressId && (
+                <p className="text-center text-xs text-neutral-500">
+                  Select or add a shipping address to continue.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

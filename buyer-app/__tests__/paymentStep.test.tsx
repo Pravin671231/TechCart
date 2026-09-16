@@ -133,7 +133,7 @@ describe("PaymentStep", () => {
     });
   });
 
-  it("verifies on the widget's success callback and redirects to the order detail page", async () => {
+  it("verifies on the widget's success callback, shows the success modal, then redirects home after 5s", async () => {
     server.use(
       http.post(`${API_URL}/api/orders/${order.id}/payment`, () =>
         HttpResponse.json(
@@ -149,8 +149,13 @@ describe("PaymentStep", () => {
       ),
     );
 
+    vi.useFakeTimers();
     await renderPaymentStep();
-    await waitFor(() => expect(capturedOptions).toBeDefined());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(capturedOptions).toBeDefined();
 
     capturedOptions!.handler({
       razorpay_order_id: "order_rzp2",
@@ -158,7 +163,19 @@ describe("PaymentStep", () => {
       razorpay_signature: "sig_1",
     });
 
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith(`/orders/${order.id}`));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText(/payment successful/i)).toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
+
+    for (let i = 0; i < 5; i++) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+    }
+
+    expect(mockPush).toHaveBeenCalledWith("/");
   });
 
   it("shows a retry option when the widget is dismissed without completing payment", async () => {

@@ -17,7 +17,7 @@ export function AddressSelector({
   const [showAddForm, setShowAddForm] = useState(false);
 
   return (
-    <section className="rounded-lg border border-neutral-200 p-5">
+    <section className="rounded-xl border border-neutral-200 p-5 shadow-xl">
       <h2 className="text-sm font-semibold tracking-wide text-neutral-700 uppercase">
         Shipping address
       </h2>
