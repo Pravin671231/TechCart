@@ -81,9 +81,37 @@ describe("CartIndicator", () => {
     await renderIndicator();
 
     expect(await screen.findByText("2")).toBeInTheDocument(); // badge
+    await userEvent.click(screen.getByRole("button", { name: /cart/i }));
+
     expect(screen.getByText("Test Phone")).toBeInTheDocument(); // dropdown item
     expect(screen.getAllByText("₹80,000").length).toBeGreaterThan(0); // subtotal + line total
     expect(screen.getByRole("link", { name: /view cart/i })).toHaveAttribute("href", "/cart");
+  });
+
+  it("opens the dropdown on click and closes it on an outside click", async () => {
+    signedIn();
+    server.use(
+      http.get(`${API_URL}/api/cart`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { id: "c1", items: [sampleLine], itemCount: 2, subtotal: 80000 },
+        }),
+      ),
+    );
+
+    await renderIndicator(<div data-testid="outside">outside</div>);
+
+    const button = await screen.findByRole("button", { name: /cart/i });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Test Phone")).not.toBeInTheDocument();
+
+    await userEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Test Phone")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId("outside"));
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Test Phone")).not.toBeInTheDocument();
   });
 
   it("updates the badge optimistically after an add", async () => {

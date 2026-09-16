@@ -10,7 +10,7 @@ export function CartSummary({ cart }: { cart: Cart }) {
   const unavailableCount = cart.items.length - availableCount;
 
   return (
-    <aside className="h-fit rounded-lg border border-neutral-200 p-5">
+    <aside className="h-fit rounded-xl border border-neutral-200 p-5 shadow-xl">
       <h2 className="text-sm font-semibold tracking-wide text-neutral-700 uppercase">
         Order summary
       </h2>

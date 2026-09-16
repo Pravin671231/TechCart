@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PageContainer } from "@/components/layout/PageContainer";
 import { ProductListError } from "@/features/products/ProductListError";
 import { useGetSessionQuery } from "@/features/authentication/auth/api";
 import { useGetCartQuery } from "./api";
@@ -33,25 +32,27 @@ export function CartContent() {
   });
 
   return (
-    <PageContainer>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight text-neutral-900">Your cart</h1>
+    <div className="min-h-dvh w-full">
+      <div className="mt-2 mx-auto w-full max-w-7xl px-4 py-6 rounded-lg shadow-xl bg-white min-h-dvh">
+        <h1 className="mb-6 text-2xl font-semibold tracking-tight text-neutral-900">Your cart</h1>
 
-      {session === null ? null : isError ? (
-        <ProductListError onRetry={refetch} message="Something went wrong loading your cart." />
-      ) : session === undefined || isLoading || !cart ? (
-        <CartSkeleton />
-      ) : cart.items.length === 0 ? (
-        <CartEmpty />
-      ) : (
-        <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
-          <div className="flex flex-col gap-4">
-            {cart.items.map((line) => (
-              <CartLineRow key={line.variant.id} line={line} />
-            ))}
+        {session === null ? null : isError ? (
+          <ProductListError onRetry={refetch} message="Something went wrong loading your cart." />
+        ) : session === undefined || isLoading || !cart ? (
+          <CartSkeleton />
+        ) : cart.items.length === 0 ? (
+          <CartEmpty />
+        ) : (
+          <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
+            <div className="flex flex-col gap-4">
+              {cart.items.map((line) => (
+                <CartLineRow key={line.variant.id} line={line} />
+              ))}
+            </div>
+            <CartSummary cart={cart} />
           </div>
-          <CartSummary cart={cart} />
-        </div>
-      )}
-    </PageContainer>
+        )}
+      </div>
+    </div>
   );
 }

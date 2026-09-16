@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
@@ -28,6 +28,27 @@ export function CartIndicator() {
     if (increased) setShake(true);
   }
 
+  // Click-to-toggle mini-cart dropdown, mirroring ProfileMenu's pattern —
+  // hover/focus no longer opens it.
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointer(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
   // Unauthenticated: the icon routes to sign-in, no badge (FR-CART-019, SRS §6).
   if (!session) {
     return (
@@ -42,10 +63,13 @@ export function CartIndicator() {
   }
 
   return (
-    <div className="group relative">
-      <Link
-        href="/cart"
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
         aria-label={`Cart, ${itemCount} item${itemCount === 1 ? "" : "s"}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
         className="relative flex text-neutral-700 hover:text-neutral-900"
       >
         <span
@@ -60,57 +84,64 @@ export function CartIndicator() {
             {itemCount}
           </span>
         )}
-      </Link>
+      </button>
 
-      {/* Mini-cart preview — opens on hover/focus of the group. */}
-      <div className="invisible absolute right-0 z-30 mt-2 w-[min(20rem,calc(100vw-1.5rem))] rounded-lg border border-neutral-200 bg-white p-3 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-        {!cart || cart.items.length === 0 ? (
-          <p className="px-1 py-4 text-center text-sm text-neutral-500">Your cart is empty.</p>
-        ) : (
-          <>
-            <ul className="max-h-72 space-y-2 overflow-y-auto">
-              {cart.items.map((line) => (
-                <li key={line.variant.id} className="flex gap-2">
-                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded bg-neutral-50">
-                    {line.variant.primaryImage && (
-                      <Image
-                        src={line.variant.primaryImage.url}
-                        alt={line.variant.primaryImage.alt ?? line.variant.product.name}
-                        fill
-                        unoptimized
-                        sizes="48px"
-                        className="object-cover"
-                      />
-                    )}
-                  </div>
-                  <div className="flex flex-1 flex-col text-xs">
-                    <span className="line-clamp-1 text-neutral-800">
-                      {line.variant.product.name}
-                    </span>
-                    <span className="text-neutral-500">
-                      ×{line.quantity}
-                      {line.unavailable ? " · unavailable" : ""}
-                    </span>
-                  </div>
-                  <span className="text-xs font-medium text-neutral-700">
-                    {formatPrice(line.lineTotal)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-3 flex items-center justify-between border-t border-neutral-200 pt-2 text-sm">
-              <span className="text-neutral-500">Subtotal</span>
-              <span className="font-semibold text-neutral-900">{formatPrice(cart.subtotal)}</span>
-            </div>
-          </>
-        )}
-        <Link
-          href="/cart"
-          className="mt-3 block rounded-md bg-gradient-primary px-3 py-2 text-center text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md"
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 z-30 mt-2 w-[min(20rem,calc(100vw-1.5rem))] rounded-lg border border-neutral-200 bg-white p-3 shadow-lg"
         >
-          View cart
-        </Link>
-      </div>
+          {!cart || cart.items.length === 0 ? (
+            <p className="px-1 py-4 text-center text-sm text-neutral-500">Your cart is empty.</p>
+          ) : (
+            <>
+              <ul className="max-h-72 space-y-2 overflow-y-auto">
+                {cart.items.map((line) => (
+                  <li key={line.variant.id} className="flex gap-2">
+                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded bg-neutral-50">
+                      {line.variant.primaryImage && (
+                        <Image
+                          src={line.variant.primaryImage.url}
+                          alt={line.variant.primaryImage.alt ?? line.variant.product.name}
+                          fill
+                          unoptimized
+                          sizes="48px"
+                          className="object-cover"
+                        />
+                      )}
+                    </div>
+                    <div className="flex flex-1 flex-col text-xs">
+                      <span className="line-clamp-1 text-neutral-800">
+                        {line.variant.product.name}
+                      </span>
+                      <span className="text-neutral-500">
+                        ×{line.quantity}
+                        {line.unavailable ? " · unavailable" : ""}
+                      </span>
+                    </div>
+                    <span className="text-xs font-medium text-neutral-700">
+                      {formatPrice(line.lineTotal)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 flex items-center justify-between border-t border-neutral-200 pt-2 text-sm">
+                <span className="text-neutral-500">Subtotal</span>
+                <span className="font-semibold text-neutral-900">
+                  {formatPrice(cart.subtotal)}
+                </span>
+              </div>
+            </>
+          )}
+          <Link
+            href="/cart"
+            onClick={() => setOpen(false)}
+            className="mt-3 block rounded-md bg-gradient-primary px-3 py-2 text-center text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md"
+          >
+            View cart
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
