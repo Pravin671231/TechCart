@@ -100,6 +100,15 @@ export function PaymentStep({ order }: { order: CheckoutResponse }) {
       .catch((err: unknown) => {
         if (cancelled) return;
         const apiError = err as NormalizedApiError;
+        // ORDER_ALREADY_PAID (bug fix, no issue number) — this order is
+        // actually already done (e.g. a stale "failed" state from an
+        // earlier verifyPayment race, now fixed at its source), not a real
+        // failure; recover into the success state instead of dead-ending
+        // the buyer on a Retry loop that will only ever reject again.
+        if (apiError?.code === "ORDER_ALREADY_PAID") {
+          setStatus("success");
+          return;
+        }
         fail(apiError?.message || "Unable to start payment. Please try again.");
       });
 

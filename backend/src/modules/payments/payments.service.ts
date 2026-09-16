@@ -67,6 +67,15 @@ export async function initiatePayment(
     throw new AppError(404, "ORDER_NOT_FOUND", "Order not found.");
   }
   if (order.status !== "pending_payment") {
+    // ORDER_ALREADY_PAID is its own code (bug fix, no issue number) — a
+    // client that's stuck on a stale "failed" state (e.g. an earlier
+    // verifyPayment race, now fixed at its source in markOrderPaid) needs to
+    // tell "this order is actually already done" apart from every other
+    // genuinely-blocked status, so it can recover into a success state
+    // instead of dead-ending on a Retry loop.
+    if (order.status === "paid") {
+      throw new AppError(400, "ORDER_ALREADY_PAID", "This order has already been paid.");
+    }
     throw new AppError(
       400,
       "PAYMENT_NOT_ALLOWED",

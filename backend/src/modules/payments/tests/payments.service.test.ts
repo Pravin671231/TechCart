@@ -109,8 +109,17 @@ describe("initiatePayment / FR-PAY-001-004", () => {
     });
   });
 
-  it("throws PAYMENT_NOT_ALLOWED when the order isn't pending_payment", async () => {
+  it("throws ORDER_ALREADY_PAID when the order is already paid", async () => {
     vi.mocked(findOwned).mockResolvedValue(makeOrder({ status: "paid" }));
+
+    await expect(initiatePayment(userId, orderId)).rejects.toMatchObject({
+      statusCode: 400,
+      code: "ORDER_ALREADY_PAID",
+    });
+  });
+
+  it("throws PAYMENT_NOT_ALLOWED for any other non-pending_payment status", async () => {
+    vi.mocked(findOwned).mockResolvedValue(makeOrder({ status: "cancelled" }));
 
     await expect(initiatePayment(userId, orderId)).rejects.toMatchObject({
       statusCode: 400,

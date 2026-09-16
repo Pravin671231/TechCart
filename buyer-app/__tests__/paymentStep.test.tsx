@@ -251,6 +251,23 @@ describe("PaymentStep", () => {
     expect(openMock).not.toHaveBeenCalled();
   });
 
+  it("recovers into the success state when initiating payment reports the order is already paid", async () => {
+    server.use(
+      http.post(`${API_URL}/api/orders/${order.id}/payment`, () =>
+        HttpResponse.json(
+          { success: false, code: "ORDER_ALREADY_PAID", message: "This order has already been paid." },
+          { status: 400 },
+        ),
+      ),
+    );
+
+    await renderPaymentStep();
+
+    expect(await screen.findByText(/payment successful/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /retry payment/i })).not.toBeInTheDocument();
+    expect(openMock).not.toHaveBeenCalled();
+  });
+
   it("shows a toast when the Razorpay script fails to load", async () => {
     scriptBehavior = "error";
 
