@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useMounted } from "@/hooks/useMounted";
 
 export type AlertVariant = "confirm" | "danger";
 
@@ -56,11 +57,7 @@ export function AlertModal({
   isConfirming,
   confirmDisabled,
 }: AlertModalProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   useEffect(() => {
     if (!open) return;

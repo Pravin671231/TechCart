@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Modal } from "@/components/ui/Modal";
 import { ProductListError } from "@/features/products/ProductListError";
 import { useGetAddressesQuery } from "./api";
 import { AddressCard } from "./AddressCard";
@@ -9,7 +10,7 @@ import { AddressesSkeleton } from "./AddressesSkeleton";
 import { AddressForm } from "./AddressForm";
 import type { Address } from "./types";
 
-type Mode = { type: "list" } | { type: "add" } | { type: "edit"; address: Address };
+type Mode = { type: "closed" } | { type: "add" } | { type: "edit"; address: Address };
 
 // feature/buyer-app-account-sidebar-shell — session guard moved to
 // AccountShell (the (account) route group's layout); this component can now
@@ -18,7 +19,7 @@ type Mode = { type: "list" } | { type: "add" } | { type: "edit"; address: Addres
 // that scrollable-pane role (matching CategoryContent's identical fix,
 // Issue #346).
 export function AddressListContent() {
-  const [mode, setMode] = useState<Mode>({ type: "list" });
+  const [mode, setMode] = useState<Mode>({ type: "closed" });
 
   const { data: addresses, isLoading, isError, refetch } = useGetAddressesQuery();
 
@@ -35,17 +36,6 @@ export function AddressListContent() {
         />
       ) : isLoading || !addresses ? (
         <AddressesSkeleton />
-      ) : mode.type === "add" ? (
-        <AddressForm
-          onDone={() => setMode({ type: "list" })}
-          onCancel={() => setMode({ type: "list" })}
-        />
-      ) : mode.type === "edit" ? (
-        <AddressForm
-          address={mode.address}
-          onDone={() => setMode({ type: "list" })}
-          onCancel={() => setMode({ type: "list" })}
-        />
       ) : addresses.length === 0 ? (
         <AddressesEmpty onAdd={() => setMode({ type: "add" })} />
       ) : (
@@ -66,6 +56,18 @@ export function AddressListContent() {
           </button>
         </div>
       )}
+
+      <Modal
+        open={mode.type !== "closed"}
+        title={mode.type === "edit" ? "Edit address" : "Add a new address"}
+        onClose={() => setMode({ type: "closed" })}
+      >
+        <AddressForm
+          address={mode.type === "edit" ? mode.address : undefined}
+          onDone={() => setMode({ type: "closed" })}
+          onCancel={() => setMode({ type: "closed" })}
+        />
+      </Modal>
     </div>
   );
 }

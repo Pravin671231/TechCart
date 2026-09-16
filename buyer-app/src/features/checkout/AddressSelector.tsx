@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Modal } from "@/components/ui/Modal";
 import { AddressForm } from "@/features/addresses/AddressForm";
 import type { Address } from "@/features/addresses/types";
 
@@ -57,25 +58,23 @@ export function AddressSelector({
         ))}
       </div>
 
-      {showAddForm ? (
-        <div className="mt-4">
-          <AddressForm
-            onDone={(address) => {
-              onSelect(address._id);
-              setShowAddForm(false);
-            }}
-            onCancel={() => setShowAddForm(false)}
-          />
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setShowAddForm(true)}
-          className="mt-4 rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-        >
-          Add a new address
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => setShowAddForm(true)}
+        className="mt-4 rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+      >
+        Add a new address
+      </button>
+
+      <Modal open={showAddForm} title="Add a new address" onClose={() => setShowAddForm(false)}>
+        <AddressForm
+          onDone={(address) => {
+            onSelect(address._id);
+            setShowAddForm(false);
+          }}
+          onCancel={() => setShowAddForm(false)}
+        />
+      </Modal>
     </section>
   );
 }
