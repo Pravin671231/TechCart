@@ -611,6 +611,8 @@ describe("Auth", () => {
       fireEvent.click(trigger);
       fireEvent.click(screen.getByRole("menuitem", { name: /sign out/i }));
 
+      fireEvent.click(await screen.findByRole("button", { name: /^sign out$/i }));
+
       await waitFor(() => {
         expect(localStorage.getItem("auth_token")).toBeNull();
         expect(mockPush).toHaveBeenCalledWith("/");

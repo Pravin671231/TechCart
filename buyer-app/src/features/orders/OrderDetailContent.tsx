@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { AlertModal } from "@/components/ui/AlertModal";
 import { NotFoundState } from "@/components/ui/NotFoundState";
 import { useAddCartItemMutation } from "@/features/cart/api";
 import { PaymentStep } from "@/features/checkout/PaymentStep";
@@ -10,16 +10,18 @@ import { ProductListError } from "@/features/products/ProductListError";
 import { formatPrice } from "@/features/products/money";
 import { showApiErrorToast } from "@/lib/apiErrorToast";
 import { useCancelOrderMutation, useGetOrderQuery } from "./api";
+import { OrderItemRow } from "./OrderItemRow";
 import { OrderStatusBadge } from "./OrderStatusBadge";
 import { OrderStatusTimeline } from "./OrderStatusTimeline";
 import { CANCELLABLE_STATUSES } from "./types";
 import type { NormalizedApiError } from "@/store/api";
 
+type ConfirmAction = "pay" | "moveToCart" | "cancel" | null;
+
 // feature/buyer-app-account-sidebar-shell — session guard moved to
 // AccountShell; PageContainer's own <main> dropped for a plain div (see
 // AddressListContent.tsx's identical note).
 export function OrderDetailContent({ id }: { id: string }) {
-  const router = useRouter();
   const {
     data: order,
     isLoading,
@@ -31,6 +33,7 @@ export function OrderDetailContent({ id }: { id: string }) {
   const [addCartItem] = useAddCartItemMutation();
   const [showPaymentStep, setShowPaymentStep] = useState(false);
   const [isMovingToCart, setIsMovingToCart] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
 
   async function handleCancel() {
     try {
@@ -44,7 +47,9 @@ export function OrderDetailContent({ id }: { id: string }) {
   // Best-effort and sequential (not Promise.all) — a buyer's cart is one
   // document, so concurrent adds would race each other. Stops on the first
   // failure and leaves the order untouched (not cancelled), so retrying is
-  // clean rather than needing compensating rollback logic.
+  // clean rather than needing compensating rollback logic. Stays on this
+  // page on success — no /cart redirect — so the confirming AlertModal's
+  // outcome is visible without navigating away.
   async function handleMoveToCart() {
     if (!order) return;
     setIsMovingToCart(true);
@@ -54,7 +59,6 @@ export function OrderDetailContent({ id }: { id: string }) {
       }
       await cancelOrder({ id }).unwrap();
       toast.success("Items added to your cart");
-      router.push("/cart");
     } catch (err) {
       showApiErrorToast(err, "Couldn't move these items to your cart. Please try again.");
     } finally {
@@ -107,25 +111,11 @@ export function OrderDetailContent({ id }: { id: string }) {
             <h2 className="text-sm font-semibold tracking-wide text-neutral-700 uppercase">
               Items
             </h2>
-            <ul className="mt-4 flex flex-col gap-3 text-sm">
+            <div className="mt-4 flex flex-col gap-3">
               {order.items.map((item) => (
-                <li key={item.variant.id} className="flex justify-between gap-3">
-                  <span className="text-neutral-700">
-                    {item.product.name}
-                    {item.variant.attributes.length > 0 && (
-                      <span className="text-neutral-500">
-                        {" "}
-                        ({item.variant.attributes.map((a) => `${a.name}: ${a.value}`).join(", ")})
-                      </span>
-                    )}{" "}
-                    × {item.quantity}
-                  </span>
-                  <span className="shrink-0 font-medium text-neutral-900">
-                    {formatPrice(item.lineTotal)}
-                  </span>
-                </li>
+                <OrderItemRow key={item.variant.id} item={item} />
               ))}
-            </ul>
+            </div>
             <div className="mt-4 flex justify-between border-t border-neutral-200 pt-4 text-base font-semibold text-neutral-900">
               <span>Total</span>
               <span>{formatPrice(order.totalAmount)}</span>
@@ -169,7 +159,7 @@ export function OrderDetailContent({ id }: { id: string }) {
               </h2>
               <button
                 type="button"
-                onClick={() => setShowPaymentStep(true)}
+                onClick={() => setConfirmAction("pay")}
                 className="w-full rounded-md bg-gradient-primary px-4 py-2 text-sm font-medium text-white transition hover:brightness-95 hover:shadow-md"
               >
                 Pay now
@@ -177,7 +167,7 @@ export function OrderDetailContent({ id }: { id: string }) {
               <button
                 type="button"
                 disabled={isMovingToCart}
-                onClick={handleMoveToCart}
+                onClick={() => setConfirmAction("moveToCart")}
                 className="w-full rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
               >
                 {isMovingToCart ? "Moving to cart…" : "Add items to cart"}
@@ -199,7 +189,7 @@ export function OrderDetailContent({ id }: { id: string }) {
               <button
                 type="button"
                 disabled={isCancelling}
-                onClick={handleCancel}
+                onClick={() => setConfirmAction("cancel")}
                 className="w-full rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
               >
                 {isCancelling ? "Cancelling…" : "Cancel order"}
@@ -208,6 +198,47 @@ export function OrderDetailContent({ id }: { id: string }) {
           )}
         </div>
       </div>
+
+      <AlertModal
+        open={confirmAction === "pay"}
+        variant="confirm"
+        title="Pay now?"
+        message={`You're about to complete payment of ${formatPrice(order.totalAmount)} for order #${order.orderNumber}.`}
+        confirmLabel="Pay now"
+        onConfirm={() => {
+          setConfirmAction(null);
+          setShowPaymentStep(true);
+        }}
+        onCancel={() => setConfirmAction(null)}
+      />
+
+      <AlertModal
+        open={confirmAction === "moveToCart"}
+        variant="confirm"
+        title="Add items to cart?"
+        message="This will add every item from this order to your cart and cancel this order."
+        confirmLabel="Add to cart"
+        isConfirming={isMovingToCart}
+        onConfirm={async () => {
+          await handleMoveToCart();
+          setConfirmAction(null);
+        }}
+        onCancel={() => setConfirmAction(null)}
+      />
+
+      <AlertModal
+        open={confirmAction === "cancel"}
+        variant="danger"
+        title="Cancel this order?"
+        message="This can't be undone. Are you sure you want to cancel this order?"
+        confirmLabel="Cancel order"
+        isConfirming={isCancelling}
+        onConfirm={async () => {
+          await handleCancel();
+          setConfirmAction(null);
+        }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </div>
   );
 }
