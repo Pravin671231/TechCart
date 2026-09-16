@@ -36,7 +36,6 @@ export function PaymentSuccessModal({
     // the identical reasoning: a test double for next/navigation's
     // useRouter returns a fresh object every render, which would otherwise
     // reset this countdown's pending timeout on any unrelated re-render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secondsLeft]);
 
   if (!mounted) return null;
