@@ -115,3 +115,28 @@ servers.
   the cart; a single cancelled order is left in that buyer's history. The
   `create-flows` phase adds an "Aurora …" brand/category/product to the local
   database — drop those rows afterwards if you want a clean dataset.
+- **2026-09-17 buyer-app refresh** (no issue/milestone): every `buyer` screenshot was
+  re-captured against the live deployment for the first time since PR #371 to catch
+  up with several redesigns merged since (account sidebar shell PR #381, order-page
+  confirm dialogs/modals PR #390, cart/checkout polish + mini-cart click-toggle
+  PR #392, payment success modal removal PR #394), plus two new shots
+  (`27-cancel-confirm-dialog.png`, `28-account-profile.png`). Three real,
+  independent bugs in `capture.mjs` itself were found and fixed in the process,
+  each previously masking the next: (1) the cleanup step's own list-row filter
+  looked for badge text "Pending payment", but `OrderStatusBadge` only ever
+  renders "Pending" — so cleanup silently never found its own test order to
+  cancel; (2) even once found, its identity guard used an **exact** text match on
+  the fixed shipping name "Sam Shopper", which can never succeed since the
+  address renders as one `<br>`-joined block of text, not an isolated element —
+  loosened to a substring match; (3) the mini-cart shot's selector,
+  `a[aria-label*='Cart']`, matched zero elements once the real control became a
+  `<button>` (PR #392), and silently fell through to the **Logo**'s
+  `aria-label="TechCart home"` (which also contains the substring "Cart"),
+  hovering that instead and shooting a plain page with no dropdown open — fixed
+  to a precise `button[aria-label^='Cart']` click. All three were caught by
+  actually re-running the script end-to-end against the live backend and
+  checking the real order state via the API afterward, not just reading the
+  script's own success log (which reported "done" throughout, even while
+  silently leaving three separate stray `pending_payment` test orders behind on
+  the shared production backend — each cancelled by hand via the API once
+  found).

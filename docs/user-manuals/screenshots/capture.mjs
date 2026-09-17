@@ -407,8 +407,15 @@ async function buyerPhase(browser) {
 
   await safe("mini-cart + cart", async () => {
     await nav("/");
-    await page.locator("header a[aria-label*='Cart']").first().hover();
-    await page.waitForTimeout(900);
+    // The signed-in cart control is a <button aria-label="Cart, N items">,
+    // opened by click (PR #392 switched it from hover-to-open to
+    // click-to-toggle) — not an <a>. A previous `a[aria-label*='Cart']`
+    // selector matched zero elements here and silently fell through to the
+    // Logo's aria-label="TechCart home" (which also contains the substring
+    // "Cart"), hovering that instead and shooting a plain home page with no
+    // dropdown open. `^=` (starts-with) avoids that class of collision.
+    await page.locator("header button[aria-label^='Cart']").first().click();
+    await page.waitForTimeout(500);
     await shot(page, "buyer-app", "15-mini-cart");
     await nav("/cart");
     await page.waitForTimeout(800);
@@ -476,7 +483,10 @@ async function buyerPhase(browser) {
     await shot(page, "buyer-app", "20-orders");
     // open a still-cancellable order so 26 shows the "Cancel order" button
     const rows = page.locator('a[href^="/orders/"]');
-    let target = rows.filter({ hasText: /Pending payment|Paid/i }).first();
+    // OrderStatusBadge renders "Pending" (not "Pending payment") for
+    // pending_payment orders — matched against the real component, not the
+    // (stale) manual copy.
+    let target = rows.filter({ hasText: /Pending|Paid/i }).first();
     if (!(await target.count())) target = rows.first();
     await target.click();
     await page.waitForURL(/\/orders\/[^/]+$/);
@@ -486,6 +496,24 @@ async function buyerPhase(browser) {
       .waitFor({ timeout: 30000 });
     await page.waitForTimeout(1000);
     await shot(page, "buyer-app", "26-order-detail");
+    // Cancel/Pay now/Add items to cart all route through AlertModal (PR #390)
+    // now, not an immediate action — capture the confirm dialog, then dismiss
+    // via its own "Cancel" (not "Cancel order") button so the order is left
+    // untouched here; the real cancel happens in the cleanup step below.
+    await safe("cancel confirm dialog", async () => {
+      const trigger = page.getByRole("button", { name: /^Cancel order$/i });
+      if (await trigger.count()) {
+        await trigger.first().click();
+        await page.getByRole("alertdialog").waitFor({ timeout: 5000 });
+        await page.waitForTimeout(300);
+        await shot(page, "buyer-app", "27-cancel-confirm-dialog");
+        await page
+          .getByRole("alertdialog")
+          .getByRole("button", { name: /^Cancel$/i })
+          .click();
+        await page.waitForTimeout(300);
+      }
+    });
   });
 
   await safe("account", async () => {
@@ -497,6 +525,12 @@ async function buyerPhase(browser) {
       .catch(() => {});
     await page.waitForTimeout(800);
     await shot(page, "buyer-app", "21-account");
+    await safe("profile page", async () => {
+      await nav("/account/profile");
+      await page.getByRole("heading", { name: /^Edit profile$/i }).waitFor({ timeout: 15000 });
+      await page.waitForTimeout(500);
+      await shot(page, "buyer-app", "28-account-profile");
+    });
   });
   await safe("addresses", async () => {
     await nav("/account/addresses");
@@ -540,27 +574,42 @@ async function buyerPhase(browser) {
         .waitFor({ timeout: 30000 })
         .catch(() => {});
       await page.waitForTimeout(1000);
-      // list rows whose own badge says "Pending payment"
-      const hrefs = await page.locator('a[href^="/orders/"]').evaluateAll((els) => [
-        ...new Set(
-          els
-            .filter((e) => /Pending payment/i.test(e.textContent || ""))
-            .map((e) => e.getAttribute("href"))
-            .filter(Boolean),
-        ),
+      // list rows whose own badge says "Pending" (OrderStatusBadge's real
+      // pending_payment label — a prior version of this filter looked for
+      // "Pending payment", which the badge never actually renders, so this
+      // step silently found nothing and never cancelled its own test order).
+      // Locator.evaluateAll() queries the live DOM with no auto-wait/retry
+      // (unlike .click()/.first() elsewhere in this script), so a genuine
+      // race against the live backend's slower render meant it could run
+      // before the row anchors had actually attached — wait for at least
+      // one match via a real Playwright locator (which does auto-wait)
+      // before reading hrefs off it.
+      const pendingRows = page
+        .locator('a[href^="/orders/"]')
+        .filter({ hasText: /Pending/i });
+      await pendingRows
+        .first()
+        .waitFor({ timeout: 10000 })
+        .catch(() => {});
+      const hrefs = await pendingRows.evaluateAll((els) => [
+        ...new Set(els.map((e) => e.getAttribute("href")).filter(Boolean)),
       ]);
       let cancelledThisPass = false;
       for (const href of hrefs) {
-        // hrefs already filtered to list rows whose badge says "Pending payment"
+        // hrefs already filtered to list rows whose badge says "Pending"
         await page.goto(`${BUYER_URL}${href}`, { waitUntil: "networkidle" });
         await page
           .getByText(/^Order #/)
           .first()
           .waitFor({ timeout: 30000 });
         await page.waitForTimeout(800);
-        // extra guards: only this script's own order (fixed test address + item)
+        // extra guards: only this script's own order (fixed test address + item).
+        // No `exact: true` here — the shipping address renders fullName/line1/
+        // city/phone as sibling text nodes inside one <br>-separated <p>, so
+        // the element's *whole* text is never exactly "Sam Shopper" alone; an
+        // exact match here could never succeed, silently defeating this guard.
         const shipsToTest = await page
-          .getByText(TEST_SHIPPING_NAME, { exact: true })
+          .getByText(TEST_SHIPPING_NAME)
           .first()
           .isVisible()
           .catch(() => false);
@@ -571,7 +620,16 @@ async function buyerPhase(browser) {
           .catch(() => false);
         const cancelBtn = page.getByRole("button", { name: /^Cancel order$/i });
         if (shipsToTest && hasTestItem && (await cancelBtn.count())) {
+          // "Cancel order" only opens an AlertModal confirm dialog now
+          // (PR #390) — the actual cancel is its "Cancel order" confirm
+          // button inside role=alertdialog, a second element with the same
+          // accessible name.
           await cancelBtn.first().click();
+          await page.getByRole("alertdialog").waitFor({ timeout: 5000 });
+          await page
+            .getByRole("alertdialog")
+            .getByRole("button", { name: /^Cancel order$/i })
+            .click();
           await page.waitForTimeout(2500);
           log(`cancelled this run's test order (${href})`);
           cancelledThisPass = true;

@@ -267,8 +267,9 @@ the reason (for example _"Only 3 left in stock"_).
 
 ### The mini-cart
 
-Hover (or focus) the cart icon in the header for a quick summary — each line, its
-quantity, whether it is unavailable, the subtotal, and a **View cart** button.
+Click the cart icon in the header for a quick summary — each line, its quantity,
+whether it is unavailable, the subtotal, and a **View cart** button. Click the icon
+again, click elsewhere, or press **Escape** to close it.
 
 ![Mini-cart dropdown](assets/buyer-app/15-mini-cart.png)
 
@@ -304,7 +305,8 @@ item.
 - **Shipping address** lists your saved addresses as radio options — full name, a
   **Default** pill where it applies, the address, and phone. Your default (or first)
   address is pre-selected.
-- **Add a new address** opens an inline form; saving it selects that address.
+- **Add a new address** opens a modal with the address form; saving it selects that
+  address.
 
 ![Checkout — adding an address](assets/buyer-app/18-checkout-add-address.png)
 
@@ -332,7 +334,7 @@ After the order is placed, the payment step loads the **Razorpay Checkout** wind
   payment** button. Retrying starts a fresh payment attempt.
 
 Your order is created as soon as **Place order** succeeds — even if payment is not
-completed, it appears under **Your orders** as **Pending payment**, and the ordered
+completed, it appears under **Your orders** as **Pending**, and the ordered
 items are removed from your cart. You can return and pay later, or cancel it.
 
 The Razorpay Checkout card (card / UPI / net-banking options) is rendered by Razorpay
@@ -343,7 +345,8 @@ merchant account.
 
 ## 9. Your orders
 
-Open **Orders** from the account menu, or go to `/orders`.
+Open **Orders** from the account sidebar (see [section 10](#10-your-account)), or go
+to `/orders`.
 
 ![Order history](assets/buyer-app/20-orders.png)
 
@@ -359,47 +362,70 @@ Open **Orders** from the account menu, or go to `/orders`.
 An order page shows:
 
 - **Order #**, the date placed, and the current status badge.
-- **Items** — each line as _name (attributes) × qty_ with its line total, then the
-  **Total**.
+- **Items** — each line with its image, product name (linking to the product), the
+  chosen variant attributes, quantity, and line total, then the **Total**.
 - **Shipping address**.
 - **Cancellation reason**, if the order was cancelled.
 - **Status** — a timeline of every status change with its date, time, and any note.
 
+### Acting on a pending order
+
+While an order's status is **Pending** (payment not yet completed), two extra
+options appear above Status:
+
+- **Pay now** opens the same Razorpay payment step from checkout, for this order.
+- **Add items to cart** adds every line back to your cart, then cancels this
+  order — useful if you'd rather adjust quantities or add more items before paying.
+
 ### Cancelling
 
-A **Cancel order** button appears only while the order is **Pending payment** or
-**Paid**. Once cancelled it cannot be reopened.
+A **Cancel order** button appears only while the order is **Pending** or **Paid**.
+Cancel order, Pay now, and Add items to cart each open a confirm dialog first —
+nothing happens until you confirm. Once cancelled, an order cannot be reopened.
+
+![Cancel confirmation](assets/buyer-app/27-cancel-confirm-dialog.png)
 
 ### Status meanings
 
-| Status              | Meaning                                  |
-| ------------------- | ---------------------------------------- |
-| **Pending payment** | Order placed, payment not yet completed. |
-| **Paid**            | Payment received; awaiting processing.   |
-| **Processing**      | Being prepared for dispatch.             |
-| **Shipped**         | Handed to the carrier.                   |
-| **Delivered**       | Received by you.                         |
-| **Cancelled**       | Cancelled by you or by staff.            |
-| **Refunded**        | Payment refunded.                        |
+| Status         | Meaning                                  |
+| -------------- | ----------------------------------------- |
+| **Pending**    | Order placed, payment not yet completed. |
+| **Paid**       | Payment received; awaiting processing.   |
+| **Processing** | Being prepared for dispatch.             |
+| **Shipped**    | Handed to the carrier.                   |
+| **Delivered**  | Received by you.                         |
+| **Cancelled**  | Cancelled by you or by staff.            |
+| **Refunded**   | Payment refunded.                        |
 
 ---
 
 ## 10. Your account
 
-Open **Account** from the header menu, or go to `/account`. You must be signed in.
+Open **Account** from the header profile menu, or go to `/account`. You must be
+signed in.
 
-![Account page](assets/buyer-app/21-account.png)
+The account area has its own sidebar with four sections — **Overview**, **Orders**,
+**Addresses**, and **Profile** — that stays alongside the content on desktop, and
+collapses to a hamburger-triggered drawer (**Account menu**) on mobile.
 
-The account page has:
+![Account overview](assets/buyer-app/21-account.png)
+
+**Overview** (`/account`) has:
 
 - **Account summary** — your name, email, and **Lifetime orders** / **Lifetime
-  spent** totals.
+  spent** totals as icon stat tiles.
+- A **Track your orders** banner linking to **Orders**.
 - **Recent orders** — your five most recent orders, with a **View all orders** link.
   A brand-new account shows _"You haven't placed any orders yet."_
-- **Edit profile** — see below.
-- Links to **Manage saved addresses** and **View your orders**.
+
+**Orders** and **Addresses** open the screens covered in [section 9](#9-your-orders)
+and just below; **Profile** is its own page.
 
 ### Editing your profile
+
+![Edit profile](assets/buyer-app/28-account-profile.png)
+
+Open **Profile** from the sidebar, or go to `/account/profile`.
 
 | Field             | Notes                                               |
 | ----------------- | --------------------------------------------------- |
@@ -407,15 +433,14 @@ The account page has:
 | **Name**          | Editable.                                           |
 | **Phone**         | Editable.                                           |
 
-Click **Save Changes**; a green _"Profile updated."_ confirms the change. Your name in
-the header updates too.
+Click **Save Changes**; a toast confirms _"Profile updated."_ Your name in the header
+updates too.
 
 ---
 
 ## 11. Saved addresses
 
-Open **Manage saved addresses** from the account page, or go to
-`/account/addresses`.
+Open **Addresses** from the account sidebar, or go to `/account/addresses`.
 
 ![Saved addresses](assets/buyer-app/22-addresses.png)
 
@@ -431,6 +456,8 @@ button.
 
 ### The address form
 
+**Add an address** and **Edit** both open the same form in a modal.
+
 ![Address form](assets/buyer-app/23-address-form.png)
 
 | Field                         | Required |
@@ -443,8 +470,9 @@ button.
 | **State**                     | Yes      |
 | **PIN code**                  | Yes      |
 
-Submit with **Add address** (new) or **Save changes** (editing); **Cancel** discards.
-The same form is used inline during checkout.
+Submit with **Add address** (new) or **Save changes** (editing); **Cancel** closes the
+modal without saving. The identical form opens in its own modal during checkout too
+(see [section 8](#8-checkout--payment)).
 
 ---
 
@@ -457,13 +485,14 @@ The same form is used inline during checkout.
 | **Logo**                    | Returns to the home page.                                                                                                                             |
 | **All Categories**          | Dropdown of top-level categories; each opens its category page.                                                                                       |
 | **Search box**              | _"Search for products, brands & more…"_ — suggestions after two characters; Enter opens the results page. On a phone, tap the magnifier to reveal it. |
-| **Cart icon**               | Links to the cart. Shows a count badge once you have items and briefly shakes when the count goes up. Hover for the mini-cart.                        |
+| **Cart icon**               | Click for the mini-cart. Shows a count badge once you have items and briefly shakes when the count goes up.                                           |
 | **Profile icon / initials** | Signed out: links to sign-in. Signed in: opens a menu.                                                                                                |
 
 ![Profile menu](assets/buyer-app/25-profile-menu.png)
 
 The profile menu (signed in) contains your name and email, then **Account**,
-**Orders**, and **Sign out**.
+**Orders**, and **Sign out** — which opens a confirm dialog before ending your
+session.
 
 The footer has quick links, customer-service links, social links, and the accepted
 payment methods. Many footer links are placeholders on the current build.
