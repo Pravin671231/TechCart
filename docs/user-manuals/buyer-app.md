@@ -326,7 +326,8 @@ After the order is placed, the payment step loads the **Razorpay Checkout** wind
 
 - The status text reads **"Opening secure payment…"**, then **"Confirming your
   payment…"** while it verifies.
-- On success you are taken to the order's detail page.
+- On success you'll see a **"Payment successful!"** confirmation and be redirected to
+  the home page.
 - If the window is dismissed or a payment fails, you see an error and a **Retry
   payment** button. Retrying starts a fresh payment attempt.
 
