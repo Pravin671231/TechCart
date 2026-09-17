@@ -133,7 +133,7 @@ describe("PaymentStep", () => {
     });
   });
 
-  it("verifies on the widget's success callback, shows the success modal, then redirects home after 5s", async () => {
+  it("verifies on the widget's success callback, shows a success toast, and redirects home immediately", async () => {
     server.use(
       http.post(`${API_URL}/api/orders/${order.id}/payment`, () =>
         HttpResponse.json(
@@ -149,13 +149,8 @@ describe("PaymentStep", () => {
       ),
     );
 
-    vi.useFakeTimers();
     await renderPaymentStep();
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    expect(capturedOptions).toBeDefined();
+    await waitFor(() => expect(capturedOptions).toBeDefined());
 
     capturedOptions!.handler({
       razorpay_order_id: "order_rzp2",
@@ -163,19 +158,8 @@ describe("PaymentStep", () => {
       razorpay_signature: "sig_1",
     });
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    expect(screen.getByText(/payment successful/i)).toBeInTheDocument();
-    expect(mockPush).not.toHaveBeenCalled();
-
-    for (let i = 0; i < 5; i++) {
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(1000);
-      });
-    }
-
-    expect(mockPush).toHaveBeenCalledWith("/");
+    expect(await screen.findByText(/payment successful/i)).toBeInTheDocument();
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/"));
   });
 
   it("shows a retry option when the widget is dismissed without completing payment", async () => {
@@ -266,6 +250,7 @@ describe("PaymentStep", () => {
     expect(await screen.findByText(/payment successful/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /retry payment/i })).not.toBeInTheDocument();
     expect(openMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/"));
   });
 
   it("shows a toast when the Razorpay script fails to load", async () => {

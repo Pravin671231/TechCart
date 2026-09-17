@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { toast } from "sonner";
 import { formatPrice } from "@/features/products/money";
 import { useInitiatePaymentMutation, useVerifyPaymentMutation } from "./api";
-import { PaymentSuccessModal } from "./PaymentSuccessModal";
 import type { CheckoutResponse } from "./types";
 import type { NormalizedApiError } from "@/store/api";
 
@@ -22,13 +22,26 @@ const SCRIPT_LOAD_ERROR_MESSAGE =
 // FR-PAY §6 (buyer-app UI/UX) — replaces the old "payment coming soon"
 // placeholder: launches the Razorpay Checkout widget using
 // POST .../payment's response, verifies the widget's own success callback
-// server-side, then shows PaymentSuccessModal (a brief confirmation with a
-// 5s countdown before it redirects home — see that component for the
-// countdown/navigation logic). A failure or dismissal returns the buyer to
-// a retry state on the same order rather than forcing a fresh checkout —
+// server-side, then surfaces a success toast. `redirectOnSuccess` (default
+// true) sends the buyer home immediately afterwards — the fresh-checkout
+// flow (OrderConfirmation.tsx) wants that; the order-detail "Pay now" retry
+// (OrderDetailContent.tsx) passes `redirectOnSuccess={false}` plus
+// `onSuccess` instead, staying on the order page, which already leaves this
+// component's rendered state once the order data refreshes to a non-
+// pending-payment status. A failure or dismissal returns the buyer to a
+// retry state on the same order rather than forcing a fresh checkout —
 // retrying re-calls POST .../payment, which the backend already mints a
 // fresh Razorpay order for after a failed attempt (FR-PAY-011).
-export function PaymentStep({ order }: { order: CheckoutResponse }) {
+export function PaymentStep({
+  order,
+  redirectOnSuccess = true,
+  onSuccess,
+}: {
+  order: CheckoutResponse;
+  redirectOnSuccess?: boolean;
+  onSuccess?: () => void;
+}) {
+  const router = useRouter();
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<PaymentStatus>("idle");
@@ -116,15 +129,29 @@ export function PaymentStep({ order }: { order: CheckoutResponse }) {
       cancelled = true;
     };
     // Deliberately re-runs only on scriptLoaded/attempt (attempt is the
-    // retry trigger). initiatePayment/verifyPayment are omitted on purpose,
-    // not an oversight — this effect originally also omitted `router` for
-    // the identical reason (a test double for next/navigation's useRouter
-    // that returns a fresh object per render turned it into an unstable
-    // dependency and re-triggered this effect every render, a real infinite
-    // loop confirmed while writing this component's own test suite);
-    // PaymentSuccessModal now owns the post-success redirect, so this
-    // component has no router usage left at all.
+    // retry trigger). initiatePayment/verifyPayment/router are omitted on
+    // purpose, not an oversight — a test double for next/navigation's
+    // useRouter returns a fresh object per render, which would otherwise
+    // turn `router` into an unstable dependency and re-trigger this effect
+    // every render (a real infinite loop confirmed while writing this
+    // component's own test suite). The success/redirect effect below reads
+    // `router` too, but keys off `status` instead, so it doesn't have this
+    // problem.
   }, [scriptLoaded, attempt]);
+
+  useEffect(() => {
+    if (status !== "success") return;
+    toast.success("Payment successful!");
+    if (redirectOnSuccess) {
+      router.push("/");
+    } else {
+      onSuccess?.();
+    }
+    // router/onSuccess/redirectOnSuccess deliberately omitted — this must
+    // fire exactly once per success transition, not on every unrelated
+    // re-render of an unstable `router`/`onSuccess` reference (see the
+    // main payment effect above for the identical reasoning).
+  }, [status]);
 
   return (
     <section className="rounded-lg border border-neutral-200 p-6 text-center">
@@ -159,10 +186,6 @@ export function PaymentStep({ order }: { order: CheckoutResponse }) {
           {status === "verifying" ? "Confirming your payment…" : "Opening secure payment…"}
         </p>
       ) : null}
-
-      {status === "success" && (
-        <PaymentSuccessModal orderNumber={order.orderNumber} amount={order.totalAmount} />
-      )}
     </section>
   );
 }
