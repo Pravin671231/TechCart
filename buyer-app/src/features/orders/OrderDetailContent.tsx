@@ -150,7 +150,9 @@ export function OrderDetailContent({ id }: { id: string }) {
         </div>
 
         <div className="flex flex-col gap-4">
-          {isPendingPayment && showPaymentStep && <PaymentStep order={order} />}
+          {isPendingPayment && showPaymentStep && (
+            <PaymentStep order={order} redirectOnSuccess={false} onSuccess={refetch} />
+          )}
 
           {isPendingPayment && !showPaymentStep && (
             <section className="flex flex-col gap-3 rounded-lg border border-neutral-200 p-5">
